@@ -1,0 +1,31 @@
+syntax = "proto3";
+package pax.v1;
+import "google/protobuf/timestamp.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+message Settings {
+  // auto_connect is daemon-owned.
+  bool auto_connect = 1;
+  uint32 log_retention_days = 2;
+  uint64 revision = 3;
+  // Retention hours: one of 1, 12, 24; default 24. Days is a legacy projection.
+  uint32 log_retention_hours = 4;
+}
+
+message UpdateSettingsRequest {
+  Settings settings = 1;
+  repeated string field_mask = 2;
+  uint64 expected_revision = 3;
+  string operation_id = 4;
+  google.protobuf.Timestamp requested_at = 5;
+}
+
+// Saved intent; changes apply on next explicit proxy activation.
+message NetworkPrivacy { uint64 revision=1; string dns_mode=2; bool webrtc=3; }
+
+// Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
+// interface 如 utun6；target 为被承接的路由目标（如 128.0/1）；at 为观测时间。
+message ExternalTUN {
+  string interface = 1;
+  string target = 2;
+  google.protobuf.Timestamp at = 3;
+}

@@ -1,0 +1,145 @@
+syntax = "proto3";
+package pax.v1;
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+import "google/protobuf/timestamp.proto";
+
+// User-private connection facts and their frozen traffic projections.
+message HistoryState {
+ uint64 revision = 1; uint64 clear_generation = 2;
+ google.protobuf.Timestamp coverage_start = 3;
+ bool partial = 4; string collection_state = 5; string error_code = 6;
+ bool capacity_evicted = 7;
+ uint64 logs_revision=8; uint64 traffic_revision=9;
+ uint64 log_head_sequence=10; uint64 log_deletion_generation=11;
+ uint64 traffic_deletion_generation=12;
+ string journal_generation=14; string summary_generation=15;
+ google.protobuf.Timestamp aggregate_coverage_start=16;
+ // 线路历史（延迟/出口点）版本号；写入规则见 protocol.md §4.2。
+ uint64 route_history_revision=17;
+ // Conservative cumulative bound: prefix deletions only remove times strictly before this
+ // Unix millisecond. Zero/absent means unknown. Summary/journal changes always revoke all.
+ int64 log_removal_before_ms=18;
+ // 13 曾是 quality_revision：状态类字段随值送达（R8），不另设版本号，字段与名称均不复用。
+ reserved 13;
+ reserved "quality_revision";
+}
+
+message FlowRecord {
+ string key = 1; string application_id = 2; string application = 3; string process = 4;
+ string domain = 5; string ip = 6; uint32 port = 7; string transport = 8;
+ string route_id = 9; string route_name = 10; string direction = 11;
+ string rule = 12; string rule_source = 13;
+ google.protobuf.Timestamp started_at = 14; google.protobuf.Timestamp closed_at = 15;
+ string establishment_state = 16; uint64 establishment_ms = 17; string failure = 18;
+ uint64 upload = 19; uint64 download = 20; string evidence = 21;
+ bool state_unknown = 22; google.protobuf.Timestamp observed_until = 23;
+ bool response_known=24; uint64 response_ms=25;string primary_domain=26;
+ string purpose=27; string ip_source=28; string process_status=29; DNSRecord dns=30; string phase=31;
+ string source_kind=32; string source_label=33; string source_evidence=34;
+}
+
+message DNSRecord {string query_type=1;string result=2;repeated string answers=3;}
+
+message TrafficQuery {
+ string dimension = 1; string direction = 2; string window = 3; string search = 4;
+ string read_token = 5; string cursor = 6; uint32 limit = 7; google.protobuf.Timestamp until=8;
+}
+
+// One retained connection's real first-response latency. Zero milliseconds is valid.
+message TrafficResponsePoint {
+ string connection_key=1; google.protobuf.Timestamp started_at=2; uint64 milliseconds=3;
+}
+
+// A real recorded exit. Application rows combine exits without inventing a route ID.
+message TrafficExit {
+ string route_id=1; string route_name=2; string direction=3;
+ uint64 upload=4; uint64 download=5; uint64 connections=6;
+}
+
+// A recorded routing decision inside the frozen query window; absence means unrecorded.
+message TrafficRoutingMatch {
+ google.protobuf.Timestamp at=1;
+ string rule=2; string source=3; string application_id=4; string application=5;
+ // Connection key includes the runtime session; lexical order breaks equal-time ties.
+ string identity=6;
+}
+
+message TrafficRow {
+ TrafficRoutingMatch latest_match=37;
+ // Source/target rows: one recorded exit per object/exit/direction group.
+ repeated TrafficExit exits=36;
+ // Retained facts only, oldest to newest. State: ready / partial / failed; empty means unavailable.
+ repeated TrafficResponsePoint recent_responses=33;
+ string recent_responses_state=34; string recent_responses_error=35;
+ uint64 p50_ms=29; uint64 p95_ms=30; bool latency_aggregated=31;
+ // Unix milliseconds of the latest activity inside the window; 0 when unknown. Rows are ordered by it, newest first.
+ int64 last_active_at=32;
+ string source_kind=26; string source_label=27; string source_evidence=28;
+ // System DNS rows contain query durations, never invented transfer counters.
+ string kind = 19;
+ bool bytes_known = 20;
+ uint64 valid_latency_count = 21;
+ uint64 missing_latency_count = 22;
+ uint64 failed_count = 23;
+ uint64 earlier_count = 24;
+ bool latency_sampled = 25;
+ string id = 1; string object_id = 2; string name = 3; string route_id = 4;
+ string route_name = 5; string direction = 6;
+ uint64 upload = 7; uint64 download = 8; uint64 connections = 9;
+ uint64 slowest_ms = 10; bool establishment_known = 11;
+ string basis = 12;
+ repeated TrafficLatencySample latency_samples=13; bool latency_known=14;uint64 slowest_latency_ms=15;repeated TrafficBasis bases=16;uint64 latest_latency_ms=17;google.protobuf.Timestamp latest_latency_at=18;
+}
+
+message TrafficPoint {
+ google.protobuf.Timestamp at = 1; uint64 upload = 2; uint64 download = 3; bool gap = 4; uint32 seconds=5; bool partial=6;
+}
+
+message TrafficPage {
+ repeated TrafficRow items = 1; string next_cursor = 2; string read_token = 3;
+ google.protobuf.Timestamp as_of = 4; google.protobuf.Timestamp from = 5;
+ uint64 upload = 6; uint64 download = 7; uint64 connections = 8;
+ repeated TrafficPoint trend = 9; HistoryState history = 10; uint64 total_rows = 11;
+ TrafficRow unknown_source=12; TrafficRow dns_summary=13; string window=14;
+ // Application page only: system-service and generic-process bytes, excluded from application subtotal.
+ uint64 system_upload=15; uint64 system_download=16;
+ // Legacy tool-subtotal fields retained; protocol 37 keeps tools to the system view and returns zero.
+ uint64 other_process_upload=17; uint64 other_process_download=18; uint64 other_process_connections=19;
+}
+
+// Retained connections are newest first; omitted limit defaults to 20. Long-window totals remain aggregated.
+message TrafficDetailRequest {
+ string row_id = 1; string connection_key = 2; string read_token = 3;
+ string cursor = 4; uint32 limit = 5; string dns_group_id=6;
+}
+
+message TrafficBasis { string rule = 1; string source = 2; uint64 connections = 3;string target=4;string route_name=5; }
+
+message TrafficLatencySample {google.protobuf.Timestamp at=1;uint64 milliseconds=2;bool known=3;uint64 count=4;uint64 p95_ms=5;uint32 seconds=6;}
+
+message TrafficDetail {
+ // Exact number of retained matching connections in the recent 24-hour detail pool.
+ uint64 retained_connection_count=25;
+ // Same frozen selection as the list, up to 60 points (list carries its last 20).
+ repeated TrafficResponsePoint recent_responses=22;
+ string recent_responses_state=23; string recent_responses_error=24;
+ TrafficRow summary = 1; repeated FlowRecord items = 2; repeated TrafficBasis basis = 3;
+ string next_cursor = 4; string read_token = 5;
+ google.protobuf.Timestamp as_of = 6; google.protobuf.Timestamp from = 7;
+ HistoryState history = 8;
+ repeated TrafficRelated related = 9;
+ repeated FlowRecord timings = 10;
+ uint64 successful = 11; uint64 failed = 12; uint64 unmeasurable = 13; uint64 earlier = 14;
+ bool timings_truncated = 15;
+ repeated TrafficPoint trend=19; bool aggregate_only=20; string window=21;
+ repeated DNSTrafficGroup dns_groups=16; string dns_group_id=17; uint64 dns_group_total=18;
+}
+
+message TrafficRelated { string id=1; string name=2; repeated string connection_keys=3; uint64 download=4; uint64 connections=5; }
+
+// DNS grouping is frozen inside the same traffic read token as its detail.
+message DNSTrafficGroup {
+ string id=1; string domain=2; string query_type=3; string result=4;
+ repeated string answers=5; uint64 queries=6; google.protobuf.Timestamp last_at=7;
+ bool latency_known=8; uint64 latency_ms=9;
+}

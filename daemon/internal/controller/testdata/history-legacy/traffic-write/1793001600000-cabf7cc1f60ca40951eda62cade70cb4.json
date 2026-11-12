@@ -1,0 +1,42 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "ip",
+    "Object": "3.3.3.3",
+    "Route": "",
+    "Direction": "unknown"
+  },
+  "Value": {
+    "Bases": {
+      "\u0000user": {
+        "Rule": "",
+        "Source": "user",
+        "RouteName": "",
+        "Connections": 1,
+        "Observations": 3
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "ip",
+      "Object": "3.3.3.3",
+      "Name": "3.3.3.3",
+      "Kind": "unknown",
+      "Route": "",
+      "RouteName": "",
+      "Direction": "unknown",
+      "Search": " 3.3.3.3   "
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 7,
+    "Download": 70,
+    "Connections": 1,
+    "Failed": 1,
+    "Latest": 0,
+    "Maximum": 0,
+    "LatestAt": "0001-01-01T00:00:00Z"
+  },
+  "Kinds": [
+    "unknown"
+  ]
+}

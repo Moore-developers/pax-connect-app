@@ -1,0 +1,113 @@
+--- a/dns/router.go
++++ b/dns/router.go
+@@ -36,6 +36,7 @@
+ )
+ 
+ type Router struct {
++	paxLease *paxDNSLease
+ 	ctx                   context.Context
+ 	logger                logger.ContextLogger
+ 	transport             adapter.DNSTransportManager
+@@ -134,12 +135,7 @@
+ 	switch stage {
+ 	case adapter.StartStateStart:
+ 		scope.Add(func() error {
+-			r.rulesAccess.Lock()
+-			r.closing = true
+-			runtimeRules := r.rules
+-			r.rules = nil
+-			r.rulesAccess.Unlock()
+-			closeRules(runtimeRules)
++			r.closePaxRules()
+ 			return nil
+ 		})
+ 		monitor.Start("initialize DNS client")
+@@ -227,6 +223,8 @@
+ }
+ 
+ func (r *Router) ValidateRuleSetMetadataUpdate(tag string, metadata adapter.RuleSetMetadata) error {
++	r.rulesAccess.RLock()
++	defer r.rulesAccess.RUnlock()
+ 	if len(r.rawRules) == 0 {
+ 		return nil
+ 	}
+@@ -237,11 +235,9 @@
+ 	overrides := map[string]adapter.RuleSetMetadata{
+ 		tag: metadata,
+ 	}
+-	r.rulesAccess.RLock()
+ 	started := r.started
+ 	legacyDNSMode := r.legacyDNSMode
+ 	closing := r.closing
+-	r.rulesAccess.RUnlock()
+ 	if closing {
+ 		return nil
+ 	}
+@@ -1044,6 +1040,7 @@
+ }
+ 
+ type dnsExchangeContext struct {
++	release func()
+ 	ctx           context.Context
+ 	rules         []adapter.DNSRule
+ 	legacyDNSMode bool
+@@ -1085,14 +1082,8 @@
+ 			Question: message.Question,
+ 		}, nil
+ 	}
+-	r.rulesAccess.RLock()
+-	if r.closing {
+-		r.rulesAccess.RUnlock()
+-		return nil, nil, E.New("dns router closed")
+-	}
+-	rules := r.rules
+-	legacyDNSMode := r.legacyDNSMode
+-	r.rulesAccess.RUnlock()
++	rules, legacyDNSMode, release, err := r.acquirePaxRules()
++	if err != nil { return nil, nil, err }
+ 	r.logger.DebugContext(ctx, "exchange ", FormatQuestion(message.Question[0].String()))
+ 	ctx, metadata := adapter.ExtendContext(ctx)
+ 	metadata.Destination = M.Socksaddr{}
+@@ -1111,6 +1102,7 @@
+ 	edns0Option := message.IsEdns0()
+ 	metadata.QueryDNSSEC = edns0Option != nil && edns0Option.Do()
+ 	return &dnsExchangeContext{
++		release: release,
+ 		ctx:           ctx,
+ 		rules:         rules,
+ 		legacyDNSMode: legacyDNSMode,
+@@ -1192,6 +1184,7 @@
+ 	if exchangeCtx == nil {
+ 		return earlyResponse, err
+ 	}
++	defer exchangeCtx.release()
+ 	ctx = exchangeCtx.ctx
+ 	var (
+ 		response  *mDNS.Msg
+@@ -1219,6 +1212,8 @@
+ 		callback(earlyResponse, err)
+ 		return
+ 	}
++	originalCallback := callback
++	callback = func(response *mDNS.Msg, err error) { exchangeCtx.release(); originalCallback(response, err) }
+ 	ctx = exchangeCtx.ctx
+ 	if options.Transport != nil {
+ 		transport := options.Transport
+@@ -1247,14 +1242,9 @@
+ }
+ 
+ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+-	r.rulesAccess.RLock()
+-	if r.closing {
+-		r.rulesAccess.RUnlock()
+-		return nil, E.New("dns router closed")
+-	}
+-	rules := r.rules
+-	legacyDNSMode := r.legacyDNSMode
+-	r.rulesAccess.RUnlock()
++	rules, legacyDNSMode, release, acquireErr := r.acquirePaxRules()
++	if acquireErr != nil { return nil, acquireErr }
++	defer release()
+ 	var (
+ 		responseAddrs []netip.Addr
+ 		err           error

@@ -1,0 +1,68 @@
+syntax = "proto3";
+package pax.v1;
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// Same-UID user-daemon only. No credential is returned in snapshots or plans.
+service AIProfilesService {
+ rpc QueryAIProfiles(AIProfilesQuery) returns (AIProfilesWorkspace);
+ rpc MutateAIProfile(AIProfileMutation) returns (AIProfilesWorkspace);
+ rpc PlanAIProfileApply(AIProfilePlanRequest) returns (AIProfilePlan);
+ rpc RefreshAIProfileModels(AIProfileModelsRequest) returns (AIProfilesWorkspace);
+ rpc ApplyAIProfile(AIProfileApplyRequest) returns (AIProfilesWorkspace);
+}
+message AIProfilesQuery {}
+message AIProfileModelsRequest { string profile_id=1; }
+message AIProviderModel { string id=1; string owner=2; string display_name=3; int64 context_window=4; }
+message AIProfileSummary {
+ string id=1; uint64 revision=2; uint64 connection_revision=3;
+ string name=4; string base_url=5; double multiplier=6;
+ repeated string model_ids=7; bool has_key=8;
+ // Native snapshots are CLI-specific selectable configurations, not API credentials.
+ string kind=9; string native_cli=10;
+ repeated AIProviderModel catalog=11; string models_state=12; string models_endpoint=13;
+ int64 models_checked=14; string models_error=15;
+ // Per-model multipliers keyed by request model id; a model not listed pays `multiplier`.
+ // Save replaces the whole map. Every value is within 0..100 with at most three decimals,
+ // as is `multiplier`.
+ map<string, double> model_multipliers=16;
+}
+message AIClientBinding {
+ string cli=1; string profile_id=2; string state=3; string reason=4;
+ string inspection_id=5; uint64 template_revision=6 [deprecated=true];
+ string endpoint=7; string target_path=8; bool requires_model=9;
+}
+message AIProfilesWorkspace {
+ repeated AIProfileSummary profiles=1;
+ repeated AIClientBinding bindings=2;
+}
+message AIProfileSave {
+ AIProfileSummary profile=1; uint64 expected_revision=2;
+ // Write-only. Empty with replace_key=false preserves the stored credential.
+ bool replace_key=3; string api_key=4;
+}
+message AIProfileDelete { string profile_id=1; uint64 expected_revision=2; }
+message AIProfileImport {
+ string cli=1; string inspection_id=2; string name=3; double multiplier=4;
+}
+message AIProfileTemplateInitialization { string cli=1; string inspection_id=2; }
+message AIProfileMutation {
+ string operation_id=1;
+ oneof action {
+  AIProfileSave save=2;
+  AIProfileDelete delete=3;
+  AIProfileImport import_profile=4;
+  AIProfileTemplateInitialization initialize_template=5 [deprecated=true];
+ }
+}
+message AIProfilePlanRequest {
+ string cli=1; string profile_id=2; uint64 revision=3;
+ uint64 template_revision=4 [deprecated=true]; string inspection_id=5; bool restore=6;
+ // Explicit first API configuration creation; never converts account authentication.
+ bool initialize=7; string model_id=8;
+}
+message AIProfilePlan {
+ string id=1; string cli=2; string profile_id=3; string base_url=4;
+ bool external_changed=5 [deprecated=true]; int64 expires_unix=6;
+ bool initializes=7; string target_path=8;
+}
+message AIProfileApplyRequest { string plan_id=1; string operation_id=2; string choice=3 [deprecated=true]; }

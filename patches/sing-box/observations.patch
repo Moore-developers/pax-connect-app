@@ -1,0 +1,348 @@
+--- a/route/route.go
++++ b/route/route.go
+@@ -3,6 +3,7 @@
+ import (
+ 	"context"
+ 	"errors"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 	"net/netip"
+ 	"strings"
+@@ -41,6 +42,7 @@
+ 
+ // Deprecated: use RouteConnectionEx instead.
+ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
++	ctx = paxobs.WithConnection(ctx)
+ 	done := make(chan any)
+ 	err := r.routeConnection(ctx, conn, metadata, N.OnceClose(func(it error) {
+ 		close(done)
+@@ -56,6 +58,7 @@
+ }
+ 
+ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
++	ctx = paxobs.WithConnection(ctx)
+ 	err := r.routeConnection(ctx, conn, metadata, onClose)
+ 	if err != nil {
+ 		N.CloseOnHandshakeFailure(conn, onClose, err)
+@@ -67,7 +70,19 @@
+ 	}
+ }
+ 
+-func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
++func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) (retErr error) {
++	paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: metadata.Destination.Fqdn, IP: metadata.Destination.Addr.String(), Port: metadata.Destination.Port})
++	defer func() {
++		if retErr != nil {
++			stage := "failed"
++			if R.IsRejected(retErr) {
++				stage = "rejected"
++			}
++			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error"})
++			paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
++		}
++	}()
++
+ 	//nolint:staticcheck
+ 	if metadata.InboundDetour != "" {
+ 		if metadata.LastInbound == metadata.InboundDetour {
+@@ -179,6 +194,7 @@
+ }
+ 
+ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
++	ctx = paxobs.WithConnection(ctx)
+ 	done := make(chan any)
+ 	err := r.routePacketConnection(ctx, conn, metadata, N.OnceClose(func(it error) {
+ 		close(done)
+@@ -199,6 +215,7 @@
+ }
+ 
+ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
++	ctx = paxobs.WithConnection(ctx)
+ 	err := r.routePacketConnection(ctx, conn, metadata, onClose)
+ 	if err != nil {
+ 		N.CloseOnHandshakeFailure(conn, onClose, err)
+@@ -210,7 +227,19 @@
+ 	}
+ }
+ 
+-func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
++func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) (retErr error) {
++	paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: metadata.Destination.Fqdn, IP: metadata.Destination.Addr.String(), Port: metadata.Destination.Port})
++	defer func() {
++		if retErr != nil {
++			stage := "failed"
++			if R.IsRejected(retErr) {
++				stage = "rejected"
++			}
++			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error"})
++			paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
++		}
++	}()
++
+ 	//nolint:staticcheck
+ 	if metadata.InboundDetour != "" {
+ 		if metadata.LastInbound == metadata.InboundDetour {
+@@ -525,6 +554,14 @@
+ 	}
+ 	metadataCopy := *metadata
+ 	result.NewTracker = func() tun.FlowTracker {
++		// One identity per actual native flow, not per repeated pre-match call.
++		ctx := paxobs.WithConnection(ctx)
++		process := ""
++		if metadataCopy.ProcessInfo != nil {
++			process = metadataCopy.ProcessInfo.ProcessPath
++		}
++		paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadataCopy.Source.String(), Inbound: metadataCopy.InboundType, Network: metadataCopy.Network, Domain: metadataCopy.Domain, IP: metadataCopy.Destination.Addr.String(), Port: metadataCopy.Destination.Port, Process: process})
++
+ 		r.logger.InfoContext(ctx, "pre-match: forward ", metadataCopy.Network, " connection from ", metadataCopy.Source.AddrString(), " to ", metadataCopy.Destination.AddrString(), " via outbound/", outbound.Type(), "[", outbound.Tag(), "]")
+ 		flowTrackers := make([]tun.FlowTracker, 0, len(r.trackers)+1)
+ 		flowTrackers = append(flowTrackers, newFlowLogger(ctx, r.logger, metadataCopy, outbound))
+--- a/route/conn.go
++++ b/route/conn.go
+@@ -2,6 +2,7 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"io"
+ 	"net"
+ 	"net/netip"
+@@ -96,6 +97,7 @@
+ 
+ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+ 	ctx = adapter.WithContext(ctx, &metadata)
++	paxobs.DialStarted(ctx)
+ 	var (
+ 		remoteConn net.Conn
+ 		err        error
+@@ -105,6 +107,7 @@
+ 	} else {
+ 		remoteConn, err = this.DialContext(ctx, N.NetworkTCP, metadata.Destination)
+ 	}
++	paxobs.DialResult(ctx, err, false)
+ 	if err != nil {
+ 		var remoteString string
+ 		if len(metadata.DestinationAddresses) > 0 {
+@@ -142,6 +145,10 @@
+ 			return
+ 		}
+ 		remoteConn = spoofConn
++	}
++	// Only direct TCP proves readiness here; lazy proxy handshakes remain unknown.
++	if out, ok := this.(adapter.Outbound); ok && out.Type() == "direct" && !N.NeedHandshakeForWrite(remoteConn) && (metadata.Destination.IsIP() || len(metadata.DestinationAddresses) > 0) {
++		paxobs.DialResult(ctx, nil, true)
+ 	}
+ 	serverFirst := sniff.Skip(&metadata)
+ 	var done atomic.Bool
+--- a/log/observable.go
++++ b/log/observable.go
+@@ -2,6 +2,7 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"io"
+ 	"os"
+ 	"sync"
+@@ -182,6 +183,9 @@
+ 	if level > l.level && len(platformWriters) == 0 && !l.needObservable {
+ 		return
+ 	}
++	if level <= LevelInfo {
++		paxobs.Emit(ctx, paxobs.Event{Stage: "diagnostic", Raw: F.ToString(args...), Level: FormatLevel(level)})
++	}
+ 	nowTime := time.Now()
+ 	message := F.ToString(args...)
+ 	if !l.started.Load() && level != LevelFatal && level != LevelPanic {
+--- a/common/dialer/detour.go
++++ b/common/dialer/detour.go
+@@ -2,6 +2,7 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 	"sync"
+ 
+@@ -82,7 +83,11 @@
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	return dialer.DialContext(ctx, network, destination)
++	conn, err := dialer.DialContext(ctx, network, destination)
++	if err == nil {
++		paxobs.Emit(ctx, paxobs.Event{Stage: "detour", Outbound: d.detour})
++	}
++	return conn, err
+ }
+ 
+ func (d *DetourDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+--- a/common/trafficcontrol/tracker.go
++++ b/common/trafficcontrol/tracker.go
+@@ -2,6 +2,7 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 	"sync/atomic"
+ 	"time"
+@@ -16,16 +17,17 @@
+ )
+ 
+ type TrackerMetadata struct {
+-	ID           uuid.UUID
+-	Metadata     adapter.InboundContext
+-	CreatedAt    time.Time
+-	ClosedAt     time.Time
+-	Upload       *atomic.Int64
+-	Download     *atomic.Int64
+-	Chain        []string
+-	Rule         adapter.Rule
+-	Outbound     string
+-	OutboundType string
++	ObservationContext context.Context
++	ID                 uuid.UUID
++	Metadata           adapter.InboundContext
++	CreatedAt          time.Time
++	ClosedAt           time.Time
++	Upload             *atomic.Int64
++	Download           *atomic.Int64
++	Chain              []string
++	Rule               adapter.Rule
++	Outbound           string
++	OutboundType       string
+ }
+ 
+ type Tracker interface {
+@@ -37,9 +39,13 @@
+ 	upload := new(atomic.Int64)
+ 	download := new(atomic.Int64)
+ 	tracker := &connTracker{
+-		ExtendedConn: bufio.NewInt64CounterConn(conn, []*atomic.Int64{upload}, []*atomic.Int64{download}),
+-		metadata:     m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download),
+-		manager:      m,
++		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) { upload.Add(n); paxobs.Emit(ctx, paxobs.Event{Stage: "bytes", Upload: n}) }}, []N.CountFunc{func(n int64) {
++			download.Add(n)
++			paxobs.ResponseReceived(ctx, n)
++			paxobs.Emit(ctx, paxobs.Event{Stage: "bytes", Download: n})
++		}}),
++		metadata: m.newTrackerMetadata(ctx, metadata, matchedRule, matchOutbound, upload, download),
++		manager:  m,
+ 	}
+ 	m.join(tracker)
+ 	return tracker
+@@ -49,9 +55,13 @@
+ 	upload := new(atomic.Int64)
+ 	download := new(atomic.Int64)
+ 	tracker := &packetConnTracker{
+-		PacketConn: bufio.NewInt64CounterPacketConn(conn, []*atomic.Int64{upload}, nil, []*atomic.Int64{download}, nil),
+-		metadata:   m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download),
+-		manager:    m,
++		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) { upload.Add(n); paxobs.Emit(ctx, paxobs.Event{Stage: "bytes", Upload: n}) }}, []N.CountFunc{func(n int64) {
++			download.Add(n)
++			paxobs.ResponseReceived(ctx, n)
++			paxobs.Emit(ctx, paxobs.Event{Stage: "bytes", Download: n})
++		}}),
++		metadata: m.newTrackerMetadata(ctx, metadata, matchedRule, matchOutbound, upload, download),
++		manager:  m,
+ 	}
+ 	m.join(tracker)
+ 	return tracker
+@@ -59,13 +69,16 @@
+ 
+ func (m *Manager) RoutedFlow(ctx context.Context, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) tun.FlowTracker {
+ 	return &flowTracker{
+-		metadata: m.newTrackerMetadata(metadata, matchedRule, matchOutbound, new(atomic.Int64), new(atomic.Int64)),
++		metadata: m.newTrackerMetadata(ctx, metadata, matchedRule, matchOutbound, new(atomic.Int64), new(atomic.Int64)),
+ 		manager:  m,
+ 	}
+ }
+ 
+-func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound, upload *atomic.Int64, download *atomic.Int64) TrackerMetadata {
+-	id, _ := uuid.NewV4()
++func (m *Manager) newTrackerMetadata(ctx context.Context, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound, upload *atomic.Int64, download *atomic.Int64) TrackerMetadata {
++	id, err := uuid.FromString(paxobs.ID(ctx))
++	if err != nil {
++		id, _ = uuid.NewV4()
++	}
+ 	var (
+ 		chain        []string
+ 		next         string
+@@ -91,16 +104,35 @@
+ 		}
+ 		next = outboundGroup.Now()
+ 	}
++	process := ""
++	if metadata.ProcessInfo != nil {
++		process = metadata.ProcessInfo.ProcessPath
++	}
++	domain := metadata.Domain
++	if domain == "" {
++		domain = metadata.Destination.Fqdn
++	}
++	ip := ""
++	if metadata.Destination.IsIP() && !metadata.FakeIP {
++		ip = metadata.Destination.Addr.String()
++	}
++	rule := "final"
++	if matchedRule != nil {
++		rule = matchedRule.String()
++	}
++	paxobs.Emit(ctx, paxobs.Event{Stage: "routed", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: domain, IP: ip, Port: metadata.Destination.Port, Process: process, Outbound: outbound, Chain: append([]string(nil), chain...), Rule: rule})
++
+ 	return TrackerMetadata{
+-		ID:           id,
+-		Metadata:     metadata,
+-		CreatedAt:    time.Now(),
+-		Upload:       upload,
+-		Download:     download,
+-		Chain:        common.Reverse(chain),
+-		Rule:         matchedRule,
+-		Outbound:     outbound,
+-		OutboundType: outboundType,
++		ObservationContext: ctx,
++		ID:                 id,
++		Metadata:           metadata,
++		CreatedAt:          time.Now(),
++		Upload:             upload,
++		Download:           download,
++		Chain:              common.Reverse(chain),
++		Rule:               matchedRule,
++		Outbound:           outbound,
++		OutboundType:       outboundType,
+ 	}
+ }
+ 
+@@ -153,10 +185,13 @@
+ 
+ func (t *flowTracker) CountForward(n int) {
+ 	t.metadata.Upload.Add(int64(n))
++	paxobs.Emit(t.metadata.ObservationContext, paxobs.Event{Stage: "bytes", Upload: int64(n)})
+ }
+ 
+ func (t *flowTracker) CountReverse(n int) {
+ 	t.metadata.Download.Add(int64(n))
++	paxobs.ResponseReceived(t.metadata.ObservationContext, int64(n))
++	paxobs.Emit(t.metadata.ObservationContext, paxobs.Event{Stage: "bytes", Download: int64(n)})
+ }
+ 
+ func (t *flowTracker) FlowEstablished() {
+--- a/common/trafficcontrol/manager.go
++++ b/common/trafficcontrol/manager.go
+@@ -1,6 +1,7 @@
+ package trafficcontrol
+ 
+ import (
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"sync"
+ 	"time"
+ 
+@@ -98,6 +99,7 @@
+ 		m.closedConnectionsAccess.Unlock()
+ 		return
+ 	}
++	paxobs.Emit(metadata.ObservationContext, paxobs.Event{Stage: "closed"})
+ 	metadata.ClosedAt = closedAt
+ 	metadataCopy := *metadata
+ 	if m.closedConnections.Len() >= closedConnectionsLimit {

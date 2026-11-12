@@ -1,0 +1,45 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "application",
+    "Object": "process:/opt/homebrew/bin/curl",
+    "Route": "route-a",
+    "Direction": "proxy"
+  },
+  "Value": {
+    "Bases": {
+      "domain=example.com\u0000user": {
+        "Rule": "domain=example.com",
+        "Source": "user",
+        "RouteName": "Route A",
+        "Connections": 1,
+        "Observations": 3
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "application",
+      "Object": "process:/opt/homebrew/bin/curl",
+      "Name": "curl",
+      "Kind": "tool",
+      "Route": "route-a",
+      "RouteName": "Route A",
+      "Direction": "proxy",
+      "Search": "api.example.com 1.1.1.1 /opt/homebrew/bin/curl curl domain=example.com"
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 20,
+    "Download": 200,
+    "Connections": 1,
+    "Failed": 0,
+    "Latency": {
+      "21": 1
+    },
+    "Latest": 80,
+    "Maximum": 80,
+    "LatestAt": "2026-10-26T08:04:59Z"
+  },
+  "Kinds": [
+    "tool"
+  ]
+}

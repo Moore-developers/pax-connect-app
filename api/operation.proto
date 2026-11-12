@@ -1,0 +1,30 @@
+syntax = "proto3";
+package pax.v1;
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+message ProductError {
+  string code = 1;
+  // 文案模板参数；UI 用 code + 参数渲染，不拼接半成品句子。
+  repeated string message_params = 2;
+  // 受影响对象（线路 ID、订阅 ID 等），可为空。
+  string affected_target = 3;
+}
+
+// ---------------------------------------------------------------- 命令
+
+message OperationAck {
+  string operation_id = 1;
+}
+
+message RouteSaveResult {
+  string route_id = 1;
+  bool created = 2;
+}
+
+message OperationResult {
+  string operation_id = 1;
+  bool ok = 2;
+  // ok=false 时给出产品错误。
+  ProductError error = 3;
+  RouteSaveResult route_save = 4;
+}

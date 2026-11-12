@@ -1,0 +1,822 @@
+syntax = "proto3";
+
+package pax.v1;
+
+import "google/protobuf/timestamp.proto";
+import "traffic.proto";
+import "operation.proto";
+import "privacy.proto";
+import "route_exit.proto";
+import "network_diagnostics.proto";
+import "route_usage.proto";
+import "ai_usage.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// Pax 产品 gRPC；协议与模型见 architecture §4/§7.5。
+// 兼容策略（code-standards.md §5.4）：只新增字段与方法，不改编号；删除须 reserved。
+//
+// 当前产品接口包含配置命令与有界只读查询；产品协议版本由双方实现同步。
+// 事件流只有一条 Watch。变更命令返回 OperationAck，最终结果经 Watch；
+// 历史、规则等查询返回只读快照，不返回私有内核 profile 或凭据。
+service PaxService {
+  rpc RecheckCurrentPath(CurrentPathRecheckRequest) returns (OperationAck);
+  rpc QueryLogUpdates(LogUpdateRequest) returns (LogUpdatePage);
+  rpc QueryRoutingRules(google.protobuf.Empty) returns (RoutingRulesSnapshot);
+  rpc QueryRoutingLibrary(google.protobuf.Empty) returns (RoutingLibrarySnapshot);
+  rpc QueryGeoRules(GeoRulesQuery) returns (GeoRulesPage);
+  rpc MutateRoutingLibrary(RoutingMutationRequest) returns (RoutingLibrarySnapshot);
+  rpc QueryObjectIcon(ObjectIconRequest) returns (ObjectIconResult);
+  rpc QueryLogs(LogQuery) returns (LogPage);
+  rpc QueryLogObjects(LogQuery) returns (LogObjectPage);
+  rpc GetLogDetail(LogDetailRequest) returns (LogDetail);
+  rpc QueryTraffic(TrafficQuery) returns (TrafficPage);
+  rpc QueryTrafficDetail(TrafficDetailRequest) returns (TrafficDetail);
+  rpc ClearLogs(ClearLogsRequest) returns (OperationAck);
+  // 协议版本握手；不兼容时 UI 提示升级，不做兼容降级。
+  // Only App-owned temporary sessions support graceful shutdown; legacy services reject it.
+  rpc ShutdownAppSession(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Hello(HelloRequest) returns (HelloResponse);
+  // 完整快照：冷启动、重连、窗口重新可见时拉取。
+  rpc GetSnapshot(GetSnapshotRequest) returns (Snapshot);
+  // 唯一事件流。重连顺序：退避 → Hello → GetSnapshot → Watch(from_seq = snapshot.snapshot_version)。
+  rpc Watch(WatchRequest) returns (stream WatchEvent);
+  // 整体替换可见页面集合（protocol.md §4.2 R7）。
+  rpc SetViewVisibility(ViewVisibility) returns (google.protobuf.Empty);
+
+  rpc PreviewRoutes(PreviewRoutesRequest) returns (RoutesPreview);
+  rpc CancelRoutesPreview(CancelRoutesPreviewRequest) returns (google.protobuf.Empty);
+  rpc ConfirmImportRoutes(ConfirmImportRoutesRequest) returns (OperationAck);
+  rpc AddRoute(RouteEditRequest) returns (OperationAck);
+  rpc UpdateRoute(RouteEditRequest) returns (OperationAck);
+  rpc DeleteRoute(DeleteRouteRequest) returns (OperationAck);
+  rpc GetRouteEditor(GetRouteEditorRequest) returns (RouteEditor);
+  rpc UpdateRouteTLS(UpdateRouteTLSRequest) returns (OperationAck);
+  rpc ConfirmRouteTLSBatch(ConfirmRouteTLSBatchRequest) returns (OperationAck);
+  rpc SaveChainRoute(SaveChainRouteRequest) returns (OperationAck);
+  rpc QueryRouteHistory(RouteHistoryRequest) returns (RouteHistoryResponse);
+  rpc QueryRouteUsage(RouteHistoryRequest) returns (RouteUsageResponse);
+  rpc NotifyPowerEvent(PowerEventRequest) returns (google.protobuf.Empty);
+  rpc SetProxyEnabled(SetProxyEnabledRequest) returns (OperationAck);
+  rpc ReconnectProxy(google.protobuf.Empty) returns (OperationAck);
+  rpc SelectRoute(SelectRouteRequest) returns (OperationAck);
+  rpc ImportRoutes(ImportRoutesRequest) returns (ImportResult);
+  rpc DeleteSubscription(DeleteSubscriptionRequest) returns (OperationAck);
+  rpc RefreshSubscription(RefreshSubscriptionRequest) returns (OperationAck);
+  rpc RestoreSubscriptionRoute(RestoreSubscriptionRouteRequest) returns (OperationAck);
+  rpc CancelOperation(CancelOperationRequest) returns (OperationAck);
+  rpc TestRoute(TestRouteRequest) returns (OperationAck);
+  rpc SaveRouteGroups(SaveRouteGroupsRequest) returns (OperationAck);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (OperationAck);
+  rpc GetNetworkPrivacy(google.protobuf.Empty) returns (NetworkPrivacy);
+  rpc SaveNetworkPrivacy(NetworkPrivacy) returns (NetworkPrivacy);
+  rpc GetMeasurementPreferences(google.protobuf.Empty) returns (MeasurementPreferences);
+  rpc SaveMeasurementPreferences(MeasurementPreferences) returns (MeasurementPreferences);
+  rpc EvaluateMeasurementPreferences(TestRouteRequest) returns (OperationAck);
+  rpc GetPhysicalEgress(google.protobuf.Empty) returns (PhysicalEgress);
+  // On-demand, bounded read-only OS observations; never claims all app traffic is captured.
+  rpc GetTrafficPathDiagnostics(google.protobuf.Empty) returns (TrafficPathDiagnostics);
+  rpc DiagnoseConnection(ConnectionDiagnosticRequest) returns (TrafficPathDiagnostics);
+  rpc DiagnoseNetwork(NetworkDiagnosticRequest) returns (NetworkDiagnosticReport);
+  rpc InspectEnvironment(EnvironmentDiagnosticRequest) returns (EnvironmentDiagnosticReport);
+  rpc QueryCFCandidates(google.protobuf.Empty) returns (CFCandidates);
+  rpc ValidateCFCandidate(CFValidationRequest) returns (CFCandidate);
+  rpc QueryCFWorkspace(CFWorkspaceRequest) returns (CFWorkspace);
+  rpc RunCFTask(CFTaskRequest) returns (OperationAck);
+}
+
+// ---------------------------------------------------------------- 握手与快照
+
+message HelloRequest {
+  string client_version = 1;
+  uint32 protocol_version = 2;
+}
+
+message HelloResponse {
+  string daemon_version = 1;
+  uint32 protocol_version = 2;
+  // 握手时的事件高水位；订阅使用随后 GetSnapshot 的 snapshot_version。
+  uint64 snapshot_seq = 3;
+  // SHA-256 of running signed daemon bytes followed by bundled LaunchDaemon plist bytes.
+  string service_fingerprint = 4;
+  // Only implemented product capabilities; absence disables the corresponding UI action.
+  repeated string capabilities = 5;
+  // Frozen before this daemon creates stores. App preferences retain unfinished guidance.
+  bool initial_install = 6;
+  // App process owning this user daemon; checked before consuming any snapshot.
+  uint32 owner_app_pid = 7;
+}
+
+message GetSnapshotRequest {}
+
+message Snapshot {
+  // 该一致快照覆盖的全局事件高水位；读快照与订阅本身不增加版本。
+  uint64 snapshot_version = 1;
+  ProtectionStatus status = 2;
+  // 全部线路（MVP 只有默认分组）。credential 永不进入本消息。
+  repeated NodeProfile routes = 3;
+  // 当前选中线路；未选或已删除时为空。
+  NodeProfile current_route = 4;
+  TrafficSnapshot today_traffic = 5;
+  Settings settings = 6;
+  // 最近的产品事件（内存环形缓冲的有界切片，Dashboard 直接渲染）。
+  repeated ProductLog recent_logs = 7;
+  string pending_operation_id = 8;
+  ProductError degraded_reason = 9;
+  ActiveTLS active_tls = 10;
+  repeated ProductError degraded_reasons = 11;
+  uint64 catalog_revision = 12;
+  string selected_route_id = 13;
+  string pending_target_route_id = 14;
+  // 已保存的订阅来源摘要；URL 与 query 永不出现在这里。
+  repeated SubscriptionSummary subscriptions = 15;
+  // 正在进行连通性测试的线路 ID；结果经 RouteTestSummary 与操作事件送达。
+  repeated string testing_route_ids = 16;
+  repeated RouteGroup route_groups = 17;
+  repeated string downloading_route_ids = 18;
+  string download_operation_id = 19;
+  ProductError measurement_error = 20;
+  PhysicalEgress physical_egress = 21;
+  string connection_session = 22;
+  uint64 connection_generation = 23;
+  repeated RouteMeasurementProgress route_measurement_progress = 24;
+  ExitPoolState exit_pool_state = 25;
+  string latency_operation_id = 26;
+  // Route ID -> cancellable operation (parent batch or standalone), including
+  // accepted tests waiting for native/latency admission. Bounded by the catalog.
+  map<string,string> test_operation_ids = 27;
+  DownloadQueueState download_queue = 28;
+  HistoryState history = 29;
+  CurrentPathCheck current_path_check = 30;
+  map<string,string> exit_operation_ids = 31;
+  AIUsageState ai_usage = 32;
+  ExternalTUN external_tun = 33;
+}
+
+message ViewVisibility {
+  repeated string views = 1;
+}
+
+// ---------------------------------------------------------------- 事件流
+
+message WatchRequest {
+  // Watch 首帧始终给出当前一致快照；此后只推边界之后的增量，0 允许初始订阅。
+  uint64 from_seq = 1;
+}
+
+message WatchEvent {
+  // 增量全局递增；首帧快照使用已覆盖高水位（可为0），客户端丢弃重复增量。
+  uint64 seq = 1;
+  uint64 snapshot_version = 2;
+  // 11/12/13/15 曾是 status/traffic/log/connection，从未发送。
+  reserved 11, 12, 13, 15;
+  reserved "status", "traffic", "log", "connection";
+  oneof payload {
+    Snapshot snapshot = 10;      // 关键变更后的完整快照
+    OperationResult operation = 14;
+    HistoryDelta history_delta = 16;
+    CurrentPathCheck current_path_check = 17;
+    AIUsageState ai_usage = 18;
+  }
+}
+
+// ---------------------------------------------------------------- 跨模块模型
+
+// 保护状态：只有 PROTECTED 才能显示"已保护"（§19.1、decisions/geo-dns-protection.md）。
+enum ProtectionStatus {
+  PROTECTION_STATUS_UNSPECIFIED = 0;
+  PROTECTION_STATUS_OFF = 1;
+  PROTECTION_STATUS_STARTING = 2;
+  PROTECTION_STATUS_PROTECTED = 3;
+  PROTECTION_STATUS_DEGRADED = 4;
+}
+
+message NodeProfile {
+  // 客户端生成/daemon 生成的稳定 ID，用于列表 diff 与选中态。
+  string id = 1;
+  string name = 2;
+  // vless / vmess / trojan / shadowsocks（protocol 是 Swift 关键字，故加后缀）。
+  string protocol_name = 3;
+  string server = 4;
+  uint32 port = 5;
+  // 分组名；MVP 固定为默认分组。
+  string group = 6;
+  string server_name = 7;
+  RouteTLSPolicy tls_policy = 8;
+  uint64 revision = 9;
+  string transport = 10;
+  string security = 11;
+  string source_id = 12;
+  // local / subscription；本地线路为空或 local。
+  string origin = 13;
+  // 用户删除的订阅线路：仍在目录中但不在默认列表显示，可恢复。
+  bool hidden = 14;
+  // 提供方已移除但仍被运行副本引用（或本轮无法确认删除）；界面须显式提示。
+  bool source_removed = 15;
+  // 最近一次手动连通性测试；无测试时为空。过期由 tested_config_revision 与当前 config_revision 对比判定。
+  RouteTestSummary test_summary = 16;
+  uint64 config_revision = 17;
+  DownloadTestSummary download_summary = 18;
+  // Configured WS/HTTPUpgrade endpoint is a literal CF address; not optimization proof.
+  bool cf_entry = 19;
+  ChainRoute chain = 20;
+  RouteExitSummary exit_summary = 21;
+}
+
+// RouteTestSummary 是一次手动连通性测试的结果：受控目标的实测连接，不是 ICMP 或带宽测速。
+message RouteTestSummary {
+  google.protobuf.Timestamp at = 1;
+  bool success = 2;
+  // Legacy single value: stable median when available, otherwise successful first response; v3 clients use cold_ms/stable_ms independently.
+  uint32 duration_ms = 3;
+  // success=false 时的受控失败码。
+  ProductError error = 4;
+  // 测量时的配置 revision；与当前 revision 不同即显示过期。
+  uint64 tested_revision = 5;
+  uint64 tested_config_revision = 6;
+  string exit_ip = 7;
+  ProductError exit_error = 8;
+  uint32 cold_ms = 9;
+  uint32 second_ms = 10;
+  bool reused = 11;
+  string method = 12;
+  string first_error = 13;
+  string second_error = 14;
+  // New method: median of three valid reused-session requests; absent when incomplete.
+  uint32 stable_ms = 15;
+  uint32 stable_samples = 16;
+  string stable_error = 17;
+  // Controlled target identity: google / gstatic, never a private URL.
+  string test_target = 18;
+  ExitLocation exit_location = 19;
+  ExitLocation last_exit_location = 20;
+}
+
+message DownloadTestSummary {
+ google.protobuf.Timestamp at = 1;
+ bool success = 2;
+ double bytes_per_second = 3;
+ ProductError error = 4;
+ uint64 tested_config_revision = 5;
+ uint64 bytes = 6;
+ uint32 duration_ms = 7;
+ string method = 8;
+ uint32 parallel = 9;
+ uint32 setup_ms = 10;
+ string end_reason = 11;
+}
+
+message MeasurementPreferences {
+ uint64 revision = 1;
+ uint32 latency_parallel = 2;
+ uint32 exit_parallel = 3;
+ uint32 download_parallel = 4;
+ string mode = 5;
+ uint32 recommended_latency = 6;
+ uint32 recommended_exit = 7;
+ uint32 recommended_download = 8;
+ string recommendation_network = 9;
+ google.protobuf.Timestamp evaluated_at = 10;
+ string latency_mode = 11;
+ string exit_mode = 12;
+ string download_mode = 13;
+ // Read-only; ignored by SaveMeasurementPreferences.
+ ExitPoolState exit_pool_state = 14;
+}
+
+message DownloadQueueState {
+ string mode = 1; // single / batch / exclusive
+ string active_route_id = 2;
+ repeated string queued_route_ids = 3;
+ map<string,string> operation_ids = 4;
+}
+message ExitPoolState {
+ uint32 configured_limit = 1;
+ uint32 in_flight = 2;
+ uint32 queued = 3;
+ // Subset of queued, not an additional task count.
+ uint32 retrying = 4;
+ uint32 available_providers = 5;
+ uint32 total_providers = 6;
+ google.protobuf.Timestamp at = 7;
+}
+enum RouteMeasurementPhase {
+ ROUTE_MEASUREMENT_PHASE_UNSPECIFIED = 0;
+ ROUTE_MEASUREMENT_PHASE_LATENCY = 1;
+ ROUTE_MEASUREMENT_PHASE_EXIT_QUEUED = 2;
+ ROUTE_MEASUREMENT_PHASE_EXIT_RUNNING = 3;
+ ROUTE_MEASUREMENT_PHASE_EXIT_RETRYING = 4;
+}
+// Transient only; never persisted as a completed measurement.
+message RouteMeasurementProgress {
+ string route_id = 1;
+ string operation_id = 2;
+ uint64 tested_config_revision = 3;
+ string network = 4;
+ RouteMeasurementPhase phase = 5;
+ RouteTestSummary latency_result = 6;
+ google.protobuf.Timestamp updated_at = 7;
+ uint32 attempt = 8;
+}
+
+message PhysicalEgress {
+ string network = 1;
+ string ipv4 = 2;
+ string ipv6 = 3;
+ string phase = 4;
+ google.protobuf.Timestamp at = 5;
+ ProductError error = 6;
+}
+message CFCandidate {
+ string ip = 1;
+ string source = 2;
+ uint32 latency_ms = 3;
+ string network = 4;
+ google.protobuf.Timestamp at = 5;
+ ProductError error = 6;
+}
+message CFCandidates { repeated CFCandidate items = 1; string network = 2; }
+message CFValidationRequest {
+ string route_id = 1;
+ uint64 expected_revision = 2;
+ string document_json = 3;
+ string ip = 4;
+ string chain_id = 5;
+ uint64 chain_revision = 6;
+}
+
+// SubscriptionSummary 是订阅来源的脱敏摘要：只有用户来源名与 hostname，没有 URL。
+message SubscriptionSummary {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  uint64 revision = 4;
+  uint32 route_count = 5;
+  uint32 hidden_count = 6;
+  // 最近一次刷新的产品错误码；成功时为空。
+  ProductError last_error = 7;
+  // 最近一次刷新的结果计数，用于「部分刷新失败」提示。
+  RefreshReport last_refresh = 8;
+  // Daemon-owned refresh survives App navigation/reconnect; never carries URL.
+  string refresh_operation_id = 9;
+  SubscriptionAttempt last_attempt = 10;
+  bool has_refresh_channel = 11;
+  string last_route_id = 12;
+  string user_agent = 13;
+}
+
+message RefreshReport {
+  bool partial = 1;
+  uint32 added = 2;
+  uint32 updated = 3;
+  uint32 hidden = 4;
+  uint32 kept = 5;
+  uint32 removed = 6;
+}
+
+message TrafficSnapshot {
+  uint64 upload_bytes = 1;
+  uint64 download_bytes = 2;
+  uint64 proxied_bytes = 3;
+  uint64 direct_bytes = 4;
+  uint64 unclassified_bytes = 5;
+  // 连接数；核心事件不可用时为 0，UI 据此隐藏该项（spec.md「流量与 Dashboard」）。
+  uint64 active_connections = 6;
+  google.protobuf.Timestamp as_of = 7;
+  bool active_connections_known = 8;
+  bool partial = 9;
+  string collection_state = 10;
+}
+
+message ProductLog {
+  google.protobuf.Timestamp at = 1;
+  LogLevel level = 2;
+  // 面向用户的可读文案；原始 sing-box 日志不进这里（§4）。
+  string message = 3;
+  // 关联的操作与快照版本（spec.md 要求关键操作可关联）。
+  string operation_id = 4;
+  uint64 snapshot_version = 5;
+  ConnectionEvent connection = 6;
+  string event_id = 7;
+  string event_kind = 8;
+  string source = 9;
+  string connection_key = 10;
+  string application_id = 11;
+  string application = 12;
+  string domain = 13;
+  string ip = 14;
+  string route_id = 15;
+  string route_name = 16;
+  string direction = 17;
+  string result = 18;
+  FlowRecord flow = 19;
+  string record_id = 20; string problem_id = 21;
+  uint64 occurrences = 22; uint64 related_connections = 23;
+  google.protobuf.Timestamp first_at = 24; google.protobuf.Timestamp last_at = 25;
+  string category = 26; string operation_from=27;string operation_to=28;string system_category=29; SystemEvent system_event=30;string category_name=31;string category_symbol=32;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  LOG_LEVEL_INFO = 1;
+  LOG_LEVEL_WARNING = 2;
+  LOG_LEVEL_ERROR = 3;
+}
+
+// 产品错误：UI 只见 ProductError，不见 daemon 内部错误（code-standards.md §一）。
+// code 的枚举清单随 ticket 增长维护，MVP 先以字符串承载。
+message SetProxyEnabledRequest {
+  bool enabled = 1;
+}
+
+message SelectRouteRequest {
+  string route_id = 1;
+  uint64 expected_route_revision = 2;
+}
+
+message ImportRoutesRequest {
+  // 分享链接或订阅 URL。凭据只在此处经 socket 传一次，之后由 daemon 保管。
+  string source = 1;
+  bool is_subscription = 2;
+}
+
+message ImportResult {
+  repeated NodeProfile imported = 1;
+  repeated ImportFailure failures = 2;
+}
+
+message ImportFailure {
+  // 出错的那一行/那一条的脱敏标识（不写回凭据）。
+  string source_label = 1;
+  ProductError error = 2;
+}
+
+message RefreshSubscriptionRequest {
+  string subscription_id = 1;
+  // 用户界面看到的来源版本；不一致时拒绝，避免旧界面覆盖新来源。
+  uint64 expected_source_revision = 2;
+  // Empty uses system networking without an HTTP proxy. Otherwise freeze this
+  // saved route for an isolated no-TUN fetch; never change the running route.
+  string route_id = 3;
+  uint64 expected_route_revision = 4;
+  uint64 expected_config_revision = 5;
+  // New address is committed only after successful download and parsing.
+  string replacement_url = 6;
+  optional string user_agent = 7;
+  bool use_last_channel = 8;
+}
+
+// RestoreSubscriptionRoute 恢复一条被用户隐藏的订阅线路，不隐式选择或连接。
+message DeleteSubscriptionRequest {
+ string subscription_id = 1;
+ uint64 expected_source_revision = 2;
+ uint64 expected_catalog_revision = 3;
+ string client_id = 4;
+ string request_id = 5;
+}
+message RestoreSubscriptionRouteRequest { string route_id = 1; uint64 expected_revision = 2; }
+
+// CancelOperation 取消仍在进行的后台操作（订阅刷新或线路测试）。
+message CancelOperationRequest { string operation_id = 1; }
+
+// TestRoute 对一条已保存线路做一次有界实测：无 TUN、不选路、不改选定与当前线路。
+message TestRouteRequest {
+  string route_id = 1;
+  uint64 expected_route_revision = 2;
+  // Independent kinds: latency (20s), exit (IP/region), download.
+  string kind = 3;
+  // Frozen visible scope; empty preserves the single-route contract.
+  repeated RouteTestTarget targets = 4;
+ string client_id = 5;
+ string request_id = 6;
+}
+
+message RouteTestTarget {
+  string route_id = 1;
+  uint64 expected_route_revision = 2;
+  uint64 expected_config_revision = 3;
+}
+
+// TLS values never default unknown modes to skipping verification.
+enum TLSMode { TLS_MODE_UNSPECIFIED = 0; TLS_MODE_STRICT = 1; TLS_MODE_SKIP_VERIFY = 2; }
+message RouteTLSPolicy {
+ TLSMode mode = 1;
+ bool user_override = 2;
+ bool needs_confirmation = 3;
+ string identity_token = 4;
+ uint64 policy_revision = 5;
+}
+message ConfirmRouteTLSBatchRequest {
+ repeated UpdateRouteTLSRequest routes = 1;
+ string client_id = 2;
+ string request_id = 3;
+}
+message UpdateRouteTLSRequest {
+ string route_id = 1;
+ string identity_token = 2;
+ uint64 expected_revision = 3;
+ TLSMode mode = 4;
+ bool confirm_skip = 5;
+}
+message ActiveTLS {
+ string route_id = 1;
+ string identity_token = 2;
+ TLSMode mode = 3;
+ bool verified = 4;
+ bool skipped = 5;
+}
+
+message PreviewRoutesRequest {
+  string source = 1;
+  bool is_subscription = 2;
+  // 用户为订阅来源输入的名称；空则由 daemon 按 hostname 生成。
+  string source_name = 3;
+  string client_id = 4;
+}
+message RoutesPreview {
+  string token = 1;
+  uint64 catalog_revision = 2;
+  repeated RoutePreviewItem items = 3;
+  // 订阅预览的来源标识：脱敏 hostname 与用户来源名，绝不含 URL。
+  string source_host = 4;
+  string source_name = 5;
+  // 预览对应的已保存来源；首次导入为空。
+  string subscription_id = 6;
+}
+message RoutePreviewItem {
+  string item_id = 1;
+  NodeProfile route = 2;
+  string error_code = 3;
+  bool duplicate = 4;
+  uint32 line = 5;
+  // 该节点在当前来源中已被用户隐藏：默认不勾选，可到已隐藏列表恢复。
+  bool hidden = 6;
+  string display_name = 7;
+  string protocol_name = 8;
+}
+message CancelRoutesPreviewRequest { string token = 1; string client_id = 2; }
+message ConfirmImportRoutesRequest { string token = 1; repeated string item_ids = 2; uint64 expected_catalog_revision = 3; string client_id = 4; string request_id = 5; bool automatic = 6; }
+message RouteEditRequest {
+ string route_id = 1; uint64 expected_revision = 2;
+ string name = 3; string protocol = 4; string server = 5; uint32 port = 6;
+ string transport = 7; string security = 8; string server_name = 9;
+ string uuid = 10; string password = 11; bool replace_credentials = 12;
+ string ws_host = 13; string ws_path = 14; repeated string alpn = 15;
+ string fingerprint = 16; string reality_public_key = 17; string reality_short_id = 18;
+ string flow = 19; uint32 alter_id = 20; string vmess_security = 21;
+ string obfs_password = 22; bool tls_skip_suggested = 23;
+ string document_json = 24; string request_id = 25; string client_id = 26;
+
+}
+message DeleteRouteRequest { string route_id = 1; uint64 expected_revision = 2; }
+message GetRouteEditorRequest { string route_id = 1; }
+message RouteEditor { RouteEditRequest fields = 1; bool credentials_set = 2; string document_json = 3; uint64 config_revision = 4; }
+
+// Ordered custom groups; subscription groups are derived from sources and cannot be written.
+message RouteGroup {
+  string id = 1;
+  string name = 2;
+  repeated string member_ids = 3;
+}
+message SaveRouteGroupsRequest {
+  repeated RouteGroup groups = 1;
+  uint64 expected_catalog_revision = 2;
+  string client_id = 3;
+  string request_id = 4;
+}
+
+// Local, bounded connection facts; no URL path/query, payload or credentials.
+message ConnectionEvent {
+  string session = 1;
+  uint64 generation = 2;
+  string route_id = 3;
+  uint64 config_revision = 4;
+  string connection_id = 5;
+  string target = 6;
+  string stage = 7;
+  string code = 8;
+  uint64 duration_ms = 9;
+  string inbound = 10;
+}
+message SubscriptionAttempt {
+  google.protobuf.Timestamp at = 1;
+  string channel = 2;
+  string phase = 3;
+  uint32 http_status = 4;
+  uint64 queue_ms = 5;
+  uint64 dns_ms = 6;
+  uint64 connect_ms = 7;
+  uint64 tls_ms = 8;
+  uint64 headers_ms = 9;
+  uint64 body_ms = 10;
+  uint64 total_ms = 11;
+  string error_code = 12;
+}
+message CFSample {
+  double value = 1;
+  google.protobuf.Timestamp measured_at = 2;
+  google.protobuf.Timestamp attempted_at = 3;
+  string error_code = 4;
+  uint32 successful_rounds = 5;
+}
+message CFIPLocation {
+ string country_code=1; string country=2; string region=3; string city=4;
+ string source=5; google.protobuf.Timestamp at=6; string error_code=7;
+}
+message CFRecord {
+  string ip = 1;
+  string prefix = 2;
+  string network = 3;
+  CFSample tcp = 4;
+  CFSample download = 5;
+  CFSample validation = 6;
+  bool reachable = 7;
+  bool proof_current = 8;
+  string issue = 9;
+  bool validation_matches = 10;
+  CFIPLocation location = 11;
+}
+message CFNetwork {
+  string id = 1;
+  uint32 count = 2;
+  google.protobuf.Timestamp at = 3;
+}
+message CFWorkspaceRequest {
+  string network = 1;
+  string route_id = 2;
+  uint64 expected_revision = 3;
+  string document_json = 4;
+}
+message CFWorkspace {
+  string network = 1;
+  repeated CFRecord records = 2;
+  repeated CFNetwork networks = 3;
+  string operation_id = 4;
+  string phase = 5;
+  uint32 completed = 6;
+  uint32 total = 7;
+  bool monitoring = 8;
+  ProductError error = 9;
+  string current_network = 10;
+  uint32 pending_checks = 11;
+  google.protobuf.Timestamp oldest_check = 12;
+}
+message CFTaskRequest {
+  // scan / download / check / locate; monitor_start/stop are no longer supported.
+  // latency_one / download_one / measure_one require exactly one IP.
+  string action = 1;
+  repeated string ips = 2;
+}
+
+// App lifetime sequence; stale sleep/wake events cannot override later intent.
+message PowerEventRequest { bool sleeping = 1; uint64 sequence = 2; }
+
+message ChainRoute { string front_id=1; string final_id=2; }
+message SaveChainRouteRequest {
+ string id=1; string name=2; string front_id=3; string final_id=4;
+ uint64 expected_revision=5; uint64 front_revision=6; uint64 final_revision=7;
+ string client_id=8; string request_id=9;
+}
+
+message RouteHistoryRequest {
+ string route_id=1; string metric=2; string cursor=3; uint32 limit=4; string window=7;
+ google.protobuf.Timestamp from=5; google.protobuf.Timestamp until=6;
+}
+message RouteHistorySample {
+ string metric=1; google.protobuf.Timestamp at=2; uint64 config_revision=3;
+ double value=4; bool success=5; ProductError error=6; string exit_ip=7; string network=8; string method=9; ExitLocation exit_location=10;
+}
+message RouteHistoryResponse { repeated RouteHistorySample items=1; string next_cursor=2; bool partial=3; }
+message RouteUsageResponse {
+ repeated RouteUsageBucket items=1; string next_cursor=2; bool partial=3;
+ uint64 today_upload=4; uint64 today_download=5; uint64 connections=6; uint64 window_connections=15;
+ uint64 upload=10;uint64 download=11;google.protobuf.Timestamp from=12;google.protobuf.Timestamp until=13; google.protobuf.Timestamp coverage_start=14;
+ google.protobuf.Timestamp sampled_at=7; ProductError error=8; string basis=9;
+}
+
+
+// Exit location estimate.
+
+
+// Private history; opaque frozen cursors.
+
+message EventCategory {string key=1;string name=2;string symbol=3;}
+message EventField {string label=1;string value=2;string before=3;string after=4;}
+message EventSection {string kind=1;string title=2;repeated EventField fields=3;}
+message SystemEvent {string type=1;string name=2;EventCategory category=3;string result=4;string error_code=5;google.protobuf.Timestamp started_at=6;repeated EventSection sections=7;}
+message LogQuery {
+ string dimension = 1; string object_id = 2; string search = 3;
+ string level = 4; string route_id = 5;
+ google.protobuf.Timestamp from = 6; google.protobuf.Timestamp until = 7;
+ string read_token = 8; string cursor = 9; uint32 limit = 10;
+ string view = 11; string problem_id = 12; string connection_key = 13;
+ bool include_dns = 14;
+ string quick=15; LogCriteria criteria=16; string scope=17;
+}
+message LogCriteria {
+ repeated string kinds=1; repeated string levels=2; string application=3; string domain=4; string domain_mode=5;
+ string target_ip=6; repeated string transports=7; uint32 port=8; repeated string directions=9; string route=10; string rule_package=11;
+ uint64 min_latency_ms=12; string dns_answer_ip=13;
+}
+message LogOptions {repeated string applications=1;repeated string routes=2;repeated string rule_packages=3;}
+message LogPage {
+ repeated ProductLog items = 1; string next_cursor = 2; string read_token = 3;
+ HistoryState history = 4; uint64 total = 5; uint64 head_sequence=6; uint64 problem_groups=7; repeated LogRecord records=8; google.protobuf.Timestamp as_of=9; LogOptions options=10;
+}
+message LogObject { string id = 1; string name = 2; uint64 count = 3; string symbol=4; }
+message LogObjectPage {
+ repeated LogObject items = 1; string next_cursor = 2; string read_token = 3;
+ HistoryState history = 4; uint64 total_events = 5; uint64 unknown_events = 6; LogObject selected_object=7;
+}
+message LogDetailRequest { string event_id = 1; LogQuery query = 2; string record_id = 3; }
+message LogDetail {
+ ProductLog event = 1; FlowRecord flow = 2;
+ repeated string raw = 3; bool truncated = 4; string raw_omitted = 5;
+ repeated ProductLog timeline = 6; uint64 total_events = 7; LogRecord record=8;
+}
+
+
+
+
+
+
+
+
+
+
+
+message ClearLogsRequest { string operation_id = 1; google.protobuf.Timestamp requested_at = 2; }
+
+// Current mixed-egress proof; never evidence of global TUN/DNS/IPv6 protection.
+message CurrentPathCheck {
+ string check_id=1; string trigger_operation_id=2; string route_id=3;
+ uint64 config_revision=4; string core_session=5; uint64 runtime_version=6;
+ string network_epoch=7; string state=8; string cause=9;
+ google.protobuf.Timestamp started_at=10; google.protobuf.Timestamp completed_at=11;
+ string evidence_scope=12; repeated string command_operation_ids=13;
+}
+message CurrentPathRecheckRequest { string request_id=1; }
+message HistoryDelta {
+ HistoryState history=1; TrafficSnapshot traffic=2;
+ repeated ProductLog recent_logs=3; bool replace_recent_logs=4;
+}
+message LogUpdateRequest {
+ LogQuery filter=1; uint64 after_sequence=2;
+ uint64 deletion_generation=3; string journal_generation=4;
+ bool count_only=5; uint32 limit=6;
+}
+message LogUpdatePage {
+ repeated ProductLog items=1; uint64 count=2; bool exact=3;
+ uint64 high_water=4; uint64 next_sequence=5; bool has_more=6;
+ bool reset_required=7; HistoryState history=8;
+ google.protobuf.Timestamp as_of=9;
+}
+
+// A frozen connection summary, distinct from the original diagnostic events.
+message ConnectionMetrics {
+ uint64 duration_ms=1; string duration_state=2;
+ uint64 upload=3; uint64 download=4; string bytes_state=5;
+ google.protobuf.Timestamp bytes_from=6; google.protobuf.Timestamp as_of=7;
+ string reason=8;
+}
+message LogRecord {
+ string kind=1; string record_id=2; string event_id=3;
+ LogLevel level=4; string title=5; string source=6;
+ FlowRecord flow=7; ConnectionMetrics metrics=8;
+ google.protobuf.Timestamp first_at=9; google.protobuf.Timestamp last_at=10;
+ uint64 event_count=11; google.protobuf.Timestamp as_of=12;string operation_from=13;string operation_to=14;string system_category=15; SystemEvent system_event=16; string category_name=17; string category_symbol=18;
+}
+
+// Anonymous same-origin favicon only. fetch=false never initiates network I/O.
+message ObjectIconRequest { string host = 1; bool fetch = 2; uint64 log_deletion_generation = 3; }
+message ObjectIconResult {
+ string host = 1; bytes png = 2; string state = 3; string reason = 4;
+ google.protobuf.Timestamp expires_at = 5; uint64 log_deletion_generation = 6;
+}
+
+// Read-only sanitized local configured policy while direct, or committed rules while running.
+message RoutingRule { string id=1; uint32 order=2; string match=3; string action=4; string source=5; }
+message RoutingRulesSnapshot {string state=1; repeated RoutingRule rules=2; google.protobuf.Timestamp at=3;}
+
+// Rule management is local and available with proxy OFF. Commands return the committed snapshot.
+message RoutingEntry { string id=1; string method=2; string target=3; string destination=4; bool enabled=5; }
+// kind: priority, local, subscription, geo, adblock (fixed built-in, block only).
+message RoutingPackage {
+ string id=1; string name=2; string kind=3; string destination=4; bool enabled=5;
+ repeated RoutingEntry rules=6; string source=7; string version=8; string previous_version=9;
+ bool automatic=10; string update_message=11;int64 updated_unix=12;
+}
+message RoutingApplication {string id=1;string name=2;repeated string domains=3;}
+message RoutingLibrarySnapshot {
+ uint64 revision=1;repeated RoutingPackage packages=2;repeated RoutingApplication applications=3;
+ repeated NodeProfile routes=4;string state=5;string message=6;
+}
+message RoutingMutationRequest {
+ uint64 expected_revision=1;string action=2;string package_id=3;string rule_id=4;
+ RoutingPackage package=5;RoutingEntry rule=6;sint32 delta=7;bool enabled=8;string destination=9;
+ repeated RoutingEntry rules=10;
+}
+
+message GeoRulesQuery {string search=1;uint32 offset=2;uint32 limit=3;}
+message GeoRulesPage {repeated RoutingEntry rules=1;uint32 total=2;uint32 next_offset=3;string version=4;int64 updated_unix=5;}

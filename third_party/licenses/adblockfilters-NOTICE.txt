@@ -1,0 +1,8 @@
+AdBlock DNS Filters (217heidai/adblockfilters)
+Source: https://github.com/217heidai/adblockfilters
+Asset: https://github.com/217heidai/adblockfilters/releases/download/rule/adblocksingboxlite.srs
+Retrieved: 2026-11-06; upstream release asset updated 2026-11-06T07:22:32Z.
+SHA-256: 797806a488e601699ebd75930c56db77881ab9de28023a2dc84ed9794cdbf48d
+Bundled unmodified. Project license: GNU GPL v3 (see GPL-3.0.txt).
+The upstream aggregates multiple community lists; their source and attribution
+are documented in its README: https://github.com/217heidai/adblockfilters#上游规则源

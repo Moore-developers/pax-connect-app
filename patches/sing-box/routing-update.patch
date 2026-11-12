@@ -1,0 +1,171 @@
+--- a/route/router.go
++++ b/route/router.go
+@@ -2,8 +2,10 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"os"
+ 	"runtime"
++	"sync"
+ 	"time"
+ 
+ 	"github.com/sagernet/sing-box/adapter"
+@@ -25,6 +27,8 @@
+ var _ adapter.Router = (*Router)(nil)
+ 
+ type Router struct {
++	paxRulesMu        sync.RWMutex
++	paxStarted        bool
+ 	ctx               context.Context
+ 	logger            log.ContextLogger
+ 	inbound           adapter.InboundManager
+@@ -71,6 +75,10 @@
+ }
+ 
+ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) error {
++	names := paxobs.RuleNames(r.ctx)
++	if len(names) > 0 && len(names) != len(rules) {
++		return E.New("rule labels mismatch")
++	}
+ 	for i, options := range rules {
+ 		err := R.ValidateNoNestedRuleActions(options)
+ 		if err != nil {
+@@ -79,6 +87,9 @@
+ 		rule, err := R.NewRule(r.ctx, r.logger, options, false)
+ 		if err != nil {
+ 			return E.Cause(err, "parse rule[", i, "]")
++		}
++		if i < len(names) {
++			rule = paxNamedRule{Rule: rule, label: names[i]}
+ 		}
+ 		r.rules = append(r.rules, rule)
+ 	}
+@@ -205,8 +216,18 @@
+ 			r.processCache = processCache
+ 		}
+ 	case adapter.StartStatePostStart:
++		scope.Add(func() error {
++			r.paxRulesMu.Lock()
++			defer r.paxRulesMu.Unlock()
++			r.paxStarted = false
++			var failures []error
++			for _, rule := range r.rules {
++				failures = append(failures, rule.Close())
++			}
++			r.rules = nil
++			return E.Errors(failures...)
++		})
+ 		for i, rule := range r.rules {
+-			scope.Add(rule.Close)
+ 			monitor.Start("initialize rule[", i, "]")
+ 			err := rule.Start()
+ 			monitor.Finish()
+@@ -219,6 +240,9 @@
+ 		}
+ 		return nil
+ 	case adapter.StartStateStarted:
++		r.paxRulesMu.Lock()
++		r.paxStarted = true
++		r.paxRulesMu.Unlock()
+ 		for _, ruleSet := range r.ruleSets {
+ 			ruleSet.Cleanup()
+ 		}
+@@ -233,7 +257,9 @@
+ }
+ 
+ func (r *Router) Rules() []adapter.Rule {
+-	return r.rules
++	r.paxRulesMu.RLock()
++	defer r.paxRulesMu.RUnlock()
++	return append([]adapter.Rule(nil), r.rules...)
+ }
+ 
+ func (r *Router) AppendTracker(tracker adapter.ConnectionTracker) {
+@@ -262,3 +288,58 @@
+ 		r.processSearcher.ResetCache()
+ 	}
+ }
++
++// ReplaceRules swaps a validated, started rule table for new connections only.
++// Existing routed sockets retain their outbound; no instance or TUN is restarted.
++func (r *Router) ReplaceRules(options []option.Rule) error { return r.ReplaceNamedRules(options, nil) }
++func (r *Router) ReplaceNamedRules(options []option.Rule, names []string) error {
++	if len(names) > 0 && len(names) != len(options) {
++		return E.New("rule labels mismatch")
++	}
++	candidate := make([]adapter.Rule, 0, len(options))
++	cleanup := func() {
++		for _, rule := range candidate {
++			_ = rule.Close()
++		}
++	}
++	for i, value := range options {
++		if err := R.ValidateNoNestedRuleActions(value); err != nil {
++			cleanup()
++			return err
++		}
++		rule, err := R.NewRule(r.ctx, r.logger, value, false)
++		if err != nil {
++			cleanup()
++			return err
++		}
++		if i < len(names) {
++			rule = paxNamedRule{Rule: rule, label: names[i]}
++		}
++		candidate = append(candidate, rule)
++	}
++	r.paxRulesMu.Lock()
++	defer r.paxRulesMu.Unlock()
++	if !r.paxStarted {
++		cleanup()
++		return E.New("router not started")
++	}
++	for _, rule := range candidate {
++		if err := rule.Start(); err != nil {
++			cleanup()
++			return err
++		}
++	}
++	previous := r.rules
++	r.rules = candidate
++	for _, rule := range previous {
++		_ = rule.Close()
++	}
++	return nil
++}
++
++type paxNamedRule struct {
++	adapter.Rule
++	label string
++}
++
++func (r paxNamedRule) String() string { return r.label }
+--- a/route/route.go
++++ b/route/route.go
+@@ -343,6 +343,8 @@
+ }
+ 
+ func (r *Router) PreMatch(metadata adapter.InboundContext, firstPacket []byte) adapter.PreMatchResult {
++	r.paxRulesMu.RLock()
++	defer r.paxRulesMu.RUnlock()
+ 	ctx := log.ContextWithNewID(r.ctx)
+ 	metadata.PreMatch = true
+ 	continueResult := adapter.PreMatchResult{Action: adapter.PreMatchContinue}
+@@ -626,6 +628,8 @@
+ 	selectedRule adapter.Rule, selectedRuleIndex int,
+ 	buffers []*buf.Buffer, packetBuffers []*N.PacketBuffer, fatalErr error,
+ ) {
++	r.paxRulesMu.RLock()
++	defer r.paxRulesMu.RUnlock()
+ 	fatalErr = r.prepareMatchMetadata(ctx, metadata)
+ 	if fatalErr != nil {
+ 		return
+@@ -718,6 +722,7 @@
+ 		if actionType == C.RuleActionTypeRoute ||
+ 			actionType == C.RuleActionTypeReject ||
+ 			actionType == C.RuleActionTypeHijackDNS {
++			paxobs.Emit(ctx, paxobs.Event{Stage: "matched", Rule: currentRule.String(), Domain: metadata.Domain})
+ 			selectedRule = currentRule
+ 			selectedRuleIndex = currentRuleIndex
+ 			break match

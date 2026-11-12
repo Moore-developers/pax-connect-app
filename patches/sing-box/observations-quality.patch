@@ -1,0 +1,257 @@
+--- a/route/route.go
++++ b/route/route.go
+@@ -71,6 +71,7 @@
+ }
+ 
+ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) (retErr error) {
++	metadata.Network = N.NetworkTCP
+ 	paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: metadata.Destination.Fqdn, IP: metadata.Destination.Addr.String(), Port: metadata.Destination.Port})
+ 	defer func() {
+ 		if retErr != nil {
+@@ -78,7 +79,7 @@
+ 			if R.IsRejected(retErr) {
+ 				stage = "rejected"
+ 			}
+-			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error"})
++			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error", Code: paxobs.FailureCode(retErr)})
+ 			paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
+ 		}
+ 	}()
+@@ -228,6 +229,7 @@
+ }
+ 
+ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) (retErr error) {
++	metadata.Network = N.NetworkUDP
+ 	paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: metadata.Destination.Fqdn, IP: metadata.Destination.Addr.String(), Port: metadata.Destination.Port})
+ 	defer func() {
+ 		if retErr != nil {
+@@ -235,7 +237,7 @@
+ 			if R.IsRejected(retErr) {
+ 				stage = "rejected"
+ 			}
+-			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error"})
++			paxobs.Emit(ctx, paxobs.Event{Stage: stage, Raw: retErr.Error(), Level: "error", Code: paxobs.FailureCode(retErr)})
+ 			paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
+ 		}
+ 	}()
+@@ -720,7 +722,7 @@
+ 		if actionType == C.RuleActionTypeRoute ||
+ 			actionType == C.RuleActionTypeReject ||
+ 			actionType == C.RuleActionTypeHijackDNS {
+-			paxobs.Emit(ctx, paxobs.Event{Stage: "matched", Rule: currentRule.String(), Domain: metadata.Domain})
++			paxobs.Emit(ctx, paxobs.Event{Stage: "matched", Rule: currentRule.String(), Domain: metadata.Domain, Network: metadata.Network, Process: processPath(metadata.ProcessInfo)})
+ 			selectedRule = currentRule
+ 			selectedRuleIndex = currentRuleIndex
+ 			break match
+@@ -953,3 +955,10 @@
+ 	}
+ 	return nil
+ }
++
++func processPath(info *adapter.ConnectionOwner) string {
++	if info != nil {
++		return info.ProcessPath
++	}
++	return ""
++}
+--- a/route/conn.go
++++ b/route/conn.go
+@@ -108,6 +108,13 @@
+ 		remoteConn, err = this.DialContext(ctx, N.NetworkTCP, metadata.Destination)
+ 	}
+ 	paxobs.DialResult(ctx, err, false)
++	if err == nil {
++		if out, ok := this.(adapter.Outbound); ok && out.Type() == "direct" {
++			if ip := M.AddrFromNet(remoteConn.RemoteAddr()); ip.IsValid() {
++				paxobs.Emit(ctx, paxobs.Event{Stage: "connected", IP: ip.String(), IPSource: "connected"})
++			}
++		}
++	}
+ 	if err != nil {
+ 		var remoteString string
+ 		if len(metadata.DestinationAddresses) > 0 {
+@@ -164,6 +171,7 @@
+ 
+ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dialer, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+ 	ctx = adapter.WithContext(ctx, &metadata)
++	paxobs.DialStarted(ctx)
+ 	var (
+ 		remotePacketConn   net.PacketConn
+ 		remoteConn         net.Conn
+@@ -188,6 +196,7 @@
+ 			remoteConn, err = this.DialContext(ctx, N.NetworkUDP, metadata.Destination)
+ 		}
+ 		if err != nil {
++			paxobs.DialResult(ctx, err, false)
+ 			var remoteString string
+ 			if len(metadata.DestinationAddresses) > 0 {
+ 				remoteString = "[" + strings.Join(common.Map(metadata.DestinationAddresses, netip.Addr.String), ",") + "]"
+@@ -217,6 +226,7 @@
+ 			remotePacketConn, err = this.ListenPacket(ctx, metadata.Destination)
+ 		}
+ 		if err != nil {
++			paxobs.DialResult(ctx, err, false)
+ 			var dialerString string
+ 			if outbound, isOutbound := this.(adapter.Outbound); isOutbound {
+ 				dialerString = " using outbound/" + outbound.Type() + "[" + outbound.Tag() + "]"
+@@ -225,6 +235,15 @@
+ 			N.CloseOnHandshakeFailure(conn, onClose, err)
+ 			m.logger.ErrorContext(ctx, err)
+ 			return
++		}
++	}
++	if out, ok := this.(adapter.Outbound); ok && out.Type() == "direct" {
++		ip := destinationAddress
++		if !ip.IsValid() && metadata.Destination.IsIP() {
++			ip = metadata.Destination.Addr
++		}
++		if ip.IsValid() {
++			paxobs.Emit(ctx, paxobs.Event{Stage: "connected", IP: ip.String(), IPSource: "connected"})
+ 		}
+ 	}
+ 	err = N.ReportPacketConnHandshakeSuccess(conn, remotePacketConn)
+--- a/route/process_cache.go
++++ b/route/process_cache.go
+@@ -2,6 +2,8 @@
+ 
+ import (
+ 	"context"
++	"errors"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net/netip"
+ 	"slices"
+ 	"strings"
+@@ -36,7 +38,19 @@
+ }
+ 
+ func (r *Router) searchProcessInfo(ctx context.Context, metadata *adapter.InboundContext) {
+-	if r.processSearcher == nil || metadata.ProcessInfo != nil || !r.isLocalSource(metadata.Source.Addr) {
++	if metadata.ProcessInfo != nil {
++		paxobs.Emit(ctx, paxobs.Event{Stage: "identity", Process: metadata.ProcessInfo.ProcessPath, ProcessStatus: "path_unavailable"})
++		if metadata.ProcessInfo.ProcessPath != "" {
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", Process: metadata.ProcessInfo.ProcessPath, ProcessStatus: "identified"})
++		}
++		return
++	}
++	if r.processSearcher == nil {
++		paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "disabled"})
++		return
++	}
++	if !r.isLocalSource(metadata.Source.Addr) {
++		paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "non_local"})
+ 		return
+ 	}
+ 	var originDestination netip.AddrPort
+@@ -47,10 +61,20 @@
+ 	}
+ 	processInfo, err := r.findProcessInfoCached(ctx, metadata.Network, metadata.Source.AddrPort(), originDestination)
+ 	if err != nil {
++		status := "lookup_failed"
++		if errors.Is(err, process.ErrNotFound) {
++			status = "not_found"
++		}
++		paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: status})
+ 		r.logger.InfoContext(ctx, "failed to search process: ", err)
+ 		return
+ 	}
+ 	metadata.ProcessInfo = processInfo
++	status := "path_unavailable"
++	if processInfo.ProcessPath != "" {
++		status = "identified"
++	}
++	paxobs.Emit(ctx, paxobs.Event{Stage: "identity", Process: processInfo.ProcessPath, ProcessStatus: status})
+ 	if processInfo.ProcessPath != "" {
+ 		if processInfo.UserName != "" {
+ 			r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, ", user: ", processInfo.UserName)
+--- a/route/dns.go
++++ b/route/dns.go
+@@ -2,6 +2,7 @@
+ 
+ import (
+ 	"context"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 	"time"
+ 
+@@ -19,6 +20,7 @@
+ 
+ func (r *Router) hijackDNSStream(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+ 	r.searchProcessInfo(ctx, &metadata)
++	paxobs.Emit(ctx, paxobs.Event{Stage: "dns_control"})
+ 	metadata.Destination = M.Socksaddr{}
+ 	err := N.ReportConnHandshakeSuccess(conn, conn)
+ 	if err != nil {
+@@ -39,6 +41,7 @@
+ 
+ func (r *Router) hijackDNSPacket(ctx context.Context, conn N.PacketConn, packetBuffers []*N.PacketBuffer, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+ 	r.searchProcessInfo(ctx, &metadata)
++	paxobs.Emit(ctx, paxobs.Event{Stage: "dns_control"})
+ 	err := N.ReportPacketConnHandshakeSuccess(conn, nil)
+ 	if err != nil {
+ 		N.ReleaseMultiPacketBuffer(packetBuffers)
+@@ -63,7 +66,9 @@
+ 	r.searchProcessInfo(ctx, &metadata)
+ 	destination := metadata.Destination
+ 	metadata.Destination = M.Socksaddr{}
+-	r.dns.ExchangeAsync(adapter.WithContext(ctx, &metadata), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, exchangeErr error) {
++	queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadata.Network, metadata.InboundType, processPath(metadata.ProcessInfo))
++	r.dns.ExchangeAsync(adapter.WithContext(queryCtx, &metadata), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, exchangeErr error) {
++		finish(response, exchangeErr)
+ 		if exchangeErr == nil {
+ 			exchangeErr = r.writeDNSPacketResponse(&message, response, writer, destination)
+ 		}
+--- a/protocol/dns/handle.go
++++ b/protocol/dns/handle.go
+@@ -3,6 +3,7 @@
+ import (
+ 	"context"
+ 	"encoding/binary"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 
+ 	"github.com/sagernet/sing-box/adapter"
+@@ -40,7 +41,13 @@
+ 		return err
+ 	}
+ 	metadataInQuery := metadata
+-	router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++	process := ""
++	if metadataInQuery.ProcessInfo != nil {
++		process = metadataInQuery.ProcessInfo.ProcessPath
++	}
++	queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadataInQuery.Network, metadataInQuery.InboundType, process)
++	router.ExchangeAsync(adapter.WithContext(queryCtx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++		finish(response, err)
+ 		if err != nil {
+ 			conn.Close()
+ 			return
+@@ -127,7 +134,13 @@
+ 				timeout.Update()
+ 			}
+ 			metadataInQuery := metadata
+-			router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++			process := ""
++			if metadataInQuery.ProcessInfo != nil {
++				process = metadataInQuery.ProcessInfo.ProcessPath
++			}
++			queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadataInQuery.Network, metadataInQuery.InboundType, process)
++			router.ExchangeAsync(adapter.WithContext(queryCtx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++				finish(response, err)
+ 				if err != nil {
+ 					cancel(err)
+ 					return
+@@ -197,7 +210,13 @@
+ 				timeout.Update()
+ 			}
+ 			metadataInQuery := metadata
+-			router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++			process := ""
++			if metadataInQuery.ProcessInfo != nil {
++				process = metadataInQuery.ProcessInfo.ProcessPath
++			}
++			queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadataInQuery.Network, metadataInQuery.InboundType, process)
++			router.ExchangeAsync(adapter.WithContext(queryCtx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++				finish(response, err)
+ 				if err != nil {
+ 					cancel(err)
+ 					return

@@ -1,0 +1,23 @@
+syntax = "proto3";
+package pax.v1;
+import "google/protobuf/timestamp.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+message ExitLocation {
+ string ip=1; string country_code=2; string country=3; string region=4; string city=5;
+ string isp=6; string asn=7; string source=8; string geo_source=9;
+ google.protobuf.Timestamp at=10; google.protobuf.Timestamp geo_at=11;
+ string geo_error=12; string network=13; uint64 config_revision=14;
+}
+
+message RouteExitSummary {
+  google.protobuf.Timestamp at = 1;
+  bool success = 2;
+  uint64 tested_config_revision = 3;
+  string error_code = 4;
+  string ip = 5;
+  ExitLocation location = 6;
+  ExitLocation last_location = 7;
+  // 与 ProductError.params 同义；ws 握手失败时放 HTTP 状态码等参数。
+  repeated string error_params = 8;
+}

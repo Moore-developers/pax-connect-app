@@ -1,0 +1,5 @@
+This application uses derived GeoLite2 data created by MaxMind (https://www.maxmind.com/).
+Source: Dreamacro/maxmind-geoip -> SagerNet/sing-geoip rule-set commit 7fe82a879ad2666526730c195b55a6d8d9147908.
+Fetched for local development on 2026-09-30; SHA-256 and details in rulesets/README.md.
+GeoLite2 data terms: https://www.maxmind.com/en/geolite2/eula and https://dev.maxmind.com/geoip/geolite2-free-geolocation-data/.
+This attribution is not a claim that redistribution obligations have been completed. Review applicable data licensing, permitted distribution and update/retention obligations before sharing the application with others.

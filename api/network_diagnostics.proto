@@ -1,0 +1,142 @@
+syntax = "proto3";
+package pax.v1;
+import "google/protobuf/timestamp.proto";
+import "route_exit.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// Bounded, read-only measurements. Cancelling the RPC cancels all probes.
+message NetworkDiagnosticRequest {
+  string mode = 1; // full, quick, services or sources
+  string operation_id = 2;
+  bool read_progress = 3; // Read only; never starts probes or acquires measurement admission.
+}
+// Ephemeral progress for the matching foreground request; settled is not success.
+message NetworkDiagnosticProgress {
+  string operation_id = 1;
+  uint32 probes_completed = 2; uint32 probes_total = 3;
+  string exit_state = 4; string sources_state = 5; // pending, running, complete, failed, skipped
+  bool finished = 6;
+}
+message NetworkDiagnosticSource {
+  string name = 1; string country = 2; string city = 3; string asn = 4;
+  string org = 5; string provider_date = 6;
+  string provider_id = 7; // Actual acquisition channel; empty on legacy reports.
+}
+message NetworkDiagnosticFact {
+  string group = 1; string label = 2; string value = 3; string source = 4;
+  string state = 5; // information, hit, clear, unknown
+  string provider_id = 6;
+}
+// One bounded exact-IP request, including skipped/failed attempts and fallback provenance.
+message NetworkDiagnosticProvider {
+  string id = 1; string query_ip = 2; string family = 3;
+  repeated string capabilities = 4;
+  string state = 5; // observed, partial, failed, not_indexed, unsupported, not_configured
+  string error_code = 6; uint32 http_status = 7; uint64 duration_ms = 8;
+  google.protobuf.Timestamp at = 9;
+  repeated string fallback_for = 10;
+  string fallback_reason = 11;
+}
+message NetworkDiagnosticProbe {
+  string target = 1; uint32 attempt = 2; uint32 http_status = 3;
+  uint64 duration_ms = 4; string error_code = 5; bool expected_response = 6;
+  google.protobuf.Timestamp at = 7;
+  string state = 8; // responded, failed, not_started, cancelled
+  string stage = 9; // dns, tls, connection, response, budget
+  string redirect_host = 10; // host only; never credentials or query
+}
+message NetworkDiagnosticReport {
+  string target_route_id = 1; string target_route_name = 2;
+  string running_route_id = 3; uint64 config_revision = 4;
+  string network = 5; google.protobuf.Timestamp at = 6;
+  bool changed_during_capture = 7; string mode = 8;
+  ExitLocation exit = 9; string exit_error = 10; string provider_error = 11;
+  optional int32 score = 12; string score_model = 13; int32 score_ceiling = 14;
+  string ip_type = 15; string timezone = 16; string country = 17;
+  uint32 intel_answered = 18; uint32 intel_total = 19;
+  repeated NetworkDiagnosticSource sources = 20;
+  repeated NetworkDiagnosticFact facts = 21;
+  repeated NetworkDiagnosticProbe probes = 22;
+  string running_route_name = 23;
+  repeated NetworkDiagnosticProvider providers = 24;
+  NetworkDiagnosticProgress progress = 25;
+}
+
+// Fixed-target observations from the host or real browser. No arbitrary response text.
+message EnvironmentCheck {
+  string kind = 1; string target = 2; string state = 3;
+  string value = 4; string error_code = 5;
+  uint64 duration_ms = 6; uint32 http_status = 7;
+  google.protobuf.Timestamp at = 8;
+}
+
+// One short-lived current-environment session, independent of route selection.
+message EnvironmentDiagnosticRequest {
+  string action = 1; // start, read, cancel, sources (retry exact-IP intelligence)
+  string session_id = 2;
+}
+message EnvironmentResolver {
+  string ip = 1; string country = 2; string organization = 3;
+}
+message EnvironmentSample {
+  string ipv4 = 1; string ipv6 = 2;
+  bool complete = 3;
+  repeated EnvironmentResolver resolvers = 4;
+  string dns_error = 5;
+  repeated string languages = 6;
+  string region = 7; string timezone = 8; string browser = 9;
+  repeated string rtc_addresses = 10;
+  string rtc_state = 11; // complete, empty, unsupported, failed
+  string ip_error = 12;
+  NetworkDiagnosticReport intelligence = 13;
+  repeated EnvironmentCheck checks = 14;
+}
+message EnvironmentDiagnosticReport {
+  string session_id = 1; string browser_url = 2;
+  EnvironmentSample mac = 3; EnvironmentSample browser = 4;
+  bool complete = 5; google.protobuf.Timestamp at = 6;
+}
+
+// Default reads retained attempt evidence; recheck performs bounded read-only probes.
+message ConnectionDiagnosticRequest { bool recheck = 1; }
+message ConnectionDiagnosticStep {
+  string kind = 1;
+  string state = 2; // pass / fail / not_checked
+  string code = 3; // controlled product cause, never upstream text
+  uint64 duration_ms = 4;
+  google.protobuf.Timestamp at = 5;
+}
+message TrafficPathFinding {
+  string kind = 1;
+  string subject = 2;
+  string state = 3;
+  string value = 4;
+}
+
+message TrafficPathDiagnostics {
+  google.protobuf.Timestamp at = 1;
+  bool partial = 2;
+  bool changed_during_capture = 3;
+  repeated TrafficPathFinding findings = 4;
+  // Counts routed into the current Pax runtime, not proof of successful transfer.
+  uint64 tun_connections = 5;
+  uint64 proxy_routes = 6;
+  uint64 direct_routes = 7;
+  google.protobuf.Timestamp last_tun_connection = 8;
+  bool runtime_observation_available = 9;
+  uint64 mixed_connections = 10;
+  google.protobuf.Timestamp last_mixed_connection = 11;
+  string target_route_id = 12;
+  string target_route_name = 13;
+  string running_route_id = 14;
+  string running_route_name = 15;
+  string operation_id = 16;
+  google.protobuf.Timestamp attempt_at = 17;
+  repeated ConnectionDiagnosticStep steps = 18;
+  uint64 target_revision = 19;
+  bool rechecked = 20;
+  string attempt_route_name = 21;
+  bool attempt_matches_target = 22;
+  repeated ConnectionDiagnosticStep attempt_steps = 23;
+
+}

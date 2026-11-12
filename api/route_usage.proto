@@ -1,0 +1,7 @@
+syntax = "proto3";
+package pax.v1;
+import "google/protobuf/timestamp.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// connections is the number of connections started inside this bucket.
+message RouteUsageBucket { google.protobuf.Timestamp at=1; uint64 upload=2; uint64 download=3; bool gap=4; uint32 seconds=5; bool partial=6; uint64 connections=7; }

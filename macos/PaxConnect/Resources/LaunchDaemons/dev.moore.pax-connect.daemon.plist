@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Pax Connect 后台服务定义。
+  必须位于 App bundle 的 Contents/Library/LaunchDaemons/<Label>.plist（S0-② 实测：plistName 要带 .plist）。
+  用 BundleProgram（App 内相对路径）而不是绝对路径，App 可以整体移动位置。
+  签名条件与批准流程见 decisions/smappservice-signing.md。
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.moore.pax-connect.daemon</string>
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/pax-connectd</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<!-- T2: plist 内容指纹变化需要通过 SMAppService 重新登记，保持用户准入记录。 -->
+	<!-- daemon 崩溃后由 launchd 拉起（§19.1 稳定性：崩溃后自动拉起并对账） -->
+	<key>KeepAlive</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<!-- 日志由 daemon 自己写进 /Library/Application Support/Pax Connect/（§11），不在这里重定向 -->
+</dict>
+</plist>

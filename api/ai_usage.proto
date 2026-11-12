@@ -1,0 +1,234 @@
+syntax = "proto3";
+package pax.v1;
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// Local usage metadata only. Never contains prompt, response or credential text.
+service AIUsageService {
+ rpc ListAISessions(AISessionCatalogQuery) returns (AISessionCatalogPage);
+ rpc QueryAIUsageAnalysis(AIUsageAnalysisQuery) returns (AIUsageAnalysis);
+ rpc QueryAIUsageBuckets(AIUsageQuery) returns (AIUsageBuckets);
+ rpc SummarizeAIUsage(AIUsageSummaryQuery) returns (AIUsageBuckets);
+ rpc ListAIUsageLogs(AIUsageLogQuery) returns (AIUsageLogs);
+ // Explicit repricing of stored history at a Profile's current multipliers.
+ rpc RepriceAIUsage(RepriceAIUsageRequest) returns (RepriceAIUsageResult);
+}
+// revision 随可见查询结果变化加一；generation 在删除/重建/重新定价时加一（protocol.md §4.2）。
+message AIUsageState {
+ uint64 revision=1; bool backfilling=2; int64 skipped=3; string error_code=4; uint64 generation=5;
+ // Native directory changes are independent of usage/accounting versions.
+ uint64 catalog_revision=6; bool catalog_ready=7; string catalog_error=8;
+}
+message AIUsageQuery {
+ int64 from_ms=1; int64 to_ms=2; string granularity=3;
+ optional uint64 known_revision=4;
+ // Field 5 was visible; page visibility is now reported through PaxService.SetViewVisibility.
+ reserved 5;
+ reserved "visible";
+}
+message AIUsageSummaryQuery {}
+message AIUsageTotals {
+ int64 count=1; int64 success=2; int64 input=3; int64 read=4; int64 write=5; int64 output=6;
+ repeated int64 costs_micro=7; int64 cost_micro=8;
+ // Fields 10 and 13 were first-token aggregates; first-token is no longer collected.
+ reserved 10, 13;
+ reserved "first_sum", "first_count";
+ // Fields 15 and 17-20 were the unpriced count and estimated timing; every request is priced
+ // and timing is measured only, so neither exists any more.
+ reserved 15, 17, 18, 19, 20;
+ reserved "unpriced", "est_tps_sum", "est_elapsed_sum", "est_tps_count", "est_elapsed_count";
+ double tps_sum=9; double elapsed_sum=11;
+ int64 tps_count=12; int64 elapsed_count=14; repeated int64 billed_costs_micro=16;
+}
+message AIUsageBucket {
+ int64 at_ms=1; string cli=2; string profile_id=3; string profile_name=4; string model_id=5; AIUsageTotals totals=6;
+}
+// Latest request time per client, independent of the queried range (retained buckets
+// fall back to their hour start). Only QueryAIUsageBuckets fills it.
+message AIUsageLastUsed { string cli=1; int64 at_ms=2; }
+message AIUsageBuckets {
+ repeated AIUsageBucket buckets=1; AIUsageState state=2; bool not_modified=3;
+ repeated AIUsageLastUsed last_used=4;
+}
+message AIUsageLogQuery {
+ int64 from_ms=1; int64 to_ms=2; optional bool succeeded=3; string query=4;
+ string profile_id=5; string model_id=6; string cli=7; uint32 page=8;
+ // Inclusive bounds on the stored 1x official cost (sum of costs_micro), before totals and pagination.
+ optional int64 min_official_cost_micro=9; optional int64 max_official_cost_micro=10;
+}
+message AIUsageUnitPrice { optional double value=1; }
+message AIUsageRequest {
+ string id=1; int64 at_ms=2; string cli=3; string model_id=4; string profile_id=5; string profile_name=6;
+ bool succeeded=7; string error_code=8; bool streaming=9;
+ int64 input=10; int64 read=11; int64 write=12; int64 output=13;
+ optional double input_price=14; optional double output_price=15; double multiplier=16;
+ // Field 18 was first_token and is retired. elapsed is send-to-end seconds; tps is output / elapsed.
+ reserved 18;
+ reserved "first_token";
+ optional double tps=17; optional double elapsed=19;
+ int64 cost_micro=20; repeated int64 costs_micro=21;
+ // Fields 22, 25, 26 and 29 were priced, price_reason, attribution_source and timing_source:
+ // every request is priced, ownership comes from the profile timeline, timing is measured.
+ reserved 22, 25, 26, 29;
+ reserved "priced", "price_reason", "attribution_source", "timing_source";
+ repeated AIUsageUnitPrice component_prices=23;
+ string price_version=24;
+ string reasoning_effort=27; string effort_source=28;
+ optional int64 cache_write_short=30; optional int64 cache_write_long=31;
+ optional double cache_write_short_price=32; optional double cache_write_long_price=33;
+}
+message AIUsageLogs {
+ repeated AIUsageRequest requests=1; int64 all=2; int64 success=3; int64 failed=4;
+ AIUsageTotals totals=5; AIUsageState state=6;
+}
+// Reprices requests whose recorded Profile is profile_id (DSH has none and is never touched).
+// The multiplier is the Profile's value now: its model entry, else its default. Range is
+// either all, or from_day..to_day as inclusive local days "YYYY-MM-DD". A dry run changes
+// nothing and returns the numbers a real run would. A real run is recorded as an override
+// that later rescans and rebuilds keep honouring.
+message RepriceAIUsageRequest {
+ string profile_id=1; optional string model_id=2;
+ string from_day=3; string to_day=4; bool all=5; bool dry_run=6;
+}
+// Costs are multiplied micro-USD. aggregated_requests is the part of requests that only
+// survives in hourly buckets (older than request retention) and is rescaled per bucket.
+message RepriceAIUsageResult {
+ int64 requests=1; int64 aggregated_requests=2;
+ int64 old_cost_micro=3; int64 new_cost_micro=4;
+ bool dry_run=5; int64 override_id=6; AIUsageState state=7;
+}
+
+// Session analysis uses retained request facts, never permanent hourly buckets.
+message AIUsageAnalysisQuery {
+ int64 from_ms=1; int64 to_ms=2;
+ // Empty: time-window summaries. Up to five identities: full retained turn trajectories.
+ repeated AIUsageSessionKey sessions=3;
+ optional uint64 known_revision=4;
+ // Limits projection only: one selected identity at most; date summaries plus retained main trend.
+ bool limits_only=5;
+ // Optional complete prior calendar-period bounds, supplied together. Limits only.
+ optional int64 comparison_from_ms=6; optional int64 comparison_to_ms=7;
+}
+message AIUsageSessionKey { string cli=1; string session_id=2; }
+// Native metadata is independent of retained usage. Dates filter last native activity.
+message AISessionCatalogQuery {
+ string cli=1; string query=2; uint32 page_size=3; string page_token=4;
+ // Resolves the selected title independently of the list's filter and page.
+ AIUsageSessionKey selected=5;
+ // Optional [from_ms,to_ms) range. Both zero preserves the unbounded directory query.
+ int64 from_ms=6; int64 to_ms=7;
+}
+message AISessionCatalogEntry {
+ AIUsageSessionKey key=1; string title=2; string title_source=3;
+ // named, untitled, indexing, source_unavailable, unsupported, source_missing.
+ string title_status=4; int64 last_activity_ms=5;
+ // Confirmed child without a selectable parent; retained as a standalone candidate.
+ bool unlinked_child=6;
+}
+message AISessionCatalogCount { string cli=1; int64 count=2; }
+message AISessionCatalogSource { string cli=1; string error_code=2; }
+message AISessionCatalogPage {
+ repeated AISessionCatalogEntry items=1; uint64 revision=2; bool ready=3;
+ int64 total=4; string next_page_token=5; bool reset_required=6;
+ repeated AISessionCatalogCount counts=7; repeated AISessionCatalogSource sources=8;
+ AISessionCatalogEntry selected=9;
+ // Request presence also affects date candidates and pagination.
+ uint64 usage_revision=10;
+}
+message AIUsageAnalysisRow {
+ string cli=1; string session_id=2; string turn_id=3; string model_id=4; string reasoning_effort=5;
+ int64 at_ms=6; int64 end_ms=7; bool complete=8; bool compressed=9;
+ AIUsageTotals totals=10; int64 max_input=11; int64 turns=12; int64 known_turn_requests=13;
+ int64 priced_requests=14; repeated string completed_turn_ids=15;
+ // Optional local display metadata; never used as identity or accounting evidence.
+ string session_title=16;
+ string request_id=17;
+}
+message AIUsageAnalysis {
+ repeated AIUsageAnalysisRow rows=1; AIUsageState state=2; bool not_modified=3;
+ // Explicit capacity/retention limits, never an implicit complete sample.
+ bool truncated=4; int64 retained_from_ms=5;
+ // Individual retained requests for selected sessions, ordered by timestamp and identity.
+ repeated AIUsageAnalysisRow requests=6;
+ // Date-window context aggregates, populated only for an empty sessions query.
+ repeated AIUsageContextUsage context_usage=7;
+ AIUsageSessionLimits limits=8;
+}
+// Empty session identity means all sessions; empty model_id means the deduplicated total.
+message AIUsageContextUsage {
+ string cli=1; string session_id=2; string model_id=3;
+ // Exactly three bands: <=150000, 150001..250000, >250000 input tokens per request.
+ repeated AIUsageContextBand bands=4;
+ int64 requests=5; int64 turns=6; int64 known_turn_requests=7;
+ // Historical request setting; empty means unrecorded, or the total row.
+ string reasoning_effort=8;
+ // Distinct agents active in the date window. Bands contain only their input costs/tokens.
+ int64 subagents=9; repeated AIUsageContextBand subagent_bands=10; bool subagents_incomplete=11;
+}
+message AIUsageContextBand {
+ int64 input=1; int64 official_cost_micro=2; int64 channel_cost_micro=3;
+ int64 requests=4; int64 priced_requests=5;
+}
+
+// Session limit values are calculated by the daemon. Money is USD (fractional micro-USD
+// is preserved for averages); absent optional values mean unknown, never zero.
+message AIUsageLimitMoney { double official=1; double channel=2; }
+message AIUsageModelLimit {
+ string model=1; int64 limit=2; int64 warn=3; int64 flat_limit=4; int64 flat_warn=5;
+ optional double baseline=6;
+}
+message AIUsageLimitBand { int64 requests=1; AIUsageLimitMoney money=2; int64 priced_requests=3; }
+message AIUsageLimitModelLine { string model=1; AIUsageModelLimit lines=2; int64 requests=3; }
+message AIUsageLimitFlat {
+ int64 limit=1; int64 requests=2; AIUsageLimitMoney cost=3; AIUsageLimitMoney over_spend=4;
+}
+message AIUsageLimitRow {
+ string id=1; string cli=2; string session_id=3; string title=4; string model=5; string effort=6;
+ bool emphasized=7; string note=8; repeated AIUsageLimitBand bands=9;
+ AIUsageModelLimit lines=10; repeated AIUsageLimitModelLine model_lines=11;
+ optional double multiple=12; AIUsageLimitMoney over_spend=13; AIUsageLimitFlat flat=14;
+ int64 unpriced=15;
+}
+message AIUsageLimitCurrent { int64 context=1; optional int64 limit=2; int32 band=3; }
+message AIUsageLimitSummary {
+ AIUsageLimitMoney input=1; AIUsageLimitMoney over_spend=2;
+ int64 sessions=3; int64 over_sessions=4; AIUsageLimitCurrent current=5;
+ int64 requests=6; int64 turns=7; bool turns_complete=8; int64 subagents=9;
+ repeated double curve=10;
+ // Only requests with a configured limit contribute to these three bands.
+ repeated AIUsageLimitBand bands=11;
+ // Actual over-limit average / actual safe average; absent without both priced samples.
+ optional double multiple=12;
+ repeated AIUsageLimitDay days=13; int64 observed_through_ms=14;
+ AIUsageLimitComparison comparison=15;
+ // Total input tokens include cache reads/writes once, including unpriced requests.
+ optional int64 input_tokens=16;
+}
+message AIUsageLimitDay {
+ int64 at_ms=1; int64 sessions=2; AIUsageLimitMoney input=3;
+ int64 requests=4; int64 priced_requests=5;
+ // Future, expired, or truncated days are unavailable rather than known zero.
+ bool available=6;
+ optional int64 input_tokens=7;
+}
+message AIUsageLimitComparison {
+ AIUsageLimitMoney input=1; int64 sessions=2; int64 from_ms=3; int64 to_ms=4;
+ optional int64 input_tokens=5;
+}
+message AIUsageLimitRequest {
+ AIUsageAnalysisRow request=1; AIUsageModelLimit lines=2; int32 band=3; optional int64 turn_number=4;
+}
+message AIUsageLimitSwitch {
+ int64 index=1; string kind=2; string from=3; string to=4;
+ optional double turn_multiple=5; optional double after_read_multiple=6;
+}
+message AIUsageLimitTrend {
+ repeated AIUsageLimitRequest requests=1; AIUsageModelLimit lines=2;
+ optional int64 over_start=3; optional int64 flat_start=4;
+ repeated AIUsageLimitSwitch switches=5; bool has_write_layer=6;
+}
+message AIUsageSessionLimits {
+ AIUsageLimitSummary summary=1;
+ // All: sessions/models; selected: main/subagents. Rows carry stable CLI-scoped identities.
+ repeated AIUsageLimitRow primary=2; repeated AIUsageLimitRow secondary=3;
+ AIUsageLimitTrend trend=4; bool agents_incomplete=5;
+}

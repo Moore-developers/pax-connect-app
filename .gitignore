@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+
+# 本地凭据与运行时产物（详见 tests/s0-tun/.gitignore）
+
+# 工作流工具的本地状态与证据（工具侧数据，不入库；文件保留在本地）
+.moore-dev-workflow/
+
+# .scratch 下本地验收与诊断过程产物：文件保留在本地，不入库；issue/合同还在 .scratch 跟踪范围内
+/.scratch/ai-telemetry-validation/
+/.scratch/blocked-details/
+/.scratch/dashboard-independent-refresh/
+/.scratch/dashboard-routing-match/
+/.scratch/history-read-model/
+/.scratch/incremental-running-798/
+/.scratch/latest-routing-match/
+/.scratch/refresh-flicker/
+/.scratch/route-diagnosis/
+/.scratch/route-live-check/
+/.scratch/route-sharing/
+/.scratch/perf/
+/.scratch/recent-match-empty/
+/.scratch/research/
+/.scratch/traffic-window-1105/
+/.scratch/ui-shot/
+/.scratch/unknown-model-repair/
+
+# 本地构建产物与工具链
+build/
+.build/
+.tools/
+DerivedData/
+xcuserdata/
+
+# 本地安装的第三方 Agent skill（不入库）
+.agents/
+.claude/skills/
+skills-lock.json
+
+# Python 回放工具的本地缓存
+__pycache__/

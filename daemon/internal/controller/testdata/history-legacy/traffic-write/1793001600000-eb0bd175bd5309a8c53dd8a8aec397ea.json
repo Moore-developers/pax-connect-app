@@ -1,0 +1,45 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "application",
+    "Object": "com.a.app",
+    "Route": "route-a",
+    "Direction": "proxy"
+  },
+  "Value": {
+    "Bases": {
+      "domain=example.com\u0000user": {
+        "Rule": "domain=example.com",
+        "Source": "user",
+        "RouteName": "Route A",
+        "Connections": 1,
+        "Observations": 4
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "application",
+      "Object": "com.a.app",
+      "Name": "A",
+      "Kind": "app",
+      "Route": "route-a",
+      "RouteName": "Route A",
+      "Direction": "proxy",
+      "Search": "api.example.com 1.1.1.1  A domain=example.com"
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 150,
+    "Download": 1500,
+    "Connections": 1,
+    "Failed": 0,
+    "Latency": {
+      "23": 1
+    },
+    "Latest": 120,
+    "Maximum": 120,
+    "LatestAt": "2026-10-26T08:04:53Z"
+  },
+  "Kinds": [
+    "app"
+  ]
+}

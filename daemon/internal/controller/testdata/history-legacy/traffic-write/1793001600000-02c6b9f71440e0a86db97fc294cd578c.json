@@ -1,0 +1,42 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "ip",
+    "Object": "4.4.4.4",
+    "Route": "route-a",
+    "Direction": "proxy"
+  },
+  "Value": {
+    "Bases": {
+      "domain=example.com\u0000user": {
+        "Rule": "domain=example.com",
+        "Source": "user",
+        "RouteName": "Route A",
+        "Connections": 1,
+        "Observations": 2
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "ip",
+      "Object": "4.4.4.4",
+      "Name": "4.4.4.4",
+      "Kind": "unknown",
+      "Route": "route-a",
+      "RouteName": "Route A",
+      "Direction": "proxy",
+      "Search": "api.example.com 4.4.4.4   domain=example.com"
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 3,
+    "Download": 3,
+    "Connections": 1,
+    "Failed": 0,
+    "Latest": 0,
+    "Maximum": 0,
+    "LatestAt": "0001-01-01T00:00:00Z"
+  },
+  "Kinds": [
+    "unknown"
+  ]
+}

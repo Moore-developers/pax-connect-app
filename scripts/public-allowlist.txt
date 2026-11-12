@@ -1,0 +1,20 @@
+# One git pathspec per line (dirs end with /). Anything not listed is never exported.
+api/
+daemon/
+macos/
+patches/
+rulesets/
+third_party/
+scripts/
+Makefile
+.gitignore
+.gitattributes
+GLOSSARY.md
+docs/architecture/
+docs/technical.md
+docs/glossary/
+README.md
+README.zh-CN.md
+LICENSE
+THIRD_PARTY_NOTICES.md
+docs/images/

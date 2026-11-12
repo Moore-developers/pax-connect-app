@@ -1,0 +1,37 @@
+[
+  {
+    "RouteID": "direct",
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 30,
+    "Download": 300,
+    "Gap": false
+  },
+  {
+    "RouteID": "route-a",
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 173,
+    "Download": 1703,
+    "Gap": false
+  },
+  {
+    "RouteID": "unattributed",
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 7,
+    "Download": 70,
+    "Gap": false
+  },
+  {
+    "RouteID": "route-a",
+    "At": "2026-10-26T08:05:00Z",
+    "Upload": 85,
+    "Download": 850,
+    "Gap": false
+  },
+  {
+    "RouteID": "unattributed",
+    "At": "2026-10-26T08:05:00Z",
+    "Upload": 1,
+    "Download": 1,
+    "Gap": false
+  }
+]

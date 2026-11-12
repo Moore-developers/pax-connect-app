@@ -1,0 +1,42 @@
+{
+  "Key": {
+    "BucketMs": 1793001900000,
+    "Dimension": "domain",
+    "Object": "unknown",
+    "Route": "",
+    "Direction": "unknown"
+  },
+  "Value": {
+    "Bases": {
+      "\u0000user": {
+        "Rule": "",
+        "Source": "user",
+        "RouteName": "",
+        "Connections": 0,
+        "Observations": 1
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "domain",
+      "Object": "unknown",
+      "Name": "未采集域名",
+      "Kind": "unknown",
+      "Route": "",
+      "RouteName": "",
+      "Direction": "unknown",
+      "Search": " 3.3.3.3   "
+    },
+    "At": "2026-10-26T08:05:00Z",
+    "Upload": 1,
+    "Download": 1,
+    "Connections": 0,
+    "Failed": 0,
+    "Latest": 0,
+    "Maximum": 0,
+    "LatestAt": "0001-01-01T00:00:00Z"
+  },
+  "Kinds": [
+    "unknown"
+  ]
+}

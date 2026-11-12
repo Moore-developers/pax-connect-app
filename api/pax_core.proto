@@ -1,0 +1,57 @@
+syntax = "proto3";
+package pax.core.v1;
+import "google/protobuf/empty.proto";
+option go_package = "pax-connect/daemon/gen/proto/corev1";
+// Internal paxd ↔ root core protocol. Never exposed to the App.
+service PaxCore {
+ rpc VerifyCurrentPath(CurrentPathRequest) returns (CurrentPathResult);
+  rpc ReadObservations(ObservationRequest) returns (ObservationBatch);
+  rpc ReadUsage(google.protobuf.Empty) returns (UsageSnapshot);
+  rpc Hello(google.protobuf.Empty) returns (HelloResponse);
+  rpc ApplyProfile(ApplyProfileRequest) returns (ApplyProfileResponse);
+  rpc UpdateRouting(ApplyProfileRequest) returns (ApplyProfileResponse);
+  rpc ClearProfile(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc IdentifyTUNOwner(IdentifyTUNOwnerRequest) returns (IdentifyTUNOwnerResponse);
+  rpc SelectRoute(SelectRouteRequest) returns (SelectRouteResponse);
+  rpc SetPaused(SetPausedRequest) returns (google.protobuf.Empty);
+  rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+message HelloResponse {
+  uint32 protocol_version = 1;
+  string core_version = 2;
+  string fingerprint = 3;
+  int32 owner_pid = 4;
+  // Upstream ServiceStatus name: IDLE, STARTING, STARTED, STOPPING, FATAL.
+  string service_status = 5;
+  string interface = 6;
+  string selected_tag = 7;
+ string runtime_session=8; uint64 runtime_version=9;
+}
+message ApplyProfileRequest { string profile_json = 1; uint64 revision = 2; repeated string routing_sources=3; }
+message ApplyProfileResponse { uint64 revision = 1; }
+message IdentifyTUNOwnerRequest { string interface = 1; }
+message IdentifyTUNOwnerResponse {
+  string kind = 1;
+  string display_name = 2;
+  string bundle_id = 3;
+  string executable_path = 4;
+  int32 pid = 5;
+}
+
+message SelectRouteRequest { string outbound_tag = 1; string expected_tag = 2; }
+message SelectRouteResponse { string selected_tag = 1; bool old_connections_closed = 2; }
+message SetPausedRequest { bool paused = 1; uint64 sequence = 2; }
+
+message UsageCounter {string tag=1;uint64 upload=2;uint64 download=3;uint64 connections=4;}
+message UsageSnapshot {string session=1;uint64 sequence=2;int64 sampled_unix_milli=3;repeated UsageCounter counters=4;bool partial=5;bool connections_known=6;}
+
+// Payload is bounded, versioned Pax config.Observation JSON, never upstream types.
+message ObservationRequest { string session = 1; uint64 after_sequence = 2; uint32 limit = 3; string reset_token=4; string cursor=5; }
+message ObservationBatch {
+ string session = 1; uint64 high_water = 2; uint64 lost_before = 3;
+ repeated bytes records = 4; bool collecting = 5; bool reset_required = 6;
+ repeated bytes baseline=7; string reset_token=8; string next_cursor=9; bool baseline_complete=10; uint64 baseline_high_water=11;
+}
+
+message CurrentPathRequest {string check_id=1;string expected_tag=2;string expected_session=3;uint64 expected_version=4;uint64 config_revision=5;}
+message CurrentPathResult {string check_id=1;string state=2;string cause=3;string actual_tag=4;string core_session=5;uint64 runtime_version=6;int64 started_unix_milli=7;int64 completed_unix_milli=8;}

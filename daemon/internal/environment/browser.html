@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pax Connect · 浏览器检测</title>
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; font: 14px -apple-system, BlinkMacSystemFont, sans-serif; color: #202124; background: #f3f3f4; }
+  main { width: 100%; max-width: 440px; padding: 28px; background: #fff; border: 1px solid #e5e5e7; border-radius: 20px; }
+  header { font-size: 13px; font-weight: 600; color: #73757a; }
+  .status-row { display: flex; align-items: center; gap: 10px; margin: 24px 0 10px; }
+  #icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; background: #eef0f2; color: #73757a; font-size: 18px; }
+  #icon::before { content: ''; width: 16px; height: 16px; border: 2px solid #d5d7db; border-top-color: #73757a; border-radius: 50%; animation: spin 1s linear infinite; }
+  main[data-stage="complete"] #icon { background: #eaf5ed; color: #247c44; }
+  main[data-stage="partial"] #icon, main[data-stage="failed"] #icon { background: #fff3e1; color: #a15c00; }
+  main[data-stage="complete"] #icon::before, main[data-stage="partial"] #icon::before, main[data-stage="failed"] #icon::before { content: none; }
+  h1 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.4; }
+  p { margin: 0; line-height: 1.7; color: #73757a; }
+  #countdown { margin-top: 20px; color: #202124; font-weight: 500; font-variant-numeric: tabular-nums; }
+  #actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button { padding: 9px 16px; border: 1px solid #dedee1; border-radius: 8px; font: inherit; background: #fff; color: #202124; cursor: pointer; }
+  #close { background: #202124; color: #fff; border-color: #202124; }
+  button:hover { filter: brightness(.94); }
+  button:focus-visible, summary:focus-visible { outline: 2px solid #007aff; outline-offset: 4px; }
+  details { margin-top: 28px; padding-top: 18px; border-top: 1px solid #eeeef0; font-size: 12px; color: #73757a; }
+  summary { width: fit-content; cursor: pointer; }
+  details p { margin-top: 12px; overflow-wrap: anywhere; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #icon::before { animation: none; } }
+  @media (max-width: 400px) { body { padding: 16px; } main { padding: 24px; } h1 { font-size: 18px; } }
+</style>
+<main data-stage="sampling">
+  <header>Pax Connect · 浏览器检测</header>
+  <section aria-live="polite" aria-atomic="true">
+    <div class="status-row">
+      <span id="icon" aria-hidden="true"></span>
+      <h1 id="state">正在检测浏览器环境…</h1>
+    </div>
+    <p id="hint">请保持页面打开，回传成功后 5 秒尝试自动关闭。</p>
+  </section>
+  <p id="countdown" hidden></p>
+  <div id="actions" hidden>
+    <button id="close" type="button">立即关闭</button>
+    <button id="keep" type="button">保留页面</button>
+  </div>
+  <details id="details">
+    <summary>检测内容与隐私</summary>
+    <p>检测语言、时区、公网 IP、DNS 和 WebRTC。详细结果在 Pax Connect 内查看。</p>
+    <p>IP 查询：icanhazip；DNS 探针：bash.ws；STUN：Cloudflare、Google；出口回显：Cloudflare、IPinfo、IPIP。这些服务会看到本次请求的网络地址。</p>
+    <p>语言、时区和浏览器读值仅回传本机。不采集账号、Cookie 或浏览历史，不会申请摄像头和麦克风权限。</p>
+  </details>
+</main>
+<script nonce="__NONCE__" src="browser.js"></script>
+</html>

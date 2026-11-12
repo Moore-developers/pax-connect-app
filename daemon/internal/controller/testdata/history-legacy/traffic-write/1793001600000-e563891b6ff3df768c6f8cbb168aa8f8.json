@@ -1,0 +1,45 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "dns",
+    "Object": "dns",
+    "Route": "direct",
+    "Direction": "direct"
+  },
+  "Value": {
+    "Bases": {
+      "domain=example.com\u0000user": {
+        "Rule": "domain=example.com",
+        "Source": "user",
+        "RouteName": "直连",
+        "Connections": 1,
+        "Observations": 2
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "dns",
+      "Object": "dns",
+      "Name": "域名解析",
+      "Kind": "dns",
+      "Route": "direct",
+      "RouteName": "直连",
+      "Direction": "direct",
+      "Search": "    domain=example.com"
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 0,
+    "Download": 0,
+    "Connections": 1,
+    "Failed": 0,
+    "Latency": {
+      "12": 1
+    },
+    "Latest": 12,
+    "Maximum": 12,
+    "LatestAt": "2026-10-26T08:04:53Z"
+  },
+  "Kinds": [
+    "dns"
+  ]
+}

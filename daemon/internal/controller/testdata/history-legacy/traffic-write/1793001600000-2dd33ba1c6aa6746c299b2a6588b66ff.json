@@ -1,0 +1,45 @@
+{
+  "Key": {
+    "BucketMs": 1793001600000,
+    "Dimension": "domain",
+    "Object": "apple.com",
+    "Route": "direct",
+    "Direction": "direct"
+  },
+  "Value": {
+    "Bases": {
+      "geosite=apple\u0000user": {
+        "Rule": "geosite=apple",
+        "Source": "user",
+        "RouteName": "直连",
+        "Connections": 1,
+        "Observations": 3
+      }
+    },
+    "MutationAt": "0001-01-01T00:00:00Z",
+    "Identity": {
+      "Dimension": "domain",
+      "Object": "apple.com",
+      "Name": "apple.com",
+      "Kind": "system",
+      "Route": "direct",
+      "RouteName": "直连",
+      "Direction": "direct",
+      "Search": "ocsp.apple.com 2.2.2.2 /usr/libexec/trustd trustd geosite=apple"
+    },
+    "At": "2026-10-26T08:00:00Z",
+    "Upload": 30,
+    "Download": 300,
+    "Connections": 1,
+    "Failed": 0,
+    "Latency": {
+      "17": 1
+    },
+    "Latest": 35,
+    "Maximum": 35,
+    "LatestAt": "2026-10-26T08:04:54Z"
+  },
+  "Kinds": [
+    "system"
+  ]
+}

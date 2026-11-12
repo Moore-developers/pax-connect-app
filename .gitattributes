@@ -1,0 +1,9 @@
+# Unified diff context prefixes are payload, not indentation in a source file.
+# The patched Go sources are separately checked by gofmt, vet and lint.
+patches/sing-box/observations-quality.patch whitespace=-blank-at-eol,-space-before-tab
+patches/sing-box/observations.patch whitespace=-blank-at-eol,-space-before-tab
+patches/sing-box/routing-update.patch whitespace=-blank-at-eol,-space-before-tab
+patches/sing-box/dns-update.patch whitespace=-blank-at-eol,-space-before-tab
+
+# Generated protobuf goldens; source and regeneration recorded alongside fixtures.
+daemon/internal/controller/testdata/history-legacy/**/*.pb binary
