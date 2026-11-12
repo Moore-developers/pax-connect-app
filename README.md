@@ -7,7 +7,7 @@
 **The Mac proxy client for Claude Code and Codex.**
 Route traffic, switch API profiles, and see token usage and cost, all in one native app.
 
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![License: GPL-3.0 core / PolyForm NC app](https://img.shields.io/badge/license-GPL--3.0%20%2F%20PolyForm%20NC-blue)](LICENSE)
 ![Platform](https://img.shields.io/badge/macOS_26%2B-Apple_Silicon-black?logo=apple)
 [![Latest release](https://img.shields.io/github/v/release/Moore-developers/pax-connect-app?include_prereleases&label=release)](https://github.com/Moore-developers/pax-connect-app/releases/latest)
 [![Built on sing-box](https://img.shields.io/badge/built_on-sing--box-5c6bc0)](https://github.com/SagerNet/sing-box)
@@ -157,10 +157,16 @@ scripts/package-release.sh 0.1.0   # Release app + DMG -> build/releases/
 
 ## License
 
-Pax Connect is licensed under the **GNU General Public License v3.0** ([LICENSE](LICENSE)). It links [sing-box](https://github.com/SagerNet/sing-box), which is GPL-3.0-or-later. The patched sing-box and sing-tun changes are in [`patches/`](patches). Other components keep their own licenses: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Source-available: the core is open source (GPL-3.0); the app UI is source-available and free for noncommercial use only (PolyForm Noncommercial 1.0.0).
 
-**Trademarks.** Pax Connect is not affiliated with or endorsed by Anthropic, OpenAI or DeepSeek. Claude, Claude Code, Codex, OpenAI, DeepSeek and other names and icons belong to their respective owners and are used only to identify the tools Pax works with.
+- **App UI** (`macos/`): [PolyForm Noncommercial 1.0.0](macos/LICENSE). Commercial use needs a separate license from the copyright holder; ask in [GitHub issues](https://github.com/Moore-developers/pax-connect-app/issues).
+- **API definitions** (`api/`): [MIT](api/LICENSE).
+- **Everything else** (`daemon/`, `patches/`, `scripts/`, `rulesets/`, `docs/`): **GPL-3.0** ([full text](third_party/licenses/GPL-3.0.txt)). The daemon and core link [sing-box](https://github.com/SagerNet/sing-box), which is GPL-3.0-or-later. The patched sing-box and sing-tun changes are in [`patches/`](patches).
+
+See [LICENSE](LICENSE) for the overview. Other components keep their own licenses: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The name and icon are covered by [TRADEMARKS.md](TRADEMARKS.md).
+
+**Third-party marks.** Pax Connect is not affiliated with or endorsed by Anthropic, OpenAI or DeepSeek. Claude, Claude Code, Codex, OpenAI, DeepSeek and other names and icons belong to their respective owners and are used only to identify the tools Pax works with.
 
 **Credits.** [sing-box](https://github.com/SagerNet/sing-box) and the SagerNet projects, the [gRPC Swift](https://github.com/grpc/grpc-swift-2) and [SwiftNIO](https://github.com/apple/swift-nio) teams, [v2fly domain-list-community](https://github.com/v2fly/domain-list-community), [MaxMind GeoLite2](https://www.maxmind.com/), [217heidai/adblockfilters](https://github.com/217heidai/adblockfilters), [Simple Icons](https://simpleicons.org/), [Lobe Icons](https://github.com/lobehub/lobe-icons) and [Lucide](https://lucide.dev/).
 
-Copyright (C) Pax Connect contributors.
+Copyright (C) 2026 Moore-developers.

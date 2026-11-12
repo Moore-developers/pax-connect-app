@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Pax Connect is licensed under the GNU General Public License v3.0 (see [LICENSE](LICENSE)). It includes or links the third-party components below, which keep their own licenses. Full license texts for the bundled data and for GPL-3.0 are in [`third_party/licenses/`](third_party/licenses); the app's About page also has an open-source licenses entry.
+Pax Connect is licensed per component: the daemon, core and everything outside `macos/` and `api/` under GPL-3.0, `macos/` under PolyForm Noncommercial 1.0.0, `api/` under MIT (see [LICENSE](LICENSE)). It includes or links the third-party components below, which keep their own licenses. Full license texts for the bundled data and for GPL-3.0 are in [`third_party/licenses/`](third_party/licenses); the app's About page also has an open-source licenses entry.
 
 This inventory was generated from the pinned dependency versions (`daemon/go.mod`, `macos/Packages/*/Package.resolved`) and the license files shipped in each module. It is a good-faith summary, not legal advice. If you find an error, please open an issue.
 

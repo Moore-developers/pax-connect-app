@@ -16,5 +16,6 @@ docs/glossary/
 README.md
 README.zh-CN.md
 LICENSE
+TRADEMARKS.md
 THIRD_PARTY_NOTICES.md
 docs/images/

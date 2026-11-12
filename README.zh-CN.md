@@ -7,7 +7,7 @@
 **给 Claude Code 和 Codex 用的 Mac 代理客户端。**
 分流上网、切换 API 配置、查看 Token 用量与费用，一个原生 App 全部搞定。
 
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![License: GPL-3.0 core / PolyForm NC app](https://img.shields.io/badge/license-GPL--3.0%20%2F%20PolyForm%20NC-blue)](LICENSE)
 ![Platform](https://img.shields.io/badge/macOS_26%2B-Apple_Silicon-black?logo=apple)
 [![最新版本](https://img.shields.io/github/v/release/Moore-developers/pax-connect-app?include_prereleases&label=release)](https://github.com/Moore-developers/pax-connect-app/releases/latest)
 [![Built on sing-box](https://img.shields.io/badge/built_on-sing--box-5c6bc0)](https://github.com/SagerNet/sing-box)
@@ -157,10 +157,16 @@ scripts/package-release.sh 0.1.0   # Release App + DMG -> build/releases/
 
 ## 许可证
 
-Pax Connect 以 **GNU General Public License v3.0** 授权（[LICENSE](LICENSE)）。它链接了 GPL-3.0-or-later 的 [sing-box](https://github.com/SagerNet/sing-box)，对 sing-box 与 sing-tun 的修改见 [`patches/`](patches)。其他组件沿用各自许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+源码公开：内核 GPL-3.0 开源，App 界面禁止商用（PolyForm Noncommercial 1.0.0）。
 
-**商标。** Pax Connect 与 Anthropic、OpenAI、DeepSeek 无关联，也未获其认可。Claude、Claude Code、Codex、OpenAI、DeepSeek 等名称与图标归各自所有者，仅用于标识 Pax 所配合使用的工具。
+- **App 界面**（`macos/`）：[PolyForm Noncommercial 1.0.0](macos/LICENSE)。商用须另行取得版权方授权，请通过 [GitHub issues](https://github.com/Moore-developers/pax-connect-app/issues) 联系。
+- **接口定义**（`api/`）：[MIT](api/LICENSE)。
+- **其余部分**（`daemon/`、`patches/`、`scripts/`、`rulesets/`、`docs/`）：**GPL-3.0**（[全文](third_party/licenses/GPL-3.0.txt)）。daemon 与 core 链接了 GPL-3.0-or-later 的 [sing-box](https://github.com/SagerNet/sing-box)，对 sing-box 与 sing-tun 的修改见 [`patches/`](patches)。
+
+总览见 [LICENSE](LICENSE)。其他组件沿用各自许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。名称与图标适用 [TRADEMARKS.md](TRADEMARKS.md)。
+
+**第三方商标。** Pax Connect 与 Anthropic、OpenAI、DeepSeek 无关联，也未获其认可。Claude、Claude Code、Codex、OpenAI、DeepSeek 等名称与图标归各自所有者，仅用于标识 Pax 所配合使用的工具。
 
 **致谢。** [sing-box](https://github.com/SagerNet/sing-box) 及 SagerNet 各项目、[gRPC Swift](https://github.com/grpc/grpc-swift-2) 与 [SwiftNIO](https://github.com/apple/swift-nio) 团队、[v2fly domain-list-community](https://github.com/v2fly/domain-list-community)、[MaxMind GeoLite2](https://www.maxmind.com/)、[217heidai/adblockfilters](https://github.com/217heidai/adblockfilters)、[Simple Icons](https://simpleicons.org/)、[Lobe Icons](https://github.com/lobehub/lobe-icons)、[Lucide](https://lucide.dev/)。
 
-Copyright (C) Pax Connect contributors.
+Copyright (C) 2026 Moore-developers.
