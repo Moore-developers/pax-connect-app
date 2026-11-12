@@ -113,7 +113,7 @@ func rebuild(ctx context.Context, dir, home string, dry bool) (aiusage.Report, e
 			}
 			return func(cli string, at time.Time) aiusage.Attribution {
 				a := t.Resolve(aiprofile.CLI(cli), at)
-				return aiusage.Attribution{ProfileID: a.ProfileID, ProfileName: a.ProfileName, Multiplier: a.Multiplier, Models: a.Models}
+				return aiusage.Attribution{ProfileID: a.ProfileID, ProfileName: a.ProfileName, Multiplier: a.Multiplier, Models: a.Models, ServiceSource: a.ServiceSource, Since: a.Since}
 			}, notes, nil
 		}})
 }

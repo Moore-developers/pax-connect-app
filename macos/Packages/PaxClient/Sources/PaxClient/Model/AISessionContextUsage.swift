@@ -7,12 +7,14 @@ public struct AISessionContextBand: Equatable, Sendable {
   public let channelCost: Double
   public let requests: Int
   public let pricedRequests: Int
+  public let unconfirmedChannel: Int
   init(_ p: Pax_V1_AIUsageContextBand) {
     input = Int(p.input)
     officialCost = Double(p.officialCostMicro) / 1_000_000
     channelCost = Double(p.channelCostMicro) / 1_000_000
     requests = Int(p.requests)
     pricedRequests = Int(p.pricedRequests)
+    unconfirmedChannel = Int(p.unconfirmedChannel)
   }
 }
 

@@ -33,7 +33,7 @@ func newTimeline(events []Event) *Timeline {
 	t := &Timeline{apply: map[CLI][]Event{}, prices: map[string][]Event{}}
 	for _, e := range events {
 		switch e.Kind {
-		case "apply":
+		case "apply", "observe":
 			t.apply[e.CLI] = append(t.apply[e.CLI], e)
 		case "metadata":
 			t.prices[e.ProfileID] = append(t.prices[e.ProfileID], e)
@@ -61,6 +61,9 @@ func (t *Timeline) Resolve(cli CLI, at time.Time) Attribution {
 	ns := at.UnixNano()
 	i := sort.Search(len(list), func(i int) bool { return list[i].At > ns }) - 1
 	if i < 0 {
+		if list[0].Kind == "observe" {
+			return out
+		}
 		return list[0].Attribution
 	}
 	out = list[i].Attribution
@@ -73,7 +76,7 @@ func (t *Timeline) Resolve(cli CLI, at time.Time) Attribution {
 }
 
 func loadEvents(ctx context.Context, db *sql.DB) ([]Event, error) {
-	rows, e := db.QueryContext(ctx, "SELECT event_key,cli,at,profile_id,profile_name,multiplier,kind,model_multipliers FROM profile_events WHERE kind IN ('apply','metadata') ORDER BY at,event_key")
+	rows, e := db.QueryContext(ctx, "SELECT event_key,cli,at,profile_id,profile_name,multiplier,kind,model_multipliers,service_source,source_since FROM profile_events WHERE kind IN ('apply','metadata','observe') ORDER BY at,event_key")
 	if e != nil {
 		return nil, StoreInvalid
 	}
@@ -82,7 +85,7 @@ func loadEvents(ctx context.Context, db *sql.DB) ([]Event, error) {
 	for rows.Next() {
 		var v Event
 		var models string
-		if e = rows.Scan(&v.Key, &v.CLI, &v.At, &v.ProfileID, &v.ProfileName, &v.Multiplier, &v.Kind, &models); e != nil {
+		if e = rows.Scan(&v.Key, &v.CLI, &v.At, &v.ProfileID, &v.ProfileName, &v.Multiplier, &v.Kind, &models, &v.ServiceSource, &v.Since); e != nil {
 			return nil, StoreInvalid
 		}
 		if models != "" && json.Unmarshal([]byte(models), &v.Models) != nil {
@@ -102,6 +105,17 @@ func (m *Manager) Timeline(ctx context.Context) (*Timeline, error) {
 	defer m.mu.Unlock()
 	if e := m.repairEvents(ctx); e != nil {
 		return nil, e
+	}
+	if !m.blocked {
+		for _, cli := range []CLI{Claude, Codex} {
+			b, err := m.inspect(ctx, cli)
+			if err != nil {
+				return nil, err
+			}
+			if err = m.observeSource(ctx, b); err != nil {
+				return nil, err
+			}
+		}
 	}
 	events, e := loadEvents(ctx, m.events)
 	if e != nil {
@@ -202,7 +216,7 @@ func (h *History) PlanSeeds(ctx context.Context, seeds []Seed) ([]Event, error) 
 		}
 		at := s.At.UnixNano()
 		var first sql.NullInt64
-		if e := h.m.events.QueryRowContext(ctx, "SELECT min(at) FROM profile_events WHERE cli=? AND kind='apply'", s.CLI).Scan(&first); e != nil {
+		if e := h.m.events.QueryRowContext(ctx, "SELECT min(at) FROM profile_events WHERE cli=? AND kind IN ('apply','observe')", s.CLI).Scan(&first); e != nil {
 			return nil, StoreInvalid
 		}
 		if first.Valid && first.Int64 <= at {

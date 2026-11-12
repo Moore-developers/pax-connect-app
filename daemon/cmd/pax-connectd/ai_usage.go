@@ -31,7 +31,7 @@ func userAIUsage(ctx context.Context, directory string, profiles *aiprofile.Mana
 		}
 		return func(cli string, at time.Time) aiusage.Attribution {
 			a := t.Resolve(aiprofile.CLI(cli), at)
-			return aiusage.Attribution{ProfileID: a.ProfileID, ProfileName: a.ProfileName, Multiplier: a.Multiplier, Models: a.Models}
+			return aiusage.Attribution{ProfileID: a.ProfileID, ProfileName: a.ProfileName, Multiplier: a.Multiplier, Models: a.Models, ServiceSource: a.ServiceSource, Since: a.Since}
 		}, nil
 	}})
 	if e != nil {

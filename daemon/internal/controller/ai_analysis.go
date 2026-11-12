@@ -43,10 +43,10 @@ func (s *AIUsageServer) QueryAIUsageAnalysis(ctx context.Context, q *pb.AIUsageA
 	for _, r := range a.ContextUsage {
 		v := &pb.AIUsageContextUsage{Cli: r.CLI, SessionId: r.Session, ModelId: r.Model, ReasoningEffort: r.Effort, Requests: r.Requests, Turns: r.Turns, KnownTurnRequests: r.KnownTurnRequests, Subagents: r.Subagents, SubagentsIncomplete: r.SubagentsIncomplete}
 		for _, b := range r.Bands {
-			v.Bands = append(v.Bands, &pb.AIUsageContextBand{Input: b.Input, OfficialCostMicro: b.OfficialCost, ChannelCostMicro: b.ChannelCost, Requests: b.Requests, PricedRequests: b.PricedRequests})
+			v.Bands = append(v.Bands, &pb.AIUsageContextBand{Input: b.Input, OfficialCostMicro: b.OfficialCost, ChannelCostMicro: b.ChannelCost, Requests: b.Requests, PricedRequests: b.PricedRequests, UnconfirmedChannel: b.UnconfirmedChannel})
 		}
 		for _, b := range r.SubagentBands {
-			v.SubagentBands = append(v.SubagentBands, &pb.AIUsageContextBand{Input: b.Input, OfficialCostMicro: b.OfficialCost, ChannelCostMicro: b.ChannelCost, Requests: b.Requests, PricedRequests: b.PricedRequests})
+			v.SubagentBands = append(v.SubagentBands, &pb.AIUsageContextBand{Input: b.Input, OfficialCostMicro: b.OfficialCost, ChannelCostMicro: b.ChannelCost, Requests: b.Requests, PricedRequests: b.PricedRequests, UnconfirmedChannel: b.UnconfirmedChannel})
 		}
 		out.ContextUsage = append(out.ContextUsage, v)
 	}

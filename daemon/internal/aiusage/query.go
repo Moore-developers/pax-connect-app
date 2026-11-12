@@ -19,7 +19,7 @@ func (s *Store) Buckets(ctx context.Context, q Query) ([]Bucket, error) {
 	if s.RebuildRequired() {
 		return nil, nil
 	}
-	rows, e := s.r.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,"+summaryColumns+" FROM usage_hourly WHERE hour>=? AND hour<? ORDER BY hour", q.From, q.To)
+	rows, e := s.r.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,service_source,"+summaryColumns+" FROM usage_hourly WHERE hour>=? AND hour<? ORDER BY hour", q.From, q.To)
 	if e != nil {
 		return nil, ErrUnavailable
 	}
@@ -27,7 +27,7 @@ func (s *Store) Buckets(ctx context.Context, q Query) ([]Bucket, error) {
 	grouped := map[bucketKey]Bucket{}
 	for rows.Next() {
 		var b Bucket
-		targets := []any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName}
+		targets := []any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName, &b.ServiceSource}
 		targets = append(targets, summaryTargets(&b.Summary)...)
 		if e = rows.Scan(targets...); e != nil {
 			return nil, ErrUnavailable
@@ -36,13 +36,14 @@ func (s *Store) Buckets(ctx context.Context, q Query) ([]Bucket, error) {
 			t := time.UnixMilli(b.At).In(time.Local)
 			b.At = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
 		}
-		k := bucketKey{b.At, b.CLI, b.ProfileID, b.Model}
+		k := bucketKey{b.At, b.CLI, b.ProfileID, b.Model, b.ServiceSource}
 		v := grouped[k]
 		v.At = b.At
 		v.CLI = b.CLI
 		v.ProfileID = b.ProfileID
 		v.ProfileName = b.ProfileName
 		v.Model = b.Model
+		v.ServiceSource = b.ServiceSource
 		v.add(b.Summary)
 		grouped[k] = v
 	}
@@ -57,7 +58,7 @@ func (s *Store) Buckets(ctx context.Context, q Query) ([]Bucket, error) {
 		if out[i].At != out[j].At {
 			return out[i].At < out[j].At
 		}
-		return out[i].CLI+out[i].ProfileID+out[i].Model < out[j].CLI+out[j].ProfileID+out[j].Model
+		return out[i].CLI+out[i].ProfileID+out[i].Model+out[i].ServiceSource < out[j].CLI+out[j].ProfileID+out[j].Model+out[j].ServiceSource
 	})
 	return out, nil
 }
@@ -100,12 +101,13 @@ func (s *Store) Summarize(ctx context.Context) ([]Bucket, error) {
 	}
 	grouped := map[bucketKey]Bucket{}
 	for _, b := range rows {
-		k := bucketKey{0, b.CLI, b.ProfileID, b.Model}
+		k := bucketKey{0, b.CLI, b.ProfileID, b.Model, b.ServiceSource}
 		v := grouped[k]
 		v.CLI = b.CLI
 		v.ProfileID = b.ProfileID
 		v.ProfileName = b.ProfileName
 		v.Model = b.Model
+		v.ServiceSource = b.ServiceSource
 		v.add(b.Summary)
 		grouped[k] = v
 	}
@@ -119,6 +121,9 @@ func (s *Store) Summarize(ctx context.Context) ([]Bucket, error) {
 // List returns ten records; result tabs exclude their own result filter.
 func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 	out := Logs{Requests: []Request{}}
+	if q.ServiceSource != "" && q.ServiceSource != "official_account" && q.ServiceSource != "official_api" && q.ServiceSource != "relay_api" && q.ServiceSource != "unknown" {
+		return out, ErrRange
+	}
 	if q.To <= q.From || q.Page < 0 || len(q.Text) > 256 ||
 		(q.MinOfficialCost != nil && *q.MinOfficialCost < 0) ||
 		(q.MaxOfficialCost != nil && *q.MaxOfficialCost < 0) ||
@@ -131,8 +136,17 @@ func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 	where := "at>=? AND at<?"
 	args := []any{q.From, q.To}
 	profile := q.Profile
+	if strings.HasPrefix(profile, "__source:") && strings.HasSuffix(profile, "__") {
+		source := strings.TrimSuffix(strings.TrimPrefix(profile, "__source:"), "__")
+		if source != "official_account" && source != "official_api" && source != "relay_api" {
+			return out, ErrRange
+		}
+		where += " AND profile_id='' AND cli<>'dsh' AND coalesce(json_extract(details,'$.ServiceSource'),'')=?"
+		args = append(args, source)
+		profile = ""
+	}
 	if profile == "__unassigned__" {
-		where += " AND profile_id='' AND cli<>'dsh'"
+		where += " AND profile_id='' AND cli<>'dsh' AND coalesce(json_extract(details,'$.ServiceSource'),'') IN ('','unknown')"
 		profile = ""
 	}
 	if profile == "__dsh__" {
@@ -144,6 +158,10 @@ func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 			where += " AND " + f.column + "=?"
 			args = append(args, f.value)
 		}
+	}
+	if q.ServiceSource != "" {
+		where += " AND coalesce(json_extract(details,'$.ServiceSource'),'')=?"
+		args = append(args, q.ServiceSource)
 	}
 	if q.Text != "" {
 		where += " AND (request_key LIKE ? ESCAPE '\\' OR model LIKE ? ESCAPE '\\' OR profile_name LIKE ? ESCAPE '\\' OR error LIKE ? ESCAPE '\\')"
@@ -186,6 +204,7 @@ func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 	for i := range 4 {
 		expressions = append(expressions, fmt.Sprintf("coalesce(sum(json_extract(details,'$.Billed[%d]')),0)", i))
 	}
+	expressions = append(expressions, "coalesce(sum(CASE WHEN json_extract(details,'$.ServiceSource') IN ('official_account','unknown') THEN 1 ELSE 0 END),0)")
 	if e = tx.QueryRowContext(ctx, "SELECT "+strings.Join(expressions, ",")+" FROM requests WHERE "+where, args...).Scan(summaryTargets(&out.Total)...); e != nil {
 		return out, ErrUnavailable
 	}

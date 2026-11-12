@@ -86,8 +86,11 @@ enum AILimitStyle {
   /// "官方 $1.20 · 渠道 $0.42".
   static func both(_ value: AILimitMoney, precision: Int = 2, plus: Bool = false) -> String {
     let sign = plus ? "+" : ""
+    if value.channelUnknown {
+      return "API 等值估算 " + sign + money(value.official, precision: precision)
+    }
     return "官方 " + sign + money(value.official, precision: precision) + " · 渠道 " + sign
-      + money(value.channel, precision: precision)
+      + money(value.channelUnknown ? nil : value.channel, precision: precision)
   }
   /// Band edge labels of one model, e.g. "≤150k", "150k–200k", ">200k".
   static func edges(_ lines: AIModelLimit?) -> [String] {

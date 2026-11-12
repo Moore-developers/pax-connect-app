@@ -130,6 +130,9 @@ public nonisolated struct Pax_V1_AIClientBinding: Sendable {
 
   public var requiresModel: Bool = false
 
+  /// Configured authentication route; never proof of a valid subscription or live session.
+  public var serviceSource: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -565,7 +568,7 @@ nonisolated extension Pax_V1_AIProfileSummary: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pax_V1_AIClientBinding: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIClientBinding"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}profile_id\0\u{1}state\0\u{1}reason\0\u{3}inspection_id\0\u{3}template_revision\0\u{1}endpoint\0\u{3}target_path\0\u{3}requires_model\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}profile_id\0\u{1}state\0\u{1}reason\0\u{3}inspection_id\0\u{3}template_revision\0\u{1}endpoint\0\u{3}target_path\0\u{3}requires_model\0\u{3}service_source\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -582,6 +585,7 @@ nonisolated extension Pax_V1_AIClientBinding: SwiftProtobuf.Message, SwiftProtob
       case 7: try { try decoder.decodeSingularStringField(value: &self.endpoint) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.targetPath) }()
       case 9: try { try decoder.decodeSingularBoolField(value: &self.requiresModel) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.serviceSource) }()
       default: break
       }
     }
@@ -615,6 +619,9 @@ nonisolated extension Pax_V1_AIClientBinding: SwiftProtobuf.Message, SwiftProtob
     if self.requiresModel != false {
       try visitor.visitSingularBoolField(value: self.requiresModel, fieldNumber: 9)
     }
+    if !self.serviceSource.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceSource, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -628,6 +635,7 @@ nonisolated extension Pax_V1_AIClientBinding: SwiftProtobuf.Message, SwiftProtob
     if lhs.endpoint != rhs.endpoint {return false}
     if lhs.targetPath != rhs.targetPath {return false}
     if lhs.requiresModel != rhs.requiresModel {return false}
+    if lhs.serviceSource != rhs.serviceSource {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -67,6 +67,7 @@ func TestAppliedProfileAndPriceChangeEnterTheTimelineAndSurviveRestart(t *testin
 	if _, e = m.Mutate(ctx, Mutation{Action: "save", OperationID: "price-events", ExpectedRevision: p.Revision, Profile: p}); e != nil {
 		t.Fatal(e)
 	}
+	pricedAt := time.Now()
 	check := func(m *Manager) {
 		tl, e := m.Timeline(ctx)
 		if e != nil {
@@ -75,11 +76,11 @@ func TestAppliedProfileAndPriceChangeEnterTheTimelineAndSurviveRestart(t *testin
 		if a := tl.Resolve(Claude, applied); a.ProfileID != p.ID || a.Multiplier != 1 {
 			t.Fatalf("at apply time: %+v", a)
 		}
-		if a := tl.Resolve(Claude, time.Now()); a.ProfileID != p.ID || a.Multiplier != 2 {
+		if a := tl.Resolve(Claude, pricedAt); a.ProfileID != p.ID || a.Multiplier != 2 {
 			t.Fatalf("after the price change: %+v", a)
 		}
-		if a := tl.Resolve(Claude, applied.Add(-time.Hour)); a.ProfileID != p.ID {
-			t.Fatalf("before the first switch uses the earliest profile: %+v", a)
+		if a := tl.Resolve(Claude, applied.Add(-time.Hour)); a.ProfileID != "" {
+			t.Fatalf("an initial observation must not invent earlier ownership: %+v", a)
 		}
 	}
 	check(m)

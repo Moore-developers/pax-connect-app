@@ -140,7 +140,8 @@ enum DashboardUsageProjection {
     model.groups = filterGroups(buckets, now: now, calendar: calendar, selection: filter)
     let filtered = buckets.filter {
       AIUsageTrendFilter.matches(
-        filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID)
+        filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID,
+        serviceSource: $0.serviceSource)
     }
     let days = filter == .all ? allDays : days(filtered, now: now, calendar: calendar)
     guard days.contains(where: \.hasData) else {
@@ -186,7 +187,7 @@ enum DashboardUsageProjection {
       AIUsageTrendFilter.Row(
         profileID: $0.profileID, client: $0.client, profileName: $0.profileName,
         modelID: $0.modelID, count: $0.totals.count, cost: $0.totals.costs.reduce(0, +),
-        tokens: tokens($0.totals))
+        tokens: tokens($0.totals), serviceSource: $0.serviceSource)
     }
     return AIUsageTrendFilter.groups(rows: rows, selection: selection, profileName: { _ in nil })
   }

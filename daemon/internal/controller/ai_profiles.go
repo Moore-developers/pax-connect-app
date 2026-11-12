@@ -48,7 +48,7 @@ func aiWorkspace(w aiprofile.Workspace) *pb.AIProfilesWorkspace {
 		out.Profiles = append(out.Profiles, summary)
 	}
 	for _, b := range w.Bindings {
-		out.Bindings = append(out.Bindings, &pb.AIClientBinding{Cli: string(b.CLI), ProfileId: b.ProfileID, State: b.State, Reason: b.Reason, InspectionId: b.InspectionID, TemplateRevision: b.TemplateRevision, Endpoint: b.Endpoint, TargetPath: b.TargetPath, RequiresModel: b.RequiresModel})
+		out.Bindings = append(out.Bindings, &pb.AIClientBinding{Cli: string(b.CLI), ProfileId: b.ProfileID, State: b.State, Reason: b.Reason, InspectionId: b.InspectionID, TemplateRevision: b.TemplateRevision, Endpoint: b.Endpoint, TargetPath: b.TargetPath, RequiresModel: b.RequiresModel, ServiceSource: b.ServiceSource})
 	}
 	return out
 }

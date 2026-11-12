@@ -73,7 +73,7 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
         .init(
           "模型 / 时间", width: 166, growth: 3, symbol: "clock", sortable: false),
         .init(
-          "Profile", width: 90, growth: 2, alignment: .center, symbol: "person.crop.circle",
+          "Profile / 来源", width: 90, growth: 2, alignment: .center, symbol: "person.crop.circle",
           inset: cellInset, sortable: false),
         .init(
           "倍率", width: 56, growth: 0, alignment: .center, symbol: "creditcard", inset: cellInset,

@@ -20,6 +20,9 @@ type textEdit struct {
 // Every other byte, including comments, remains owned by the CLI user.
 func patchCurrent(cli CLI, files []nativeFile, base, key string) ([]nativeFile, error) {
 	for _, f := range files {
+		if cli == Codex && f.Name == "config.toml" && (!f.Exists || len(bytes.TrimSpace(f.Data)) == 0) {
+			continue
+		}
 		if !f.Exists || len(bytes.TrimSpace(f.Data)) == 0 {
 			return nil, Unsupported
 		}
@@ -61,11 +64,11 @@ func patchCurrent(cli CLI, files []nativeFile, base, key string) ([]nativeFile, 
 		}
 		// Another native profile may explicitly reference the same provider.
 		for _, entry := range object(cfg["profiles"]) {
-			if text(object(entry)["model_provider"]) == provider {
+			if value, exists := object(entry)["model_provider"]; exists && text(value) == provider {
 				return nil, Unsupported
 			}
 		}
-		b, err := patchTOML(fileData(files, "config.toml"), []string{"model_providers", provider, "base_url"}, old.url, base)
+		b, err := patchCodexBase(fileData(files, "config.toml"), cfg, old.url, base)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +76,10 @@ func patchCurrent(cli CLI, files []nativeFile, base, key string) ([]nativeFile, 
 		if err != nil {
 			return nil, err
 		}
-		out = replaceData(replaceData(out, "config.toml", b), "auth.json", a)
+		if !bytes.Equal(fileData(files, "config.toml"), b) {
+			out = replaceData(out, "config.toml", b)
+		}
+		out = replaceData(out, "auth.json", a)
 	case Claude:
 		cfg, err := jsonObject(fileData(files, "settings.json"))
 		if err != nil {
@@ -92,7 +98,7 @@ func patchCurrent(cli CLI, files []nativeFile, base, key string) ([]nativeFile, 
 		if _, exists := env[other]; exists {
 			return nil, Unsupported
 		}
-		b, err := patchJSON(fileData(files, "settings.json"), []string{"env", "ANTHROPIC_BASE_URL"}, old.url, base)
+		b, err := patchClaudeBase(fileData(files, "settings.json"), env, old.url, base)
 		if err != nil {
 			return nil, err
 		}

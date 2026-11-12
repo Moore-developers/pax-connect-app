@@ -20,19 +20,6 @@ import (
 func (m *Manager) initializationState(cli CLI, files []nativeFile) (string, error) {
 	switch cli {
 	case Claude:
-		account, err := m.claudeAccount()
-		if err != nil {
-			return "invalid", err
-		}
-		if account {
-			return "account", Unsupported
-		}
-		// Claude's account credentials live alongside settings; they are never a write target.
-		if _, err := os.Lstat(filepath.Join(m.targetDir(cli), ".credentials.json")); err == nil {
-			return "account", Unsupported
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "invalid", Unsafe
-		}
 		cfg := map[string]any{}
 		if raw := fileData(files, "settings.json"); len(bytes.TrimSpace(raw)) > 0 {
 			var err error
@@ -59,6 +46,17 @@ func (m *Manager) initializationState(cli CLI, files []nativeFile) (string, erro
 			}
 		}
 		if _, ok := cfg["apiKeyHelper"]; ok {
+			return "invalid", Unsupported
+		}
+		account, err := m.claudeAccount()
+		if err != nil {
+			return "invalid", err
+		}
+		credentials, err := m.accountMarker(filepath.Join(m.targetDir(cli), ".credentials.json"), "claudeAiOauth")
+		if err != nil {
+			return "invalid", err
+		}
+		if account || credentials {
 			return "account", Unsupported
 		}
 		return "missing", nil
@@ -69,15 +67,20 @@ func (m *Manager) initializationState(cli CLI, files []nativeFile) (string, erro
 				return "invalid", Invalid
 			}
 		}
+		provider := text(cfg["model_provider"])
+		if provider != "" && provider != "openai" || cfg["profile"] != nil || cfg["chatgpt_base_url"] != nil || cfg["model_providers"] != nil {
+			return "invalid", Unsupported
+		}
+		if store := text(cfg["cli_auth_credentials_store"]); store != "" && store != "auto" && store != "file" {
+			return "invalid", Unsupported
+		}
 		if raw := fileData(files, "auth.json"); len(raw) > 0 {
 			auth, err := jsonObject(raw)
 			if err != nil {
 				return "invalid", Invalid
 			}
-			if _, ok := auth["tokens"]; ok {
-				return "account", Unsupported
-			}
-			if mode, ok := auth["auth_mode"]; ok && mode != "apikey" {
+			tokens := object(auth["tokens"])
+			if text(auth["OPENAI_API_KEY"]) == "" && text(tokens["access_token"]) != "" && (auth["auth_mode"] == nil || auth["auth_mode"] == "chatgpt") && cfg["forced_login_method"] != "api" {
 				return "account", Unsupported
 			}
 			if len(auth) > 0 {
@@ -226,6 +229,10 @@ func (m *Manager) claudeAccount() (bool, error) {
 	if m.directories[Claude] != "" {
 		path = filepath.Join(m.targetDir(Claude), ".claude.json")
 	}
+	return m.accountMarker(path, "oauthAccount")
+}
+
+func (m *Manager) accountMarker(path, field string) (bool, error) {
 	fd, err := syscall.Open(path, syscall.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
@@ -250,8 +257,15 @@ func (m *Manager) claudeAccount() (bool, error) {
 	if err != nil {
 		return false, Invalid
 	}
-	account, exists := cfg["oauthAccount"]
-	return exists && account != nil, nil
+	account, exists := cfg[field]
+	if !exists || account == nil {
+		return false, nil
+	}
+	value, ok := account.(map[string]any)
+	if !ok || len(value) == 0 {
+		return false, Invalid
+	}
+	return true, nil
 }
 
 func codexNeedsModel(files []nativeFile) bool {

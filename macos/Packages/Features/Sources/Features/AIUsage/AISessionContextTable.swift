@@ -211,7 +211,11 @@ extension AISessionAnalysisView {
   }
 
   private func contextCost(_ bands: [AISessionContextBand]) -> Double? {
-    guard bands.allSatisfy({ $0.pricedRequests == $0.requests }) else { return nil }
+    guard
+      bands.allSatisfy({
+        $0.pricedRequests == $0.requests && (!options.channel || $0.unconfirmedChannel == 0)
+      })
+    else { return nil }
     return bands.reduce(0) { $0 + (options.channel ? $1.channelCost : $1.officialCost) }
   }
 

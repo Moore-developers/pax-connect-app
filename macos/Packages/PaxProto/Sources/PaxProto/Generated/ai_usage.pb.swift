@@ -116,6 +116,9 @@ public nonisolated struct Pax_V1_AIUsageTotals: Sendable {
 
   public var billedCostsMicro: [Int64] = []
 
+  /// Nonzero when this sum includes account/unknown-source equivalents rather than channel costs.
+  public var unconfirmedChannel: Int64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -159,6 +162,11 @@ public nonisolated struct Pax_V1_AIUsageBucket: @unchecked Sendable {
   public var hasTotals: Bool {_storage._totals != nil}
   /// Clears the value of `totals`. Subsequent reads from it will return its default value.
   public mutating func clearTotals() {_uniqueStorage()._totals = nil}
+
+  public var serviceSource: String {
+    get {_storage._serviceSource}
+    set {_uniqueStorage()._serviceSource = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -256,6 +264,8 @@ public nonisolated struct Pax_V1_AIUsageLogQuery: Sendable {
   public var hasMaxOfficialCostMicro: Bool {self._maxOfficialCostMicro != nil}
   /// Clears the value of `maxOfficialCostMicro`. Subsequent reads from it will return its default value.
   public mutating func clearMaxOfficialCostMicro() {self._maxOfficialCostMicro = nil}
+
+  public var serviceSource: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -463,6 +473,12 @@ public nonisolated struct Pax_V1_AIUsageRequest: @unchecked Sendable {
   public var hasCacheWriteLongPrice: Bool {_storage._cacheWriteLongPrice != nil}
   /// Clears the value of `cacheWriteLongPrice`. Subsequent reads from it will return its default value.
   public mutating func clearCacheWriteLongPrice() {_uniqueStorage()._cacheWriteLongPrice = nil}
+
+  /// Frozen local configuration observation; empty for existing records, unknown if unconfirmed.
+  public var serviceSource: String {
+    get {_storage._serviceSource}
+    set {_uniqueStorage()._serviceSource = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1012,6 +1028,8 @@ public nonisolated struct Pax_V1_AIUsageContextBand: Sendable {
 
   public var pricedRequests: Int64 = 0
 
+  public var unconfirmedChannel: Int64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1027,6 +1045,8 @@ public nonisolated struct Pax_V1_AIUsageLimitMoney: Sendable {
   public var official: Double = 0
 
   public var channel: Double = 0
+
+  public var channelUnknown: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1781,7 +1801,7 @@ nonisolated extension Pax_V1_AIUsageSummaryQuery: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Pax_V1_AIUsageTotals: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageTotals"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}count\0\u{1}success\0\u{1}input\0\u{1}read\0\u{1}write\0\u{1}output\0\u{3}costs_micro\0\u{3}cost_micro\0\u{3}tps_sum\0\u{4}\u{2}elapsed_sum\0\u{3}tps_count\0\u{4}\u{2}elapsed_count\0\u{4}\u{2}billed_costs_micro\0\u{b}first_sum\0\u{b}first_count\0\u{b}unpriced\0\u{b}est_tps_sum\0\u{b}est_elapsed_sum\0\u{b}est_tps_count\0\u{b}est_elapsed_count\0\u{c}\u{a}\u{1}\u{c}\u{d}\u{1}\u{c}\u{f}\u{1}\u{c}\u{11}\u{1}\u{c}\u{12}\u{1}\u{c}\u{13}\u{1}\u{c}\u{14}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}count\0\u{1}success\0\u{1}input\0\u{1}read\0\u{1}write\0\u{1}output\0\u{3}costs_micro\0\u{3}cost_micro\0\u{3}tps_sum\0\u{4}\u{2}elapsed_sum\0\u{3}tps_count\0\u{4}\u{2}elapsed_count\0\u{4}\u{2}billed_costs_micro\0\u{4}\u{5}unconfirmed_channel\0\u{b}first_sum\0\u{b}first_count\0\u{b}unpriced\0\u{b}est_tps_sum\0\u{b}est_elapsed_sum\0\u{b}est_tps_count\0\u{b}est_elapsed_count\0\u{c}\u{a}\u{1}\u{c}\u{d}\u{1}\u{c}\u{f}\u{1}\u{c}\u{11}\u{1}\u{c}\u{12}\u{1}\u{c}\u{13}\u{1}\u{c}\u{14}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1802,6 +1822,7 @@ nonisolated extension Pax_V1_AIUsageTotals: SwiftProtobuf.Message, SwiftProtobuf
       case 12: try { try decoder.decodeSingularInt64Field(value: &self.tpsCount) }()
       case 14: try { try decoder.decodeSingularInt64Field(value: &self.elapsedCount) }()
       case 16: try { try decoder.decodeRepeatedInt64Field(value: &self.billedCostsMicro) }()
+      case 21: try { try decoder.decodeSingularInt64Field(value: &self.unconfirmedChannel) }()
       default: break
       }
     }
@@ -1847,6 +1868,9 @@ nonisolated extension Pax_V1_AIUsageTotals: SwiftProtobuf.Message, SwiftProtobuf
     if !self.billedCostsMicro.isEmpty {
       try visitor.visitPackedInt64Field(value: self.billedCostsMicro, fieldNumber: 16)
     }
+    if self.unconfirmedChannel != 0 {
+      try visitor.visitSingularInt64Field(value: self.unconfirmedChannel, fieldNumber: 21)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1864,6 +1888,7 @@ nonisolated extension Pax_V1_AIUsageTotals: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.tpsCount != rhs.tpsCount {return false}
     if lhs.elapsedCount != rhs.elapsedCount {return false}
     if lhs.billedCostsMicro != rhs.billedCostsMicro {return false}
+    if lhs.unconfirmedChannel != rhs.unconfirmedChannel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1871,7 +1896,7 @@ nonisolated extension Pax_V1_AIUsageTotals: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageBucket"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}at_ms\0\u{1}cli\0\u{3}profile_id\0\u{3}profile_name\0\u{3}model_id\0\u{1}totals\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}at_ms\0\u{1}cli\0\u{3}profile_id\0\u{3}profile_name\0\u{3}model_id\0\u{1}totals\0\u{3}service_source\0")
 
   fileprivate class _StorageClass {
     var _atMs: Int64 = 0
@@ -1880,6 +1905,7 @@ nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf
     var _profileName: String = String()
     var _modelID: String = String()
     var _totals: Pax_V1_AIUsageTotals? = nil
+    var _serviceSource: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -1896,6 +1922,7 @@ nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf
       _profileName = source._profileName
       _modelID = source._modelID
       _totals = source._totals
+      _serviceSource = source._serviceSource
     }
   }
 
@@ -1920,6 +1947,7 @@ nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf
         case 4: try { try decoder.decodeSingularStringField(value: &_storage._profileName) }()
         case 5: try { try decoder.decodeSingularStringField(value: &_storage._modelID) }()
         case 6: try { try decoder.decodeSingularMessageField(value: &_storage._totals) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._serviceSource) }()
         default: break
         }
       }
@@ -1950,6 +1978,9 @@ nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf
       try { if let v = _storage._totals {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
       } }()
+      if !_storage._serviceSource.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._serviceSource, fieldNumber: 7)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1965,6 +1996,7 @@ nonisolated extension Pax_V1_AIUsageBucket: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._profileName != rhs_storage._profileName {return false}
         if _storage._modelID != rhs_storage._modelID {return false}
         if _storage._totals != rhs_storage._totals {return false}
+        if _storage._serviceSource != rhs_storage._serviceSource {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -2060,7 +2092,7 @@ nonisolated extension Pax_V1_AIUsageBuckets: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageLogQuery"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}succeeded\0\u{1}query\0\u{3}profile_id\0\u{3}model_id\0\u{1}cli\0\u{1}page\0\u{3}min_official_cost_micro\0\u{3}max_official_cost_micro\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}succeeded\0\u{1}query\0\u{3}profile_id\0\u{3}model_id\0\u{1}cli\0\u{1}page\0\u{3}min_official_cost_micro\0\u{3}max_official_cost_micro\0\u{3}service_source\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2078,6 +2110,7 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
       case 8: try { try decoder.decodeSingularUInt32Field(value: &self.page) }()
       case 9: try { try decoder.decodeSingularInt64Field(value: &self._minOfficialCostMicro) }()
       case 10: try { try decoder.decodeSingularInt64Field(value: &self._maxOfficialCostMicro) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.serviceSource) }()
       default: break
       }
     }
@@ -2118,6 +2151,9 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
     try { if let v = self._maxOfficialCostMicro {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 10)
     } }()
+    if !self.serviceSource.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceSource, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2132,6 +2168,7 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
     if lhs.page != rhs.page {return false}
     if lhs._minOfficialCostMicro != rhs._minOfficialCostMicro {return false}
     if lhs._maxOfficialCostMicro != rhs._maxOfficialCostMicro {return false}
+    if lhs.serviceSource != rhs.serviceSource {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2173,7 +2210,7 @@ nonisolated extension Pax_V1_AIUsageUnitPrice: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}at_ms\0\u{1}cli\0\u{3}model_id\0\u{3}profile_id\0\u{3}profile_name\0\u{1}succeeded\0\u{3}error_code\0\u{1}streaming\0\u{1}input\0\u{1}read\0\u{1}write\0\u{1}output\0\u{3}input_price\0\u{3}output_price\0\u{1}multiplier\0\u{1}tps\0\u{2}\u{2}elapsed\0\u{3}cost_micro\0\u{3}costs_micro\0\u{4}\u{2}component_prices\0\u{3}price_version\0\u{4}\u{3}reasoning_effort\0\u{3}effort_source\0\u{4}\u{2}cache_write_short\0\u{3}cache_write_long\0\u{3}cache_write_short_price\0\u{3}cache_write_long_price\0\u{b}first_token\0\u{b}priced\0\u{b}price_reason\0\u{b}attribution_source\0\u{b}timing_source\0\u{c}\u{12}\u{1}\u{c}\u{16}\u{1}\u{c}\u{19}\u{1}\u{c}\u{1a}\u{1}\u{c}\u{1d}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}at_ms\0\u{1}cli\0\u{3}model_id\0\u{3}profile_id\0\u{3}profile_name\0\u{1}succeeded\0\u{3}error_code\0\u{1}streaming\0\u{1}input\0\u{1}read\0\u{1}write\0\u{1}output\0\u{3}input_price\0\u{3}output_price\0\u{1}multiplier\0\u{1}tps\0\u{2}\u{2}elapsed\0\u{3}cost_micro\0\u{3}costs_micro\0\u{4}\u{2}component_prices\0\u{3}price_version\0\u{4}\u{3}reasoning_effort\0\u{3}effort_source\0\u{4}\u{2}cache_write_short\0\u{3}cache_write_long\0\u{3}cache_write_short_price\0\u{3}cache_write_long_price\0\u{3}service_source\0\u{b}first_token\0\u{b}priced\0\u{b}price_reason\0\u{b}attribution_source\0\u{b}timing_source\0\u{c}\u{12}\u{1}\u{c}\u{16}\u{1}\u{c}\u{19}\u{1}\u{c}\u{1a}\u{1}\u{c}\u{1d}\u{1}")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2204,6 +2241,7 @@ nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobu
     var _cacheWriteLong: Int64? = nil
     var _cacheWriteShortPrice: Double? = nil
     var _cacheWriteLongPrice: Double? = nil
+    var _serviceSource: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2242,6 +2280,7 @@ nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobu
       _cacheWriteLong = source._cacheWriteLong
       _cacheWriteShortPrice = source._cacheWriteShortPrice
       _cacheWriteLongPrice = source._cacheWriteLongPrice
+      _serviceSource = source._serviceSource
     }
   }
 
@@ -2288,6 +2327,7 @@ nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobu
         case 31: try { try decoder.decodeSingularInt64Field(value: &_storage._cacheWriteLong) }()
         case 32: try { try decoder.decodeSingularDoubleField(value: &_storage._cacheWriteShortPrice) }()
         case 33: try { try decoder.decodeSingularDoubleField(value: &_storage._cacheWriteLongPrice) }()
+        case 34: try { try decoder.decodeSingularStringField(value: &_storage._serviceSource) }()
         default: break
         }
       }
@@ -2384,6 +2424,9 @@ nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobu
       try { if let v = _storage._cacheWriteLongPrice {
         try visitor.visitSingularDoubleField(value: v, fieldNumber: 33)
       } }()
+      if !_storage._serviceSource.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._serviceSource, fieldNumber: 34)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2421,6 +2464,7 @@ nonisolated extension Pax_V1_AIUsageRequest: SwiftProtobuf.Message, SwiftProtobu
         if _storage._cacheWriteLong != rhs_storage._cacheWriteLong {return false}
         if _storage._cacheWriteShortPrice != rhs_storage._cacheWriteShortPrice {return false}
         if _storage._cacheWriteLongPrice != rhs_storage._cacheWriteLongPrice {return false}
+        if _storage._serviceSource != rhs_storage._serviceSource {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -3412,7 +3456,7 @@ nonisolated extension Pax_V1_AIUsageContextUsage: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Pax_V1_AIUsageContextBand: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageContextBand"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}official_cost_micro\0\u{3}channel_cost_micro\0\u{1}requests\0\u{3}priced_requests\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}official_cost_micro\0\u{3}channel_cost_micro\0\u{1}requests\0\u{3}priced_requests\0\u{3}unconfirmed_channel\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3425,6 +3469,7 @@ nonisolated extension Pax_V1_AIUsageContextBand: SwiftProtobuf.Message, SwiftPro
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.channelCostMicro) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.requests) }()
       case 5: try { try decoder.decodeSingularInt64Field(value: &self.pricedRequests) }()
+      case 6: try { try decoder.decodeSingularInt64Field(value: &self.unconfirmedChannel) }()
       default: break
       }
     }
@@ -3446,6 +3491,9 @@ nonisolated extension Pax_V1_AIUsageContextBand: SwiftProtobuf.Message, SwiftPro
     if self.pricedRequests != 0 {
       try visitor.visitSingularInt64Field(value: self.pricedRequests, fieldNumber: 5)
     }
+    if self.unconfirmedChannel != 0 {
+      try visitor.visitSingularInt64Field(value: self.unconfirmedChannel, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3455,6 +3503,7 @@ nonisolated extension Pax_V1_AIUsageContextBand: SwiftProtobuf.Message, SwiftPro
     if lhs.channelCostMicro != rhs.channelCostMicro {return false}
     if lhs.requests != rhs.requests {return false}
     if lhs.pricedRequests != rhs.pricedRequests {return false}
+    if lhs.unconfirmedChannel != rhs.unconfirmedChannel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3462,7 +3511,7 @@ nonisolated extension Pax_V1_AIUsageContextBand: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Pax_V1_AIUsageLimitMoney: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageLimitMoney"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}official\0\u{1}channel\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}official\0\u{1}channel\0\u{3}channel_unknown\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3472,6 +3521,7 @@ nonisolated extension Pax_V1_AIUsageLimitMoney: SwiftProtobuf.Message, SwiftProt
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularDoubleField(value: &self.official) }()
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.channel) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.channelUnknown) }()
       default: break
       }
     }
@@ -3484,12 +3534,16 @@ nonisolated extension Pax_V1_AIUsageLimitMoney: SwiftProtobuf.Message, SwiftProt
     if self.channel.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.channel, fieldNumber: 2)
     }
+    if self.channelUnknown != false {
+      try visitor.visitSingularBoolField(value: self.channelUnknown, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_AIUsageLimitMoney, rhs: Pax_V1_AIUsageLimitMoney) -> Bool {
     if lhs.official != rhs.official {return false}
     if lhs.channel != rhs.channel {return false}
+    if lhs.channelUnknown != rhs.channelUnknown {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

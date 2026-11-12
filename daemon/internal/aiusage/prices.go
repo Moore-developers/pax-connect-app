@@ -31,6 +31,18 @@ func (r *Request) attribute(a attributor) {
 	if r.CLI != "dsh" && a.resolve != nil {
 		at = a.resolve(r.CLI, time.UnixMilli(r.At))
 	}
+	// A process started before an observed route change may still use its old
+	// credentials. Without request-level auth evidence, do not claim either route.
+	if at.Since > 0 && (r.sourceStart == 0 || r.sourceStart < at.Since) {
+		at = Attribution{ServiceSource: "unknown", Multiplier: 1}
+	}
+	if r.CLI == "codex" && at.ServiceSource == "official_account" && r.sourceProvider != "" && r.sourceProvider != "openai" {
+		at = Attribution{ServiceSource: "unknown", Multiplier: 1}
+	}
+	if r.CLI != "dsh" && at.ServiceSource == "" && at.ProfileID == "" {
+		at.ServiceSource = "unknown"
+	}
+	r.Details.ServiceSource = at.ServiceSource
 	m := at.ForModel(r.Model)
 	if r.CLI != "dsh" && at.ProfileID != "" {
 		m = a.multiplier(at.ProfileID, r.Model, r.At, m)

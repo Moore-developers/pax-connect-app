@@ -30,6 +30,8 @@ message AIClientBinding {
  string cli=1; string profile_id=2; string state=3; string reason=4;
  string inspection_id=5; uint64 template_revision=6 [deprecated=true];
  string endpoint=7; string target_path=8; bool requires_model=9;
+ // Configured authentication route; never proof of a valid subscription or live session.
+ string service_source=10;
 }
 message AIProfilesWorkspace {
  repeated AIProfileSummary profiles=1;

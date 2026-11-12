@@ -54,6 +54,13 @@ struct AIOverviewSegment: Equatable {
 
 struct AIClientUsageRow: Equatable {
   let client: AIClient
+  let serviceSource: AIServiceSource
+  var configurationText: String {
+    profileName
+      + ([AIServiceSource.officialAPI, .relayAPI].contains(serviceSource)
+        && profileName != serviceSource.label ? " · " + serviceSource.label : "")
+      + (multiplier.map { " · " + $0 } ?? "")
+  }
   let profileName: String
   let multiplier: String?
   /// stateLabel of any binding that is not 配置已写入; nil when applied or the service is unavailable.
@@ -119,13 +126,14 @@ extension AIUsageStore {
       ? selected.map {
         .init(
           profileID: $0.profileID, client: $0.client, profileName: $0.profileName,
-          modelID: $0.modelID, count: 1, cost: $0.originalCost, tokens: $0.tokens)
+          modelID: $0.modelID, count: 1, cost: $0.originalCost, tokens: $0.tokens,
+          serviceSource: $0.serviceSource)
       }
       : (data?.buckets ?? []).map {
         .init(
           profileID: $0.profileID, client: $0.client, profileName: $0.profileName,
           modelID: $0.modelID, count: $0.totals.count, cost: $0.totals.costs.reduce(0, +),
-          tokens: $0.totals.input + $0.totals.output)
+          tokens: $0.totals.input + $0.totals.output, serviceSource: $0.serviceSource)
       }
     let named = Dictionary(
       profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
@@ -241,22 +249,31 @@ extension AIUsageStore {
       let (client, sum) = pair
       let binding = bindings[client]
       let profile = profiles.first { $0.id == binding?.profileID }
+      let source =
+        binding?.serviceSource == .unrecorded
+        ? profile?.serviceSource ?? .unknown : binding?.serviceSource ?? .unknown
       let used = sum.count > 0
       return AIClientUsageRow(
-        client: client,
-        profileName: client == .harness ? "只读用量" : profile?.name ?? "未保存 Profile",
-        multiplier: client == .harness
-          ? AIUsageFormatting.multiplier(1)
-          : profile.map { AIUsageFormatting.multiplier($0.multiplier) },
+        client: client, serviceSource: source,
+        profileName: client == .harness
+          ? "只读用量"
+          : source == .officialAccount
+            ? "官方账号"
+            : profile?.name ?? source.label,
+        multiplier: source == .officialAccount
+          ? nil
+          : client == .harness
+            ? AIUsageFormatting.multiplier(1)
+            : profile.map { AIUsageFormatting.multiplier($0.multiplier) },
         state: states[client],
         stateText: client == .harness
           ? "只读" : configuration.available ? AIProfilesStore.stateLabel(binding) : "配置服务不可用",
         needsAction: states[client].map(Self.actionLabels.contains) ?? false,
         unconfigured: client != .harness
-          && (profile == nil || AIProfilesStore.stateLabel(binding) == "未配置"),
+          && binding?.state == "missing",
         value: used
           ? (cost
-            ? (sum.officialCostLabel + "（官方）")
+            ? (sum.officialCostLabel + (sum.accountOnly ? "（API 等值）" : "（官方）"))
             : AIUsageFormatting.tokens(sum.tokens)) : "—",
         billedCostText: used ? sum.costLabel : "—",
         shareText: used && total > 0 ? AIUsageFormatting.percent(amount / total) : "",

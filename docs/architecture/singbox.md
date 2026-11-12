@@ -56,7 +56,7 @@ NetworkDiagnosticProgress是本轮临时计数/阶段标准值，measurement发�
 
 后台恢复的跨端握手追加owner_app_pid，Go/Swift同提交同步；行为以[协议§4](protocol.md#4-ipc-与协议)及[恢复合同](../changes/pax-connect-network-control-plane/backend-recovery.md)为准。
 
-AI Profile标准值由Go→proto→PaxClient映射，见P07。
+AI Profile标准值由Go→proto→PaxClient映射，见P07。AIServiceSource独立标识本机配置来源；请求与桶保存历史来源，渠道金额覆盖缺失独立传递，见[来源合同](../changes/pax-connect-network-control-plane/ai-service-sources.md)。
 
 首次引导新增Hello首次身份、AI绑定检测和初始化计划，Go/proto/Swift同步；合同见[首次引导](../changes/pax-connect-network-control-plane/first-run-onboarding.md)，不改变sing-box运行模型。
 

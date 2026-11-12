@@ -182,7 +182,7 @@ func TestEventStoreMigratesFromVersionOneInPlace(t *testing.T) {
 			t.Fatalf("an old event reads as no overrides: %+v", a)
 		}
 		var v int
-		if e = m.events.QueryRowContext(ctx, "PRAGMA user_version").Scan(&v); e != nil || v != 2 {
+		if e = m.events.QueryRowContext(ctx, "PRAGMA user_version").Scan(&v); e != nil || v != 3 {
 			t.Fatalf("version %d %v", v, e)
 		}
 		if e = m.Close(); e != nil {

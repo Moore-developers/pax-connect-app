@@ -85,10 +85,12 @@ struct AILimitRequest: Equatable {
 struct AILimitMoney: Equatable {
   var official = 0.0
   var channel = 0.0
+  var channelUnknown = false
   func value(channel useChannel: Bool) -> Double { useChannel ? channel : official }
   mutating func add(_ other: AILimitMoney) {
     official += other.official
     channel += other.channel
+    channelUnknown = channelUnknown || other.channelUnknown
   }
 }
 
@@ -108,7 +110,7 @@ struct AILimitBand: Equatable {
     guard pricedRequests > 0 else { return nil }
     return .init(
       official: money.official / Double(pricedRequests),
-      channel: money.channel / Double(pricedRequests))
+      channel: money.channel / Double(pricedRequests), channelUnknown: money.channelUnknown)
   }
   mutating func add(_ other: AILimitBand) {
     requests += other.requests

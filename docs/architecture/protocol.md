@@ -2,6 +2,7 @@
 
 ## 4. IPC 与协议
 
+
 DiagnoseNetwork进度字段及只读查询见[合同](../changes/pax-connect-network-control-plane/network-diagnostics-progress.md)。
 
 引导：[合同](../changes/pax-connect-network-control-plane/first-run-onboarding.md)。Hello新增initial_install（onboarding.v1），启动建库前冻结；AI绑定附endpoint/target_path/requires_model，计划增加initialize/model_id与initializes/target_path，创建仍经Plan→Apply，无Key回传。
@@ -113,9 +114,9 @@ TrafficRow.latest_match为可选最近匹配证据；语义见[最近命中](../
 
 AI日志跨generation返回`ai_usage_busy`。
 
-AI用量RPC限用户socket，5秒超时（重算30秒）；桶/日志/分析范围≤367天，不含正文/密钥。桶查询带可选known_revision（`visible` 租约已 reserved，改由 SetViewVisibility 上报）；未变化只返回state/not_modified，不重读用量。日志10条分页，结果计数排除自身筛选；可选价格/性能以proto presence表达。桶查询另返回last_used（每CLI最近请求时间，不受时段限制）。全时段汇总读永久小时桶，不读过期明细。
+AI用量RPC限用户socket、5秒（重算30秒）、范围≤367天；不传正文/密钥。known_revision未变只回state/not_modified；可见性由SetViewVisibility上报。日志10条分页，结果计数排除自身筛选；可选值用presence。last_used不受时段限制；全时段汇总读永久小时桶。
 
-AI请求字段/presence/reserved编号见api/ai_usage.proto，归属与重建见AI采集§3–7；DSH只读。
+协议46：AI追加service_source、渠道金额覆盖状态及对应sources.v1能力；字段见api/ai_usage.proto与ai_profiles.proto，语义见[来源](../changes/pax-connect-network-control-plane/ai-service-sources.md)。
 
 `AIProfileSummary.model_multipliers`按请求模型覆盖默认倍率，保存时整表替换，客户端须原样带回；值范围0–100、至多3位小数，否则`ai_profile_invalid`。`RepriceAIUsage`支持模型、含两端的本地日期或全部范围、试算；字段见`api/ai_usage.proto`。仅剩小时桶时按桶重估，试算override_id为0。倍率取daemon该Profile当前值；错误：范围/参数`ai_usage_range_invalid`（InvalidArgument）、Profile不存在`ai_profile_not_found`（NotFound）、采集超时`ai_usage_busy`（Unavailable）。语义与覆盖优先级见AI采集§4。
 

@@ -9,7 +9,7 @@ import (
 )
 
 const requestColumns = "cli,request_key,at,day,session,segment,profile_id,profile_name,model,streaming,succeeded,error,input,read,write,output,input_price,output_price,multiplier,tps,elapsed,cost,c0,c1,c2,c3,details"
-const summaryColumns = "count,success,input,read,write,output,c0,c1,c2,c3,cost,tps_sum,elapsed_sum,tps_count,elapsed_count,b0,b1,b2,b3"
+const summaryColumns = "count,success,input,read,write,output,c0,c1,c2,c3,cost,tps_sum,elapsed_sum,tps_count,elapsed_count,b0,b1,b2,b3,unconfirmed_channel"
 
 var requestInsert = "INSERT OR REPLACE INTO requests(" + requestColumns + ") VALUES(?" + strings.Repeat(",?", strings.Count(requestColumns, ",")) + ")"
 
@@ -19,12 +19,12 @@ var bucketUpsert = func() string {
 	for _, c := range strings.Split(summaryColumns, ",") {
 		set = append(set, c+"="+c+"+excluded."+c)
 	}
-	return "INSERT INTO usage_hourly(hour,cli,profile_id,model,profile_name," + summaryColumns + ") VALUES(?,?,?,?,?" + strings.Repeat(",?", strings.Count(summaryColumns, ",")+1) + ") ON CONFLICT(hour,cli,profile_id,model) DO UPDATE SET " + strings.Join(set, ",")
+	return "INSERT INTO usage_hourly(hour,cli,profile_id,model,profile_name,service_source," + summaryColumns + ") VALUES(?,?,?,?,?,?" + strings.Repeat(",?", strings.Count(summaryColumns, ",")+1) + ") ON CONFLICT(hour,cli,profile_id,model,service_source) DO UPDATE SET " + strings.Join(set, ",")
 }()
 
 type bucketKey struct {
-	At                  int64
-	CLI, Profile, Model string
+	At                          int64
+	CLI, Profile, Model, Source string
 }
 
 // commitRows is the one write path: it stores rows and adds them to the hourly
@@ -182,9 +182,10 @@ func writeRequest(ctx context.Context, stmt *sql.Stmt, r Request) error {
 }
 
 func accumulate(grouped map[bucketKey]Bucket, r Request, sign int64) {
-	key := bucketKey{r.At / 3600000 * 3600000, r.CLI, r.ProfileID, r.Model}
+	key := bucketKey{r.At / 3600000 * 3600000, r.CLI, r.ProfileID, r.Model, r.Details.ServiceSource}
 	v := grouped[key]
 	v.At, v.CLI, v.ProfileID, v.ProfileName, v.Model = key.At, r.CLI, r.ProfileID, r.ProfileName, r.Model
+	v.ServiceSource = r.Details.ServiceSource
 	sum := summarize(r)
 	if sign < 0 {
 		sum = sum.negate()
@@ -194,11 +195,11 @@ func accumulate(grouped map[bucketKey]Bucket, r Request, sign int64) {
 }
 
 func summaryValues(v Summary) []any {
-	return []any{v.Count, v.Success, v.Input, v.Read, v.Write, v.Output, v.Costs[0], v.Costs[1], v.Costs[2], v.Costs[3], v.Cost, v.TPSSum, v.ElapsedSum, v.TPSCount, v.ElapsedCount, v.BilledCosts[0], v.BilledCosts[1], v.BilledCosts[2], v.BilledCosts[3]}
+	return []any{v.Count, v.Success, v.Input, v.Read, v.Write, v.Output, v.Costs[0], v.Costs[1], v.Costs[2], v.Costs[3], v.Cost, v.TPSSum, v.ElapsedSum, v.TPSCount, v.ElapsedCount, v.BilledCosts[0], v.BilledCosts[1], v.BilledCosts[2], v.BilledCosts[3], v.UnconfirmedChannel}
 }
 
 func summaryTargets(v *Summary) []any {
-	return []any{&v.Count, &v.Success, &v.Input, &v.Read, &v.Write, &v.Output, &v.Costs[0], &v.Costs[1], &v.Costs[2], &v.Costs[3], &v.Cost, &v.TPSSum, &v.ElapsedSum, &v.TPSCount, &v.ElapsedCount, &v.BilledCosts[0], &v.BilledCosts[1], &v.BilledCosts[2], &v.BilledCosts[3]}
+	return []any{&v.Count, &v.Success, &v.Input, &v.Read, &v.Write, &v.Output, &v.Costs[0], &v.Costs[1], &v.Costs[2], &v.Costs[3], &v.Cost, &v.TPSSum, &v.ElapsedSum, &v.TPSCount, &v.ElapsedCount, &v.BilledCosts[0], &v.BilledCosts[1], &v.BilledCosts[2], &v.BilledCosts[3], &v.UnconfirmedChannel}
 }
 
 // writeBuckets adds each Summary to its hour.
@@ -209,7 +210,7 @@ func writeBuckets(ctx context.Context, tx *sql.Tx, grouped map[bucketKey]Bucket)
 	}
 	defer func() { _ = stmt.Close() }()
 	for _, b := range grouped {
-		if _, e = stmt.ExecContext(ctx, append([]any{b.At, b.CLI, b.ProfileID, b.Model, b.ProfileName}, summaryValues(b.Summary)...)...); e != nil {
+		if _, e = stmt.ExecContext(ctx, append([]any{b.At, b.CLI, b.ProfileID, b.Model, b.ProfileName, b.ServiceSource}, summaryValues(b.Summary)...)...); e != nil {
 			return ErrUnavailable
 		}
 	}

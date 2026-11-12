@@ -237,7 +237,7 @@ func TestRepriceRescalesBucketsOlderThanStoredRequests(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if e = writeBuckets(context.Background(), tx, map[bucketKey]Bucket{{hour, "claude", "p", modelA}: old}); e != nil || tx.Commit() != nil {
+	if e = writeBuckets(context.Background(), tx, map[bucketKey]Bucket{{hour, "claude", "p", modelA, ""}: old}); e != nil || tx.Commit() != nil {
 		t.Fatal(e)
 	}
 	// A day range that misses March leaves it alone; all reaches it.
@@ -301,7 +301,7 @@ func TestOverrideSurvivesAFullRebuild(t *testing.T) {
 	f.reprice(RepriceQuery{FromDay: "2026-10-27", ToDay: "2026-10-27", Multiplier: .5})
 	hour := local(2026, 3, 1, 9, 0).UnixMilli() / 3600000 * 3600000
 	tx, _ := f.store.w.Begin()
-	if e := writeBuckets(context.Background(), tx, map[bucketKey]Bucket{{hour, "claude", "p", modelA}: {At: hour, CLI: "claude", ProfileID: "p", ProfileName: "P", Model: modelA, Summary: Summary{Count: 1, Costs: [4]int64{1000000, 0, 0, 0}, Cost: 1000000, BilledCosts: [4]int64{1000000, 0, 0, 0}}}}); e != nil || tx.Commit() != nil {
+	if e := writeBuckets(context.Background(), tx, map[bucketKey]Bucket{{hour, "claude", "p", modelA, ""}: {At: hour, CLI: "claude", ProfileID: "p", ProfileName: "P", Model: modelA, Summary: Summary{Count: 1, Costs: [4]int64{1000000, 0, 0, 0}, Cost: 1000000, BilledCosts: [4]int64{1000000, 0, 0, 0}}}}); e != nil || tx.Commit() != nil {
 		t.Fatal(e)
 	}
 	f.reprice(RepriceQuery{All: true, Multiplier: .5, Model: modelA, DryRun: false, FromDay: "", ToDay: ""})

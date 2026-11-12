@@ -6,6 +6,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 	"io"
+	"strings"
 )
 
 type nativeFile struct {
@@ -122,17 +123,54 @@ func codexConfig(files []nativeFile, base, key string) ([]nativeFile, nativeValu
 	if toml.Unmarshal(fileData(files, "config.toml"), &cfg) != nil {
 		return nil, nativeValue{}, Unsupported
 	}
-	provider := object(object(cfg["model_providers"])[text(cfg["model_provider"])])
+	providerID := text(cfg["model_provider"])
+	provider := object(object(cfg["model_providers"])[providerID])
 	auth, err := jsonObject(fileData(files, "auth.json"))
 	if err != nil {
 		return nil, nativeValue{}, Unsupported
 	}
 	v := nativeValue{url: text(provider["base_url"]), key: text(auth["OPENAI_API_KEY"])}
-	if provider == nil || v.url == "" || v.key == "" || text(provider["env_key"]) != "" || text(provider["experimental_bearer_token"]) != "" || object(provider["http_headers"])["Authorization"] != nil || object(provider["env_http_headers"])["Authorization"] != nil {
+	if _, exists := auth["tokens"]; exists {
 		return nil, v, Unsupported
+	}
+	if mode, exists := auth["auth_mode"]; exists && mode != "apikey" {
+		return nil, v, Unsupported
+	}
+	if mode := text(cfg["forced_login_method"]); mode != "" && mode != "api" {
+		return nil, v, Unsupported
+	}
+	if store := text(cfg["cli_auth_credentials_store"]); store != "" && store != "auto" && store != "file" {
+		return nil, v, Unsupported
+	}
+	if cfg["profile"] != nil {
+		return nil, v, Unsupported
+	}
+	if providerID == "" || providerID == "openai" {
+		if provider == nil {
+			provider = object(object(cfg["model_providers"])["openai"])
+		}
+		v.url = text(provider["base_url"])
+		if v.url == "" {
+			v.url = "https://api.openai.com/v1"
+		}
+	} else if provider == nil {
+		return nil, v, Unsupported
+	}
+	if v.url == "" || v.key == "" || provider["auth"] != nil || provider["gateway_oauth"] != nil || text(provider["env_key"]) != "" || text(provider["experimental_bearer_token"]) != "" {
+		return nil, v, Unsupported
+	}
+	for _, field := range []string{"http_headers", "env_http_headers"} {
+		for name := range object(provider[field]) {
+			if strings.EqualFold(name, "authorization") {
+				return nil, v, Unsupported
+			}
+		}
 	}
 	if base == "" {
 		return files, v, nil
+	}
+	if provider == nil {
+		return nil, v, Unsupported
 	}
 	provider["base_url"] = base
 	auth["OPENAI_API_KEY"] = key
@@ -152,15 +190,26 @@ func claudeConfig(files []nativeFile, base, key string) ([]nativeFile, nativeVal
 		return nil, nativeValue{}, Unsupported
 	}
 	env := object(cfg["env"])
+	if cfg["apiKeyHelper"] != nil {
+		return nil, nativeValue{}, Unsupported
+	}
+	for _, name := range []string{"CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"} {
+		if env[name] != nil {
+			return nil, nativeValue{}, Unsupported
+		}
+	}
 	field := "ANTHROPIC_AUTH_TOKEN"
 	token, api := text(env[field]), text(env["ANTHROPIC_API_KEY"])
-	if token != "" && api != "" {
+	if _, exists := env[field]; exists && env["ANTHROPIC_API_KEY"] != nil {
 		return nil, nativeValue{}, Unsupported
 	}
 	if token == "" {
 		field = "ANTHROPIC_API_KEY"
 	}
 	v := nativeValue{url: text(env["ANTHROPIC_BASE_URL"]), key: text(env[field])}
+	if v.url == "" && api != "" {
+		v.url = "https://api.anthropic.com"
+	}
 	if v.url == "" || v.key == "" {
 		return nil, v, Unsupported
 	}

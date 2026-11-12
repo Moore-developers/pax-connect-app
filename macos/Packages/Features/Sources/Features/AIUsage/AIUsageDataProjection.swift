@@ -48,11 +48,13 @@ extension AIUsageStore {
       preview
       ? selected.filter {
         AIUsageTrendFilter.matches(
-          filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID)
+          filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID,
+          serviceSource: $0.serviceSource)
       } : []
     let rows = (data?.buckets ?? []).filter {
       AIUsageTrendFilter.matches(
-        filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID)
+        filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID,
+        serviceSource: $0.serviceSource)
     }
     return trendIntervals.map { range in
       (

@@ -6,7 +6,8 @@ import PaxUI
 enum AIUsageCostDisplay {
   static let officialColor = PaxTheme.Color.error
   static let channelColor = PaxTheme.Chart.cacheLabel
-  static let explanation = "官方费用按已记录官方单价以1×计算；渠道费用按已记录倍率计算。均为本地估算，非平台账单。"
+  static let explanation =
+    "官方费用按已记录 API 单价以1×折算，包含订阅的 API 等值估算；渠道费用按已记录倍率计算。订阅、来源待确认或混合记录不展示渠道金额。均非平台实际账单，不含订阅剩余额度。"
 
   static func text(official: String, channel: String) -> String {
     official + " / " + channel
@@ -29,9 +30,17 @@ enum AIUsageCostDisplay {
 
   @MainActor
   static func apply(
-    _ label: NSTextField, official: String, channel: String, stacked: Bool = false,
+    _ label: NSTextField, official: String, channel: String?, stacked: Bool = false,
     lineSpacing: CGFloat = 0
   ) {
+    guard let channel else {
+      label.stringValue = official + "（API 等值）"
+      label.textColor = officialColor
+      label.maximumNumberOfLines = 1
+      label.toolTip = "API 等值估算 " + official + "\n" + explanation
+      label.setAccessibilityLabel("API 等值估算 " + official)
+      return
+    }
     let text = NSMutableAttributedString(
       attributedString: attributed(
         official: official, channel: channel, font: label.font ?? PaxTheme.Typography.time,

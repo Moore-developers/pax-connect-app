@@ -36,7 +36,9 @@ type Store struct {
 // schemaVersion is PRAGMA user_version. A database from before version 5 is never migrated
 // by the daemon: it reports ErrRebuildCode until `make ai-usage-rebuild` runs.
 // Versions 5–7 gain additive tables/indexes atomically; analysis enrichment uses its own cursor flag.
-const schemaVersion = 11
+const schemaVersion = 12
+
+const hourlySchema = `CREATE TABLE IF NOT EXISTS usage_hourly(hour INTEGER NOT NULL,cli TEXT NOT NULL,profile_id TEXT NOT NULL,model TEXT NOT NULL,profile_name TEXT NOT NULL,count INTEGER NOT NULL,success INTEGER NOT NULL,input INTEGER NOT NULL,read INTEGER NOT NULL,write INTEGER NOT NULL,output INTEGER NOT NULL,c0 INTEGER NOT NULL,c1 INTEGER NOT NULL,c2 INTEGER NOT NULL,c3 INTEGER NOT NULL,cost INTEGER NOT NULL,tps_sum REAL NOT NULL,elapsed_sum REAL NOT NULL,tps_count INTEGER NOT NULL,elapsed_count INTEGER NOT NULL,b0 INTEGER NOT NULL,b1 INTEGER NOT NULL,b2 INTEGER NOT NULL,b3 INTEGER NOT NULL,service_source TEXT NOT NULL DEFAULT '',unconfirmed_channel INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(hour,cli,profile_id,model,service_source));`
 
 const schema = `
 CREATE TABLE IF NOT EXISTS requests(cli TEXT NOT NULL,request_key TEXT NOT NULL,at INTEGER NOT NULL,day TEXT NOT NULL,session TEXT NOT NULL,segment TEXT NOT NULL,profile_id TEXT NOT NULL,profile_name TEXT NOT NULL,model TEXT NOT NULL,streaming INTEGER NOT NULL,succeeded INTEGER NOT NULL,error TEXT NOT NULL,input INTEGER NOT NULL,read INTEGER NOT NULL,write INTEGER NOT NULL,output INTEGER NOT NULL,input_price REAL,output_price REAL,multiplier REAL NOT NULL,tps REAL,elapsed REAL,cost INTEGER NOT NULL,c0 INTEGER NOT NULL,c1 INTEGER NOT NULL,c2 INTEGER NOT NULL,c3 INTEGER NOT NULL,details TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(cli,request_key));
@@ -45,7 +47,7 @@ CREATE INDEX IF NOT EXISTS requests_day ON requests(day);
 CREATE INDEX IF NOT EXISTS requests_profile ON requests(profile_id,at);
 CREATE INDEX IF NOT EXISTS requests_model ON requests(model,at);
 CREATE INDEX IF NOT EXISTS requests_cli ON requests(cli,at);
-CREATE TABLE IF NOT EXISTS usage_hourly(hour INTEGER NOT NULL,cli TEXT NOT NULL,profile_id TEXT NOT NULL,model TEXT NOT NULL,profile_name TEXT NOT NULL,count INTEGER NOT NULL,success INTEGER NOT NULL,input INTEGER NOT NULL,read INTEGER NOT NULL,write INTEGER NOT NULL,output INTEGER NOT NULL,c0 INTEGER NOT NULL,c1 INTEGER NOT NULL,c2 INTEGER NOT NULL,c3 INTEGER NOT NULL,cost INTEGER NOT NULL,tps_sum REAL NOT NULL,elapsed_sum REAL NOT NULL,tps_count INTEGER NOT NULL,elapsed_count INTEGER NOT NULL,b0 INTEGER NOT NULL,b1 INTEGER NOT NULL,b2 INTEGER NOT NULL,b3 INTEGER NOT NULL,PRIMARY KEY(hour,cli,profile_id,model));
+` + hourlySchema + `
 CREATE TABLE IF NOT EXISTS request_keys(key_hash BLOB PRIMARY KEY,at INTEGER NOT NULL) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS request_keys_at ON request_keys(at);
 CREATE TABLE IF NOT EXISTS cursors(path TEXT PRIMARY KEY,inode INTEGER NOT NULL,size INTEGER NOT NULL,mtime INTEGER NOT NULL,offset INTEGER NOT NULL,state BLOB NOT NULL);
@@ -58,7 +60,7 @@ CREATE INDEX IF NOT EXISTS reprice_profile ON reprice_overrides(profile_id,id);
 ` + analysisSchema + `
 ` + sessionCatalogSchema + `
 ` + sessionAgentSchema + `
-PRAGMA user_version=11;`
+PRAGMA user_version=12;`
 
 // Open validates private storage and schema without starting background collection.
 // An older schema opens in a rebuild-required state: nothing is read, written or migrated.
@@ -114,6 +116,12 @@ func Open(ctx context.Context, o Options) (*Store, error) {
 	tx, e := w.BeginTx(ctx, nil)
 	if e != nil {
 		return fail()
+	}
+	if v >= 5 && v < 12 {
+		if e = migrateHourlySources(ctx, tx); e != nil {
+			_ = tx.Rollback()
+			return fail()
+		}
 	}
 	if _, e = tx.ExecContext(ctx, schema); e != nil {
 		_ = tx.Rollback()

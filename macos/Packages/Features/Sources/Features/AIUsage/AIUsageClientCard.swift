@@ -68,7 +68,8 @@ extension AIUsageViewController {
   }
 
   private func billingText(_ row: AIClientUsageRow) -> String {
-    row.profileName + (row.multiplier.map { " · " + $0 } ?? "") + " · " + row.billedCostText
+    if row.serviceSource == .officialAccount { return "官方账号 · API 等值估算，非订阅扣费" }
+    return row.configurationText + " · " + row.billedCostText
   }
 
   private func clientRow(_ row: AIClientUsageRow, total: Double) -> NSView {

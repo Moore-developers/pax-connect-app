@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pax Connect · 安装与首次打开</title>
+<style>
+:root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#243047;background:#f3f5fa;line-height:1.75}
+*{box-sizing:border-box}body{margin:0;padding:48px 24px 64px}main{max-width:780px;margin:auto}header{margin:0 0 32px}.brand{font-size:14px;font-weight:650;color:#65759b;letter-spacing:.04em}h1{font-size:34px;line-height:1.3;margin:12px 0}h2{font-size:21px;margin:0 0 14px}p{margin:10px 0}.muted{color:#667085}.badge{display:inline-block;background:#e8edf7;border-radius:8px;padding:3px 10px;font-size:13px}section{background:#fff;border:1px solid #e0e5ef;border-radius:18px;padding:26px 30px;margin:16px 0}ol,ul{padding-left:24px;margin:12px 0}li{padding:5px 0}.note{border-left:3px solid #8d9bc1;padding:4px 0 4px 16px;margin-top:18px}code{font-size:13px;background:#eef1f6;border-radius:5px;padding:3px 5px;overflow-wrap:anywhere}footer{font-size:13px;color:#667085;margin-top:24px}a{color:#4c68b0}@media(prefers-color-scheme:dark){:root{color:#e7eaf2;background:#171b24}section{background:#202633;border-color:#343c4e}.muted,footer{color:#a8b2c7}.badge,code{background:#30394c}.brand,a{color:#adbee9}}@media(max-width:540px){body{padding:28px 16px}h1{font-size:28px}section{padding:22px}}
+</style>
+</head>
+<body><main>
+<header><div class="brand">PAX CONNECT · 安装帮助</div><h1>安装与首次打开</h1>
+<p class="muted">先拖入应用程序，再从应用程序打开。</p>
+<span class="badge">macOS 26 及更新版本</span> <span class="badge">Apple Silicon · M 系列</span>
+<p class="muted">不支持 Intel Mac。无需安装 Go、Xcode 或其他开发工具。</p></header>
+<section><h2>1 · 拖入应用程序</h2><ol>
+<li>打开下载的 DMG 磁盘映像。</li>
+<li>把左侧 <strong>PaxConnect.app</strong> 拖到右侧<strong>「应用程序」</strong>文件夹。等复制完成。</li>
+<li>推出 DMG。在 Finder 的<strong>「应用程序」</strong>里打开 <strong>Pax Connect</strong>。</li>
+</ol><p class="note">如果已有旧版，请先回到旧版按 <strong>⌘Q</strong> 退出，再替换。不要直接在 DMG 内运行应用。</p></section>
+<section><h2>2 · 首次被 macOS 拦截时</h2>
+<p>此候选版没有 Apple Developer ID 签名与 Apple 公证。首次打开可能被系统阻止；临时签名用于检查代码完整性，不能证明发布者身份。</p>
+<ol><li>确认应用来自你信任的下载来源，并尝试打开一次。</li>
+<li>打开<strong>「系统设置 → 隐私与安全」</strong>，查找针对 Pax Connect 的<strong>「仍要打开」</strong>选项。</li>
+<li>按系统提示确认，再打开应用。</li></ol>
+<p class="muted">系统版本或设备管理策略可能影响能否放行。如果没有这个入口，或系统提示应用已损坏、包含恶意软件，请保留准确提示并向发布者反馈。不要关闭 Gatekeeper 或全局安全保护。</p></section>
+<section><h2>3 · 配置线路，再开启代理</h2>
+<p>启动应用会启动当前用户后台。按首次引导导入或添加自己的线路，再开启代理。应用不附送代理服务或线路。</p>
+<p>开启代理需要权限时，应用会提示管理员授权以启动网络内核。<strong>这与首次打开的系统安全提示是两件事。</strong>取消授权后应保持代理关闭。</p>
+<p>关闭窗口不会退出应用。停止代理释放 Pax 接管的网络；按 <strong>⌘Q</strong> 退出应用及其管理的后台。若另一个 VPN/TUN 工具占用网络，请先在对应工具中关闭，Pax 不代为关闭。</p></section>
+<section><h2>4 · 更新、已有数据与卸载</h2>
+<p><strong>更新：</strong>⌘Q 退出旧版，下载并替换应用。配置和本地记录位于 <code>~/Library/Application Support/Pax Connect/</code>，替换应用不会主动删除这些数据。不同版本的数据兼容以版本说明为准，不保证可以降级。</p>
+<p><strong>为什么新安装后还有旧数据？</strong>同一个 macOS 用户下，Pax 会读取上述目录中的已有数据，包括曾使用开发版留下的数据。安装包不包含你的个人数据；在没有旧数据的新账号中才会从空数据开始。</p>
+<p><strong>卸载：</strong>先 ⌘Q 退出，再删除应用。要彻底清除数据，可另外删除上述目录；其中包含线路凭据和本地记录，删除不可恢复，请自行决定是否备份。</p></section>
+<section><h2>5 · 版本说明、许可与反馈</h2>
+<p>版本说明和第三方许可位于 DMG 的「说明与许可」文件夹，请返回磁盘映像打开该文件夹。查看应用内「关于应用」可确认实际版本与构建号。</p>
+<p>Pax 自身的许可文本位于「说明与许可/Pax 许可」：网络内核及其余部分为 GPL-3.0，macOS App 为 PolyForm Noncommercial 1.0.0（仅限非商业使用），API 为 MIT。源码与问题反馈：<a href="https://github.com/Moore-developers/pax-connect-app">github.com/Moore-developers/pax-connect-app</a>。</p>
+<p>线路配置、本地网络历史和 AI CLI 用量记录保存在本机。部分功能会访问订阅、测速目标、规则更新源或网站图标来源。</p>
+<p>反馈请附 macOS 版本、芯片、Pax 版本与构建号、复现步骤和脱敏截图。不要公开订阅链接、密码、API Key、完整配置或个人访问历史。反馈入口以发布页面为准。</p>
+</section>
+<footer>本帮助可离线阅读，不加载外部字体、图片或脚本。下载包校验值 SHA256SUMS.txt 由发布页面另行提供。</footer>
+</main></body></html>

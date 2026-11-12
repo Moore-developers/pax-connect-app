@@ -72,6 +72,7 @@ type savedProfile struct {
 
 // Binding reports files on disk, never that an existing CLI session adopted them.
 type Binding struct {
+	ServiceSource    string `json:"service_source"`
 	CLI              CLI    `json:"cli"`
 	ProfileID        string `json:"profile_id"`
 	State            string `json:"state"`

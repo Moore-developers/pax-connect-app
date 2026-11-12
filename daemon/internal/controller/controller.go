@@ -30,7 +30,7 @@ import (
 )
 
 // ProtocolVersion 是产品协议版本；与 Swift 侧 PaxClient.protocolVersion 必须一致。
-const ProtocolVersion uint32 = 45
+const ProtocolVersion uint32 = 46
 
 type Controller struct {
 	initialInstallKnown   bool
@@ -150,10 +150,10 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 		capabilities = append(capabilities, "network.path_diagnostics", "network.connection_diagnostics.v1")
 	}
 	if c.aiUsage && c.userMode {
-		capabilities = append(capabilities, "ai.usage.v1", "ai.usage.cost_range.v1", "ai.usage.sessions.v1", "ai.usage.context.v1", "ai.usage.session_agents.v1", "ai.usage.limits.v1", "ai.usage.limits.summary.v1", "ai.sessions.catalog.activity.v1", "ai.sessions.catalog.v1", "ai.sessions.catalog.range.v1")
+		capabilities = append(capabilities, "ai.usage.v1", "ai.usage.sources.v1", "ai.usage.cost_range.v1", "ai.usage.sessions.v1", "ai.usage.context.v1", "ai.usage.session_agents.v1", "ai.usage.limits.v1", "ai.usage.limits.summary.v1", "ai.sessions.catalog.activity.v1", "ai.sessions.catalog.v1", "ai.sessions.catalog.range.v1")
 	}
 	if c.aiProfiles && c.userMode {
-		capabilities = append(capabilities, "ai.profiles.v1", "ai.cli_apply.v1")
+		capabilities = append(capabilities, "ai.profiles.v1", "ai.cli_apply.v1", "ai.profiles.sources.v1")
 	}
 	if c.userMode {
 		capabilities = append(capabilities, "paxd.user")

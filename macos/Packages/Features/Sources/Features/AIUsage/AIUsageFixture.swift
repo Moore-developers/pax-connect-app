@@ -35,7 +35,7 @@ enum AIUsageFixture {
   ]
   static let profiles: [AIProfile] = [
     .init(
-      id: "krill", name: "Krill", endpoint: "https://api.krill.example/v1", multiplier: 0.3,
+      id: "example", name: "示例服务", endpoint: "https://test.example/v1", multiplier: 0.3,
       modelIDs: Set(models.map(\.id))),
     .init(
       id: "anthropic", name: "Anthropic", endpoint: "https://api.anthropic.com", multiplier: 1,
@@ -45,9 +45,9 @@ enum AIUsageFixture {
       modelIDs: ["gpt", "gpt-mini"]),
   ]
   static let bindings: [AIClient: AIBinding] = [
-    .claude: .init(profileID: "krill", state: "applied"),
+    .claude: .init(profileID: "example", state: "applied"),
     .codex: .init(profileID: "openai", state: "applied"),
-    .harness: .init(profileID: "krill", state: "applied"),
+    .harness: .init(profileID: "example", state: "applied"),
   ]
   static func requests(now: Date, calendar: Calendar) -> [AIRequest] {
     let today = calendar.startOfDay(for: now)

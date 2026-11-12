@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -195,7 +196,7 @@ func Rebuild(ctx context.Context, o RebuildOptions) (rep Report, err error) {
 // carryOver keeps rows whose source log no longer exists: tokens and time stay, while
 // ownership and price are recomputed under the current rules.
 func (s *Store) carryOver(ctx context.Context, old *sql.DB, attr attributor, cutoffDay string, rep *Report) error {
-	rows, err := old.QueryContext(ctx, "SELECT cli,request_key,at,session,segment,model,streaming,succeeded,error,input,read,write,output,tps,elapsed,details FROM requests ORDER BY at")
+	rows, err := old.QueryContext(ctx, "SELECT cli,request_key,at,session,segment,model,streaming,succeeded,error,input,read,write,output,tps,elapsed,details,profile_id,profile_name,multiplier FROM requests ORDER BY at")
 	if err != nil {
 		return fmt.Errorf("cannot read old requests: %w", err)
 	}
@@ -239,7 +240,14 @@ func (s *Store) carryOver(ctx context.Context, old *sql.DB, attr attributor, cut
 		} else if seen {
 			continue
 		}
-		r.attribute(attr)
+		if r.Details.ServiceSource == "" {
+			r.attribute(attr)
+		} else {
+			if r.CLI != "dsh" && r.ProfileID != "" {
+				r.Multiplier = attr.multiplier(r.ProfileID, r.Model, r.At, r.Multiplier)
+			}
+			r.price()
+		}
 		batch = append(batch, r)
 		rep.Carried[r.CLI]++
 		if len(batch) >= 500 {
@@ -283,17 +291,17 @@ func (s *Store) reconcile(ctx context.Context, window int64) ([]string, error) {
 		return nil, ErrUnavailable
 	}
 	got := map[bucketKey]Bucket{}
-	brows, err := s.r.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,"+summaryColumns+" FROM usage_hourly WHERE hour>=?", window)
+	brows, err := s.r.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,service_source,"+summaryColumns+" FROM usage_hourly WHERE hour>=?", window)
 	if err != nil {
 		return nil, ErrUnavailable
 	}
 	defer func() { _ = brows.Close() }()
 	for brows.Next() {
 		var b Bucket
-		if e := brows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName}, summaryTargets(&b.Summary)...)...); e != nil {
+		if e := brows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName, &b.ServiceSource}, summaryTargets(&b.Summary)...)...); e != nil {
 			return nil, ErrUnavailable
 		}
-		got[bucketKey{b.At, b.CLI, b.ProfileID, b.Model}] = b
+		got[bucketKey{b.At, b.CLI, b.ProfileID, b.Model, b.ServiceSource}] = b
 	}
 	var out []string
 	for k, w := range want {
@@ -324,7 +332,11 @@ func sameSummary(a, b Summary) bool {
 // recomputed. Component prices cannot be rederived from an hourly sum, so costs that the
 // old rules left unpriced stay as they were.
 func (s *Store) keepOlderBuckets(ctx context.Context, old *sql.DB, attr attributor, window int64, rep *Report) error {
-	rows, err := old.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,"+summaryColumns+" FROM usage_hourly WHERE hour<?", window)
+	source, err := oldBucketSource(ctx, old)
+	if err != nil {
+		return err
+	}
+	rows, err := old.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,"+source+","+strings.TrimSuffix(summaryColumns, ",unconfirmed_channel")+",0 FROM usage_hourly WHERE hour<?", window)
 	if err != nil {
 		return fmt.Errorf("cannot read old buckets: %w", err)
 	}
@@ -343,27 +355,37 @@ func (s *Store) keepOlderBuckets(ctx context.Context, old *sql.DB, attr attribut
 	grouped := map[bucketKey]Bucket{}
 	for rows.Next() {
 		var b Bucket
-		if e := rows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName}, summaryTargets(&b.Summary)...)...); e != nil {
+		if e := rows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName, &b.ServiceSource}, summaryTargets(&b.Summary)...)...); e != nil {
 			return ErrUnavailable
 		}
-		a := Attribution{Multiplier: 1}
-		if b.CLI != "dsh" {
+		frozenSource := b.ServiceSource != ""
+		a := Attribution{ProfileID: b.ProfileID, ProfileName: b.ProfileName, ServiceSource: b.ServiceSource, Multiplier: 1}
+		if b.CLI != "dsh" && !frozenSource {
 			a = attr.resolve(b.CLI, time.UnixMilli(b.At))
 		}
-		b.ProfileID, b.ProfileName = a.ProfileID, a.ProfileName
+		b.ProfileID, b.ProfileName, b.ServiceSource = a.ProfileID, a.ProfileName, a.ServiceSource
+		if b.ServiceSource == "official_account" || b.ServiceSource == "unknown" {
+			b.UnconfirmedChannel = b.Count
+		}
 		m := a.ForModel(b.Model)
+		reprice := !frozenSource
 		if b.CLI != "dsh" && a.ProfileID != "" {
-			m = attr.multiplier(a.ProfileID, b.Model, b.At, m)
+			if override, ok := attr.overrides.match(a.ProfileID, b.Model, b.At); ok {
+				m, reprice = override.multiplierFor(b.Model), true
+			}
 		}
-		var raw float64
-		for i, c := range b.Costs {
-			b.BilledCosts[i] = int64(math.Round(float64(c) * m))
-			raw += float64(c)
+		if reprice {
+			var raw float64
+			for i, c := range b.Costs {
+				b.BilledCosts[i] = int64(math.Round(float64(c) * m))
+				raw += float64(c)
+			}
+			b.Cost = int64(math.Round(raw * m))
 		}
-		b.Cost = int64(math.Round(raw * m))
-		k := bucketKey{b.At, b.CLI, b.ProfileID, b.Model}
+		k := bucketKey{b.At, b.CLI, b.ProfileID, b.Model, b.ServiceSource}
 		v := grouped[k]
 		v.At, v.CLI, v.ProfileID, v.ProfileName, v.Model = b.At, b.CLI, b.ProfileID, b.ProfileName, b.Model
+		v.ServiceSource = b.ServiceSource
 		v.add(b.Summary)
 		grouped[k] = v
 		rep.OldBuckets++

@@ -160,7 +160,7 @@ func pruneEmptyCodexBuckets(ctx context.Context, tx *sql.Tx, grouped map[bucketK
 		if key.CLI != "codex" || b.Count > 0 {
 			continue
 		}
-		_, err := tx.ExecContext(ctx, "DELETE FROM usage_hourly WHERE hour=? AND cli=? AND profile_id=? AND model=? AND count=0 AND success=0 AND input=0 AND read=0 AND write=0 AND output=0 AND cost=0 AND c0=0 AND c1=0 AND c2=0 AND c3=0 AND b0=0 AND b1=0 AND b2=0 AND b3=0 AND tps_count=0 AND elapsed_count=0 AND abs(tps_sum)<0.000001 AND abs(elapsed_sum)<0.000001", key.At, key.CLI, key.Profile, key.Model)
+		_, err := tx.ExecContext(ctx, "DELETE FROM usage_hourly WHERE hour=? AND cli=? AND profile_id=? AND model=? AND service_source=? AND count=0 AND success=0 AND input=0 AND read=0 AND write=0 AND output=0 AND cost=0 AND c0=0 AND c1=0 AND c2=0 AND c3=0 AND b0=0 AND b1=0 AND b2=0 AND b3=0 AND tps_count=0 AND elapsed_count=0 AND abs(tps_sum)<0.000001 AND abs(elapsed_sum)<0.000001", key.At, key.CLI, key.Profile, key.Model, key.Source)
 		if err != nil {
 			return err
 		}

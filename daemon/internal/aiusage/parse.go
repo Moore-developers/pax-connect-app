@@ -8,6 +8,7 @@ import (
 )
 
 type parseState struct {
+	ServiceProvider                         string
 	AnalysisTurnSession                     string
 	CodexPending                            bool
 	CodexOwnerVersion                       int
@@ -82,6 +83,8 @@ func (s *parseState) parseUsage(cli string, line []byte) (*Request, bool) {
 	return nil, true
 }
 func (s *parseState) finish(r *Request) *Request {
+	r.sourceStart = s.SegmentAt
+	r.sourceProvider = s.ServiceProvider
 	if r.At <= 0 || r.Key == "" || r.Input < 0 || r.Read < 0 || r.Write < 0 || r.Output < 0 {
 		return nil
 	}

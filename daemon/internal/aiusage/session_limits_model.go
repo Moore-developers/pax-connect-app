@@ -1,9 +1,16 @@
 package aiusage
 
 // LimitMoney is an input-only amount in USD; averages retain fractional micro-dollars.
-type LimitMoney struct{ Official, Channel float64 }
+type LimitMoney struct {
+	Official, Channel float64
+	ChannelUnknown    bool
+}
 
-func (m *LimitMoney) add(v LimitMoney) { m.Official += v.Official; m.Channel += v.Channel }
+func (m *LimitMoney) add(v LimitMoney) {
+	m.Official += v.Official
+	m.Channel += v.Channel
+	m.ChannelUnknown = m.ChannelUnknown || v.ChannelUnknown
+}
 
 // ModelLimit is the approved warning/limit preset and its retained official baseline.
 type ModelLimit struct {

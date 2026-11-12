@@ -78,6 +78,7 @@ func (s *parseState) codex(line []byte) (*Request, bool) {
 	case "session_meta":
 		var p struct {
 			ID           string
+			Provider     string `json:"model_provider"`
 			SessionID    string `json:"session_id"`
 			Timestamp    string
 			ForkedFrom   json.RawMessage `json:"forked_from"`
@@ -87,6 +88,10 @@ func (s *parseState) codex(line []byte) (*Request, bool) {
 			return nil, true
 		}
 		s.Session = p.ID
+		s.ServiceProvider = p.Provider
+		if len(p.Provider) > 256 {
+			s.ServiceProvider = "unknown"
+		}
 		if s.Session == "" {
 			s.Session = p.SessionID
 		}

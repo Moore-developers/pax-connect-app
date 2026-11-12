@@ -2,6 +2,8 @@
 
 ## 16. 目录结构
 
+发布入口：AGENTS.md指向docs/release/WORKFLOW.md；BUILD.md定义本地打包。scripts/public-allowlist.txt包含导出所需的release安装/版本材料，私有执行记录留在tests/release/。
+
 术语入口为根GLOSSARY.md；网络观测补充定义按职责拆在docs/glossary/network-observation.md。
 
 
@@ -135,6 +137,8 @@ Codex身份：`internal/aiusage/parse_codex.go`解析白名单元数据，`codex
 关于页沿Features/About组织，复用系统设置分组卡显示版本与许可摘要；专用尺寸在PaxUI/PaxAboutTheme。
 
 内置广告包：rulesets/adblock-lite.srs 与 manifest/许可 NOTICE；config/routing_adblock.go 定义身份，controller/routing_adblock.go 初始化与域名源边界；Features/RoutingWorkbench 的 RoutingPackagePresentation.swift、RoutingPackageUpdates.swift 分别维护包文案与更新设置。定向测试在 controller/singbox 的 routing_adblock_test.go，真实验收 tests/adblock。
+
+官方账号来源：aiprofile/sources.go与default_api.go维护认证来源事件和默认API局部切换；aiusage/source_migration.go拥有schema12来源维度迁移；PaxClient/Model/AIServiceSource.swift映射来源。归属合同从ai-usage-collection §4进入ai-usage-attribution.md。验收见tests/ai-service-sources。
 
 模型用量三表复用PaxDataTable及PaxPresentation中的PaxText.tableLabel；PaxUI/PaxFilterRow.swift承载筛选行与范围输入排版，业务过滤与校验留在Features/AIUsage。
 

@@ -26,7 +26,17 @@ struct AIUsageSummary {
     requests = []
     aggregate = totals
   }
-  var costLabel: String { AIUsageFormatting.cost(cost) }
+  var hasChannelEstimate: Bool {
+    if let aggregate { return aggregate.unconfirmedChannel == 0 }
+    return requests.allSatisfy(\.hasChannelEstimate)
+  }
+  var accountOnly: Bool {
+    if !aggregateBuckets.isEmpty {
+      return aggregateBuckets.allSatisfy { $0.serviceSource == .officialAccount }
+    }
+    return !requests.isEmpty && requests.allSatisfy { $0.serviceSource == .officialAccount }
+  }
+  var costLabel: String { hasChannelEstimate ? AIUsageFormatting.cost(cost) : "—" }
   var officialCostLabel: String { AIUsageFormatting.cost(originalCost) }
   var officialCosts: [Double] {
     aggregate?.costs

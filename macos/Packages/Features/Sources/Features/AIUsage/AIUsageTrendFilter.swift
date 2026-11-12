@@ -7,12 +7,24 @@ enum AIUsageTrendFilter {
   static let unassignedKey = "__unassigned__"
 
   /// 空 profileID 时：DeepSeek 官方（harness）与未配置各自一组。
-  static func profileKey(profileID: String, client: AIClient) -> String {
-    profileID.isEmpty ? (client == .harness ? harnessKey : unassignedKey) : profileID
+  static func profileKey(
+    profileID: String, client: AIClient, serviceSource: AIServiceSource = .unrecorded
+  ) -> String {
+    if !profileID.isEmpty { return profileID }
+    if client == .harness { return harnessKey }
+    if serviceSource == .unknown || serviceSource == .unrecorded { return unassignedKey }
+    return "__source:" + serviceSource.rawValue + "__"
   }
 
   static func fallbackName(_ key: String) -> String? {
-    key == harnessKey ? "DeepSeek 官方" : key == unassignedKey ? "未配置" : nil
+    if key == harnessKey { return "DeepSeek 官方" }
+    if key == unassignedKey { return "来源待确认" }
+    if key.hasPrefix("__source:"), key.hasSuffix("__"),
+      let source = AIServiceSource(rawValue: String(key.dropFirst(9).dropLast(2)))
+    {
+      return source.label
+    }
+    return nil
   }
 
   /// 一行有请求的用量，与来源（桶或请求）无关。
@@ -24,13 +36,15 @@ enum AIUsageTrendFilter {
     var count: Int
     var cost: Double
     var tokens: Int
+    var serviceSource: AIServiceSource = .unrecorded
   }
 
   static func matches(
-    _ filter: PaxUsageFilter, profileID: String, client: AIClient, modelID: String
+    _ filter: PaxUsageFilter, profileID: String, client: AIClient, modelID: String,
+    serviceSource: AIServiceSource = .unrecorded
   ) -> Bool {
     guard let wanted = filter.profileID else { return true }
-    return profileKey(profileID: profileID, client: client) == wanted
+    return profileKey(profileID: profileID, client: client, serviceSource: serviceSource) == wanted
       && (filter.modelID == nil || filter.modelID == modelID)
   }
 
@@ -46,7 +60,8 @@ enum AIUsageTrendFilter {
     }
     var profiles: [String: (name: String, sum: Sum, models: [String: Sum])] = [:]
     for row in rows where row.count > 0 {
-      let key = profileKey(profileID: row.profileID, client: row.client)
+      let key = profileKey(
+        profileID: row.profileID, client: row.client, serviceSource: row.serviceSource)
       let name =
         fallbackName(key) ?? profileName(key) ?? (row.profileName.isEmpty ? key : row.profileName)
       var entry = profiles[key] ?? (name, Sum(), [:])

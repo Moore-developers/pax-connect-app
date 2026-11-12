@@ -6,7 +6,7 @@ import (
 )
 
 func limitMoney(v aiusage.LimitMoney) *pb.AIUsageLimitMoney {
-	return &pb.AIUsageLimitMoney{Official: v.Official, Channel: v.Channel}
+	return &pb.AIUsageLimitMoney{Official: v.Official, Channel: v.Channel, ChannelUnknown: v.ChannelUnknown}
 }
 func optionalLimitMoney(v *aiusage.LimitMoney) *pb.AIUsageLimitMoney {
 	if v == nil {

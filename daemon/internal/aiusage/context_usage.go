@@ -9,7 +9,7 @@ import (
 
 // ContextBand attributes a whole request by its input size, excluding output costs.
 type ContextBand struct {
-	Input, OfficialCost, ChannelCost, Requests, PricedRequests int64
+	Input, OfficialCost, ChannelCost, Requests, PricedRequests, UnconfirmedChannel int64
 }
 
 // ContextUsage is one model or total, scoped to a session or the entire date window.
@@ -45,7 +45,7 @@ func contextUsage(ctx context.Context, tx *sql.Tx, from, to int64) ([]ContextUsa
  sum(r.input),sum(r.c0+r.c1+r.c2),
  sum(coalesce(json_extract(r.details,'$.Billed[0]'),0)+coalesce(json_extract(r.details,'$.Billed[1]'),0)+coalesce(json_extract(r.details,'$.Billed[2]'),0)),
  count(*),sum(CASE WHEN json_extract(r.details,'$.Prices[0]') IS NOT NULL AND r.model<>'unknown' THEN 1 ELSE 0 END),
- sum(CASE WHEN a.turn IS NOT NULL THEN 1 ELSE 0 END),json_group_array(DISTINCT a.turn)
+ sum(CASE WHEN a.turn IS NOT NULL THEN 1 ELSE 0 END),json_group_array(DISTINCT a.turn),sum(CASE WHEN json_extract(r.details,'$.ServiceSource') IN ('official_account','unknown') THEN 1 ELSE 0 END)
  FROM requests r LEFT JOIN analysis_requests a ON a.cli=r.cli AND a.request_key=r.request_key LEFT JOIN session_agent_requests ar ON ar.cli=r.cli AND ar.request_key=r.request_key AND ar.session=r.session
  WHERE r.at>=? AND r.at<? GROUP BY r.cli,r.session,r.model,coalesce(json_extract(r.details,'$.ReasoningEffort'),''),coalesce(ar.agent,''),band
  ORDER BY r.cli,r.session,r.model,4,5,band LIMIT 10001`, from, to)
@@ -74,7 +74,7 @@ func contextUsage(ctx context.Context, tx *sql.Tx, from, to int64) ([]ContextUsa
 		var band int
 		var known int64
 		var v ContextBand
-		if err = rows.Scan(&cli, &session, &model, &effort, &agentID, &band, &v.Input, &v.OfficialCost, &v.ChannelCost, &v.Requests, &v.PricedRequests, &known, &rawTurns); err != nil {
+		if err = rows.Scan(&cli, &session, &model, &effort, &agentID, &band, &v.Input, &v.OfficialCost, &v.ChannelCost, &v.Requests, &v.PricedRequests, &known, &rawTurns, &v.UnconfirmedChannel); err != nil {
 			return nil, false, err
 		}
 		var turns []*string
@@ -102,6 +102,7 @@ func contextUsage(ctx context.Context, tx *sql.Tx, from, to int64) ([]ContextUsa
 				b.ChannelCost += v.ChannelCost
 				b.Requests += v.Requests
 				b.PricedRequests += v.PricedRequests
+				b.UnconfirmedChannel += v.UnconfirmedChannel
 			}
 			b := &group.value.Bands[band]
 			b.Input += v.Input
@@ -109,6 +110,7 @@ func contextUsage(ctx context.Context, tx *sql.Tx, from, to int64) ([]ContextUsa
 			b.ChannelCost += v.ChannelCost
 			b.Requests += v.Requests
 			b.PricedRequests += v.PricedRequests
+			b.UnconfirmedChannel += v.UnconfirmedChannel
 			group.value.Requests += v.Requests
 			group.value.KnownTurnRequests += known
 			for _, turn := range turns {

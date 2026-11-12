@@ -20,7 +20,10 @@ import (
 // Attribution is a credential-free Profile and the price multiplier in effect at one instant.
 type Attribution struct {
 	ProfileID, ProfileName string
-	Multiplier             float64
+	ServiceSource          string
+	// Since bounds configuration observations; zero preserves legacy apply semantics.
+	Since      int64
+	Multiplier float64
 	// Models holds per-model multipliers that override Multiplier; nil means none.
 	Models map[string]float64
 }
@@ -68,7 +71,7 @@ func (m *Manager) openEventsAt(path string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var version int
-	if e = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); e != nil || (version < 0 || version > 2) {
+	if e = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); e != nil || (version < 0 || version > 3) {
 		return StoreInvalid
 	}
 	if version == 1 { // v1 predates per-model multipliers: add the column in place, once
@@ -81,13 +84,36 @@ func (m *Manager) openEventsAt(path string) error {
 		}
 	}
 	if _, e = db.ExecContext(ctx, `PRAGMA journal_mode=WAL;
- CREATE TABLE IF NOT EXISTS profile_events(event_key TEXT PRIMARY KEY,cli TEXT NOT NULL,at INTEGER NOT NULL,profile_id TEXT NOT NULL,profile_name TEXT NOT NULL,multiplier REAL NOT NULL,kind TEXT NOT NULL,model_multipliers TEXT NOT NULL DEFAULT '');
+ CREATE TABLE IF NOT EXISTS profile_events(event_key TEXT PRIMARY KEY,cli TEXT NOT NULL,at INTEGER NOT NULL,profile_id TEXT NOT NULL,profile_name TEXT NOT NULL,multiplier REAL NOT NULL,kind TEXT NOT NULL,model_multipliers TEXT NOT NULL DEFAULT '',service_source TEXT NOT NULL DEFAULT '',source_since INTEGER NOT NULL DEFAULT 0);
  CREATE INDEX IF NOT EXISTS event_cli_at ON profile_events(cli,at);
  CREATE INDEX IF NOT EXISTS event_profile_at ON profile_events(profile_id,at);
- PRAGMA user_version=2;`); e != nil {
+	`); e != nil {
 		return StoreInvalid
 	}
-	return nil
+	if version == 1 || version == 2 {
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			return StoreInvalid
+		}
+		defer func() { _ = tx.Rollback() }()
+		for _, col := range []struct{ name, definition string }{{"service_source", "TEXT NOT NULL DEFAULT ''"}, {"source_since", "INTEGER NOT NULL DEFAULT 0"}} {
+			var n int
+			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM pragma_table_info('profile_events') WHERE name=?", col.name).Scan(&n); err != nil {
+				return StoreInvalid
+			}
+			if n == 0 {
+				if _, err = tx.ExecContext(ctx, "ALTER TABLE profile_events ADD COLUMN "+col.name+" "+col.definition); err != nil {
+					return StoreInvalid
+				}
+			}
+		}
+		if _, err = tx.ExecContext(ctx, "PRAGMA user_version=3"); err != nil {
+			return StoreInvalid
+		}
+		return cause(tx.Commit())
+	}
+	_, e = db.ExecContext(ctx, "PRAGMA user_version=3")
+	return cause(e)
 }
 
 func (m *Manager) recordEvent(ctx context.Context, key string, cli CLI, at int64, p Attribution, kind string) error {
@@ -102,13 +128,17 @@ func (m *Manager) recordEvent(ctx context.Context, key string, cli CLI, at int64
 		}
 		models = string(b)
 	}
-	_, e := m.events.ExecContext(ctx, "INSERT OR IGNORE INTO profile_events(event_key,cli,at,profile_id,profile_name,multiplier,kind,model_multipliers) VALUES(?,?,?,?,?,?,?,?)", key, cli, at, p.ProfileID, p.ProfileName, p.Multiplier, kind, models)
+	_, e := m.events.ExecContext(ctx, "INSERT OR IGNORE INTO profile_events(event_key,cli,at,profile_id,profile_name,multiplier,kind,model_multipliers,service_source,source_since) VALUES(?,?,?,?,?,?,?,?,?,?)", key, cli, at, p.ProfileID, p.ProfileName, p.Multiplier, kind, models, p.ServiceSource, p.Since)
 	return cause(e)
 }
 func (m *Manager) repairEvents(ctx context.Context) error {
 	for cli, a := range m.recovery.Applied {
 		if a.EventAt != 0 {
-			if e := m.recordEvent(ctx, "apply:"+string(cli)+":"+a.OperationID, cli, a.EventAt, Attribution{ProfileID: a.ProfileID, ProfileName: a.EventName, Multiplier: a.EventMultiplier, Models: a.EventModels}, "apply"); e != nil {
+			since := int64(0)
+			if a.EventSource != "" {
+				since = a.EventAt / 1e6
+			}
+			if e := m.recordEvent(ctx, "apply:"+string(cli)+":"+a.OperationID, cli, a.EventAt, Attribution{ProfileID: a.ProfileID, ProfileName: a.EventName, Multiplier: a.EventMultiplier, Models: a.EventModels, ServiceSource: a.EventSource, Since: since}, "apply"); e != nil {
 				return e
 			}
 		}

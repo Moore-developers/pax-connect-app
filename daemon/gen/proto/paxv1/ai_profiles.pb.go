@@ -349,8 +349,10 @@ type AIClientBinding struct {
 	Endpoint         string `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
 	TargetPath       string `protobuf:"bytes,8,opt,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
 	RequiresModel    bool   `protobuf:"varint,9,opt,name=requires_model,json=requiresModel,proto3" json:"requires_model,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Configured authentication route; never proof of a valid subscription or live session.
+	ServiceSource string `protobuf:"bytes,10,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AIClientBinding) Reset() {
@@ -445,6 +447,13 @@ func (x *AIClientBinding) GetRequiresModel() bool {
 		return x.RequiresModel
 	}
 	return false
+}
+
+func (x *AIClientBinding) GetServiceSource() string {
+	if x != nil {
+		return x.ServiceSource
+	}
+	return ""
 }
 
 type AIProfilesWorkspace struct {
@@ -1168,7 +1177,7 @@ const file_ai_profiles_proto_rawDesc = "" +
 	"\x11model_multipliers\x18\x10 \x03(\v2..pax.v1.AIProfileSummary.ModelMultipliersEntryR\x10modelMultipliers\x1aC\n" +
 	"\x15ModelMultipliersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xaa\x02\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd1\x02\n" +
 	"\x0fAIClientBinding\x12\x10\n" +
 	"\x03cli\x18\x01 \x01(\tR\x03cli\x12\x1d\n" +
 	"\n" +
@@ -1180,7 +1189,9 @@ const file_ai_profiles_proto_rawDesc = "" +
 	"\bendpoint\x18\a \x01(\tR\bendpoint\x12\x1f\n" +
 	"\vtarget_path\x18\b \x01(\tR\n" +
 	"targetPath\x12%\n" +
-	"\x0erequires_model\x18\t \x01(\bR\rrequiresModel\"\x80\x01\n" +
+	"\x0erequires_model\x18\t \x01(\bR\rrequiresModel\x12%\n" +
+	"\x0eservice_source\x18\n" +
+	" \x01(\tR\rserviceSource\"\x80\x01\n" +
 	"\x13AIProfilesWorkspace\x124\n" +
 	"\bprofiles\x18\x01 \x03(\v2\x18.pax.v1.AIProfileSummaryR\bprofiles\x123\n" +
 	"\bbindings\x18\x02 \x03(\v2\x17.pax.v1.AIClientBindingR\bbindings\"\xaa\x01\n" +

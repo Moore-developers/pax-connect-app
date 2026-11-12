@@ -38,6 +38,8 @@ paxd 数据目标为 `~/Library/Application Support/Pax Connect/`，私有数据
 
 ## 17. 构建、签名与安装
 
+发布到GitHub及官网默认沿[三仓库流程](../release/WORKFLOW.md)，本节只定义产物与运行合同。
+
 ```text
 scripts/gen-proto.sh     → Go + Swift 生成代码（工具版本锁定在脚本里）
 scripts/build-daemon.sh  → go build pax-connectd（arm64）

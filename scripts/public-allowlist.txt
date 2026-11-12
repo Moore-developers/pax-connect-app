@@ -19,3 +19,9 @@ LICENSE
 TRADEMARKS.md
 THIRD_PARTY_NOTICES.md
 docs/images/
+docs/release/BUILD.md
+docs/release/geolite-redistribution.md
+docs/release/INSTALL.zh-CN.html
+docs/release/INSTALL.zh-CN.md
+docs/release/RELEASE-NOTES.zh-CN.md
+docs/release/github-release-*.md

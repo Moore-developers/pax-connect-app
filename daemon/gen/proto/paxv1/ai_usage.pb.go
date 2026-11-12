@@ -242,8 +242,10 @@ type AIUsageTotals struct {
 	TpsCount         int64                  `protobuf:"varint,12,opt,name=tps_count,json=tpsCount,proto3" json:"tps_count,omitempty"`
 	ElapsedCount     int64                  `protobuf:"varint,14,opt,name=elapsed_count,json=elapsedCount,proto3" json:"elapsed_count,omitempty"`
 	BilledCostsMicro []int64                `protobuf:"varint,16,rep,packed,name=billed_costs_micro,json=billedCostsMicro,proto3" json:"billed_costs_micro,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Nonzero when this sum includes account/unknown-source equivalents rather than channel costs.
+	UnconfirmedChannel int64 `protobuf:"varint,21,opt,name=unconfirmed_channel,json=unconfirmedChannel,proto3" json:"unconfirmed_channel,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AIUsageTotals) Reset() {
@@ -367,6 +369,13 @@ func (x *AIUsageTotals) GetBilledCostsMicro() []int64 {
 	return nil
 }
 
+func (x *AIUsageTotals) GetUnconfirmedChannel() int64 {
+	if x != nil {
+		return x.UnconfirmedChannel
+	}
+	return 0
+}
+
 type AIUsageBucket struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AtMs          int64                  `protobuf:"varint,1,opt,name=at_ms,json=atMs,proto3" json:"at_ms,omitempty"`
@@ -375,6 +384,7 @@ type AIUsageBucket struct {
 	ProfileName   string                 `protobuf:"bytes,4,opt,name=profile_name,json=profileName,proto3" json:"profile_name,omitempty"`
 	ModelId       string                 `protobuf:"bytes,5,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
 	Totals        *AIUsageTotals         `protobuf:"bytes,6,opt,name=totals,proto3" json:"totals,omitempty"`
+	ServiceSource string                 `protobuf:"bytes,7,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -449,6 +459,13 @@ func (x *AIUsageBucket) GetTotals() *AIUsageTotals {
 		return x.Totals
 	}
 	return nil
+}
+
+func (x *AIUsageBucket) GetServiceSource() string {
+	if x != nil {
+		return x.ServiceSource
+	}
+	return ""
 }
 
 // Latest request time per client, independent of the queried range (retained buckets
@@ -586,6 +603,7 @@ type AIUsageLogQuery struct {
 	// Inclusive bounds on the stored 1x official cost (sum of costs_micro), before totals and pagination.
 	MinOfficialCostMicro *int64 `protobuf:"varint,9,opt,name=min_official_cost_micro,json=minOfficialCostMicro,proto3,oneof" json:"min_official_cost_micro,omitempty"`
 	MaxOfficialCostMicro *int64 `protobuf:"varint,10,opt,name=max_official_cost_micro,json=maxOfficialCostMicro,proto3,oneof" json:"max_official_cost_micro,omitempty"`
+	ServiceSource        string `protobuf:"bytes,11,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -690,6 +708,13 @@ func (x *AIUsageLogQuery) GetMaxOfficialCostMicro() int64 {
 	return 0
 }
 
+func (x *AIUsageLogQuery) GetServiceSource() string {
+	if x != nil {
+		return x.ServiceSource
+	}
+	return ""
+}
+
 type AIUsageUnitPrice struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Value         *float64               `protobuf:"fixed64,1,opt,name=value,proto3,oneof" json:"value,omitempty"`
@@ -764,8 +789,10 @@ type AIUsageRequest struct {
 	CacheWriteLong       *int64                 `protobuf:"varint,31,opt,name=cache_write_long,json=cacheWriteLong,proto3,oneof" json:"cache_write_long,omitempty"`
 	CacheWriteShortPrice *float64               `protobuf:"fixed64,32,opt,name=cache_write_short_price,json=cacheWriteShortPrice,proto3,oneof" json:"cache_write_short_price,omitempty"`
 	CacheWriteLongPrice  *float64               `protobuf:"fixed64,33,opt,name=cache_write_long_price,json=cacheWriteLongPrice,proto3,oneof" json:"cache_write_long_price,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Frozen local configuration observation; empty for existing records, unknown if unconfirmed.
+	ServiceSource string `protobuf:"bytes,34,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AIUsageRequest) Reset() {
@@ -992,6 +1019,13 @@ func (x *AIUsageRequest) GetCacheWriteLongPrice() float64 {
 		return *x.CacheWriteLongPrice
 	}
 	return 0
+}
+
+func (x *AIUsageRequest) GetServiceSource() string {
+	if x != nil {
+		return x.ServiceSource
+	}
+	return ""
 }
 
 type AIUsageLogs struct {
@@ -2216,14 +2250,15 @@ func (x *AIUsageContextUsage) GetSubagentsIncomplete() bool {
 }
 
 type AIUsageContextBand struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Input             int64                  `protobuf:"varint,1,opt,name=input,proto3" json:"input,omitempty"`
-	OfficialCostMicro int64                  `protobuf:"varint,2,opt,name=official_cost_micro,json=officialCostMicro,proto3" json:"official_cost_micro,omitempty"`
-	ChannelCostMicro  int64                  `protobuf:"varint,3,opt,name=channel_cost_micro,json=channelCostMicro,proto3" json:"channel_cost_micro,omitempty"`
-	Requests          int64                  `protobuf:"varint,4,opt,name=requests,proto3" json:"requests,omitempty"`
-	PricedRequests    int64                  `protobuf:"varint,5,opt,name=priced_requests,json=pricedRequests,proto3" json:"priced_requests,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Input              int64                  `protobuf:"varint,1,opt,name=input,proto3" json:"input,omitempty"`
+	OfficialCostMicro  int64                  `protobuf:"varint,2,opt,name=official_cost_micro,json=officialCostMicro,proto3" json:"official_cost_micro,omitempty"`
+	ChannelCostMicro   int64                  `protobuf:"varint,3,opt,name=channel_cost_micro,json=channelCostMicro,proto3" json:"channel_cost_micro,omitempty"`
+	Requests           int64                  `protobuf:"varint,4,opt,name=requests,proto3" json:"requests,omitempty"`
+	PricedRequests     int64                  `protobuf:"varint,5,opt,name=priced_requests,json=pricedRequests,proto3" json:"priced_requests,omitempty"`
+	UnconfirmedChannel int64                  `protobuf:"varint,6,opt,name=unconfirmed_channel,json=unconfirmedChannel,proto3" json:"unconfirmed_channel,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AIUsageContextBand) Reset() {
@@ -2291,14 +2326,22 @@ func (x *AIUsageContextBand) GetPricedRequests() int64 {
 	return 0
 }
 
+func (x *AIUsageContextBand) GetUnconfirmedChannel() int64 {
+	if x != nil {
+		return x.UnconfirmedChannel
+	}
+	return 0
+}
+
 // Session limit values are calculated by the daemon. Money is USD (fractional micro-USD
 // is preserved for averages); absent optional values mean unknown, never zero.
 type AIUsageLimitMoney struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Official      float64                `protobuf:"fixed64,1,opt,name=official,proto3" json:"official,omitempty"`
-	Channel       float64                `protobuf:"fixed64,2,opt,name=channel,proto3" json:"channel,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Official       float64                `protobuf:"fixed64,1,opt,name=official,proto3" json:"official,omitempty"`
+	Channel        float64                `protobuf:"fixed64,2,opt,name=channel,proto3" json:"channel,omitempty"`
+	ChannelUnknown bool                   `protobuf:"varint,3,opt,name=channel_unknown,json=channelUnknown,proto3" json:"channel_unknown,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AIUsageLimitMoney) Reset() {
@@ -2343,6 +2386,13 @@ func (x *AIUsageLimitMoney) GetChannel() float64 {
 		return x.Channel
 	}
 	return 0
+}
+
+func (x *AIUsageLimitMoney) GetChannelUnknown() bool {
+	if x != nil {
+		return x.ChannelUnknown
+	}
+	return false
 }
 
 type AIUsageModelLimit struct {
@@ -3505,7 +3555,7 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\vgranularity\x18\x03 \x01(\tR\vgranularity\x12*\n" +
 	"\x0eknown_revision\x18\x04 \x01(\x04H\x00R\rknownRevision\x88\x01\x01B\x11\n" +
 	"\x0f_known_revisionJ\x04\b\x05\x10\x06R\avisible\"\x15\n" +
-	"\x13AIUsageSummaryQuery\"\x8d\x04\n" +
+	"\x13AIUsageSummaryQuery\"\xbe\x04\n" +
 	"\rAIUsageTotals\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\x03R\x05count\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\x03R\asuccess\x12\x14\n" +
@@ -3522,8 +3572,9 @@ const file_ai_usage_proto_rawDesc = "" +
 	"elapsedSum\x12\x1b\n" +
 	"\ttps_count\x18\f \x01(\x03R\btpsCount\x12#\n" +
 	"\relapsed_count\x18\x0e \x01(\x03R\felapsedCount\x12,\n" +
-	"\x12billed_costs_micro\x18\x10 \x03(\x03R\x10billedCostsMicroJ\x04\b\n" +
-	"\x10\vJ\x04\b\r\x10\x0eJ\x04\b\x0f\x10\x10J\x04\b\x11\x10\x12J\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15R\tfirst_sumR\vfirst_countR\bunpricedR\vest_tps_sumR\x0fest_elapsed_sumR\rest_tps_countR\x11est_elapsed_count\"\xc2\x01\n" +
+	"\x12billed_costs_micro\x18\x10 \x03(\x03R\x10billedCostsMicro\x12/\n" +
+	"\x13unconfirmed_channel\x18\x15 \x01(\x03R\x12unconfirmedChannelJ\x04\b\n" +
+	"\x10\vJ\x04\b\r\x10\x0eJ\x04\b\x0f\x10\x10J\x04\b\x11\x10\x12J\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15R\tfirst_sumR\vfirst_countR\bunpricedR\vest_tps_sumR\x0fest_elapsed_sumR\rest_tps_countR\x11est_elapsed_count\"\xe9\x01\n" +
 	"\rAIUsageBucket\x12\x13\n" +
 	"\x05at_ms\x18\x01 \x01(\x03R\x04atMs\x12\x10\n" +
 	"\x03cli\x18\x02 \x01(\tR\x03cli\x12\x1d\n" +
@@ -3531,7 +3582,8 @@ const file_ai_usage_proto_rawDesc = "" +
 	"profile_id\x18\x03 \x01(\tR\tprofileId\x12!\n" +
 	"\fprofile_name\x18\x04 \x01(\tR\vprofileName\x12\x19\n" +
 	"\bmodel_id\x18\x05 \x01(\tR\amodelId\x12-\n" +
-	"\x06totals\x18\x06 \x01(\v2\x15.pax.v1.AIUsageTotalsR\x06totals\"8\n" +
+	"\x06totals\x18\x06 \x01(\v2\x15.pax.v1.AIUsageTotalsR\x06totals\x12%\n" +
+	"\x0eservice_source\x18\a \x01(\tR\rserviceSource\"8\n" +
 	"\x0fAIUsageLastUsed\x12\x10\n" +
 	"\x03cli\x18\x01 \x01(\tR\x03cli\x12\x13\n" +
 	"\x05at_ms\x18\x02 \x01(\x03R\x04atMs\"\xc6\x01\n" +
@@ -3539,7 +3591,7 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\abuckets\x18\x01 \x03(\v2\x15.pax.v1.AIUsageBucketR\abuckets\x12*\n" +
 	"\x05state\x18\x02 \x01(\v2\x14.pax.v1.AIUsageStateR\x05state\x12!\n" +
 	"\fnot_modified\x18\x03 \x01(\bR\vnotModified\x124\n" +
-	"\tlast_used\x18\x04 \x03(\v2\x17.pax.v1.AIUsageLastUsedR\blastUsed\"\x96\x03\n" +
+	"\tlast_used\x18\x04 \x03(\v2\x17.pax.v1.AIUsageLastUsedR\blastUsed\"\xbd\x03\n" +
 	"\x0fAIUsageLogQuery\x12\x17\n" +
 	"\afrom_ms\x18\x01 \x01(\x03R\x06fromMs\x12\x13\n" +
 	"\x05to_ms\x18\x02 \x01(\x03R\x04toMs\x12!\n" +
@@ -3552,14 +3604,15 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\x04page\x18\b \x01(\rR\x04page\x12:\n" +
 	"\x17min_official_cost_micro\x18\t \x01(\x03H\x01R\x14minOfficialCostMicro\x88\x01\x01\x12:\n" +
 	"\x17max_official_cost_micro\x18\n" +
-	" \x01(\x03H\x02R\x14maxOfficialCostMicro\x88\x01\x01B\f\n" +
+	" \x01(\x03H\x02R\x14maxOfficialCostMicro\x88\x01\x01\x12%\n" +
+	"\x0eservice_source\x18\v \x01(\tR\rserviceSourceB\f\n" +
 	"\n" +
 	"_succeededB\x1a\n" +
 	"\x18_min_official_cost_microB\x1a\n" +
 	"\x18_max_official_cost_micro\"7\n" +
 	"\x10AIUsageUnitPrice\x12\x19\n" +
 	"\x05value\x18\x01 \x01(\x01H\x00R\x05value\x88\x01\x01B\b\n" +
-	"\x06_value\"\xc6\t\n" +
+	"\x06_value\"\xed\t\n" +
 	"\x0eAIUsageRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x13\n" +
 	"\x05at_ms\x18\x02 \x01(\x03R\x04atMs\x12\x10\n" +
@@ -3596,7 +3649,8 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\x11cache_write_short\x18\x1e \x01(\x03H\x04R\x0fcacheWriteShort\x88\x01\x01\x12-\n" +
 	"\x10cache_write_long\x18\x1f \x01(\x03H\x05R\x0ecacheWriteLong\x88\x01\x01\x12:\n" +
 	"\x17cache_write_short_price\x18  \x01(\x01H\x06R\x14cacheWriteShortPrice\x88\x01\x01\x128\n" +
-	"\x16cache_write_long_price\x18! \x01(\x01H\aR\x13cacheWriteLongPrice\x88\x01\x01B\x0e\n" +
+	"\x16cache_write_long_price\x18! \x01(\x01H\aR\x13cacheWriteLongPrice\x88\x01\x01\x12%\n" +
+	"\x0eservice_source\x18\" \x01(\tR\rserviceSourceB\x0e\n" +
 	"\f_input_priceB\x0f\n" +
 	"\r_output_priceB\x06\n" +
 	"\x04_tpsB\n" +
@@ -3727,16 +3781,18 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\tsubagents\x18\t \x01(\x03R\tsubagents\x12A\n" +
 	"\x0esubagent_bands\x18\n" +
 	" \x03(\v2\x1a.pax.v1.AIUsageContextBandR\rsubagentBands\x121\n" +
-	"\x14subagents_incomplete\x18\v \x01(\bR\x13subagentsIncomplete\"\xcd\x01\n" +
+	"\x14subagents_incomplete\x18\v \x01(\bR\x13subagentsIncomplete\"\xfe\x01\n" +
 	"\x12AIUsageContextBand\x12\x14\n" +
 	"\x05input\x18\x01 \x01(\x03R\x05input\x12.\n" +
 	"\x13official_cost_micro\x18\x02 \x01(\x03R\x11officialCostMicro\x12,\n" +
 	"\x12channel_cost_micro\x18\x03 \x01(\x03R\x10channelCostMicro\x12\x1a\n" +
 	"\brequests\x18\x04 \x01(\x03R\brequests\x12'\n" +
-	"\x0fpriced_requests\x18\x05 \x01(\x03R\x0epricedRequests\"I\n" +
+	"\x0fpriced_requests\x18\x05 \x01(\x03R\x0epricedRequests\x12/\n" +
+	"\x13unconfirmed_channel\x18\x06 \x01(\x03R\x12unconfirmedChannel\"r\n" +
 	"\x11AIUsageLimitMoney\x12\x1a\n" +
 	"\bofficial\x18\x01 \x01(\x01R\bofficial\x12\x18\n" +
-	"\achannel\x18\x02 \x01(\x01R\achannel\"\xbd\x01\n" +
+	"\achannel\x18\x02 \x01(\x01R\achannel\x12'\n" +
+	"\x0fchannel_unknown\x18\x03 \x01(\bR\x0echannelUnknown\"\xbd\x01\n" +
 	"\x11AIUsageModelLimit\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x03R\x05limit\x12\x12\n" +

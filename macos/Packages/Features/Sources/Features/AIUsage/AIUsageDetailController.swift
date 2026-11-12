@@ -128,7 +128,7 @@ final class AIUsageDetailController: WorkbenchModalController {
           labels: ["普通输入", "缓存读取", "缓存写入", "输出"], values: s.officialCosts,
           colors: PaxTheme.Chart.categorySeries,
           format: { AIUsageFormatting.cost($0, precision: 4) }))
-      pane.add(fact("实际倍率费用", s.costLabel))
+      pane.add(fact("渠道估算费用", s.costLabel))
       pane.add(AIUsageLayout.separator())
       profileRows(list, expanded: false, official: true)
     case .model, .request:
@@ -141,9 +141,14 @@ final class AIUsageDetailController: WorkbenchModalController {
           ]),
         ]))
       if isRequest {
-        pane.add(fact("官方费用（1×）", s.officialCostLabel, color: AIUsageCostDisplay.officialColor))
-        pane.add(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
-        if let request = list.first {
+        pane.add(
+          fact(
+            s.accountOnly ? "API 等值估算" : "官方费用（1×）", s.officialCostLabel,
+            color: AIUsageCostDisplay.officialColor))
+        if s.hasChannelEstimate {
+          pane.add(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
+        }
+        if let request = list.first, request.hasChannelEstimate {
           pane.add(fact("请求记录倍率", AIUsageFormatting.multiplier(request.multiplier)))
         }
       }
@@ -195,7 +200,7 @@ final class AIUsageDetailController: WorkbenchModalController {
       }
       if isRequest, let request = list.first {
         pane.add(AIUsageLayout.separator())
-        pane.add(fact("Profile", request.client == .harness ? "只读" : request.profileName))
+        pane.add(fact("Profile", request.sourceLabel))
         pane.add(fact("CLI", request.client.rawValue))
         pane.add(fact("模型", store.model(request.modelID)))
         pane.add(fact("请求时间", TrafficFormatting.logDate(request.at)))
@@ -375,15 +380,20 @@ final class AIUsageDetailController: WorkbenchModalController {
             prices([r.cacheWriteShortPrice]) + " / " + prices([r.cacheWriteLongPrice])))
         fields.append(fact("缓存写入短期 / 长期Token", "\(short) / \(long)"))
       }
-      fields.append(fact("渠道倍率", AIUsageFormatting.multiplier(r.multiplier)))
+      if r.hasChannelEstimate {
+        fields.append(fact("渠道倍率", AIUsageFormatting.multiplier(r.multiplier)))
+      }
       fields.append(fact("官方价格版本", r.priceVersion.isEmpty ? "预览样本" : r.priceVersion))
     }
     fields.append(
       fact(
-        "官方费用（1×）", AIUsageFormatting.cost(s.originalCost, precision: 6),
+        s.accountOnly ? "API 等值估算" : "官方费用（1×）",
+        AIUsageFormatting.cost(s.originalCost, precision: 6),
         color: AIUsageCostDisplay.officialColor))
-    fields.append(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
-    fields.append(AIUsageLayout.label("按内置官方价格版本和渠道倍率估算；缓存写入缺少档位时按 5 分钟档计。", secondary: true))
+    if s.hasChannelEstimate {
+      fields.append(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
+    }
+    fields.append(AIUsageLayout.label(AIUsageCostDisplay.explanation, secondary: true))
     let facts = AIUsageLayout.stack(fields)
     facts.isHidden = true
     let toggle = actions.button("计费依据  ·  历史单价与倍率  ›") { [weak self, weak facts] in

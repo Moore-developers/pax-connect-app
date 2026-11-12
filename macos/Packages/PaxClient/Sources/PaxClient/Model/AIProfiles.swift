@@ -51,6 +51,7 @@ public struct AIProviderModel: Equatable, Sendable {
 
 /// Public profile metadata never contains the stored API key.
 public struct AIProfile: Identifiable, Equatable, Sendable {
+  public var serviceSource: AIServiceSource { .api(endpoint: endpoint) }
   public var id: String
   public var revision: UInt64
   public var connectionRevision: UInt64
@@ -111,6 +112,7 @@ public struct AIProfile: Identifiable, Equatable, Sendable {
   }
 }
 public struct AIBinding: Equatable, Sendable {
+  public var serviceSource: AIServiceSource
   public var profileID: String
   public var state: String
   public var reason: String
@@ -122,8 +124,10 @@ public struct AIBinding: Equatable, Sendable {
   public init(
     profileID: String = "", state: String = "not_imported", reason: String = "",
     inspectionID: String = "", templateRevision: UInt64 = 0, endpoint: String = "",
-    targetPath: String = "", requiresModel: Bool = false
+    targetPath: String = "", requiresModel: Bool = false,
+    serviceSource: AIServiceSource = .unrecorded
   ) {
+    self.serviceSource = serviceSource
     self.profileID = profileID
     self.state = state
     self.reason = reason
@@ -145,7 +149,8 @@ public struct AIProfilesWorkspace: Sendable {
       bindings[cli] = AIBinding(
         profileID: b.profileID, state: b.state, reason: b.reason,
         inspectionID: b.inspectionID, templateRevision: b.templateRevision, endpoint: b.endpoint,
-        targetPath: b.targetPath, requiresModel: b.requiresModel)
+        targetPath: b.targetPath, requiresModel: b.requiresModel,
+        serviceSource: AIServiceSource(rawValue: b.serviceSource) ?? .unknown)
     }
   }
 }

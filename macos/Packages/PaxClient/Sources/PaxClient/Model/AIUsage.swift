@@ -3,6 +3,7 @@ import PaxProto
 
 /// Additive usage counters. Cost values are USD; every request is priced.
 public struct AIUsageTotals: Equatable, Sendable {
+  public var unconfirmedChannel = 0
   public var count = 0
   public var success = 0
   public var input = 0
@@ -18,6 +19,7 @@ public struct AIUsageTotals: Equatable, Sendable {
   public var elapsedCount = 0
   public init() {}
   init(_ p: Pax_V1_AIUsageTotals) {
+    unconfirmedChannel = Int(p.unconfirmedChannel)
     count = Int(p.count)
     success = Int(p.success)
     input = Int(p.input)
@@ -35,6 +37,7 @@ public struct AIUsageTotals: Equatable, Sendable {
     elapsedCount = Int(p.elapsedCount)
   }
   public mutating func add(_ v: Self) {
+    unconfirmedChannel += v.unconfirmedChannel
     count += v.count
     success += v.success
     input += v.input
@@ -53,6 +56,7 @@ public struct AIUsageTotals: Equatable, Sendable {
   }
 }
 public struct AIUsageBucket: Equatable, Sendable {
+  public let serviceSource: AIServiceSource
   public let at: Date
   public let client: AIClient
   public let profileID: String
@@ -61,8 +65,9 @@ public struct AIUsageBucket: Equatable, Sendable {
   public let totals: AIUsageTotals
   public init(
     at: Date, client: AIClient, profileID: String = "", profileName: String = "", modelID: String,
-    totals: AIUsageTotals
+    totals: AIUsageTotals, serviceSource: AIServiceSource = .unrecorded
   ) {
+    self.serviceSource = serviceSource
     self.at = at
     self.client = client
     self.profileID = profileID
@@ -71,6 +76,7 @@ public struct AIUsageBucket: Equatable, Sendable {
     self.totals = totals
   }
   init?(_ p: Pax_V1_AIUsageBucket) {
+    serviceSource = AIServiceSource(rawValue: p.serviceSource) ?? .unknown
     guard let cli = AIClient(code: p.cli) else { return nil }
     at = Date(timeIntervalSince1970: Double(p.atMs) / 1000)
     client = cli
@@ -81,6 +87,12 @@ public struct AIUsageBucket: Equatable, Sendable {
   }
 }
 public struct AIUsageRequest: Identifiable, Equatable, Sendable {
+  public var serviceSource: AIServiceSource = .unrecorded
+  public var hasChannelEstimate: Bool { serviceSource.hasChannelEstimate }
+  public var sourceLabel: String {
+    if client == .harness { return "只读" }
+    return profileName.isEmpty ? serviceSource.label : profileName
+  }
   public let id: String
   public let at: Date
   public let profileID: String
@@ -157,6 +169,7 @@ public struct AIUsageRequest: Identifiable, Equatable, Sendable {
       tps: p.hasTps ? p.tps : nil,
       elapsed: p.hasElapsed ? p.elapsed : nil, streaming: p.streaming,
       errorMessage: p.errorCode.isEmpty ? nil : p.errorCode)
+    serviceSource = AIServiceSource(rawValue: p.serviceSource) ?? .unknown
     componentPrices = p.componentPrices.map { $0.hasValue ? $0.value : nil }
     priceVersion = p.priceVersion
     reasoningEffort = p.reasoningEffort

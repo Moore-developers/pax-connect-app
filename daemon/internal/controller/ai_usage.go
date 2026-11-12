@@ -49,12 +49,12 @@ func usageState(v aiusage.State) *pb.AIUsageState {
 	return &pb.AIUsageState{Revision: v.Revision, Backfilling: v.Backfilling, Skipped: v.Skipped, ErrorCode: v.Error, Generation: v.Generation, CatalogRevision: v.CatalogRevision, CatalogReady: v.CatalogReady, CatalogError: v.CatalogError}
 }
 func usageTotals(v aiusage.Summary) *pb.AIUsageTotals {
-	return &pb.AIUsageTotals{Count: v.Count, Success: v.Success, Input: v.Input, Read: v.Read, Write: v.Write, Output: v.Output, CostsMicro: v.Costs[:], CostMicro: v.Cost, TpsSum: v.TPSSum, ElapsedSum: v.ElapsedSum, TpsCount: v.TPSCount, ElapsedCount: v.ElapsedCount, BilledCostsMicro: v.BilledCosts[:]}
+	return &pb.AIUsageTotals{Count: v.Count, Success: v.Success, Input: v.Input, Read: v.Read, Write: v.Write, Output: v.Output, CostsMicro: v.Costs[:], CostMicro: v.Cost, TpsSum: v.TPSSum, ElapsedSum: v.ElapsedSum, TpsCount: v.TPSCount, ElapsedCount: v.ElapsedCount, BilledCostsMicro: v.BilledCosts[:], UnconfirmedChannel: v.UnconfirmedChannel}
 }
 func usageBuckets(rows []aiusage.Bucket, state aiusage.State) *pb.AIUsageBuckets {
 	out := &pb.AIUsageBuckets{State: usageState(state)}
 	for _, b := range rows {
-		out.Buckets = append(out.Buckets, &pb.AIUsageBucket{AtMs: b.At, Cli: b.CLI, ProfileId: b.ProfileID, ProfileName: b.ProfileName, ModelId: b.Model, Totals: usageTotals(b.Summary)})
+		out.Buckets = append(out.Buckets, &pb.AIUsageBucket{AtMs: b.At, Cli: b.CLI, ProfileId: b.ProfileID, ProfileName: b.ProfileName, ModelId: b.Model, Totals: usageTotals(b.Summary), ServiceSource: b.ServiceSource})
 	}
 	return out
 }
@@ -100,14 +100,14 @@ func (s *AIUsageServer) ListAIUsageLogs(ctx context.Context, q *pb.AIUsageLogQue
 	if q.ToMs <= q.FromMs || q.ToMs-q.FromMs > aiusage.MaxQuerySpanMillis || q.Page > 100000 {
 		return nil, usageError(aiusage.ErrRange)
 	}
-	v, state, e := readAIUsageLogs(ctx, s.store.List, s.store.State, aiusage.Query{From: q.FromMs, To: q.ToMs, CLI: q.Cli, Profile: q.ProfileId, Model: q.ModelId, Text: q.Query, Result: q.Succeeded, Page: int(q.Page), MinOfficialCost: q.MinOfficialCostMicro, MaxOfficialCost: q.MaxOfficialCostMicro})
+	v, state, e := readAIUsageLogs(ctx, s.store.List, s.store.State, aiusage.Query{From: q.FromMs, To: q.ToMs, CLI: q.Cli, Profile: q.ProfileId, Model: q.ModelId, Text: q.Query, Result: q.Succeeded, Page: int(q.Page), MinOfficialCost: q.MinOfficialCostMicro, MaxOfficialCost: q.MaxOfficialCostMicro, ServiceSource: q.ServiceSource})
 	out := &pb.AIUsageLogs{All: v.All, Success: v.Success, Failed: v.Failed, Totals: usageTotals(v.Total), State: usageState(state)}
 	for _, r := range v.Requests {
 		parts := make([]*pb.AIUsageUnitPrice, 4)
 		for i, p := range r.Details.Prices {
 			parts[i] = &pb.AIUsageUnitPrice{Value: p}
 		}
-		out.Requests = append(out.Requests, &pb.AIUsageRequest{CacheWriteShortPrice: r.Details.CacheWritePrices[0], CacheWriteLongPrice: r.Details.CacheWritePrices[1], ComponentPrices: parts, PriceVersion: r.Details.PriceVersion, ReasoningEffort: r.Details.ReasoningEffort, EffortSource: r.Details.EffortSource, CacheWriteShort: r.Details.WriteShort, CacheWriteLong: r.Details.WriteLong, Id: r.CLI + ":" + r.Key, AtMs: r.At, Cli: r.CLI, ModelId: r.Model, ProfileId: r.ProfileID, ProfileName: r.ProfileName, Succeeded: r.Succeeded, ErrorCode: r.Error, Streaming: r.Streaming, Input: r.Input, Read: r.Read, Write: r.Write, Output: r.Output, InputPrice: r.InputPrice, OutputPrice: r.OutputPrice, Multiplier: r.Multiplier, Tps: r.TPS, Elapsed: r.Elapsed, CostMicro: r.Cost, CostsMicro: r.Costs[:]})
+		out.Requests = append(out.Requests, &pb.AIUsageRequest{CacheWriteShortPrice: r.Details.CacheWritePrices[0], CacheWriteLongPrice: r.Details.CacheWritePrices[1], ComponentPrices: parts, PriceVersion: r.Details.PriceVersion, ReasoningEffort: r.Details.ReasoningEffort, EffortSource: r.Details.EffortSource, CacheWriteShort: r.Details.WriteShort, CacheWriteLong: r.Details.WriteLong, Id: r.CLI + ":" + r.Key, AtMs: r.At, Cli: r.CLI, ModelId: r.Model, ProfileId: r.ProfileID, ProfileName: r.ProfileName, Succeeded: r.Succeeded, ErrorCode: r.Error, Streaming: r.Streaming, Input: r.Input, Read: r.Read, Write: r.Write, Output: r.Output, InputPrice: r.InputPrice, OutputPrice: r.OutputPrice, Multiplier: r.Multiplier, Tps: r.TPS, Elapsed: r.Elapsed, CostMicro: r.Cost, CostsMicro: r.Costs[:], ServiceSource: r.Details.ServiceSource})
 	}
 	return out, usageError(e)
 }

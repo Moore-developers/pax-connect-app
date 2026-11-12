@@ -9,7 +9,7 @@ extension AIProfilesStore {
     case "changed": return "配置已变更"
     case "ready": return "可导入配置"
     case "missing": return "未配置 API"
-    case "account": return "客户端账号管理"
+    case "account": return "检测到账号配置"
     case "invalid": return "配置需检查"
     case "read_only": return "只读用量"
     case "restored": return "已恢复原配置"

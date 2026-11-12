@@ -5,7 +5,7 @@
 - geosite-cn：SagerNet/sing-geosite，rule-set提交 `417ea33286a8c3a77fdce9b68ce25d58565dad43`；SHA-256 `2f4af0be08f2ff494a8fcdef992dc92a2267600ce26c9bba17421d1ce9a6715c`。原始域名数据v2fly/domain-list-community，MIT；生成器GPL-3.0-or-later。旧来源不明文件归档。
 - geoip-cn：SagerNet/sing-geoip，rule-set提交 `7fe82a879ad2666526730c195b55a6d8d9147908`；SHA-256 `ebee603fdf402314b44b9f653cdcf6d9cc9c41e84e2b3515e3123c5c920a93bc`，与S0逐字节一致。生成器GPL-3.0-or-later；原始数据来自Dreamacro/maxmind-geoip转供的MaxMind GeoLite2。
 
-生成器声明及域名MIT许可证保存在third_party/licenses；GeoLite数据来源署名见同目录NOTICE。生成器许可不替代数据许可。本包仅用于本机开发/自用，尚未承诺满足向他人分发GeoLite衍生数据的全部条款；对外分发前核实GeoLite EULA、更新与署名要求。远程更新按Geo来源合同执行。
+生成器声明及域名MIT许可证保存在third_party/licenses；GeoLite数据来源署名见同目录NOTICE。生成器许可不替代数据许可。本包的GeoLite衍生资源仅用于本地候选，当前公开发布阻断见[分发条件](../docs/release/geolite-redistribution.md)；署名不代表更新/删除及再分发条件已满足。远程更新按Geo来源合同执行。
 
 来源：https://github.com/SagerNet/sing-geosite ，https://github.com/SagerNet/sing-geoip ，https://github.com/v2fly/domain-list-community ，https://github.com/Dreamacro/maxmind-geoip ，https://dev.maxmind.com/geoip/geolite2-free-geolocation-data/ 。
 

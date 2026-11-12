@@ -13,6 +13,7 @@ type observation struct {
 }
 type application struct {
 	ConnectionDigest   string             `json:"connection_sha256,omitempty"`
+	EventSource        string             `json:"event_source,omitempty"`
 	EventAt            int64              `json:"event_at,omitempty"`
 	EventName          string             `json:"event_name,omitempty"`
 	EventMultiplier    float64            `json:"event_multiplier,omitempty"`
@@ -34,7 +35,7 @@ type planned struct {
 }
 
 func (m *Manager) inspect(ctx context.Context, cli CLI) (Binding, error) {
-	b := Binding{CLI: cli, State: "not_imported", TargetPath: m.targetDir(cli)}
+	b := Binding{CLI: cli, ServiceSource: "unknown", State: "not_imported", TargetPath: m.targetDir(cli)}
 	if cli == DSH && m.usageOnlyDSH {
 		b.State = "read_only"
 		b.Reason = string(Unsupported)
@@ -76,6 +77,12 @@ func (m *Manager) inspect(ctx context.Context, cli CLI) (Binding, error) {
 		b.Reason = string(Invalid)
 		validation = Invalid
 	}
+	if b.State == "account" {
+		b.ServiceSource = "official_account"
+	}
+	if validation == nil {
+		b.ServiceSource = sourceOfEndpoint(cli, v.url)
+	}
 	a, applied := m.recovery.Applied[cli]
 	if !applied {
 		return b, nil
@@ -87,19 +94,24 @@ func (m *Manager) inspect(ctx context.Context, cli CLI) (Binding, error) {
 	b.ProfileID = a.ProfileID
 	if p.Kind == "native" && sameFiles(files, a.Files) {
 		b.State = "applied"
+		b.ServiceSource = "official_account"
 		b.Reason = ""
 		return b, nil
 	}
 	if validation != nil {
+		b.ProfileID = ""
 		return b, nil
 	}
 	switch {
 	case matchesConnection(cli, files, p):
 		b.State = "applied"
-	case a.ConnectionRevision != p.ConnectionRevision:
+	case a.ConnectionRevision != p.ConnectionRevision && a.ConnectionDigest != "" && connectionDigest(cli, files) == a.ConnectionDigest:
 		b.State = "pending"
 	default:
 		b.State = "changed"
+	}
+	if b.State == "changed" {
+		b.ProfileID = ""
 	}
 	return b, nil
 }
@@ -153,7 +165,7 @@ func (m *Manager) importCurrent(ctx context.Context, r Mutation) error {
 	changes := []stateChange{change("profiles", p.ID, p)}
 	apps := map[CLI]application{}
 	if _, ok := m.recovery.Applied[r.CLI]; !ok {
-		apps[r.CLI] = application{Schema: 2, ProfileID: p.ID, ConnectionRevision: p.ConnectionRevision}
+		apps[r.CLI] = application{Schema: 2, ProfileID: p.ID, ConnectionRevision: p.ConnectionRevision, ConnectionDigest: connectionDigest(r.CLI, files)}
 	}
 	if e = m.stateTransactionApplied(ctx, changes, apps); e != nil {
 		return e
@@ -184,9 +196,26 @@ func (m *Manager) deleteProfile(ctx context.Context, r Mutation) error {
 	if p.Revision != r.ExpectedRevision {
 		return Conflict
 	}
-	for _, a := range m.recovery.Applied {
-		if a.ProfileID == p.ID {
+	next := m.recovery.clone()
+	for cli, a := range m.recovery.Applied {
+		if a.ProfileID != p.ID {
+			continue
+		}
+		b, err := m.inspect(ctx, cli)
+		if err != nil {
+			return err
+		}
+		if b.ProfileID == p.ID {
 			return InUse
+		}
+		delete(next.Applied, cli)
+	}
+	if len(next.Applied) != len(m.recovery.Applied) {
+		if err := m.repairEvents(ctx); err != nil {
+			return err
+		}
+		if err := m.persistRecovery(ctx, next); err != nil {
+			return err
 		}
 	}
 	var changes []stateChange

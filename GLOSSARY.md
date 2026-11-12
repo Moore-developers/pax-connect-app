@@ -199,7 +199,11 @@ _Avoid_：把重新创建 TUN 称为复用、把仅发现旧接口称为恢复�
 
 **AI子代理**：由CLI原生证据确认的代理；按所选日活动/请求去重，含无请求代理。输入用量与费用单列，来源不足标不完整。
 
-**AI Profile**：Pax管理的模型服务配置：同一组API Key与Base URL供多个CLI使用，保存名称、模型和计费倍率；区别于网络NodeProfile和DSH运行Profile。
+**AI Profile**：Pax管理的API地址、Key、模型与估算倍率，支持官方API和中转；账号登录由CLI管理。
+
+**AI服务来源**：观测到的官方账号、官方API、中转或来源待确认，独立于Profile；不证明登录有效。
+
+**API等值估算**：按官方API价格折算的Token价值，非订阅扣费或额度。
 
 **AI CLI 绑定**：Pax 为一个 CLI 选择的 AI Profile；选定关系不等于配置已应用或运行中的 CLI 已采用它。
 
@@ -209,11 +213,11 @@ _Avoid_：把重新创建 TUN 称为复用、把仅发现旧接口称为恢复�
 
 **首次使用引导**：根据真实配置和采集状态提示下一步；网络和模型两条路径独立，可跳过/恢复。Profile保存、CLI配置写入与真实请求成功分别确认，合同见[引导](docs/changes/pax-connect-network-control-plane/first-run-onboarding.md)。
 
-**原生账号 Profile**：保留账号登录及原生设置的 CLI 专用配置，不冒充通用 API Key 配置。
+**原生账号 Profile**：旧版保留账号设置的CLI专用配置，仅兼容旧数据。新官方账号不创建Profile，登录由CLI管理。
 
 **DSH 运行 Profile**：DeepSeek Harness 的运行配置组合；它与 Pax 管理的供应商 Profile 是不同概念。
 
-**AI估算费用**：内置官方四项价格×请求倍率（默认或模型覆盖，至多3位小数）的本地估算。已定价历史保留；旧缺价按原倍率补齐，显式重算采用指定倍率。缺分项显示小计，不冒充供应商结算。
+**AI估算费用**：官方分项价×请求倍率的本地估算，非平台账单；历史定价与重算见[AI采集](docs/changes/pax-connect-network-control-plane/ai-usage-collection.md)§4–5。
 
 **AI官方费用**：存储的1×官方四项费用之和，不含Profile倍率；用于概览统计/趋势/排行。与渠道费用分列（官方红、渠道蓝），保留已定价历史。
 
@@ -225,6 +229,6 @@ _Avoid_：把重新创建 TUN 称为复用、把仅发现旧接口称为恢复�
 
 **AI未定价**：本地价目表没有可核实的对应模型价格；Token和请求数仍可统计，费用不以零冒充。
 
-**AI用量归属**：按请求自己的时间在CLI应用事件里固定Profile，倍率取该时间的快照（模型覆盖优先于默认）；用户显式重算的记录（重算覆盖）优先于快照；没有历史事件的请求用空Profile、倍率1；DSH只读、不关联Profile。合同见[AI采集](docs/changes/pax-connect-network-control-plane/ai-usage-collection.md)§4。
+**AI用量归属**：按请求时间冻结来源、Profile与倍率；账号/未知不沿旧中转，历史不重标。规则见[归属](docs/changes/pax-connect-network-control-plane/ai-usage-attribution.md)。
 
 网络观测补充术语见[流量、IPv6、最近命中与当前环境检测](docs/glossary/network-observation.md)。

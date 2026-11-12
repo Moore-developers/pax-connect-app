@@ -73,7 +73,7 @@ extension WorkbenchDemoStore {
     return DashboardTrafficProjection.card(snapshot: snapshot, page: page, now: now)
   }
 
-  /// 近 7 日 + 今日各模型的确定桶：今日 $18.60，共 7 个模型中前 5 个有 CLI 分段。
+  /// 近 7 日 + 今日各模型的确定桶：今日官方 $18.60，6 个模型，全部只在内存。
   var dashboardUsageBuckets: [AIUsageBucket] {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: trafficCapturedAt)
@@ -82,9 +82,11 @@ extension WorkbenchDemoStore {
       value.count = count
       value.success = count
       value.input = tokens * 4 / 5
+      value.read = value.input * 3 / 5
       value.output = tokens / 5
       value.cost = cost
-      value.billedCosts = [cost * 0.35, cost * 0.11, 0, cost * 0.54]
+      value.costs = [cost * 0.35, cost * 0.11, 0, cost * 0.54]
+      value.billedCosts = value.costs
       return value
     }
     let earlier: [Double] = [12.4, 15.1, 9.8, 13.6, 14.9, 15.4]
@@ -96,7 +98,8 @@ extension WorkbenchDemoStore {
       }
     }
     let now: [(AIClient, String, Double, Int, Int)] = [
-      (.claude, "claude-opus-5-5", 9.70, 620_000, 560),
+      (.claude, "claude-opus-5-5", 9.10, 580_000, 530),
+      (.claude, "claude-haiku-5-5", 0.60, 40_000, 30),
       (.codex, "gpt-5.1-codex", 3.50, 230_000, 310),
       (.harness, "deepseek-v4", 1.68, 105_000, 180), (.claude, "deepseek-v4", 0.72, 45_000, 60),
       (.claude, "claude-sonnet-5-5", 1.90, 120_000, 120),

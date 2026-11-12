@@ -4,7 +4,7 @@ import PaxClient
 /// Projection only: business amounts, thresholds, classifications and markers come from daemon.
 enum AISessionLimitsMapping {
   static func money(_ value: AISessionLimitMoney) -> AILimitMoney {
-    .init(official: value.official, channel: value.channel)
+    .init(official: value.official, channel: value.channel, channelUnknown: value.channelUnknown)
   }
 
   static func scope(_ value: AISessionLimits, selected: Bool) -> AILimitScope {
@@ -87,7 +87,8 @@ enum AISessionLimitsMapping {
         fresh: r.totals.input - r.totals.read - r.totals.write,
         read: r.totals.read, write: r.totals.write,
         official: r.pricedRequests > 0 ? .init(fresh: o[0], read: o[1], write: o[2]) : nil,
-        channel: r.pricedRequests > 0 ? .init(fresh: c[0], read: c[1], write: c[2]) : nil,
+        channel: r.pricedRequests > 0 && r.totals.unconfirmedChannel == 0
+          ? .init(fresh: c[0], read: c[1], write: c[2]) : nil,
         lines: point.lines.map(AIModelLimit.init), band: point.band)
     }
     return .init(

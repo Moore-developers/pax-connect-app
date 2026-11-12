@@ -308,6 +308,7 @@ func (s *Store) Reprice(ctx context.Context, q RepriceQuery) (RepriceResult, err
 func addDelta(grouped map[bucketKey]Bucket, k bucketKey, name string, d Summary) {
 	v := grouped[k]
 	v.At, v.CLI, v.ProfileID, v.ProfileName, v.Model = k.At, k.CLI, k.Profile, name, k.Model
+	v.ServiceSource = k.Source
 	v.add(d)
 	grouped[k] = v
 }
@@ -359,7 +360,7 @@ func (s *Store) repriceRequests(ctx context.Context, tx *sql.Tx, q RepriceQuery,
 			for i := range d.BilledCosts {
 				d.BilledCosts[i] = next.Details.Billed[i] - old.Details.Billed[i]
 			}
-			addDelta(grouped, bucketKey{old.At / 3600000 * 3600000, old.CLI, old.ProfileID, old.Model}, old.ProfileName, d)
+			addDelta(grouped, bucketKey{old.At / 3600000 * 3600000, old.CLI, old.ProfileID, old.Model, old.Details.ServiceSource}, old.ProfileName, d)
 		}
 		if len(batch) < 500 {
 			return nil
@@ -386,14 +387,14 @@ func repriceBuckets(ctx context.Context, tx *sql.Tx, q RepriceQuery, from, to in
 		where += " AND model=?"
 		args = append(args, q.Model)
 	}
-	rows, e := tx.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,"+summaryColumns+" FROM usage_hourly WHERE "+where, args...)
+	rows, e := tx.QueryContext(ctx, "SELECT hour,cli,profile_id,model,profile_name,service_source,"+summaryColumns+" FROM usage_hourly WHERE "+where, args...)
 	if e != nil {
 		return ErrUnavailable
 	}
 	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var b Bucket
-		if e = rows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName}, summaryTargets(&b.Summary)...)...); e != nil {
+		if e = rows.Scan(append([]any{&b.At, &b.CLI, &b.ProfileID, &b.Model, &b.ProfileName, &b.ServiceSource}, summaryTargets(&b.Summary)...)...); e != nil {
 			return ErrUnavailable
 		}
 		m := q.forModel(b.Model)
@@ -410,7 +411,7 @@ func repriceBuckets(ctx context.Context, tx *sql.Tx, q RepriceQuery, from, to in
 		res.Aggregated += b.Count
 		res.OldCost += b.Cost
 		res.NewCost += cost
-		addDelta(grouped, bucketKey{b.At, b.CLI, b.ProfileID, b.Model}, b.ProfileName, d)
+		addDelta(grouped, bucketKey{b.At, b.CLI, b.ProfileID, b.Model, b.ServiceSource}, b.ProfileName, d)
 	}
 	return rows.Err()
 }

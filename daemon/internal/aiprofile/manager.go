@@ -155,6 +155,11 @@ func (m *Manager) workspace(ctx context.Context) (Workspace, error) {
 			b.State = "recovery_required"
 			b.Reason = string(RecoveryRequired)
 		}
+		if !m.blocked {
+			if e := m.observeSource(ctx, b); e != nil {
+				return Workspace{}, e
+			}
+		}
 		w.Bindings = append(w.Bindings, b)
 	}
 	return w, nil

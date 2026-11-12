@@ -145,10 +145,13 @@ func TestFirstAPIRejectsAccountsAndMalformedTargets(t *testing.T) {
 		state string
 	}{
 		{Codex, map[string]string{"auth.json": `{"tokens":{"access_token":"fixture"}}`}, "account"},
+		{Codex, map[string]string{"auth.json": `{"auth_mode":"chatgpt","OPENAI_API_KEY":"fixture","tokens":{"access_token":"fixture"}}`}, "invalid"},
+		{Codex, map[string]string{"config.toml": "cli_auth_credentials_store = 'keyring'\n", "auth.json": `{"auth_mode":"chatgpt","tokens":{"access_token":"fixture"}}`}, "invalid"},
+		{Codex, map[string]string{"config.toml": "model_provider = 'gateway'\n[model_providers.gateway]\nbase_url = 'https://gateway.example/v1'\n", "auth.json": `{"auth_mode":"chatgpt","tokens":{"access_token":"fixture"}}`}, "invalid"},
 		{Codex, map[string]string{"config.toml": "bad = ["}, "invalid"},
-		{Claude, map[string]string{"settings.json": `{"env":{"ANTHROPIC_API_KEY":"existing"}}`}, "invalid"},
-		{Claude, map[string]string{"settings.json": `{"apiKeyHelper":"command"}`}, "account"},
-		{Claude, map[string]string{".credentials.json": `{"claudeAiOauth":{}}`}, "account"},
+		{Claude, map[string]string{"settings.json": `{"env":{"ANTHROPIC_API_KEY":"existing"}}`}, "ready"},
+		{Claude, map[string]string{"settings.json": `{"apiKeyHelper":"command"}`}, "invalid"},
+		{Claude, map[string]string{".credentials.json": `{"claudeAiOauth":{}}`}, "invalid"},
 	}
 	for _, c := range cases {
 		t.Run(string(c.cli)+c.state, func(t *testing.T) {

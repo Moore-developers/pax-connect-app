@@ -104,8 +104,9 @@ extension AIUsageStore {
     let sum =
       bindings[client].flatMap { binding in
         profiles.first(where: { $0.id == binding.profileID }).map { usageSummary(profile: $0.id) }
-      } ?? AIUsageSummary(requests: [])
+      } ?? usageSummary(client: client)
     let last = lastUsed(client).map { AIUsageFormatting.recentUse($0, now: now) } ?? "—"
+    let source = bindings[client]?.serviceSource ?? .unknown
     let recent = AICLICardLines.Run(text: "CLI 最近使用 " + last, role: .label)
     guard sum.count > 0 else {
       return .init(usage: [.init(text: "本时段无请求", role: .label)], recent: [recent])
@@ -125,10 +126,15 @@ extension AIUsageStore {
         Run(text: AIUsageFormatting.percent(sum.cache), role: .cache),
         Run(text: " · " + recent.text, role: .label),
       ],
-      cost: [
-        Run(text: "官方 ", role: .label), Run(text: sum.officialCostLabel, role: .officialCost),
-        Run(text: " / 渠道 ", role: .label), Run(text: sum.costLabel, role: .cost),
-      ])
+      cost: source == .officialAccount || !sum.hasChannelEstimate
+        ? [
+          Run(text: "API 等值估算 ", role: .label),
+          Run(text: sum.officialCostLabel, role: .officialCost),
+        ]
+        : [
+          Run(text: "官方 ", role: .label), Run(text: sum.officialCostLabel, role: .officialCost),
+          Run(text: " / 渠道 ", role: .label), Run(text: sum.costLabel, role: .cost),
+        ])
   }
 
   static func host(_ endpoint: String) -> String {
@@ -148,7 +154,8 @@ extension AIUsageStore {
         isNative: native, nativeCLI: p.nativeCLI, statusText: status.text,
         statusTone: status.tone,
         source: native
-          ? (p.nativeCLI?.rawValue ?? "CLI") + " · 原生账号配置" : "API · " + Self.host(p.endpoint),
+          ? (p.nativeCLI?.rawValue ?? "CLI") + " · 原生账号配置"
+          : p.serviceSource.label + " · " + Self.host(p.endpoint),
         missingKey: !p.hasKey && !native && !preview, name: p.name,
         multiplier: AIUsageFormatting.multiplier(p.multiplier), modelsLine: modelsLine(p),
         topModelLine: topModelLine(p), costHeader: period.rawValue + "费用",

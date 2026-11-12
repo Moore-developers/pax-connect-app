@@ -71,7 +71,7 @@ func earliestData(ctx context.Context, old *sql.DB) (map[string]time.Time, error
 func scanOld(rows *sql.Rows) (Request, error) {
 	var r Request
 	var details []byte
-	if err := rows.Scan(&r.CLI, &r.Key, &r.At, &r.Session, &r.Segment, &r.Model, &r.Streaming, &r.Succeeded, &r.Error, &r.Input, &r.Read, &r.Write, &r.Output, &r.TPS, &r.Elapsed, &details); err != nil {
+	if err := rows.Scan(&r.CLI, &r.Key, &r.At, &r.Session, &r.Segment, &r.Model, &r.Streaming, &r.Succeeded, &r.Error, &r.Input, &r.Read, &r.Write, &r.Output, &r.TPS, &r.Elapsed, &details, &r.ProfileID, &r.ProfileName, &r.Multiplier); err != nil {
 		return r, err
 	}
 	if err := json.Unmarshal(details, &r.Details); err != nil {

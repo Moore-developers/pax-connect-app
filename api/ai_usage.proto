@@ -38,9 +38,12 @@ message AIUsageTotals {
  reserved "unpriced", "est_tps_sum", "est_elapsed_sum", "est_tps_count", "est_elapsed_count";
  double tps_sum=9; double elapsed_sum=11;
  int64 tps_count=12; int64 elapsed_count=14; repeated int64 billed_costs_micro=16;
+ // Nonzero when this sum includes account/unknown-source equivalents rather than channel costs.
+ int64 unconfirmed_channel=21;
 }
 message AIUsageBucket {
  int64 at_ms=1; string cli=2; string profile_id=3; string profile_name=4; string model_id=5; AIUsageTotals totals=6;
+ string service_source=7;
 }
 // Latest request time per client, independent of the queried range (retained buckets
 // fall back to their hour start). Only QueryAIUsageBuckets fills it.
@@ -54,6 +57,7 @@ message AIUsageLogQuery {
  string profile_id=5; string model_id=6; string cli=7; uint32 page=8;
  // Inclusive bounds on the stored 1x official cost (sum of costs_micro), before totals and pagination.
  optional int64 min_official_cost_micro=9; optional int64 max_official_cost_micro=10;
+ string service_source=11;
 }
 message AIUsageUnitPrice { optional double value=1; }
 message AIUsageRequest {
@@ -75,6 +79,8 @@ message AIUsageRequest {
  string reasoning_effort=27; string effort_source=28;
  optional int64 cache_write_short=30; optional int64 cache_write_long=31;
  optional double cache_write_short_price=32; optional double cache_write_long_price=33;
+ // Frozen local configuration observation; empty for existing records, unknown if unconfirmed.
+ string service_source=34;
 }
 message AIUsageLogs {
  repeated AIUsageRequest requests=1; int64 all=2; int64 success=3; int64 failed=4;
@@ -167,11 +173,12 @@ message AIUsageContextUsage {
 message AIUsageContextBand {
  int64 input=1; int64 official_cost_micro=2; int64 channel_cost_micro=3;
  int64 requests=4; int64 priced_requests=5;
+ int64 unconfirmed_channel=6;
 }
 
 // Session limit values are calculated by the daemon. Money is USD (fractional micro-USD
 // is preserved for averages); absent optional values mean unknown, never zero.
-message AIUsageLimitMoney { double official=1; double channel=2; }
+message AIUsageLimitMoney { double official=1; double channel=2; bool channel_unknown=3; }
 message AIUsageModelLimit {
  string model=1; int64 limit=2; int64 warn=3; int64 flat_limit=4; int64 flat_warn=5;
  optional double baseline=6;

@@ -77,7 +77,7 @@ final class AIBindingController: WorkbenchModalController {
       case "missing":
         configurationRows.append(note("尚未配置 API。可选择已有 Profile，或先创建再应用。"))
       case "account":
-        configurationRows.append(note("检测到账号或外部认证，请在客户端管理登录。这里不会改为 API 认证。"))
+        configurationRows.append(note("检测到官方账号配置。登录与订阅由客户端管理，本地用量无需 Profile 即可读取。"))
       case "invalid", "recovery_required":
         configurationRows.append(note("配置格式、权限或认证需要检查。未覆盖文件，处理后可重新检查。"))
       default: break
@@ -86,6 +86,18 @@ final class AIBindingController: WorkbenchModalController {
     pane.add(
       PaxPreferenceGroup(
         title: "客户端配置", symbol: "terminal", rows: [AIUsageLayout.stack(configurationRows)]))
+
+    let accountHelp = actions.button("登录说明") { [weak self] in self?.showAccountHelp() }
+    accountHelp.capsule = false
+    pane.add(
+      PaxPreferenceGroup(
+        title: "官方账号", symbol: "person.crop.circle",
+        rows: [
+          PaxPreferenceRow(
+            title: "在客户端管理登录",
+            detail: "订阅账号与 API 独立计费。Pax 读取本机日志，不需要账号 Profile。",
+            control: accountHelp)
+        ]))
 
     let profiles = store.profiles.filter {
       (targetProfile == nil || targetProfile == $0.id)
@@ -112,7 +124,8 @@ final class AIBindingController: WorkbenchModalController {
         button.setAccessibilityLabel("应用 " + p.name)
         control = button
       }
-      let source = p.kind == "native" ? "原生账号" : AIUsageStore.host(p.endpoint)
+      let source =
+        p.kind == "native" ? "原生账号" : p.serviceSource.label + " · " + AIUsageStore.host(p.endpoint)
       let detail =
         source + " · " + AIUsageFormatting.multiplier(p.multiplier)
         + (current && !applied ? " · " + AIProfilesStore.stateLabel(binding) : "")
@@ -133,9 +146,36 @@ final class AIBindingController: WorkbenchModalController {
               title: "创建 Profile", detail: "保存 API 地址与 Key，稍后选择应用。", control: create)
           ]))
     }
-    explanation.stringValue = "保存到 Pax 和写入客户端是两个动作。已有 API 配置切换只更新地址与 Key，当前会话是否采用以客户端为准。"
+    explanation.stringValue = "官方 API 和中转都使用地址与 Key；倍率仅用于本地估算。保存后再应用，当前会话是否采用以客户端为准。"
     pane.add(explanation)
     pane.setActions([actions.button("关闭") { [weak self] in self?.close() }])
+    pane.invalidateContentSize()
+  }
+  private func showAccountHelp() {
+    pane.clear()
+    let login =
+      client == .codex
+      ? "停用 API 认证，恢复默认 OpenAI 服务。\n运行 codex login 后开启新会话，再重新检查。"
+      : "停用 API 地址与 Key，运行 /login 登录。\n开启新会话后，点「重新检查」。"
+    pane.add(
+      PaxPreferenceGroup(
+        title: "使用官方账号", symbol: "person.crop.circle",
+        rows: [note(login)]))
+    pane.add(
+      PaxPreferenceGroup(
+        title: "改用 API", symbol: "key",
+        rows: [note("官方 API 与中转均使用地址和 Key。\n在客户端完成 API 认证，再选择 Profile 应用。")]))
+    pane.add(
+      PaxPreferenceGroup(
+        title: "用量与费用", symbol: "chart.bar",
+        rows: [note("无需 Profile，自动读取本机 CLI 用量。\n费用为 API 等值估算，非订阅扣费；不含剩余额度。")]))
+    let recheck = actions.button("重新检查", primary: true) { [weak self] in self?.recheck() }
+    recheck.widthAnchor.constraint(
+      greaterThanOrEqualToConstant: ceil(recheck.intrinsicContentSize.width) + PaxTheme.Spacing.xs
+    ).isActive = true
+    pane.setActions([
+      actions.button("返回") { [weak self] in self?.render() }, recheck,
+    ])
     pane.invalidateContentSize()
   }
   private func recheck() {

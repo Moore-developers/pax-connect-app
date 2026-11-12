@@ -19,6 +19,8 @@ const ErrRebuildCode = "ai_usage_rebuild_required"
 // Attribution is the Profile owning a request and the multiplier in effect at its time.
 type Attribution struct {
 	ProfileID, ProfileName string
+	ServiceSource          string
+	Since                  int64
 	Multiplier             float64
 	// Models holds per-model multipliers that override Multiplier; nil means none.
 	Models map[string]float64
@@ -38,6 +40,7 @@ type Resolver func(cli string, at time.Time) Attribution
 
 // Details is a whitelist of derived usage metadata, never source JSON.
 type Details struct {
+	ServiceSource         string `json:",omitempty"`
 	WriteShort, WriteLong *int64
 	Prices                [4]*float64
 	CacheWritePrices      [2]*float64
@@ -49,6 +52,8 @@ type Details struct {
 
 // Request contains only usage metadata. Times are UTC Unix milliseconds.
 type Request struct {
+	sourceProvider                                                   string
+	sourceStart                                                      int64
 	analysis                                                         *analysisEvent
 	turn                                                             string
 	codex                                                            *codexEvidence
@@ -65,6 +70,7 @@ type Request struct {
 
 // Summary is additive; performance sums count only successful known values.
 type Summary struct {
+	UnconfirmedChannel                         int64
 	BilledCosts                                [4]int64
 	Count, Success, Input, Read, Write, Output int64
 	Costs                                      [4]int64
@@ -74,6 +80,7 @@ type Summary struct {
 }
 
 func (s *Summary) add(v Summary) {
+	s.UnconfirmedChannel += v.UnconfirmedChannel
 	s.Count += v.Count
 	s.Success += v.Success
 	s.Input += v.Input
@@ -93,6 +100,7 @@ func (s *Summary) add(v Summary) {
 
 // negate flips every additive field, to subtract a stored row from its bucket.
 func (s Summary) negate() Summary {
+	s.UnconfirmedChannel = -s.UnconfirmedChannel
 	s.Count, s.Success, s.Input, s.Read, s.Write, s.Output = -s.Count, -s.Success, -s.Input, -s.Read, -s.Write, -s.Output
 	s.Cost, s.TPSSum, s.ElapsedSum, s.TPSCount, s.ElapsedCount = -s.Cost, -s.TPSSum, -s.ElapsedSum, -s.TPSCount, -s.ElapsedCount
 	for i := range s.Costs {
@@ -103,6 +111,9 @@ func (s Summary) negate() Summary {
 
 func summarize(r Request) Summary {
 	s := Summary{Count: 1, Input: r.Input, Read: r.Read, Write: r.Write, Output: r.Output, Costs: r.Costs, Cost: r.Cost, BilledCosts: r.Details.Billed}
+	if r.Details.ServiceSource == "official_account" || r.Details.ServiceSource == "unknown" {
+		s.UnconfirmedChannel = 1
+	}
 	if r.Succeeded {
 		s.Success = 1
 		if r.TPS != nil {
@@ -119,6 +130,7 @@ func summarize(r Request) Summary {
 
 // Bucket is an hourly/daily grouping by client, Profile and model.
 type Bucket struct {
+	ServiceSource                      string
 	At                                 int64
 	CLI, ProfileID, ProfileName, Model string
 	Summary
@@ -126,6 +138,7 @@ type Bucket struct {
 
 // Query bounds an aggregation or a ten-row log page.
 type Query struct {
+	ServiceSource                          string
 	From, To                               int64
 	Granularity, CLI, Profile, Model, Text string
 	MinOfficialCost, MaxOfficialCost       *int64

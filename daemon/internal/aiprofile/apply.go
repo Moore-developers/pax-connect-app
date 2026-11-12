@@ -136,7 +136,7 @@ func (m *Manager) Apply(ctx context.Context, r ApplyRequest) (Workspace, error) 
 
 	}
 
-	a := application{ConnectionDigest: connectionDigest(p.CLI, p.files), EventAt: time.Now().UnixNano(), EventName: m.profiles[p.ProfileID].Name, EventMultiplier: m.profiles[p.ProfileID].Multiplier, EventModels: m.profiles[p.ProfileID].ModelMultipliers, Schema: 2, PlanID: r.PlanID, ProfileID: p.ProfileID, ConnectionRevision: p.connectionRevision, TemplateRevision: p.request.TemplateRevision, OperationID: r.OperationID, Files: p.files}
+	a := application{EventSource: sourceOfEndpoint(p.CLI, m.profiles[p.ProfileID].BaseURL), ConnectionDigest: connectionDigest(p.CLI, p.files), EventAt: time.Now().UnixNano(), EventName: m.profiles[p.ProfileID].Name, EventMultiplier: m.profiles[p.ProfileID].Multiplier, EventModels: m.profiles[p.ProfileID].ModelMultipliers, Schema: 2, PlanID: r.PlanID, ProfileID: p.ProfileID, ConnectionRevision: p.connectionRevision, TemplateRevision: p.request.TemplateRevision, OperationID: r.OperationID, Files: p.files}
 	if m.profiles[p.ProfileID].Kind != "native" {
 		a.Files = nil
 	}

@@ -13,7 +13,7 @@ type limitFact struct {
 }
 
 func (f limitFact) money() LimitMoney {
-	return LimitMoney{float64(f.row.Costs[0]+f.row.Costs[1]+f.row.Costs[2]) / 1e6, float64(f.row.BilledCosts[0]+f.row.BilledCosts[1]+f.row.BilledCosts[2]) / 1e6}
+	return LimitMoney{Official: float64(f.row.Costs[0]+f.row.Costs[1]+f.row.Costs[2]) / 1e6, Channel: float64(f.row.BilledCosts[0]+f.row.BilledCosts[1]+f.row.BilledCosts[2]) / 1e6, ChannelUnknown: f.row.UnconfirmedChannel > 0}
 }
 
 type limitSample struct {
@@ -24,7 +24,11 @@ type limitSample struct {
 
 func judgeLimits(over, rest []limitSample) (*float64, *LimitMoney) {
 	if len(over) == 0 {
-		return nil, &LimitMoney{}
+		empty := &LimitMoney{}
+		for _, sample := range rest {
+			empty.ChannelUnknown = empty.ChannelUnknown || sample.money.ChannelUnknown
+		}
+		return nil, empty
 	}
 	type average struct {
 		money LimitMoney
@@ -60,6 +64,7 @@ func judgeLimits(over, rest []limitSample) (*float64, *LimitMoney) {
 		total += v.money.Official
 		spend.Official += v.money.Official - base.Official
 		spend.Channel += v.money.Channel - base.Channel
+		spend.ChannelUnknown = spend.ChannelUnknown || v.money.ChannelUnknown || base.ChannelUnknown
 	}
 	if denominator <= 0 {
 		return nil, nil

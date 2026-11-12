@@ -40,11 +40,11 @@ extension AIUsageLogView {
       lines.spacing = PaxTheme.Spacing.xs
       return lines
     case 2:
-      let text = request.client == .harness ? "只读" : request.profileName
+      let text = request.sourceLabel
       let label = PaxText.tableLabel(text)
       label.lineBreakMode = .byTruncatingTail
       label.alignment = .center
-      label.toolTip = text
+      label.toolTip = text + "\n来源按本机配置与请求时间推定；终端私有配置和并行旧会话可能无法确认。"
       return label
     case 3:
       // Plain text, no tag background.
@@ -68,7 +68,8 @@ extension AIUsageLogView {
       tokens.alignment = .right
       let fee = PaxText.tableLabel("", numeric: true, alignment: .right)
       AIUsageCostDisplay.apply(
-        fee, official: request.officialCostLabel, channel: request.costLabel)
+        fee, official: request.officialCostLabel,
+        channel: request.hasChannelEstimate ? request.costLabel : nil)
       let lines = AIUsageLayout.stack([tokens, fee])
       lines.spacing = PaxTheme.Spacing.xs
       return lines
@@ -96,7 +97,7 @@ enum AIUsageLogFormat {
   static let tokenColor = PaxTheme.Color.text
   static let cacheColor = PaxTheme.Chart.cacheLabel
   static func multiplier(_ request: AIRequest) -> String {
-    AIUsageFormatting.multiplier(request.multiplier)
+    request.hasChannelEstimate ? AIUsageFormatting.multiplier(request.multiplier) : "—"
   }
   /// Token count in the token color; the cache rate has its own column.
   static func tokenLine(_ request: AIRequest) -> NSAttributedString {
@@ -124,11 +125,14 @@ enum AIUsageLogFormat {
         color: tokenColor),
       .init(title: "Token", value: AIUsageFormatting.tokens(totals.tokens), color: tokenColor),
       .init(
-        title: "官方费用 / 渠道费用",
-        value: AIUsageCostDisplay.text(
-          official: totals.officialCostLabel, channel: totals.costLabel),
-        color: AIUsageCostDisplay.officialColor, officialCost: totals.officialCostLabel,
-        channelCost: totals.costLabel),
+        title: totals.hasChannelEstimate ? "官方费用 / 渠道费用" : "API 等值估算",
+        value: totals.hasChannelEstimate
+          ? AIUsageCostDisplay.text(
+            official: totals.officialCostLabel, channel: totals.costLabel)
+          : totals.officialCostLabel,
+        color: AIUsageCostDisplay.officialColor,
+        officialCost: totals.hasChannelEstimate ? totals.officialCostLabel : nil,
+        channelCost: totals.hasChannelEstimate ? totals.costLabel : nil),
       .init(title: "缓存率", value: AIUsageFormatting.percent(totals.cache), color: cacheColor),
       .init(
         title: "成功", value: AIUsageFormatting.percent(totals.successRate),

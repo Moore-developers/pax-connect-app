@@ -100,7 +100,7 @@ func (s *Store) AnalyzeLimits(ctx context.Context, from, to int64, keys []Sessio
 	return out, nil
 }
 func readLimitFacts(ctx context.Context, tx *sql.Tx, g agentGraph, lines map[string]*ModelLimit, where string, args []any, capRows int) ([]limitFact, bool, error) {
-	query := `SELECT r.cli,r.session,r.request_key,r.model,coalesce(json_extract(r.details,'$.ReasoningEffort'),''),r.at,r.input,r.read,r.write,r.c0,r.c1,r.c2,coalesce(json_extract(r.details,'$.Billed[0]'),0),coalesce(json_extract(r.details,'$.Billed[1]'),0),coalesce(json_extract(r.details,'$.Billed[2]'),0),CASE WHEN json_extract(r.details,'$.Prices[0]') IS NOT NULL AND r.model<>'unknown' THEN 1 ELSE 0 END,coalesce(a.turn,''),coalesce(ar.agent,'') FROM requests r LEFT JOIN analysis_requests a ON a.cli=r.cli AND a.request_key=r.request_key LEFT JOIN session_agent_requests ar ON ar.cli=r.cli AND ar.request_key=r.request_key AND ar.session=r.session WHERE ` + where + fmt.Sprintf(" ORDER BY r.at,r.cli,r.request_key LIMIT %d", capRows+1)
+	query := `SELECT r.cli,r.session,r.request_key,r.model,coalesce(json_extract(r.details,'$.ReasoningEffort'),''),r.at,r.input,r.read,r.write,r.c0,r.c1,r.c2,coalesce(json_extract(r.details,'$.Billed[0]'),0),coalesce(json_extract(r.details,'$.Billed[1]'),0),coalesce(json_extract(r.details,'$.Billed[2]'),0),CASE WHEN json_extract(r.details,'$.Prices[0]') IS NOT NULL AND r.model<>'unknown' THEN 1 ELSE 0 END,coalesce(a.turn,''),coalesce(ar.agent,''),CASE WHEN json_extract(r.details,'$.ServiceSource') IN ('official_account','unknown') THEN 1 ELSE 0 END FROM requests r LEFT JOIN analysis_requests a ON a.cli=r.cli AND a.request_key=r.request_key LEFT JOIN session_agent_requests ar ON ar.cli=r.cli AND ar.request_key=r.request_key AND ar.session=r.session WHERE ` + where + fmt.Sprintf(" ORDER BY r.at,r.cli,r.request_key LIMIT %d", capRows+1)
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, false, err
@@ -115,7 +115,7 @@ func readLimitFacts(ctx context.Context, tx *sql.Tx, g agentGraph, lines map[str
 		}
 		var f limitFact
 		r := &f.row
-		if err = rows.Scan(&r.CLI, &r.Session, &r.RequestID, &r.Model, &r.Effort, &r.At, &r.Input, &r.Read, &r.Write, &r.Costs[0], &r.Costs[1], &r.Costs[2], &r.BilledCosts[0], &r.BilledCosts[1], &r.BilledCosts[2], &r.PricedRequests, &r.Turn, &f.agent); err != nil {
+		if err = rows.Scan(&r.CLI, &r.Session, &r.RequestID, &r.Model, &r.Effort, &r.At, &r.Input, &r.Read, &r.Write, &r.Costs[0], &r.Costs[1], &r.Costs[2], &r.BilledCosts[0], &r.BilledCosts[1], &r.BilledCosts[2], &r.PricedRequests, &r.Turn, &f.agent, &r.UnconfirmedChannel); err != nil {
 			return nil, false, err
 		}
 		r.Count = 1

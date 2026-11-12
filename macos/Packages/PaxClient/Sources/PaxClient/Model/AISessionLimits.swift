@@ -5,9 +5,11 @@ import PaxProto
 public struct AISessionLimitMoney: Equatable, Sendable {
   public let official: Double
   public let channel: Double
+  public let channelUnknown: Bool
   init(_ p: Pax_V1_AIUsageLimitMoney) {
     official = p.official
     channel = p.channel
+    channelUnknown = p.channelUnknown
   }
 }
 public struct AISessionModelLimit: Equatable, Sendable {

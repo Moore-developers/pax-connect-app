@@ -20,7 +20,7 @@ extension AIUsageViewController {
     let name = AIUsageLayout.label(row.client.rawValue, secondary: true)
     let heading = AIUsageLayout.stack([AIClientMark.view(row.client), name], vertical: false)
     heading.spacing = PaxTheme.Spacing.tight
-    let profileText = row.profileName + (row.multiplier.map { " · " + $0 } ?? "")
+    let profileText = row.configurationText
     let profile = PaxText.label(profileText, font: PaxTheme.Typography.section)
     profile.lineBreakMode = .byTruncatingTail
     profile.toolTip = profileText
@@ -59,13 +59,13 @@ extension AIUsageViewController {
     let body = AIUsageLayout.stack([top, profile, usage, costs, recent])
     body.spacing = PaxTheme.Spacing.tight
     body.setCustomSpacing(PaxTheme.Spacing.tight / 2, after: top)
-    usage.toolTip = "当前绑定Profile的所选时段用量，与下方同名Profile行一致（跨CLI汇总）"
+    usage.toolTip = "已绑定时为当前 Profile 的跨 CLI 用量；无 Profile 时为此 CLI 的全部来源用量。官方账号费用是 API 等值估算。"
     costs.toolTip = AIUsageCostDisplay.explanation
     contentRefreshers.append { [weak self] in
       guard let self,
         let next = self.store.clientRows(cost: false).first(where: { $0.client == row.client })
       else { return }
-      let text = next.profileName + (next.multiplier.map { " · " + $0 } ?? "")
+      let text = next.configurationText
       profile.stringValue = text
       profile.toolTip = text
       let lines = self.store.cliCardLines(row.client)

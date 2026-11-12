@@ -126,6 +126,7 @@ public typealias EventField = PaxClient.EventField
 
 public typealias NetworkPrivacy = PaxClient.NetworkPrivacy
 
+public typealias AIServiceSource = PaxClient.AIServiceSource
 public typealias AIClient = PaxClient.AIClient
 public typealias AIProfile = PaxClient.AIProfile
 public typealias AIBinding = PaxClient.AIBinding

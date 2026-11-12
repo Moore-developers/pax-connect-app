@@ -102,12 +102,14 @@ final class AIUsageStore {
   var logProfileOptions: [(String, String)] {
     var names = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
     for b in (data?.lifetime ?? []) where b.client != .harness {
-      let id = AIUsageTrendFilter.profileKey(profileID: b.profileID, client: b.client)
-      if names[id] == nil { names[id] = b.profileName }
+      let id = AIUsageTrendFilter.profileKey(
+        profileID: b.profileID, client: b.client, serviceSource: b.serviceSource)
+      if names[id] == nil { names[id] = AIUsageTrendFilter.fallbackName(id) ?? b.profileName }
     }
     for request in requests where request.client != .harness {
-      let id = AIUsageTrendFilter.profileKey(profileID: request.profileID, client: request.client)
-      if names[id] == nil { names[id] = request.profileName }
+      let id = AIUsageTrendFilter.profileKey(
+        profileID: request.profileID, client: request.client, serviceSource: request.serviceSource)
+      if names[id] == nil { names[id] = AIUsageTrendFilter.fallbackName(id) ?? request.profileName }
     }
     return names.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value < $1.value }
       .map { ($0.key, $0.value) }
@@ -128,7 +130,10 @@ final class AIUsageStore {
   private func logs(applyingResult: Bool) -> [AIRequest] {
     selected.filter { request in
       (logClient == nil || request.client == logClient)
-        && (logProfileID == nil || request.profileID == logProfileID)
+        && (logProfileID == nil
+          || AIUsageTrendFilter.profileKey(
+            profileID: request.profileID, client: request.client,
+            serviceSource: request.serviceSource) == logProfileID)
         && (logModelID == nil || request.modelID == logModelID)
         && (!applyingResult || logResult == nil || request.succeeded == logResult)
         && (minimumCost.map { Int64((request.originalCost * 1_000_000).rounded()) >= $0 } ?? true)
