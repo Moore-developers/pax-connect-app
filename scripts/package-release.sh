@@ -30,6 +30,14 @@ python3 scripts/release-materials.py "$STAGE/PaxConnect.app" "$OUT"
 # Additional dependency notices are outside the signed bundle.
 ditto "$OUT/licenses" "$STAGE/说明与许可/第三方许可"
 cp "$OUT/manifest.json" "$STAGE/说明与许可/manifest.json"
+# Pax's own split licenses (root overview, app, API, GPL text, trademarks).
+PAXLIC="$STAGE/说明与许可/Pax 许可"
+mkdir "$PAXLIC"
+cp LICENSE "$PAXLIC/许可总览.txt"
+cp macos/LICENSE "$PAXLIC/App-PolyForm-Noncommercial-1.0.0.md"
+cp api/LICENSE "$PAXLIC/API-MIT.txt"
+cp third_party/licenses/GPL-3.0.txt "$PAXLIC/GPL-3.0.txt"
+cp TRADEMARKS.md "$PAXLIC/TRADEMARKS.md"
 python3 scripts/create-release-dmg.py "$STAGE" "$OUT/PaxConnect-${RELEASE_VERSION}-arm64.dmg"
 cp docs/release/INSTALL.zh-CN.html docs/release/RELEASE-NOTES.zh-CN.md "$OUT/"
 (cd "$OUT" && shasum -a 256 *.dmg manifest.json *.html *.md > SHA256SUMS.txt)
