@@ -102,10 +102,10 @@ def main():
         'workingTreeChanges': run('git', 'status', '--porcelain').splitlines(),
         'daemonVersion': daemon_version,
         'kernelVersion': (resources / 'kernel-version.txt').read_text().strip(),
-        'signing': 'ad-hoc', 'notarized': False, 'releaseStatus': 'local-candidate',
+        'signing': 'ad-hoc', 'notarized': False, 'releaseStatus': 'beta',
         'fingerprints': checks, 'dependenciesWithoutRootNotices': missing,
-        'publicationPending': ['clean-machine downloaded installation and network acceptance',
-                               'GPL corresponding source distribution', 'GeoLite data redistribution terms'],
+        'knownLimitations': ['clean-machine downloaded installation and network acceptance not verified',
+                             'GeoLite redistribution terms review remains open; existing data retained by publisher decision'],
     }
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(json.dumps(manifest, indent=2))

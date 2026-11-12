@@ -22,4 +22,4 @@ macOS 26及以上、Apple Silicon；当前App为中文界面。沿用临时签�
 
 核心及其余部分GPL-3.0，macOS App为PolyForm Noncommercial 1.0.0，API为MIT；许可文本位于DMG「说明与许可/Pax许可」。源码为公开仓库[对应标签v0.1.1](https://github.com/Moore-developers/pax-connect-app/tree/v0.1.1)，最终build和源码提交见manifest。
 
-真实下载、干净机器安装、最低系统、网络授权/睡眠换网和覆盖升级以本版验收记录为准，未验条件如实保留。GeoLite衍生规则的分发与更新条件见随源码的分发条件记录，当前仅生成本地候选，不作为0.1.1公开安装包。
+真实下载、干净机器安装、最低系统、网络授权/睡眠换网和覆盖升级以本版验收记录为准，未验条件如实保留。本版保留原中国IP地址表与更新来源，GeoLite衍生数据的条款取证及发布决定见随源码的分发条件记录。

@@ -17,7 +17,7 @@ scripts/package-release.sh 0.1.1
 ## 公开分发前
 
 1. Pax自身源码许可证分层：daemon/core及根目录其余部分GPL-3.0，macos/ App为PolyForm Noncommercial 1.0.0，api/为MIT（见仓库根LICENSE与TRADEMARKS.md）；落实GPL部分对应源码（包括匹配版本、补丁和构建脚本）随发布下载，并核对与发布包一致。
-2. GeoLite衍生数据的核实结果见[分发条件](geolite-redistribution.md)。当前发布阻断未解，只能生成本地候选；规则来源替换或额外许可由用户决定。
+2. GeoLite衍生数据的核实及用户发布决定见[分发条件](geolite-redistribution.md)。当前沿用户指令保留原规则公开发布；不将继续发布记为条款已核实满足，来源替换另需用户决定。
 3. 完成安装说明中的真实下载/新机/代理/退出/升级路径，记录系统拦截的准确提示。不以清除隔离标记或关闭安全机制代替验收。
 4. 在发布页面填写下载地址、反馈地址、已知问题和校验值。上传前核对源码、许可、包与版本记录一致。
 
