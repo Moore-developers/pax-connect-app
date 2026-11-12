@@ -43,4 +43,5 @@ if [ -n "${PAX_RELEASE_VERSION:-}" ]; then
 fi
 xcodebuild -project macos/PaxConnect.xcodeproj -scheme PaxConnect \
   -configuration "$CONFIGURATION" -derivedDataPath build/DerivedData \
+  -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
   CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" "$@" build
