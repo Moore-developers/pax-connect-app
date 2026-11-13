@@ -73,6 +73,7 @@ type historyIngest struct {
 	wait           func(context.Context, time.Duration) bool
 	// onRows runs after a commit that stored observation or gap rows: the log job consumes them now.
 	onRows func()
+	route  func(*config.FlowFact) // freezes observed runtime identity before live/journal publication
 
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -208,6 +209,19 @@ func (in *historyIngest) read(ctx context.Context) (config.ObservationBatch, err
 	batch, err := in.core.ReadObservationPage(request, q)
 	if err == nil && len(batch.Records) > ingestPageRecords {
 		err = errObservationInvalid
+	}
+	if err == nil && in.route != nil {
+		// Core pages can share Flow pointers across retries. Never modify the source.
+		for i := range batch.Records {
+			if batch.Records[i].Flow != nil {
+				f := cloneFlowFact(*batch.Records[i].Flow)
+				in.route(&f)
+				batch.Records[i].Flow = &f
+			}
+		}
+		for i := range batch.Baseline {
+			in.route(&batch.Baseline[i])
+		}
 	}
 	return batch, err
 }
@@ -368,6 +382,7 @@ func (c *Controller) ConfigureHistoryIngest(ctx context.Context, directory strin
 		return err
 	}
 	in := newHistoryIngest(journal, pager)
+	in.route = c.mapHistoryRoute
 	if c.consumers != nil {
 		in.consumers = c.consumers
 	}

@@ -51,7 +51,11 @@ public enum FlowPresentation {
     switch flow.direction {
     case "dns": return "Pax DNS 解析"
     case "direct": return "直连"
-    case "proxy": return flow.routeName.isEmpty ? "代理 · 历史未采集线路名称" : "代理 · " + flow.routeName
+    case "proxy":
+      if flow.routeName.hasPrefix("pax-node-") {
+        return TrafficFormatting.actualConnection(direction: "proxy", route: flow.routeName)
+      }
+      return flow.routeName.isEmpty ? "代理 · 历史未采集线路名称" : "代理 · " + flow.routeName
     case "blocked": return "已阻断"
     default: return flow.purpose == "dns" ? "DNS 接管" : flow.purpose.isEmpty ? "历史未记录去向" : "未完成线路选择"
     }
@@ -69,7 +73,7 @@ public enum FlowPresentation {
       let ready =
         flow.responseKnown || flow.establishmentState == "ready"
         || flow.establishmentState == "response_ready"
-      let name = flow.routeName.isEmpty ? "历史未记录线路" : flow.routeName
+      let name = TrafficFormatting.actualConnection(direction: "proxy", route: flow.routeName)
       return (ready ? "" : "已选") + name + suffix
     case "blocked": return "已阻断"
     default: return flow.purpose.isEmpty ? "历史未记录连接方式" : "尚未选定线路"

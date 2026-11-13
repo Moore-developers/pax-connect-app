@@ -36,7 +36,8 @@ public enum TrafficFormatting {
     switch direction {
     case "direct", "直连": return "直连"
     case "blocked", "已阻断": return "已阻断"
-    case "proxy", "代理": return route.isEmpty ? "线路未记录" : route
+    case "proxy", "代理":
+      return route.isEmpty || route.hasPrefix("pax-node-") ? "代理线路名称未记录" : route
     case "mixed": return "多个连接去向，见详情"
     default: return "去向未记录"
     }

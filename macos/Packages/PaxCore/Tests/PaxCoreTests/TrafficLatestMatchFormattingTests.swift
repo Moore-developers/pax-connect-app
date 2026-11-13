@@ -19,6 +19,16 @@ import Testing
     value.connections = count
     return value
   }
+  @Test("实际连接不把内部标识当成线路名称，已知名称与直连保持")
+  func actualRouteIdentity() {
+    #expect(
+      TrafficFormatting.actualConnection(direction: "proxy", route: "pax-node-unknown")
+        == "代理线路名称未记录")
+    #expect(TrafficFormatting.actualConnection(direction: "proxy", route: "") == "代理线路名称未记录")
+    #expect(TrafficFormatting.actualConnection(direction: "proxy", route: "洛杉矶-CF") == "洛杉矶-CF")
+    #expect(
+      TrafficFormatting.actualConnection(direction: "direct", route: "pax-node-unknown") == "直连")
+  }
   @Test("最近命中只用冻结证据，旧历史即使有basis也不推断")
   func latestEvidence() {
     #expect(TrafficRuleFormatting.latestTitle(nil) == "最近命中未记录")

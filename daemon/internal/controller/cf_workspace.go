@@ -91,16 +91,9 @@ func (c *Controller) saveCF(ctx context.Context) error {
 	}
 	return nil
 }
-func (c *Controller) mergeCF(r cf.Record) {
-	c.cf.mu.Lock()
-	if w := c.cf.workspace; w != nil && w.document.Accepts(r.IP, r.Network) {
-		w.document.Merge(r, time.Now())
-	}
-	c.cf.mu.Unlock()
-}
 
-// mergeCFExplicit stores the result of a user-requested single-IP test. Unlike late
-// stage updates of a scan, the request names its own IP, so it need not be a scan member.
+// mergeCFExplicit stores a user-requested IP result, including toolbar batches.
+// The request names its own IPs, so they need not be members of the last scan.
 // The record keeps its own network tag; another network's scan records stay untouched.
 func (c *Controller) mergeCFExplicit(r cf.Record) {
 	c.cf.mu.Lock()
@@ -204,6 +197,10 @@ func (c *Controller) RunCFTask(ctx context.Context, r *pb.CFTaskRequest) (*pb.Op
 	w.failure = ""
 	if r.Action == "scan" {
 		w.scan = &cfScan{network: physical.Epoch, records: []cf.Record{}}
+	} else {
+		// An admitted explicit test leaves any failed scan view behind. Its
+		// results live in the saved document, not the discarded partial scan.
+		w.scan = nil
 	}
 	c.cf.mu.Unlock()
 	go c.runCF(run, cancel, id, r.Action, ips, physical, downloadParallel)
@@ -256,19 +253,19 @@ func (c *Controller) runCF(ctx context.Context, cancel context.CancelFunc, id, a
 		} else {
 			reachable := []string{}
 			err = cf.MeasureTCP(ctx, ips, physical.Epoch, 3, 4, probe, func(r cf.Record) {
-				c.mergeCF(r)
+				c.mergeCFExplicit(r)
 				if r.Reachable {
 					reachable = append(reachable, r.IP)
 				} else {
 					// This IP is terminal for the download request even though
 					// other candidates will continue transferring data.
-					c.mergeCF(cf.Record{IP: r.IP, Prefix: r.Prefix, Network: r.Network, Download: cf.Sample{Attempt: time.Now(), Error: "cf_tcp_unreachable"}})
+					c.mergeCFExplicit(cf.Record{IP: r.IP, Prefix: r.Prefix, Network: r.Network, Download: cf.Sample{Attempt: time.Now(), Error: "cf_tcp_unreachable"}})
 				}
 			}, func(v cf.Progress) { v.Phase = "check"; progress(v) })
 			if err == nil && len(reachable) > 0 {
 				for offset := 0; offset < len(reachable); offset += 20 {
 					chunk := reachable[offset:min(offset+20, len(reachable))]
-					err = cf.Download(ctx, physical.Epoch, chunk, downloadParallel, probe, c.mergeCF, func(v cf.Progress) { v.Completed += offset; v.Total = len(reachable); progress(v) })
+					err = cf.Download(ctx, physical.Epoch, chunk, downloadParallel, probe, c.mergeCFExplicit, func(v cf.Progress) { v.Completed += offset; v.Total = len(reachable); progress(v) })
 					if err != nil {
 						break
 					}
@@ -284,7 +281,7 @@ func (c *Controller) runCF(ctx context.Context, cancel context.CancelFunc, id, a
 		if probe.TCP == nil {
 			err = errors.New("cf_probe_unavailable")
 		} else {
-			err = cf.MeasureTCP(ctx, ips, physical.Epoch, 3, 4, probe, c.mergeCF, func(v cf.Progress) { v.Phase = "check"; progress(v) })
+			err = cf.MeasureTCP(ctx, ips, physical.Epoch, 3, 4, probe, c.mergeCFExplicit, func(v cf.Progress) { v.Phase = "check"; progress(v) })
 		}
 
 	}
@@ -398,6 +395,12 @@ func (c *Controller) locateCF(ctx context.Context, network string, ips []string,
 				c.cf.mu.Unlock()
 				age := time.Since(cached.At)
 				if !cached.At.IsZero() && cached.Error == "" && age >= 0 && age < 24*time.Hour {
+					// Region evidence is IP-scoped. Reuse it on this network
+					// without inventing a new lookup time or losing the row.
+					select {
+					case results <- cf.Record{IP: ip, Prefix: cf.Prefix(ip), Network: network, Location: cached}:
+					case <-ctx.Done():
+					}
 					continue
 				}
 				bounded, stop := context.WithTimeout(ctx, measurement.TotalMeasureTimeout)
@@ -432,7 +435,7 @@ func (c *Controller) locateCF(ctx context.Context, network string, ips []string,
 	go func() { workers.Wait(); close(results); close(done) }()
 	completed := 0
 	for result := range results {
-		c.mergeCFLocation(result)
+		c.mergeCFExplicit(result)
 		completed++
 		progress(cf.Progress{Phase: "location", Completed: completed, Total: len(ips)})
 	}
@@ -440,22 +443,4 @@ func (c *Controller) locateCF(ctx context.Context, network string, ips []string,
 	<-done
 	progress(cf.Progress{Phase: "location", Completed: len(ips), Total: len(ips)})
 	return ctx.Err()
-}
-
-func (c *Controller) mergeCFLocation(in cf.Record) {
-	c.cf.mu.Lock()
-	defer c.cf.mu.Unlock()
-	if !c.cf.workspace.document.Accepts(in.IP, in.Network) {
-		return
-	}
-	found := false
-	for i, r := range c.cf.workspace.document.Records {
-		if r.IP == in.IP && r.Network == in.Network {
-			c.cf.workspace.document.Records[i].Location = in.Location
-			found = true
-		}
-	}
-	if !found {
-		c.cf.workspace.document.Merge(in, time.Now())
-	}
 }

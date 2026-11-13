@@ -100,11 +100,9 @@ func (c *Controller) mapHistoryRoute(f *config.FlowFact) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, r := range c.current.Routes {
-		tag := config.RuntimeTag(config.RouteConfig{NodeProfile: config.NodeProfile{ID: r.Id}, ResolvedConfigRevision: r.ConfigRevision})
-		if tag == f.RouteID {
-			f.RouteID = r.Id
-			f.RouteName = r.Name
+	if c.data != nil {
+		if name, ok := c.data.routeNames[f.RouteID]; ok {
+			f.RouteID, f.RouteName = c.data.tags[f.RouteID], name
 			return
 		}
 	}

@@ -30,9 +30,7 @@ func (c *Controller) coreProfiles(ctx context.Context) []config.RouteConfig {
 			continue
 		}
 		p := resolved.Config
-		if c.data != nil && len(c.data.tags) < 10000 {
-			c.data.tags[config.RuntimeTag(p)] = p.ID
-		}
+		c.rememberHistoryRoute(p)
 		profiles = append(profiles, p)
 	}
 	return profiles
@@ -62,8 +60,11 @@ func (c *Controller) applyCore(ctx context.Context, p config.RouteConfig) error 
 		}
 	}
 	if core, ok := c.coreSession.(catalogCore); ok {
-		return core.ApplyCatalog(ctx, c.coreProfiles(ctx), p)
+		profiles := c.coreProfiles(ctx)
+		c.rememberHistoryRoute(p)
+		return core.ApplyCatalog(ctx, profiles, p)
 	}
+	c.rememberHistoryRoute(p)
 	return c.coreSession.Apply(ctx, p)
 }
 
@@ -139,6 +140,7 @@ func (c *Controller) selectCoreRoute(ctx context.Context, record config.RouteRec
 		return err
 	}
 	coreAttempted = true
+	c.rememberHistoryRoute(p)
 	committed, err := core.SwitchRoute(ctx, p)
 	if err != nil && err.Error() == "runtime_refresh_required" {
 		// Newly imported or edited nodes change the outbound structure; reload once.

@@ -29,6 +29,7 @@ type routeData struct {
 	historyError, usageError string
 	sampleError              string
 	tags                     map[string]string
+	routeNames               map[string]string // frozen names, indexed by the same bounded runtime tags
 	live                     config.UsageSnapshot
 	// revision mirrors history.Revision for the history publisher, which runs outside the owner.
 	revision atomic.Uint64

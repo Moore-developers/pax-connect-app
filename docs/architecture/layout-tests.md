@@ -85,6 +85,8 @@ pax-connect/
 
 AIUsage 已移除质量测试专用 AIQualityController.swift、AIQualityRun.swift、AIUsageSVGFixture.swift；Profile 编辑与用量详情沿现有组件。
 
+实际连接归属：controller/history_route_identity.go沿routeData现有有界标识表保存运行版名称，history_ingest在journal入口冻结。定向回归history_route_identity_test.go覆盖编辑/移除与双库加工；tests/traffic-route-identity/repair以临时Go overlay复用正式聚合合并并封装离线SQLite维护，不加入产品入口或自动迁移。
+
 ## 18. 测试与验证
 
 | 层 | 内容 | 工具 |
@@ -153,3 +155,5 @@ Codex身份：`internal/aiusage/parse_codex.go`解析白名单元数据，`codex
 会话上限：aiusage/session_limits_*负责只读预设/查询/投影，controller/ai_limits.go映射协议；PaxClient/Model/AISessionLimits与Features/AISessionLimitsMapping隔离协议和展示；AISessionLiveLimitsView复用目录与Store；AISessionLimitsReadout为此页比例条与问号共用原生悬浮面板。tests/ai-session-limits包含socket/SQLite对账和PaxSparkline真实数据栅格化重放；PaxProportionView内迷你图仅按像素保留峰谷，不改原始数据。
 
 模型用量概览时间桶由Features/AIUsage/AIUsageDataProjection投影；PaxUI/PaxStackedChart+Categorical承载可选最少时间格、右轴平滑数列与对齐hover，PaxCharts保留共享状态/事件；Features/AIUsage/AIUsageTrendReadout投影结构化读数，PaxUI/PaxChartStructuredReadout在共享popover复用H1卡。合同见P07c「趋势时间与单位费用」，不改存储与RPC。
+
+CF顶部显式测试回归沿controller/cf_displayed_tests_test.go覆盖旧/空/失败扫描后的延迟、地区、下载与落盘；真实验收见tests/cf-explicit-tests/。

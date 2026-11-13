@@ -156,7 +156,7 @@ func makeRoutingTrafficCell(
   let kind: WorkbenchObjectIcons.Kind =
     store.dimension == .application ? .application : store.dimension == .domain ? .domain : .ip
   let identity = store.livePage.items.first { $0.id == id }?.objectID ?? row.name
-  return PaxTrafficCells.make(
+  let cell = PaxTrafficCells.make(
     display, column: column > 2 ? column - 1 : column, tooltip: tooltip,
     onActivate: onActivate,
     objectContent: { content in
@@ -166,6 +166,16 @@ func makeRoutingTrafficCell(
         size: PaxTheme.Dashboard.nodeTitle, gap: PaxTheme.Dashboard.titleGap,
         tint: PaxTheme.Color.textSecondary)
     })
+  if column == 1, let fact {
+    let exits =
+      fact.exits.isEmpty
+      ? ["记录的线路：" + fact.routeName + "\n线路标识：" + fact.routeID]
+      : fact.exits.map { "记录的线路：" + $0.routeName + "\n线路标识：" + $0.routeID }
+    let evidence = exits.joined(separator: "\n")
+    cell.toolTip = evidence
+    for child in cell.subviews { child.toolTip = evidence }
+  }
+  return cell
 }
 
 /// 副标题为空或与名称相同时只显示一行，由身份视图垂直居中；否则保持双行。

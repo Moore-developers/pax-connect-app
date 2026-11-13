@@ -5,7 +5,7 @@
 在 Apple Silicon / macOS 26 开发机器上，准备 Xcode、Go 和项目现有依赖工具，然后在仓库根执行：
 
 ```sh
-scripts/package-release.sh 0.1.1
+scripts/package-release.sh 0.1.2
 ```
 
 脚本统一注入版本、分配构建号，构建两个Go程序和Release App，校验后生成DMG。输出在`build/releases/PaxConnect-版本-构建号-arm64/`；每次构建使用新目录，失败目录保留排查。构建过程不上传、不更改Gatekeeper、不安装系统服务，不清用户数据。

@@ -8,7 +8,10 @@ extension WorkbenchTrafficRecord {
       application: f.sourceKind == "unknown" ? "未识别来源" : FlowPresentation.application(f),
       process: f.process, domain: f.domain.isEmpty ? nil : f.domain,
       ip: FlowPresentation.ip(f),
-      routeID: f.routeID, route: f.routeName,
+      routeID: f.routeID,
+      route: f.direction == "proxy"
+        ? TrafficFormatting.actualConnection(direction: f.direction, route: f.routeName)
+        : f.routeName,
       direction: f.direction == "proxy"
         ? "代理" : f.direction == "direct" ? "直连" : FlowPresentation.connection(f),
       started: f.startedAt, transport: f.transport.isEmpty ? "协议未记录" : f.transport.uppercased(),
