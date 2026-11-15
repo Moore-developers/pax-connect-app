@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -90,6 +89,9 @@ func attachLogsPipeline(t testing.TB, c *Controller, dir string) *logsPipeline {
 	}
 	l, err := newHistoryLogs(ctx, logs, journal, consumers)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err = rebuildColumnProjections(ctx, logs.Columns()); err != nil {
 		t.Fatal(err)
 	}
 	l.route = c.mapHistoryRoute
@@ -195,39 +197,7 @@ func (p *logsPipeline) barrier() {
 func stripLogEventCheckpoints(t *testing.T, path string) {
 	t.Helper()
 	editLogsDatabase(t, path, func(db *sql.DB) error {
-		rows, err := db.QueryContext(context.Background(), "SELECT seq,body FROM events")
-		if err != nil {
-			return err
-		}
-		type eventRow struct {
-			seq  int64
-			body []byte
-		}
-		var events []eventRow
-		for rows.Next() {
-			var row eventRow
-			if err = rows.Scan(&row.seq, &row.body); err != nil {
-				_ = rows.Close()
-				return err
-			}
-			events = append(events, row)
-		}
-		_ = rows.Close()
-		for _, row := range events {
-			var value map[string]any
-			if err = json.Unmarshal(row.body, &value); err != nil {
-				return err
-			}
-			delete(value, "Metrics")
-			raw, err := json.Marshal(value)
-			if err != nil {
-				return err
-			}
-			if _, err = db.ExecContext(context.Background(), "UPDATE events SET body=? WHERE seq=?", raw, row.seq); err != nil {
-				return err
-			}
-		}
-		_, err = db.ExecContext(context.Background(), "UPDATE meta SET value='' WHERE key=?", historystore.MetaSummaryGeneration)
+		_, err := db.ExecContext(context.Background(), "UPDATE col_events SET metrics_present=0; UPDATE meta SET value='' WHERE key='summary_generation'; DELETE FROM col_groups; DELETE FROM col_answers WHERE owner_kind=2; DELETE FROM col_projection_progress WHERE name LIKE 'groups/%'")
 		return err
 	})
 }

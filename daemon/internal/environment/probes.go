@@ -125,7 +125,7 @@ func parseResolvers(data []byte) ([]Resolver, error) {
 	}
 	return result, nil
 }
-func macSample(ctx context.Context, client measurement.Client) Sample {
+func macSample(ctx context.Context, client measurement.Client, provider EvidenceProvider) Sample {
 	var sample Sample
 	var v4, v6, route Check
 	var dnsChecks []Check
@@ -151,13 +151,14 @@ func macSample(ctx context.Context, client measurement.Client) Sample {
 		var queries sync.WaitGroup
 		query := Check{Kind: "dns_query", Target: "bash.ws", At: time.Now(), State: "attempted", Value: "12 randomized names"}
 		started = time.Now()
-		for i := 0; i < 12; i++ {
+		names := dnsProbeNames(id)
+		for _, name := range names {
 			queries.Add(1)
 			go func() {
 				defer queries.Done()
 				bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
 				defer cancel()
-				_, _ = net.DefaultResolver.LookupIPAddr(bounded, randomToken()+"."+id+".bash.ws")
+				_, _ = net.DefaultResolver.LookupIPAddr(bounded, name)
 			}()
 		}
 		queries.Wait()
@@ -175,6 +176,7 @@ func macSample(ctx context.Context, client measurement.Client) Sample {
 		sample.Resolvers, result = dnsResultCheck(ctx, client, id)
 		sample.DNSError = result.ErrorCode
 		dnsChecks = append(dnsChecks, result)
+		dnsChecks = append(dnsChecks, collectDNSPath(ctx, provider, names, query.At, time.Now())...)
 	}()
 	workers.Wait()
 	sample.Checks = append([]Check{v4, v6, route}, dnsChecks...)

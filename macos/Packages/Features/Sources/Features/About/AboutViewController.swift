@@ -70,13 +70,13 @@ final class AboutViewController: NSViewController {
           row("已连接 daemon", detail: "当前连接的后台服务", value: daemon),
           row("操作系统", detail: "当前系统版本", value: label(store.system)),
           row("芯片架构", detail: "应用构建架构", value: label(store.architecture)),
-        ]))
+        ], style: .compact))
     add(
       PaxPreferenceGroup(
         title: "开源许可", symbol: "doc.text",
         rows: AboutStore.licenses.map { entry in
           row(entry.name, detail: entry.detail, value: label(entry.license))
-        }))
+        }, style: .compact))
     observe()
   }
   private func add(_ item: NSView) {
@@ -87,7 +87,7 @@ final class AboutViewController: NSViewController {
     PaxText.label(value, font: PaxTheme.Typography.time)
   }
   private func row(_ title: String, detail: String, value: NSTextField) -> NSView {
-    PaxPreferenceRow(title: title, detail: detail, control: value)
+    PaxPreferenceRow(title: title, detail: detail, control: value, style: .compact)
   }
   private func observe() {
     withObservationTracking {

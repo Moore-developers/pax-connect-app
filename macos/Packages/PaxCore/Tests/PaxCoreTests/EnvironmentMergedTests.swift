@@ -38,7 +38,7 @@ import Testing
     #expect(rows[2].value.contains("Asia/Shanghai"))
     #expect(rows[3].value.contains("45 秒"))
     #expect(rows[3].value.contains("DNS 服务未返回有效解析器"))
-    #expect(rows[4].value.contains("0 个公网地址"))
+    #expect(rows[4].value.contains("未取得候选地址"))
   }
 
   @Test("浏览器和 Mac 相同或不同时，摘要保留双方来源")
@@ -72,7 +72,8 @@ import Testing
     }
     let rows = EnvironmentDiagnosticPresentation.mergedRows(
       EnvironmentDiagnosticReport(raw), local: local, waiting: false)
-    #expect(rows.count == 5)
+    #expect(rows.count == 7)
+    #expect(rows.suffix(2).map(\.title) == ["IPv6", "定位"])
     #expect(
       rows[0].value
         == "Mac：IPv4 8.8.8.8 · IPv6 本次未取得（旧记录未采集原因）；Chrome：IPv4 8.8.8.8 · IPv6 本次未取得（旧记录未采集原因）")
@@ -82,7 +83,7 @@ import Testing
     #expect(rows[2].value.contains("Chrome：America/Los_Angeles"))
     #expect(rows[3].value.contains("1.1.1.1"))
     #expect(rows[3].value.contains("9.9.9.9"))
-    #expect(rows[4].value.contains("0 个公网地址"))
+    #expect(rows[4].value.contains("未取得候选地址"))
   }
   @Test("浏览器未返回时不伪称双方相同，也不借用不同出口的情报")
   func partialAndIdentity() {

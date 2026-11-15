@@ -7,88 +7,117 @@ import PaxUI
 final class NetworkPrivacySettingsController: NSViewController {
   private let routes: RoutesStore
   private let mode = PaxRoutePicker(style: .toolbar)
-  private let webRTC = PaxRoutePicker(style: .toolbar)
+  private lazy var webRTC = PaxToggle(
+    label: "WebRTC 公网出口限制", showsLabel: false, target: self, action: #selector(changed))
   private let status = PaxText.label(
-    "正在读取网络保护设置…", font: PaxTheme.Typography.caption(), wrapping: true)
+    "正在读取…", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
   private var saved: NetworkPrivacy?
   private var task: Task<Void, Never>?
   private lazy var save = PaxRouteButton(
     "保存网络保护", style: .primary, target: self, action: #selector(commit))
-  private lazy var reload = PaxRouteButton(
-    "重新读取", style: .secondary, target: self, action: #selector(retry))
-  @objc private func retry() { read() }
+  private lazy var retry = PaxRouteButton(
+    "重试", style: .quiet, target: self, action: #selector(read))
+
   init(routes: RoutesStore) {
     self.routes = routes
     super.init(nibName: nil, bundle: nil)
   }
   required init?(coder: NSCoder) { fatalError("代码构建") }
+
   override func loadView() {
-    mode.addItems(withTitles: ["加密分流（推荐）", "严格 DNS 隐私"])
-    webRTC.addItems(withTitles: ["保留正常功能", "增强公网出口限制"])
+    mode.addItems(withTitles: ["加密分流", "严格隐私"])
+    mode.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
     mode.setAccessibilityIdentifier("privacy-dns-mode")
+    mode.setAccessibilityLabel("DNS 保护")
     webRTC.setAccessibilityIdentifier("privacy-webrtc")
-    for picker in [mode, webRTC] {
-      picker.target = self
-      picker.action = #selector(changed)
+    save.setAccessibilityIdentifier("privacy-save")
+    retry.setAccessibilityIdentifier("privacy-retry")
+    mode.target = self
+    mode.action = #selector(changed)
+    let note = PaxText.label(
+      "仅开启代理时提供保护；修改后，下次开启代理生效。",
+      font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
+    note.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    let actions = NSStackView(views: [note, NSView(), retry, save])
+    actions.spacing = PaxTheme.Spacing.tight
+    let footer = NSStackView(views: [actions, status])
+    footer.orientation = .vertical
+    footer.alignment = .leading
+    footer.spacing = PaxTheme.Spacing.tight
+    for item in footer.arrangedSubviews {
+      item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
     }
     view = PaxPreferenceGroup(
-      title: "DNS 与 WebRTC", symbol: "lock.shield",
+      title: "网络保护", symbol: "lock.shield",
       rows: [
         PaxPreferenceRow(
-          title: "DNS 保护", detail: "国内加密直连，海外经代理加密；严格模式让公网业务解析统一经代理。节点引导及明确内网域名例外。", control: mode),
+          title: "DNS 保护", detail: "加密分流按规则选择直连或代理；严格隐私经代理解析公网域名。节点引导与内网域名例外。", control: mode,
+          style: .compact),
         PaxPreferenceRow(
-          title: "WebRTC 公网出口限制", detail: "增强限制让识别的公网 STUN 经代理，UDP 不可用时失败而不直连，可能影响通话；浏览器插件仍需保留。",
-          control: webRTC),
-        PaxText.label(
-          "阿里／腾讯 DoH 国内主备，Cloudflare／Google DoH 海外主备；不静默回退明文。仅代理/TUN启用时提供保护，DNS策略不等于所有业务匿名。",
-          font: PaxTheme.Typography.caption(), secondary: true, wrapping: true),
-        status, reload, save,
-      ])
-    mode.isEnabled = false
-    webRTC.isEnabled = false
-    save.isEnabled = false
+          title: "WebRTC 公网出口限制", detail: "识别的公网 STUN 经代理，可能影响通话；不保证隐藏所有 IP。", control: webRTC,
+          style: .compact),
+      ], style: .compact, footer: footer)
     read()
   }
-  private func read() {
-    task?.cancel()
+
+  private func showStatus(_ message: String) {
+    status.stringValue = message
+    status.isHidden = message.isEmpty
+  }
+
+  @objc private func read() {
+    guard task == nil else { return }
     saved = nil
     save.isEnabled = false
     mode.isEnabled = false
     webRTC.isEnabled = false
+    retry.isHidden = true
     guard routes.capabilities.contains("network.privacy.v1") else {
-      status.stringValue = "后台尚未就绪或不支持网络保护设置，请连接新版后台后重新读取。"
+      showStatus("后台尚未就绪，连接后可重试。")
+      retry.isHidden = false
       return
     }
-    reload.isEnabled = false
+    showStatus("正在读取…")
     task = Task { [weak self] in
       guard let self else { return }
-      defer { reload.isEnabled = true }
+      defer { task = nil }
       do {
-        guard case .networkPrivacy(let value) = try await routes.measurement(.networkPrivacy),
-          !Task.isCancelled
-        else { return }
+        guard case .networkPrivacy(let value) = try await routes.measurement(.networkPrivacy) else {
+          return
+        }
         saved = value
         mode.selectItem(at: value.dnsMode == "strict" ? 1 : 0)
-        webRTC.selectItem(at: value.webRTC ? 1 : 0)
+        webRTC.isChecked = value.webRTC
         mode.isEnabled = true
         webRTC.isEnabled = true
-        status.stringValue = "已保存；修改后下次开启代理生效。尚未进行泄露检测。"
-      } catch { status.stringValue = "读取失败：" + ProductErrorPresentation.display(error) }
+        showStatus("")
+      } catch {
+        showStatus("读取失败：" + ProductErrorPresentation.display(error))
+        retry.isHidden = false
+      }
     }
   }
-  @objc private func changed() { save.isEnabled = saved != nil }
+
+  @objc private func changed() {
+    guard let saved else { return }
+    save.isEnabled =
+      (mode.indexOfSelectedItem == 1) != (saved.dnsMode == "strict")
+      || webRTC.isChecked != saved.webRTC
+    showStatus(save.isEnabled ? "尚未保存" : "")
+  }
+
   @objc private func commit() {
-    guard var draft = saved else { return }
+    guard task == nil, var draft = saved else { return }
     draft.dnsMode = mode.indexOfSelectedItem == 1 ? "strict" : "balanced"
-    draft.webRTC = webRTC.indexOfSelectedItem == 1
+    draft.webRTC = webRTC.isChecked
     save.isEnabled = false
-    reload.isEnabled = false
     mode.isEnabled = false
     webRTC.isEnabled = false
+    showStatus("正在保存…")
     task = Task { [weak self] in
       guard let self else { return }
       defer {
-        reload.isEnabled = true
+        task = nil
         mode.isEnabled = true
         webRTC.isEnabled = true
       }
@@ -97,9 +126,9 @@ final class NetworkPrivacySettingsController: NSViewController {
           case .networkPrivacy(let value) = try await routes.measurement(.saveNetworkPrivacy(draft))
         else { return }
         saved = value
-        status.stringValue = "已保存，下次开启代理生效；当前连接策略保持。"
+        showStatus("已保存，下次开启代理生效")
       } catch {
-        status.stringValue = "保存失败，草稿保留：" + ProductErrorPresentation.display(error)
+        showStatus("保存失败，草稿保留：" + ProductErrorPresentation.display(error))
         save.isEnabled = true
       }
     }

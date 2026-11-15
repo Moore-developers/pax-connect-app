@@ -188,12 +188,27 @@ func (o *coreObservations) capture(e paxobs.Event) {
 	if e.Stage == "connected" {
 		f.fact.IP, f.fact.IPSource = e.IP, e.IPSource
 	}
+	if e.Stage == "dns_upstream" {
+		if f.fact.Purpose != "dns" || f.fact.DNS == nil {
+			return
+		}
+		proof := *f.fact.DNS
+		proof.Upstream, proof.Outbound, proof.Pool, proof.UpstreamAt = e.IP, e.Outbound, e.Rule, e.At
+		f.fact.DNS = &proof
+		return // Publish with this query's final response, never as a business flow.
+	}
+
 	if e.Stage == "dns_response" {
 		queryType := ""
 		if f.fact.DNS != nil {
 			queryType = f.fact.DNS.QueryType
 		}
-		f.fact.DNS = &config.DNSFact{QueryType: queryType, Result: e.DNSResult, Answers: append([]string(nil), e.Answers...)}
+		proof := config.DNSFact{}
+		if f.fact.DNS != nil {
+			proof = *f.fact.DNS
+		}
+		proof.QueryType, proof.Result, proof.Answers = queryType, e.DNSResult, append([]string(nil), e.Answers...)
+		f.fact.DNS = &proof
 		f.fact.ResponseKnown, f.fact.ResponseMS = true, uint64(max(0, e.Duration.Milliseconds()))
 		f.fact.EstablishmentState, f.fact.EstablishmentMS, f.fact.Evidence = "response_ready", f.fact.ResponseMS, "dns_response"
 		e.Stage = "ready"

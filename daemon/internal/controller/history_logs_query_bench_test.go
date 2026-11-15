@@ -59,7 +59,7 @@ func buildLogLoadFixtureWindow(b testing.TB, span time.Duration) *Controller {
 	}
 	var events, connections int
 	reader := c.logs.logs.(*historystore.Logs).Reader()
-	if err = reader.QueryRow("SELECT (SELECT count(*) FROM events),(SELECT count(*) FROM connections)").Scan(&events, &connections); err != nil {
+	if err = reader.QueryRow("SELECT (SELECT count(*) FROM col_events),(SELECT count(*) FROM col_connections)").Scan(&events, &connections); err != nil {
 		b.Fatal(err)
 	}
 	if events != logLoadEvents || connections != logLoadConnections {

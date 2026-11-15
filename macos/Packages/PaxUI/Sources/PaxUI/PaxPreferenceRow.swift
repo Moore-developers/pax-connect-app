@@ -2,9 +2,11 @@ import AppKit
 
 /// 分组表单共用的说明/当前值/控件行，只接收呈现值，不认识设置Store。
 public final class PaxPreferenceRow: NSView {
+  public enum Style { case standard, compact }
+
   private let detailField: NSTextField
   private let currentField = PaxText.label("", font: PaxTheme.Typography.caption())
-  public init(title: String, detail: String, control: NSView) {
+  public init(title: String, detail: String, control: NSView, style: Style = .standard) {
     detailField = PaxText.label(
       detail, font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
     super.init(frame: .zero)
@@ -26,16 +28,29 @@ public final class PaxPreferenceRow: NSView {
     control.translatesAutoresizingMaskIntoConstraints = false
     addSubview(copy)
     addSubview(control)
+    let inset = style == .compact ? PaxTheme.Settings.compactRowInset : PaxTheme.Spacing.medium
+    let minimum =
+      style == .compact ? PaxTheme.Settings.compactRowMinimum : PaxTheme.Settings.rowMinimum
     NSLayoutConstraint.activate([
       copy.leadingAnchor.constraint(equalTo: leadingAnchor),
       copy.trailingAnchor.constraint(
         equalTo: control.leadingAnchor, constant: -PaxTheme.Spacing.regular),
-      copy.topAnchor.constraint(equalTo: topAnchor, constant: PaxTheme.Spacing.medium),
-      copy.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -PaxTheme.Spacing.medium),
       control.trailingAnchor.constraint(equalTo: trailingAnchor),
       control.centerYAnchor.constraint(equalTo: centerYAnchor),
-      heightAnchor.constraint(greaterThanOrEqualToConstant: PaxTheme.Settings.rowMinimum),
+      heightAnchor.constraint(greaterThanOrEqualToConstant: minimum),
     ])
+    if style == .compact {
+      NSLayoutConstraint.activate([
+        copy.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: inset),
+        copy.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -inset),
+        copy.centerYAnchor.constraint(equalTo: centerYAnchor),
+      ])
+    } else {
+      NSLayoutConstraint.activate([
+        copy.topAnchor.constraint(equalTo: topAnchor, constant: inset),
+        copy.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -inset),
+      ])
+    }
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public func apply(detail: String, currentValue: String?) {

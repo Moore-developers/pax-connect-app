@@ -2,29 +2,30 @@ package controller
 
 import (
 	"context"
-
 	"errors"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
-	"pax-connect/daemon/internal/config"
-	"pax-connect/daemon/internal/historystore"
-	"time"
 )
 
 // QueryLogUpdates scans only newly committed event identities, never historical pages or raw text.
 func (c *Controller) QueryLogUpdates(ctx context.Context, q *pb.LogUpdateRequest) (*pb.LogUpdatePage, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	source, err := c.logStore()
+	_, err := c.logStore(ctx)
 	if err != nil {
 		return nil, historyError(err)
 	}
-	meta, err := source.SnapshotMeta(ctx)
+	job, _ := c.logJob()
+	columnSnapshot, err := job.logColumnSnapshot(ctx)
 	if err != nil {
 		return nil, historyError(err)
 	}
+	defer func() { _ = columnSnapshot.Close() }()
+	meta := columnSnapshot.Meta()
 	out := &pb.LogUpdatePage{Exact: true, AsOf: timestamppb.Now(), History: historyState(c.logsHistoryMeta(meta)), HighWater: meta.HeadSequence, NextSequence: q.AfterSequence}
 	if q.JournalGeneration != meta.JournalGeneration || q.DeletionGeneration != meta.LogDeletionGeneration || q.AfterSequence > meta.HeadSequence {
 		out.ResetRequired = true
@@ -43,13 +44,13 @@ func (c *Controller) QueryLogUpdates(ctx context.Context, q *pb.LogUpdateRequest
 	}
 	deadline := time.Now().Add(100 * time.Millisecond)
 	cutoff := time.Now().Add(-time.Duration(meta.RetentionHours) * time.Hour)
-	rows, err := source.LogEventsAfter(ctx, int64(q.AfterSequence), int64(meta.HeadSequence), 2001)
+	rows, err := columnSnapshot.EventsAfter(ctx, int64(q.AfterSequence), int64(meta.HeadSequence), 2001)
 	if err != nil {
 		return nil, historyError(err)
 	}
 	touched := map[string]bool{}
 	bytes := 0
-	for i, row := range rows {
+	for i, event := range rows {
 		if i >= 2000 || time.Now().After(deadline) || !q.CountOnly && len(out.Items) >= limit || bytes >= 1<<20 {
 			out.HasMore, out.Exact = true, false
 			break
@@ -57,12 +58,8 @@ func (c *Controller) QueryLogUpdates(ctx context.Context, q *pb.LogUpdateRequest
 		if err := ctx.Err(); err != nil {
 			return nil, historyError(err)
 		}
-		n := uint64(row.Sequence)
+		n := event.Sequence
 		out.NextSequence = n
-		event, err := logQueryEvent(row)
-		if err != nil {
-			return nil, historyError(err)
-		}
 		if event.At.Before(cutoff) {
 			continue
 		}
@@ -102,27 +99,18 @@ func (c *Controller) QueryLogUpdates(ctx context.Context, q *pb.LogUpdateRequest
 			continue
 		}
 		touched[key] = true
-		members := []config.HistoryEvent{event}
-		if filter.View != "operations" && (filter.View != "activity" || event.Flow != nil) {
-			flowKey := ""
-			if event.Flow != nil {
-				flowKey = event.Flow.Key
-			}
-			members, err = logViewMembers(ctx, source, filter, key, flowKey, cutoff, deadline)
-			if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
-				out.HasMore, out.Exact = true, false
-				out.NextSequence = n - 1
-				break
-			}
-			if err != nil {
-				return nil, historyError(err)
-			}
+		groupCtx, cancel := context.WithDeadline(ctx, deadline)
+		item, e := c.columnLogUpdateGroup(groupCtx, columnSnapshot, filter, key, cutoff)
+		cancel()
+		if errors.Is(e, context.DeadlineExceeded) && ctx.Err() == nil {
+			out.HasMore, out.Exact = true, false
+			out.NextSequence = n - 1
+			break
 		}
-		items, err := projectLogView(ctx, members, filter)
-		if err != nil {
-			return nil, historyError(err)
+		if e != nil {
+			return nil, historyError(e)
 		}
-		for _, item := range items {
+		if item != nil {
 			out.Count++
 			if !q.CountOnly {
 				out.Items = append(out.Items, item)
@@ -135,54 +123,12 @@ func (c *Controller) QueryLogUpdates(ctx context.Context, q *pb.LogUpdateRequest
 	if !out.HasMore {
 		out.NextSequence = out.HighWater
 	}
+	from := cutoff
+	if filter.From != nil && filter.From.AsTime().After(from) {
+		from = filter.From.AsTime()
+	}
+	if !columnSnapshot.ListValid(from.UnixMilli()) {
+		return nil, historyError(errors.New("history_cursor_expired"))
+	}
 	return out, nil
-}
-
-// logViewMembers reloads the frozen members of one connection or problem group, bounded by
-// the same 24MiB and 100ms budget as the legacy index scan.
-func logViewMembers(ctx context.Context, source logReads, q *pb.LogQuery, key, flowKey string, cutoff, deadline time.Time) ([]config.HistoryEvent, error) {
-	fromMs, untilMs := int64(historystore.FullLogRangeMin), int64(historystore.FullLogRangeMax)
-	if q.From != nil {
-		fromMs = q.From.AsTime().UnixMilli()
-	}
-	if q.Until != nil {
-		untilMs = q.Until.AsTime().UnixMilli()
-	}
-	var events []config.HistoryEvent
-	size := 0
-	visit := func(row historystore.LogEvent) error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if time.Now().After(deadline) {
-			return context.DeadlineExceeded
-		}
-		size += len(row.Body)
-		if size > 24<<20 {
-			return errors.New("history_query_busy")
-		}
-		event, err := logQueryEvent(row)
-		if err != nil {
-			return err
-		}
-		if event.At.Before(cutoff) {
-			return nil
-		}
-		if q.From != nil && !event.At.After(q.From.AsTime()) || q.Until != nil && event.At.After(q.Until.AsTime()) {
-			return nil
-		}
-		if q.RouteId != "" && (event.Flow == nil || event.Flow.RouteID != q.RouteId) {
-			return nil
-		}
-		event.Raw = nil
-		events = append(events, event)
-		return nil
-	}
-	var err error
-	if q.View == "problems" {
-		err = source.EachProblemLogEvent(ctx, key, fromMs, untilMs, cutoff.UnixMilli(), visit)
-	} else {
-		err = source.EachFlowLogEvent(ctx, flowKey, fromMs, untilMs, cutoff.UnixMilli(), visit)
-	}
-	return events, err
 }

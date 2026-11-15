@@ -16,16 +16,20 @@ import Observation
   private var generation: UInt64 = 0
   private var previous: (EnvironmentDiagnosticReport, NetworkDiagnosticEnvironment?, Bool)?
   private var activeSessionID: String?
+  private var scannedLocation: (token: UInt64, value: LocationExposure)?
   private let history: NetworkDiagnosticHistory?
   private let request: @Sendable (String, String) async throws -> EnvironmentDiagnosticReport
   private let openBrowser: @MainActor (URL) async -> Bool
+  private let scanLocation: @Sendable () -> LocationExposure
 
   public init(
     history: NetworkDiagnosticHistory? = nil,
     request: @escaping @Sendable (String, String) async throws -> EnvironmentDiagnosticReport,
-    openBrowser: @escaping @MainActor (URL) async -> Bool
+    openBrowser: @escaping @MainActor (URL) async -> Bool,
+    scanLocation: @escaping @Sendable () -> LocationExposure = { LocationExposureScanner.current() }
   ) {
     self.history = history
+    self.scanLocation = scanLocation
     self.request = request
     self.openBrowser = openBrowser
     if let saved = history?.environment {
@@ -46,7 +50,20 @@ import Observation
     progressReport = nil
     stale = report != nil
     message = "正在检测 Mac，等待浏览器采样；最长 45 秒"
-    let sampledLocal = NetworkDiagnosticEnvironment.current()
+    let baseLocal = NetworkDiagnosticEnvironment.current()
+    // File and system reads run off the main actor and merge in when they finish.
+    scannedLocation = nil
+    let scanLocation = scanLocation
+    let scan = Task.detached(priority: .userInitiated) { scanLocation() }
+    Task { [weak self] in
+      let value = await scan.value
+      guard let self, generation == token else { return }
+      scannedLocation = (token, value)
+      if busy, let current = local, current.at == baseLocal.at {
+        local = current.withLocation(value)
+        revision &+= 1
+      }
+    }
     task = Task { [weak self, request] in
       var session = ""
       var acceptedSample = false
@@ -61,7 +78,7 @@ import Observation
         progressReport = initial
         if previous == nil || initial.mac.complete || initial.browser.complete {
           report = initial
-          local = sampledLocal
+          local = sampledLocal(baseLocal, token)
           acceptedSample = initial.mac.complete || initial.browser.complete
           revision &+= 1
           stale = false
@@ -84,7 +101,7 @@ import Observation
           if previous == nil || value.mac.complete || value.browser.complete {
             let changed = report != value
             report = value
-            local = sampledLocal
+            local = sampledLocal(baseLocal, token)
             acceptedSample = value.mac.complete || value.browser.complete
             stale = false
             if changed { revision &+= 1 }
@@ -95,6 +112,12 @@ import Observation
             ? "无法打开浏览器，正在检测 Mac…" : value.mac.complete ? "Mac 检测完成，等待浏览器结果…" : "正在检测 Mac 和浏览器…"
         }
         if acceptedSample, let report {
+          let scanned = await scan.value
+          guard generation == token, !Task.isCancelled else { throw CancellationError() }
+          if local != nil {
+            scannedLocation = (token, scanned)
+            local = local?.withLocation(scanned)
+          }
           runState = report.complete ? .finished : .failed
           if let old = previous?.0 { previousReport = old }
           history?.saveEnvironment(report, local: local, previous: previousReport)
@@ -153,6 +176,12 @@ import Observation
       message = "显示上次环境检测结果，请按需重新检测"
       revision &+= 1
     }
+  }
+
+  private func sampledLocal(_ base: NetworkDiagnosticEnvironment, _ token: UInt64)
+    -> NetworkDiagnosticEnvironment
+  {
+    base.withLocation(scannedLocation?.token == token ? scannedLocation?.value : nil)
   }
 
   private func restorePrevious() {

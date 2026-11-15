@@ -14,7 +14,9 @@ type NetworkPrivacy struct {
 	WebRTC   bool   `json:"webrtc"`
 }
 
-func DefaultNetworkPrivacy() NetworkPrivacy { return NetworkPrivacy{Revision: 1, DNSMode: "balanced"} }
+func DefaultNetworkPrivacy() NetworkPrivacy {
+	return NetworkPrivacy{Revision: 1, DNSMode: "balanced", WebRTC: true}
+}
 func (p NetworkPrivacy) Validate() error {
 	if p.Revision == 0 || p.DNSMode != "balanced" && p.DNSMode != "strict" {
 		return errors.New("network_privacy_invalid")

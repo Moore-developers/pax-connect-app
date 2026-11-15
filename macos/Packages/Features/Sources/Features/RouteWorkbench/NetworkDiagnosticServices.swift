@@ -92,7 +92,7 @@ extension NetworkDiagnosticView {
       rows.append(
         diagnosticRow(
           title: title, subtitle: value, symbol: "globe",
-          detail: check.map(E.checkText) ?? "旧记录未采集",
+          detail: check.map { E.checkText($0) } ?? "旧记录未采集",
           tone: check?.state == "observed" ? .information : .pending))
     }
     let list = vertical(rows, spacing: 0)

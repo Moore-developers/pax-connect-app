@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/stats"
@@ -19,7 +20,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 		r, e := c.readTokens.read(q.ReadToken, "traffic", signature)
 		return r, q.ReadToken, e
 	}
-	at := time.Now().UTC().Truncate(time.Second)
+	at := c.now().UTC().Truncate(time.Second)
 	from, _, err := calendarWindow(q.Window, at)
 	if err != nil {
 		return nil, "", err
@@ -31,7 +32,8 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	defer func() { _ = snap.read.Close() }()
 	r := &historyRead{at: at, from: from, kind: "traffic", signature: signature, dimension: q.Dimension, window: q.Window, meta: snap.meta, flows: map[string][]*pb.FlowRecord{}}
 	if err = c.freezeTrafficConnections(ctx, r, ""); err != nil {
-		return nil, "", err
+		r.recentResponsesState, r.recentResponsesError = "failed", trafficLogEvidenceError(err)
+		r.meta.Partial, r.meta.Error = true, r.recentResponsesError
 	}
 	buckets, err := snap.ruleBuckets(ctx, from, at, trafficDimensions(q.Dimension))
 	if err != nil {
@@ -43,7 +45,12 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	}
 	all := proto.Clone(q).(*pb.TrafficQuery)
 	all.Search = ""
-	err = c.projectTrafficRead(ctx, r, all, values)
+	var columnMatches map[trafficSearchKey]bool
+	if r.columnSnapshot != nil {
+		columnMatches, err = c.columnPeriodRows(ctx, r, q)
+	} else {
+		err = c.projectTrafficRead(ctx, r, all, values)
+	}
 	if err != nil {
 		return nil, "", err
 	}
@@ -57,6 +64,9 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	exitRows := map[key]*pb.TrafficRow{}
 	sums := map[key]aggregateBucket{}
 	search := newTrafficSearch(q.Search)
+	for key := range columnMatches {
+		search.matched[key] = true
+	}
 	if err := snap.searchMatches(ctx, from, at, trafficDimensions(q.Dimension), q.Direction, search); err != nil {
 		return nil, "", err
 	}
@@ -155,7 +165,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	if r.dns != nil {
 		rows = append(rows, r.dns)
 	}
-	if r.logVersion != nil {
+	if r.columnSnapshot != nil {
 		if err := indexAggregateConnections(ctx, r, q, rows); err != nil {
 			return nil, "", err
 		}
@@ -186,11 +196,9 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 		v := sums[k]
 		if summarizesTrafficDimension(q.Dimension) && row.Kind != "unknown" && row.Kind != "dns" {
 			r.ruleMemberBuckets[row.Id] = r.ruleMemberBuckets[aggregateRowID(v.Identity)]
-			if r.logVersion != nil {
-				if r.recentResponses == nil {
-					r.recentResponses = map[string][]*pb.TrafficResponsePoint{}
-				}
-				r.recentResponses[row.Id] = r.modelRecentResponses(row.Id)
+			if r.columnSnapshot != nil {
+				// Actual response samples are selected lazily from the frozen SQL
+				// relation after bucket membership has been finalized.
 			} else {
 				members := r.flows[row.Id][:0]
 				for _, fact := range r.flows[row.Id] {
@@ -270,7 +278,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	if err := indexAggregateConnections(ctx, r, q, rows); err != nil {
 		return nil, "", err
 	}
-	if r.logVersion == nil {
+	if r.columnSnapshot == nil {
 		for id, members := range r.aggregateFlowRows {
 			r.flows[id] = nil
 			for _, member := range members {
@@ -279,9 +287,6 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 				r.flows[id] = append(r.flows[id], item)
 			}
 		}
-	}
-	if r.logVersion != nil {
-		r.aggregateFlows = nil
 	}
 	sortTrafficRows(r.rows)
 	token, err := c.readTokens.save(r)

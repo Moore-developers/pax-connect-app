@@ -142,9 +142,13 @@ func TestEnvironmentBrowserCannotSetCompletionOrRawIPError(t *testing.T) {
 	r := httptest.NewRequest("POST", "http://127.0.0.1:1234/secret/result", strings.NewReader(`{"ipv4":"8.8.8.8","complete":true,"ipError":"untrusted text","rtcState":"empty"}`))
 	r.Header.Set("Origin", s.origin)
 	r.Header.Set("Content-Type", "application/json")
+	s.state.Mac.Checks = []Check{{Kind: "ipv6_route", State: "absent"}}
 	w := httptest.NewRecorder()
 	s.serve(context.Background(), w, r)
 	if w.Code != 204 || !s.Read().Browser.Complete {
 		t.Fatal(w.Code)
+	}
+	if got := w.Header().Get("X-Pax-IPv6-Route"); got != "absent" {
+		t.Fatal("route header", got)
 	}
 }

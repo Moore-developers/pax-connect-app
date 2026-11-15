@@ -12,7 +12,8 @@ import (
 )
 
 // InspectEnvironment never captures a selected route or binds a physical NIC.
-// The singleton short-lived session is read explicitly, with no background polling.
+// The singleton short-lived session is read explicitly; its only polling is the bounded, read-only
+// live-view lookup for STUN route evidence after the browser reports.
 func (c *Controller) InspectEnvironment(ctx context.Context, req *pb.EnvironmentDiagnosticRequest) (*pb.EnvironmentDiagnosticReport, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, status.FromContextError(err).Err()
@@ -39,7 +40,7 @@ func (c *Controller) InspectEnvironment(ctx context.Context, req *pb.Environment
 		if c.environmentSession != nil {
 			c.environmentSession.Close()
 		}
-		session, err := environment.Start(c.tests.lifetime, c.exits)
+		session, err := environment.Start(c.tests.lifetime, c.exits, environmentEvidence{c})
 		if err != nil {
 			return nil, status.Error(codes.Unavailable, "environment_listener_failed")
 		}

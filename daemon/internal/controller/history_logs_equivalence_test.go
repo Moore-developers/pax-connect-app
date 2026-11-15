@@ -196,54 +196,15 @@ func readLogState(t *testing.T, logs *historystore.Logs) (map[string]config.LogC
 	t.Helper()
 	summaries := map[string]config.LogConnectionSummary{}
 	diagnostics := map[string]string{}
-	rows, err := logs.Reader().Query(`SELECT flow_key,body FROM connections`)
-	if err != nil {
+	ctx := context.Background()
+	if err := logs.Columns().EachConnection(ctx, func(v config.LogConnectionSummary) error { summaries[v.Fact.Key] = v; return nil }); err != nil {
 		t.Fatal(err)
 	}
-	for rows.Next() {
-		var key string
-		var body []byte
-		if err = rows.Scan(&key, &body); err != nil {
-			t.Fatal(err)
-		}
-		var s config.LogConnectionSummary
-		if err = json.Unmarshal(body, &s); err != nil {
-			t.Fatal(err)
-		}
-		summaries[key] = s
-	}
-	if err = rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	_ = rows.Close()
 	var events []config.HistoryEvent
-	// Raw lines are stored in their own column; join them back so the comparison with the
-	// legacy event (which kept them in the body) still covers the full event.
-	rows, err = logs.Reader().Query(`SELECT body,raw FROM events ORDER BY seq`)
-	if err != nil {
+	if err := logs.Columns().EachEvent(ctx, func(e config.HistoryEvent) error { events = append(events, e); return nil }); err != nil {
 		t.Fatal(err)
 	}
-	for rows.Next() {
-		var body, raw []byte
-		if err = rows.Scan(&body, &raw); err != nil {
-			t.Fatal(err)
-		}
-		var e config.HistoryEvent
-		if err = json.Unmarshal(body, &e); err != nil {
-			t.Fatal(err)
-		}
-		if len(raw) > 0 {
-			if err = json.Unmarshal(raw, &e.Raw); err != nil {
-				t.Fatal(err)
-			}
-		}
-		events = append(events, e)
-	}
-	if err = rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	_ = rows.Close()
-	rows, err = logs.Reader().Query(`SELECT flow_key,seq,at_ms,text FROM diagnostics ORDER BY flow_key,seq`)
+	rows, err := logs.Reader().Query(`SELECT flow_key,seq,at_ms,text FROM diagnostics ORDER BY flow_key,seq`)
 	if err != nil {
 		t.Fatal(err)
 	}

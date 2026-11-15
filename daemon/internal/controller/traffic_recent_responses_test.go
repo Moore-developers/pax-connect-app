@@ -3,13 +3,12 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"google.golang.org/protobuf/proto"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/historystore"
@@ -159,70 +158,5 @@ func TestRecentResponsesKeepSimultaneousKeys(t *testing.T) {
 	points := r.recentResponses["row"]
 	if len(points) != 3 || points[0].ConnectionKey != "a" || points[2].ConnectionKey != "c" {
 		t.Fatal(points)
-	}
-}
-
-// The embedded store is never used: the retained-fact reader is the failing seam.
-type failedResponseSnapshot struct {
-	logsStore
-	body []byte
-	err  error
-}
-
-func (source failedResponseSnapshot) ConnectionSnapshot(_ context.Context, _, _ int64, _ string, visit func(historystore.LogConnection) error) (historystore.LogsMeta, error) {
-	if err := visit(historystore.LogConnection{Body: source.body}); err != nil {
-		return historystore.LogsMeta{}, err
-	}
-	return historystore.LogsMeta{}, source.err
-}
-
-func TestRecentResponseFailureRestoresBudgetAndPreservesAggregate(t *testing.T) {
-	h := newTrafficHarness(t)
-	f := markedFlow("response-budget/1")
-	h.append(h.clock, true, h.obs(time.Second, "started", f, 10, 20))
-	h.settle()
-	c := New("test", "test")
-	c.traffic = h.tr
-	c.history = &historyOwner{clock: func() time.Time { return h.clock }}
-	ctx := context.Background()
-	baseline, err := c.QueryTraffic(ctx, &pb.TrafficQuery{Dimension: "application", Window: "week"})
-	if err != nil || len(baseline.Items) == 0 {
-		t.Fatalf("baseline: %v %v", baseline, err)
-	}
-	body, err := json.Marshal(config.LogConnectionSummary{Fact: *f})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, scenario := range []string{"after-partial-read", "over-budget"} {
-		t.Run(scenario, func(t *testing.T) {
-			source := failedResponseSnapshot{body: body, err: errors.New("injected read failure")}
-			if scenario == "over-budget" {
-				source.body = append(append([]byte(nil), body...), strings.Repeat(" ", 24<<20)...)
-				source.err = nil
-			}
-			c.logs = &historyLogs{logs: source}
-			read := &historyRead{from: trafficEpoch.Add(-time.Hour), at: h.clock, bytes: 1234}
-			if err := c.freezeTrafficConnections(ctx, read, ""); err == nil {
-				t.Fatal("failure not reported")
-			}
-			if read.bytes != 1234 || len(read.aggregateFlows) != 0 {
-				t.Fatalf("failed source retained bytes/facts: %d/%d", read.bytes, len(read.aggregateFlows))
-			}
-			page, err := c.QueryTraffic(ctx, &pb.TrafficQuery{Dimension: "application", Window: "week"})
-			if err != nil {
-				t.Fatalf("independent response failure blocked aggregate: %v", err)
-			}
-			if page.Upload != baseline.Upload || page.Download != baseline.Download || page.Connections != baseline.Connections || len(page.Items) != len(baseline.Items) {
-				t.Fatal("aggregate totals changed")
-			}
-			for i, row := range page.Items {
-				if row.RecentResponsesState != "failed" || row.RecentResponsesError != "history_store_failed" || len(row.RecentResponses) != 0 {
-					t.Fatal("failure was not confined to recent series")
-				}
-				if !proto.Equal(row, baseline.Items[i]) {
-					t.Fatal("full aggregate row changed after response failure")
-				}
-			}
-		})
 	}
 }

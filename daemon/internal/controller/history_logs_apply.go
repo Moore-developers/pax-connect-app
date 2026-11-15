@@ -101,15 +101,9 @@ func (l *historyLogs) applyObservation(ctx context.Context, tx *historystore.Log
 		return l.applyEvent(ctx, tx, *e, true)
 	}
 	key := o.Flow.Key
-	existing, ok, err := tx.Connection(ctx, key)
+	summary, _, err := tx.Summary(ctx, key)
 	if err != nil {
 		return false, err
-	}
-	var summary config.LogConnectionSummary
-	if ok {
-		if err = json.Unmarshal(existing.Body, &summary); err != nil {
-			return false, fmt.Errorf("history logs: summary %s: %w", key, err)
-		}
 	}
 	before := summary.Fact
 	l.apps.identifyContext(ctx, o.Flow)
@@ -118,9 +112,6 @@ func (l *historyLogs) applyObservation(ctx context.Context, tx *historystore.Log
 	}
 	o.Flow = telemetry.MergeAcceptedFlow(&summary.Fact, o.Flow)
 	summary, _ = telemetry.ApplyLogObservation(summary, o, gap, l.clearedAt)
-	if err = putLogSummaryTx(ctx, tx, summary); err != nil {
-		return false, err
-	}
 	if o.Kind == "diagnostic" && o.Raw != "" {
 		raw, _, _ := telemetry.ScrubRaw(o.Raw)
 		if raw != "" {
@@ -137,9 +128,12 @@ func (l *historyLogs) applyObservation(ctx context.Context, tx *historystore.Log
 	}
 	e := telemetry.ProductEvent(o)
 	if e == nil {
+		if err = putLogSummaryTx(ctx, tx, summary); err != nil {
+			return false, err
+		}
 		return !sameRecentResponseFact(before, summary.Fact), nil
 	}
-	inserted, err := l.applyEvent(ctx, tx, *e, true)
+	inserted, err := l.applyEventWithSummary(ctx, tx, *e, true, &summary)
 	return inserted || !sameRecentResponseFact(before, summary.Fact), err
 }
 
@@ -147,6 +141,13 @@ func (l *historyLogs) applyObservation(ctx context.Context, tx *historystore.Log
 // connection summary from the saved evidence. strict reports malformed
 // observation events as errors; inbox events from other producers are dropped instead.
 func (l *historyLogs) applyEvent(ctx context.Context, tx *historystore.LogsTx, e config.HistoryEvent, strict bool) (bool, error) {
+	return l.applyEventWithSummary(ctx, tx, e, strict, nil)
+}
+
+// Observation folding already owns the current summary. Checkpoint it before
+// the single write instead of writing, reading/decoding and rewriting it in
+// the same transaction. Inbox-only product events still load their summary.
+func (l *historyLogs) applyEventWithSummary(ctx context.Context, tx *historystore.LogsTx, e config.HistoryEvent, strict bool, observationSummary *config.LogConnectionSummary) (bool, error) {
 	if validLogEvent(e) != nil {
 		if strict {
 			return false, errInvalidLogEvent
@@ -155,6 +156,9 @@ func (l *historyLogs) applyEvent(ctx context.Context, tx *historystore.LogsTx, e
 	}
 	exists, err := tx.EventExists(ctx, e.ID)
 	if err != nil || exists {
+		if err == nil && observationSummary != nil {
+			err = putLogSummaryTx(ctx, tx, *observationSummary)
+		}
 		return false, err
 	}
 	seq, err := tx.NextEventSequence(ctx)
@@ -164,45 +168,26 @@ func (l *historyLogs) applyEvent(ctx context.Context, tx *historystore.LogsTx, e
 	e.Sequence = uint64(seq)
 	telemetry.LimitEventRaw(&e)
 	if e.Flow != nil {
-		existing, ok, err := tx.Connection(ctx, e.Flow.Key)
-		if err != nil {
-			return false, err
+		var summary config.LogConnectionSummary
+		ok := observationSummary != nil
+		if ok {
+			summary = *observationSummary
+		} else {
+			var err error
+			summary, ok, err = tx.Summary(ctx, e.Flow.Key)
+			if err != nil {
+				return false, err
+			}
 		}
 		if ok {
-			var summary config.LogConnectionSummary
-			if err = json.Unmarshal(existing.Body, &summary); err != nil {
-				return false, fmt.Errorf("history logs: summary %s: %w", e.Flow.Key, err)
-			}
 			summary = telemetry.CheckpointLogEvent(summary, &e)
 			if err = putLogSummaryTx(ctx, tx, summary); err != nil {
 				return false, err
 			}
 		}
 	}
-	problemKey, _ := logProblem(e)
-	// Raw lines live in their own column: list scans must not page through them.
-	raw := e.Raw
-	e.Raw = nil
-	body, err := json.Marshal(e)
-	if err != nil {
-		return false, fmt.Errorf("history logs: event %s: %w", e.ID, err)
-	}
-	var rawBody []byte
-	if len(raw) > 0 {
-		if rawBody, err = json.Marshal(raw); err != nil {
-			return false, fmt.Errorf("history logs: event %s raw: %w", e.ID, err)
-		}
-	}
-	flowKey := ""
-	if e.Flow != nil {
-		flowKey = e.Flow.Key
-	}
-	inserted, _, err := tx.PutEvent(ctx, historystore.LogEvent{EventID: e.ID, AtMs: e.At.UnixMilli(), Sequence: seq,
-		Kind: e.Kind, FlowKey: flowKey, Level: e.Level, Source: e.Source, ProblemKey: problemKey, Body: body, Raw: rawBody})
-	if err != nil {
-		return false, err
-	}
-	return inserted, nil
+	inserted, _, err := tx.AppendEvent(ctx, e)
+	return inserted, err
 }
 
 // validLogEvent applies the legacy event validity rule shared by RecordEvent and the writer.
@@ -216,19 +201,18 @@ func validLogEvent(e config.HistoryEvent) error {
 // markGap rewrites every still-open summary as partial from its last known time. The
 // scan completes before any write so the same transaction never updates an open cursor.
 func (l *historyLogs) markGap(ctx context.Context, tx *historystore.LogsTx) error {
-	rows, err := tx.Connections(ctx)
+	if err := tx.MarkImportGap(ctx); err != nil {
+		return err
+	}
+	rows, err := tx.Summaries(ctx)
 	if err != nil {
 		return err
 	}
-	for _, row := range rows {
-		var summary config.LogConnectionSummary
-		if err = json.Unmarshal(row.Body, &summary); err != nil {
-			return fmt.Errorf("history logs: summary %s: %w", row.FlowKey, err)
-		}
+	for _, summary := range rows {
 		if summary.Fact.ClosedAt != nil {
 			continue
 		}
-		summary = telemetry.MarkLogGap(summary)
+		summary = config.MarkLogGap(summary)
 		if err = putLogSummaryTx(ctx, tx, summary); err != nil {
 			return err
 		}
@@ -237,26 +221,7 @@ func (l *historyLogs) markGap(ctx context.Context, tx *historystore.LogsTx) erro
 }
 
 func putLogSummaryTx(ctx context.Context, tx *historystore.LogsTx, s config.LogConnectionSummary) error {
-	body, err := json.Marshal(s)
-	if err != nil {
-		return fmt.Errorf("history logs: encode summary %s: %w", s.Fact.Key, err)
-	}
-	return tx.PutConnection(ctx, historystore.LogConnection{FlowKey: s.Fact.Key, StartedMs: s.Fact.StartedAt.UnixMilli(),
-		LastActivityMs: logSummaryActivity(s), AppID: s.Fact.ApplicationID, Domain: s.Fact.Domain, IP: s.Fact.IP,
-		IssueCode: s.Fact.Failure, Body: body})
-}
-
-// logSummaryActivity is the latest point at which the connection was observed or produced
-// a visible event; it bounds retention and today's connection lists.
-func logSummaryActivity(s config.LogConnectionSummary) int64 {
-	at := s.Metrics.AsOf
-	if s.LastLogAt.After(at) {
-		at = s.LastLogAt
-	}
-	if at.IsZero() {
-		at = s.Fact.StartedAt
-	}
-	return at.UnixMilli()
+	return tx.PutSummary(ctx, s)
 }
 
 // Only new chart facts add a revision when no visible product event was inserted.

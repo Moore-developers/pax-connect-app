@@ -21,6 +21,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/experimental/paxobs"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	M "github.com/sagernet/sing/common/metadata"
@@ -120,7 +121,20 @@ func TestNativeEncryptedDNSFallbackVerifiesTLSAndPreservesDetour(t *testing.T) {
 		}
 		q := new(dns.Msg)
 		q.SetQuestion("fixture.test.", dns.TypeA)
-		response, e := pool.Exchange(ctx, q)
+		var upstreams []paxobs.Event
+		queryCtx := paxobs.WithSink(ctx, func(event paxobs.Event) {
+			if event.Stage == "dns_upstream" {
+				upstreams = append(upstreams, event)
+			}
+		})
+		queryCtx, _ = paxobs.BeginDNS(queryCtx, q, "udp", "tun", "")
+		response, e := pool.Exchange(queryCtx, q)
+		if trusted && (len(upstreams) != 1 || upstreams[0].IP != "119.29.29.29" || upstreams[0].Outbound != "fixture-proxy") {
+			t.Fatal("native response proof missing/wrong", upstreams)
+		}
+		if !trusted && len(upstreams) != 0 {
+			t.Fatal("failed TLS produced path proof", upstreams)
+		}
 		if trusted && (e != nil || response.Rcode != dns.RcodeNameError) {
 			t.Fatal("native HTTPS backup failed", e)
 		}

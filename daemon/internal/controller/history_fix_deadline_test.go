@@ -38,8 +38,8 @@ func TestHistoryFixSnapshotDeadlineWhileWriterLocked(t *testing.T) {
 		return
 	case <-time.After(80 * time.Millisecond):
 		h.tr.snapshotMu.Unlock()
-		<-done
-		t.Fatal("snapshot ignored its deadline while writer held commit lock")
+		err := <-done
+		t.Fatalf("snapshot ignored its deadline while writer held commit lock: %v", err)
 	}
 }
 func TestHistoryFixQueryTrafficDeadlineWhileWriterLocked(t *testing.T) {
@@ -67,7 +67,7 @@ func TestHistoryFixQueryTrafficDeadlineWhileWriterLocked(t *testing.T) {
 		t.Logf("returned by 2.2s: %v", e)
 	default:
 		h.tr.snapshotMu.Unlock()
-		<-done
-		t.Fatal("QueryTraffic still blocked 2.2s after its internal 2s deadline")
+		err := <-done
+		t.Fatalf("QueryTraffic still blocked 2.2s after its internal 2s deadline: %v", err)
 	}
 }

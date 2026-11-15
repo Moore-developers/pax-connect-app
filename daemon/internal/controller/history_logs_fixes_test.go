@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"reflect"
@@ -181,7 +180,7 @@ func TestMergeLogHistoryTakesQualityFromLogsOnly(t *testing.T) {
 	}
 }
 
-// Raw lines live in their own column: the body list scans read carries none, and event
+// Raw lines live in ordered child rows: the list body carries none, and event
 // detail gets them back unchanged.
 func TestLogsRawLinesStayOutOfListBodies(t *testing.T) {
 	ctx := context.Background()
@@ -189,17 +188,28 @@ func TestLogsRawLinesStayOutOfListBodies(t *testing.T) {
 	lines := []string{"connection reset by peer", "dial tcp: i/o timeout"}
 	p.emit(config.HistoryEvent{ID: "with-raw", At: time.Now(), Kind: "diagnostic", Title: "诊断", Level: "error", Source: "fixture", Raw: lines})
 	logs := c.logs.logs.(*historystore.Logs)
-	var body, raw []byte
-	if err := logs.Reader().QueryRow("SELECT body,raw FROM events WHERE event_id='with-raw'").Scan(&body, &raw); err != nil {
+	events, err := logs.RecentEvents(ctx, 10)
+	if err != nil || len(events) != 1 || events[0].ID != "with-raw" || len(events[0].Raw) != 0 {
+		t.Fatalf("list carries raw: %+v %v", events, err)
+	}
+	rows, err := logs.Reader().Query("SELECT value FROM col_raw WHERE event_id='with-raw' ORDER BY ordinal")
+	if err != nil {
 		t.Fatal(err)
 	}
-	var stored config.HistoryEvent
-	if err := json.Unmarshal(body, &stored); err != nil || len(stored.Raw) != 0 {
-		t.Fatalf("list body carries raw lines: %v %v", stored.Raw, err)
-	}
 	var column []string
-	if err := json.Unmarshal(raw, &column); err != nil || !reflect.DeepEqual(column, lines) {
-		t.Fatalf("raw column = %q (%v), want %q", column, err, lines)
+	for rows.Next() {
+		var line string
+		if err = rows.Scan(&line); err != nil {
+			t.Fatal(err)
+		}
+		column = append(column, line)
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	_ = rows.Close()
+	if !reflect.DeepEqual(column, lines) {
+		t.Fatalf("raw child rows=%q, want %q", column, lines)
 	}
 	detail, err := c.GetLogDetail(ctx, &pb.LogDetailRequest{EventId: "with-raw"})
 	if err != nil || !reflect.DeepEqual(detail.Raw, lines) {

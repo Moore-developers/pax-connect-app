@@ -3,7 +3,10 @@
 ## 4. IPC 与协议
 
 
+
 DiagnoseNetwork进度字段及只读查询见[合同](../changes/pax-connect-network-control-plane/network-diagnostics-progress.md)。
+
+HistoryState.error_code=history_building：日志建立中，采集状态独立，无proto变更。
 
 引导：[合同](../changes/pax-connect-network-control-plane/first-run-onboarding.md)。Hello新增initial_install（onboarding.v1），启动建库前冻结；AI绑定附endpoint/target_path/requires_model，计划增加initialize/model_id与initializes/target_path，创建仍经Plan→Apply，无Key回传。
 
@@ -124,4 +127,4 @@ AI用量RPC限用户socket、5秒（重算30秒）、范围≤367天；不传正
 
 `RoutingPackage.kind` 新值 `adblock`，见[广告包合同](../changes/pax-connect-network-control-plane/adblock.md)。
 
-环境检测：InspectEnvironment的start/read/cancel/sources持有45秒短会话；EnvironmentCheck附带固定目标/状态/受控错误/耗时/时间，NetworkDiagnosticProbe附state/stage/redirect_host；full与局部检测合同统一见网络诊断。EnvironmentDiagnosticReport独立保存Mac/真实浏览器核心样本及本机回传URL，取消/关窗关闭loopback。不会读取所选线路；字段与RPC唯一见api/network_diagnostics.proto，细则见[网络诊断](../changes/pax-connect-network-control-plane/network-diagnostics.md)。基础ConnectionDiagnostic/TrafficPath消息同属该proto，类型全名与字段编号不变。
+环境检测：InspectEnvironment(start/read/cancel/sources)为45秒短会话，Mac/真实浏览器独立采样，不绑定所选线路；取消/关窗关闭loopback。EnvironmentCheck/Probe字段见proto。字段/RPC唯一见api/network_diagnostics.proto，亦含ConnectionDiagnostic/TrafficPath，编号不变；行为见[网络诊断](../changes/pax-connect-network-control-plane/network-diagnostics.md)。本轮DNS复用Check的dns_path/dns_upstream及core观测JSON的DNSFact可选上游字段，不改proto；旧core缺字段保留未知，见[DNS路径](../changes/pax-connect-network-control-plane/network-diagnostics-dns-path.md)。

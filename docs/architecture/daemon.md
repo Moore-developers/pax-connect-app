@@ -39,7 +39,7 @@
 - **只读采集**：`internal/network` 只做只读物理路径 / 路由归属采集，不写系统网络；controller 在队列外有界执行诊断并复核会话边界。
 - **子包边界**：`coreclient`、`measurement`、`cfoptimizer`、`siteicon`、`subfetch` 等包的依赖与职责见 [code-standards/module-boundaries.md](../code-standards/module-boundaries.md)，不在此重复。
 
-历史查询的共享不可变读模型、提交版本、按需响应/详情及删除撤销规则见[等价历史读取](../changes/pax-connect-network-control-plane/history-read-model.md)。业务字段与统计/筛选/排序不变，内存模型可从SQLite重建，不新增第二套持久化权威。
+日志库v4的列式事实/聚合、SQL分页、旧行与旧索引快照、单owner升级及失败隔离见[日志库按列重建](../changes/pax-connect-network-control-plane/history-log-index.md)。业务字段与统计/筛选/排序不变；SQLite为唯一持久化权威，旧全量内存模型与Body兼容读写已删除，正常路径直接传标准值；v3迁移与journal输入保留必要解码。令牌与删除合同继续沿[等价历史读取](../changes/pax-connect-network-control-plane/history-read-model.md)§1/§4。
 
 首次使用合同见[引导](../changes/pax-connect-network-control-plane/first-run-onboarding.md)。启动建库前冻结首次身份；aiprofile区分missing/account/invalid/ready，首次API创建复用Plan/Apply与恢复日志。新文件排他创建，不覆盖途中外部新文件。
 

@@ -27,7 +27,7 @@ func TestNetworkPrivacyCASAndSaveFailureDoNotChangeIntent(t *testing.T) {
 	c.ConfigureNetworkPrivacy(repo)
 	ctx := context.Background()
 	initial, e := c.GetNetworkPrivacy(ctx, nil)
-	if e != nil || initial.DnsMode != "balanced" || initial.Webrtc {
+	if e != nil || initial.DnsMode != "balanced" || !initial.Webrtc {
 		t.Fatal(initial, e)
 	}
 	value, e := c.SaveNetworkPrivacy(ctx, &pb.NetworkPrivacy{Revision: 1, DnsMode: "strict", Webrtc: true})

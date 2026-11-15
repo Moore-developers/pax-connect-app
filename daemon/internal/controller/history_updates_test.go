@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
@@ -106,23 +105,11 @@ func TestLogJournalRebuildsEqualCountRollbackChanges(t *testing.T) {
 	// identity changes while the row count stays equal. Reopening must rebuild the
 	// generation so incremental readers reset instead of trusting their cursor.
 	editLogsDatabase(t, filepath.Join(dir, "history", "logs.db"), func(db *sql.DB) error {
-		var body []byte
-		if err := db.QueryRowContext(ctx, "SELECT body FROM events WHERE event_id='before'").Scan(&body); err != nil {
+		if _, err := db.ExecContext(ctx, "UPDATE col_events SET event_id='after-rollback' WHERE event_id='before'; DELETE FROM col_event_index; DELETE FROM col_groups; DELETE FROM col_projection_progress"); err != nil {
 			return err
 		}
-		var event config.HistoryEvent
-		if err := json.Unmarshal(body, &event); err != nil {
-			return err
-		}
-		event.ID = "after-rollback"
-		raw, err := json.Marshal(event)
-		if err != nil {
-			return err
-		}
-		if _, err = db.ExecContext(ctx, "UPDATE events SET event_id='after-rollback', body=? WHERE event_id='before'", raw); err != nil {
-			return err
-		}
-		_, err = db.ExecContext(ctx, "UPDATE meta SET value='' WHERE key=?", historystore.MetaJournalGeneration)
+
+		_, err := db.ExecContext(ctx, "UPDATE meta SET value='' WHERE key=?", historystore.MetaJournalGeneration)
 		return err
 	})
 	c, _ = newLogsTestController(t, dir)

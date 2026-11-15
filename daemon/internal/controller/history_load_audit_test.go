@@ -97,7 +97,7 @@ func TestHistoryStorageLoadAudit(t *testing.T) {
 		})
 	}
 	var rows int
-	if e := c.logs.logs.(*historystore.Logs).Reader().QueryRow("SELECT count(*) FROM connections").Scan(&rows); e != nil || rows != 15000 {
+	if e := c.logs.logs.(*historystore.Logs).Reader().QueryRow("SELECT count(*) FROM col_connections").Scan(&rows); e != nil || rows != 15000 {
 		t.Fatal(fmt.Sprint("load summary count=", rows, " error=", e))
 	}
 }

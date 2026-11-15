@@ -18,6 +18,8 @@ public enum ProductErrorPresentation {
     if let security = networkSecurityMessage(error) { return security }
     if let path = currentPathError(error) { return path }
     return switch error.code {
+    case "history_converting": "正在转换"
+    case "history_building": "正在建立日志索引，完成后会自动显示"
     case "history_expired": "相关记录已过期或已清除"
     case "history_cursor_expired", "history_cleared": "记录已清理或读取已过期，请刷新"
     case "history_query_busy": "记录较多，请缩小时间范围后重试"

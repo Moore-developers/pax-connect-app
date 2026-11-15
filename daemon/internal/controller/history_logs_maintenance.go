@@ -37,7 +37,14 @@ func (l *historyLogs) maintain(ctx context.Context) time.Duration {
 	if pruned.More {
 		return 0
 	}
-	live, err := l.logs.LiveBytes(ctx)
+	state, _, err := l.logs.Meta(ctx, "column_upgrade_state")
+	if err != nil {
+		return l.fail(ctx, "history_logs_maintain_failed")
+	}
+	if state == "building" {
+		return 0
+	}
+	live, err := l.logs.CapacityBytes(ctx)
 	if err != nil {
 		return l.fail(ctx, "history_logs_maintain_failed")
 	}

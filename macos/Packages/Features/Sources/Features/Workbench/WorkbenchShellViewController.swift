@@ -33,10 +33,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     self.routing = routing
     let logs = LogsWorkbenchViewController(session: store, objectIcons: icons)
     self.logs = logs
-    let settings = SettingsWorkbenchViewController(
-      store: SettingsWorkbenchStore(
-        onClearLogs: { logs.store.perform(.scene(.empty)) },
-        onRemoveService: { store.perform(.selectScenario(.off)) }))
+    let settings = SettingsWorkbenchViewController()
     self.settings = settings
     super.init(nibName: nil, bundle: nil)
     pages.tabStyle = .unspecified
@@ -97,7 +94,6 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       refresh: refresh)
     self.logs = logs
     let settings = SettingsWorkbenchViewController(
-      store: SettingsWorkbenchStore(backendAvailable: false),
       measurement: MeasurementSettingsViewController(routes: routes), telemetry: telemetry,
       privacyRoutes: routes)
     self.settings = settings
@@ -243,15 +239,6 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   }
   public func showSettings() { navigation.select(5) }
   public func showAbout() { navigation.select(6) }
-  public func previewSettings(_ name: String) {
-    if let scene = SettingsWorkbenchStore.Scene(rawValue: name) {
-      settings?.store.perform(.scene(scene))
-    }
-    navigation.select(5)
-  }
-  public static var settingsPreviewScenes: [String] {
-    SettingsWorkbenchStore.Scene.allCases.map(\.rawValue)
-  }
   public func showAIUsage() { navigation.select(4) }
   public func showLogs() { navigation.select(3) }
   public func previewLogs(_ name: String) {

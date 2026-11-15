@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/historystore"
@@ -28,7 +29,7 @@ func TestLogRetentionKeepsRecentTokenAndRevokesAffectedQuery(t *testing.T) {
 	if err != nil || affected.Total != 3 {
 		t.Fatal(affected, err)
 	}
-	late, _, err := c.logRead(ctx, recent)
+	late, _, err := c.columnLogRead(ctx, recent)
 	if err != nil {
 		t.Fatal(err)
 	}

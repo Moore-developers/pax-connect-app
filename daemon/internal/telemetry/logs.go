@@ -159,20 +159,6 @@ func ApplyLogObservation(summary config.LogConnectionSummary, o config.Observati
 	return summary, summary.Metrics
 }
 
-// MarkLogGap marks one still-open summary as unknown from its last known time.
-// Closed connections keep their recorded result.
-func MarkLogGap(summary config.LogConnectionSummary) config.LogConnectionSummary {
-	if summary.Fact.ClosedAt != nil {
-		return summary
-	}
-	at := summary.Metrics.AsOf
-	summary.Fact.StateUnknown = true
-	summary.Fact.ObservedUntil = &at
-	summary.Metrics.BytesState = "partial"
-	summary.Metrics.Reason = "observation_gap"
-	return summary
-}
-
 // CheckpointLogEvent attaches the summary's current metrics to an event and records
 // the event as the connection's latest visible evidence. The caller only passes a
 // summary that exists; e is updated in place.

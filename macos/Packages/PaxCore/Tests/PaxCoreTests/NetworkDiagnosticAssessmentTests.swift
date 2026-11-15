@@ -63,13 +63,54 @@ import Testing
         }
       })
     let rows = EnvironmentDiagnosticPresentation.assessedRows(report, local: nil, waiting: false)
-    #expect(rows[0].value.contains("同出口"))
-    #expect(rows[3].value.contains("不等于泄露"))
+    #expect(rows[0].value.contains("未发现出口差异"))
+    #expect(rows[3].value.contains("请求路径未确认"))
+    #expect(rows[3].tone == .pending)
+    #expect(rows[3].value.contains("尚无完整的本轮 DNS 传输证据"))
     #expect(rows[3].detail.contains("1.1.1.1"))
     #expect(rows[3].detail.contains("9.9.9.9"))
     #expect(rows[3].detail.contains("149.112.112.112"))
     #expect(rows[4].value.contains("不能据此确认防泄露"))
   }
+  @Test("相同DNS出口仍待确认；IP和偏好只报告差异，不宣称安全", arguments: [true, false])
+  func evidenceBoundaries(matching: Bool) {
+    let at = Date(timeIntervalSince1970: 1_733_011_200)
+    let local = NetworkDiagnosticEnvironment(
+      timezone: "America/Los_Angeles", languages: ["en-US", "en-GB"], region: "en_US", at: at)
+    let report = EnvironmentDiagnosticReport(
+      .with {
+        $0.at = .init(date: at)
+        $0.mac = .with {
+          $0.complete = true
+          $0.ipv4 = "8.8.8.8"
+          $0.resolvers = [.with { $0.ip = "1.1.1.1" }]
+        }
+        $0.browser = .with {
+          $0.complete = true
+          $0.ipv4 = matching ? "8.8.8.8" : "9.9.9.9"
+          $0.languages = matching ? ["en-US", "en-GB"] : ["en-GB", "en-US"]
+          $0.timezone = matching ? "America/Los_Angeles" : "America/Vancouver"
+          $0.resolvers = [.with { $0.ip = "1.1.1.1" }]
+        }
+      })
+    let rows = EnvironmentDiagnosticPresentation.assessedRows(report, local: local, waiting: false)
+    for (index, name) in [(0, "出口"), (1, "语言"), (2, "时区")] {
+      #expect(rows[index].value.hasPrefix((matching ? "未发现" : "发现") + name + "差异"))
+      #expect(!rows[index].value.contains("安全"))
+    }
+    #expect(rows[1].detail.contains("en-US"))
+    #expect(rows[2].detail.contains("America/Los_Angeles"))
+    if matching {
+      #expect(rows[1].value.contains("英语"))
+      #expect(rows[2].value.contains("UTC−08:00"))
+    } else {
+      #expect(rows[2].value.contains("名称不同，本次 UTC 偏移相同"))
+    }
+    #expect(rows[3].value == "请求路径未确认 · 尚无完整的本轮 DNS 传输证据")
+    #expect(rows[3].tone == .pending)
+    #expect(rows[3].detail.contains("Mac 1 个解析器，浏览器 1 个解析器"))
+  }
+
   @Test("不同地址族的两个回显不判分流")
   func exitFamilies() {
     let report = EnvironmentDiagnosticReport(

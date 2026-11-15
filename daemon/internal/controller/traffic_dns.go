@@ -3,14 +3,17 @@ package controller
 import (
 	"context"
 	"errors"
+	"sort"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
-	"sort"
+	"pax-connect/daemon/internal/config"
 )
 
 func dnsTrafficGroupID(f *pb.FlowRecord) string {
-	return "dns-group:" + querySignature([]string{f.Domain, f.GetDns().GetQueryType(), dnsTrafficResult(f)})
+	return config.TrafficDNSGroupID(f.Domain, f.GetDns().GetQueryType(), dnsTrafficResult(f))
 }
 func dnsTrafficResult(f *pb.FlowRecord) string {
 	if f.GetDns().GetResult() != "" {
@@ -76,7 +79,6 @@ func dnsTrafficDetail(ctx context.Context, r *historyRead, token string, q *pb.T
 		out.Items = members[start:end]
 		selected := *r
 		selected.recentResponses = nil
-		selected.logVersion = nil // subgroup chart is computed from its own frozen members below
 		for _, f := range members {
 			if !f.StartedAt.AsTime().After(r.from) || f.StartedAt.AsTime().After(r.at) {
 				continue

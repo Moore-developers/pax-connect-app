@@ -54,27 +54,13 @@ func reduceTrafficLatency(values []*pb.TrafficLatencySample) []*pb.TrafficLatenc
 	if len(values) <= 256 {
 		return values
 	}
-	out := []*pb.TrafficLatencySample{values[0]}
-	const groups = 127
-	for bucket := 0; bucket < groups; bucket++ {
-		begin := 1 + (len(values)-2)*bucket/groups
-		end := 1 + (len(values)-2)*(bucket+1)/groups
-		lo, hi := begin, begin
-		for i := begin + 1; i < end; i++ {
-			if values[i].Milliseconds < values[lo].Milliseconds {
-				lo = i
-			}
-			if values[i].Milliseconds > values[hi].Milliseconds {
-				hi = i
-			}
-		}
-		if lo > hi {
-			lo, hi = hi, lo
-		}
-		out = append(out, values[lo])
-		if hi != lo {
-			out = append(out, values[hi])
-		}
+	r := config.NewTrafficLatencyReducer(len(values))
+	for _, v := range values {
+		r.Observe(v.At.AsTime(), v.Milliseconds)
 	}
-	return append(out, values[len(values)-1])
+	out := make([]*pb.TrafficLatencySample, 0, 256)
+	for _, v := range r.Samples() {
+		out = append(out, &pb.TrafficLatencySample{At: timestamppb.New(v.At), Milliseconds: v.Milliseconds, Known: true})
+	}
+	return out
 }

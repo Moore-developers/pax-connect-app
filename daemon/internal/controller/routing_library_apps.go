@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"pax-connect/daemon/internal/config"
-	"pax-connect/daemon/internal/historystore"
 )
 
 // Rule candidates are installed bundles, not the broader traffic source list.
@@ -84,17 +82,14 @@ func (c *Controller) installedRoutingApplications(ctx context.Context, roots []s
 	}
 	if job, e := c.logJob(); e == nil && ctx.Err() == nil {
 		if source, ok := job.logs.(interface {
-			EachRecentConnection(context.Context, int64, int64, int, func(historystore.LogConnection) error) error
+			RecentSummaries(context.Context, int64, int64, int) ([]config.LogConnectionSummary, error)
 		}); ok {
-			_ = source.EachRecentConnection(ctx, time.Now().Add(-24*time.Hour).UnixMilli(), time.Now().UnixMilli(), 10000, func(row historystore.LogConnection) error {
-				var summary config.LogConnectionSummary
-				if e := json.Unmarshal(row.Body, &summary); e != nil {
-					return e
-				}
+			summaries, _ := source.RecentSummaries(ctx, time.Now().Add(-24*time.Hour).UnixMilli(), time.Now().UnixMilli(), 10000)
+			for _, summary := range summaries {
 				f := summary.Fact
 				source := config.ClassifyTrafficSource(f)
 				if source.Kind != "app" {
-					return nil
+					continue
 				}
 				if a, ok := values[f.ApplicationID]; ok {
 					if f.Domain != "" && len(a.Domains) < 32 && domainBudget > 0 && !slices.Contains(a.Domains, f.Domain) {
@@ -105,8 +100,7 @@ func (c *Controller) installedRoutingApplications(ctx context.Context, roots []s
 						}
 					}
 				}
-				return nil
-			})
+			}
 		}
 	}
 

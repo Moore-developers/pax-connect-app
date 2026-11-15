@@ -203,16 +203,7 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
       item.representedObject = scene
       item.target = self
     }
-    for scene in WorkbenchShellViewController.settingsPreviewScenes {
-      let item = previewMenu.addItem(
-        withTitle: "设置：" + scene, action: #selector(previewSettings(_:)), keyEquivalent: "")
-      item.representedObject = scene
-      item.target = self
-    }
     NSApp.mainMenu = main
-  }
-  @objc private func previewSettings(_ sender: NSMenuItem) {
-    if let scene = sender.representedObject as? String { shell.previewSettings(scene) }
   }
   @objc private func previewLogs(_ sender: NSMenuItem) {
     if let scene = sender.representedObject as? String { shell.previewLogs(scene) }

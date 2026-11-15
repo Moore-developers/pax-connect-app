@@ -85,10 +85,11 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 	if q.Direction != "" && q.Direction != "all" && q.Direction != "proxy" && q.Direction != "direct" {
 		return nil, "", errors.New("invalid_filter")
 	}
-	at := c.now()
+	now := c.now()
+	at := now
 	if q.Until != nil {
 		at = q.Until.AsTime()
-		if at.Before(time.Now().Add(-10*time.Minute)) || at.After(time.Now().Add(time.Second)) {
+		if at.Before(now.Add(-10*time.Minute)) || at.After(now.Add(time.Second)) {
 			return nil, "", errors.New("invalid_filter")
 		}
 	}
@@ -123,7 +124,8 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 		}
 		if q.Dimension != "network" {
 			if e = c.freezeTrafficConnections(ctx, r, ""); e != nil {
-				r.recentResponsesState, r.recentResponsesError = "failed", "history_store_failed"
+				r.recentResponsesState, r.recentResponsesError = "failed", trafficLogEvidenceError(e)
+				r.meta.Partial, r.meta.Error = true, r.recentResponsesError
 			}
 		}
 		if from.Before(r.aggregateCoverage) || !fullAggregateCoverage(r.aggregateCoverageRows, from, at) {
@@ -357,7 +359,11 @@ func aggregateDetail(ctx context.Context, r *historyRead, token string, q *pb.Tr
 	}
 	for _, row := range rows {
 		if row.Id == q.RowId {
-			out := &pb.TrafficDetail{Summary: r.trafficOutputRow(row), Basis: row.Bases, ReadToken: token, AsOf: timestamppb.New(r.at), From: timestamppb.New(r.from), History: aggregateHistoryState(r), AggregateOnly: true, Window: r.window, Trend: r.aggregateTrend[row.Id], Successful: row.ValidLatencyCount, Failed: row.FailedCount, Unmeasurable: row.MissingLatencyCount}
+			summary, err := r.columnTrafficOutputRow(ctx, row)
+			if err != nil {
+				return nil, err
+			}
+			out := &pb.TrafficDetail{Summary: summary, Basis: row.Bases, ReadToken: token, AsOf: timestamppb.New(r.at), From: timestamppb.New(r.from), History: aggregateHistoryState(r), AggregateOnly: true, Window: r.window, Trend: r.aggregateTrend[row.Id], Successful: row.ValidLatencyCount, Failed: row.FailedCount, Unmeasurable: row.MissingLatencyCount}
 			r.setRecentDetail(out)
 			return out, aggregateConnectionPage(ctx, r, q, out)
 		}

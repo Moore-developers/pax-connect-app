@@ -3,6 +3,16 @@ import AppKit
 extension PaxTheme {
   /// Geometry of the approved workbench. Surfaces and colors remain Pax tokens.
   public enum NetworkDiagnostics {
+    /// Palette F: only the diagnostic summary metrics use these colors.
+    public static let summaryAccent = Color.adaptive(
+      "PaxDiagnosticSummaryAccent", light: 0x208368, dark: 0x71d1b4)
+    public static let summaryText = Color.adaptive(
+      "PaxDiagnosticSummaryText", light: 0x1a211e, dark: 0xe0e6e3)
+    public static let summaryWarning = Color.adaptive(
+      "PaxDiagnosticSummaryWarning", light: 0xab6400, dark: 0xffca16)
+    public static let summaryClear = Color.adaptive(
+      "PaxDiagnosticSummaryClear", light: 0x027864, dark: 0x58d5ba)
+
     public static let pairColumns: [CGFloat] = [0.34, 0.66]
     public static let readingColumns: [CGFloat] = [0.24, 0.46, 0.30]
     public static let sourceColumns: [CGFloat] = [0.26, 0.13, 0.25, 0.14, 0.22]

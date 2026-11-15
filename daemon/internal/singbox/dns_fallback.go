@@ -8,6 +8,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	boxdns "github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/dns/transport"
+	"github.com/sagernet/sing-box/experimental/paxobs"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"net"
@@ -55,16 +56,17 @@ func newEncryptedPool(ctx context.Context, logger log.ContextLogger, tag string,
 	if outbound == "" {
 		outbound = "direct"
 	}
-	return &encryptedPool{pool: pool, outbound: outbound, TransportAdapter: boxdns.NewTransportAdapterWithRemoteOptions("https", tag, o.RemoteDNSServerOptions), primary: primary, backup: secondary}, nil
+	return &encryptedPool{pool: pool, outbound: outbound, primaryServer: o.Server, backupServer: backup.Server, TransportAdapter: boxdns.NewTransportAdapterWithRemoteOptions("https", tag, o.RemoteDNSServerOptions), primary: primary, backup: secondary}, nil
 }
 
 type encryptedPool struct {
 	boxdns.TransportAdapter
-	primary, backup adapter.DNSTransport
-	mu              sync.Mutex
-	primaryRetry    time.Time
-	pool, outbound  string
-	environment     atomic.Uint64
+	primary, backup             adapter.DNSTransport
+	mu                          sync.Mutex
+	primaryRetry                time.Time
+	pool, outbound              string
+	primaryServer, backupServer string
+	environment                 atomic.Uint64
 }
 
 func (p *encryptedPool) Start(stage adapter.StartStage, s *adapter.Scope) error {
@@ -94,11 +96,11 @@ func (p *encryptedPool) Exchange(ctx context.Context, q *dns.Msg) (*dns.Msg, err
 	retry := p.primaryRetry
 	p.mu.Unlock()
 	if time.Now().Before(retry) {
-		answer, err := p.backup.Exchange(ctx, q)
+		answer, err := p.exchange(ctx, q, true)
 		return answer, p.failure("cooldown", err)
 	}
 	first, done := context.WithTimeout(ctx, dnsPrimaryBudget)
-	answer, e := p.primary.Exchange(first, q)
+	answer, e := p.exchange(first, q, false)
 	done()
 	if e == nil {
 		return answer, nil
@@ -109,12 +111,26 @@ func (p *encryptedPool) Exchange(ctx context.Context, q *dns.Msg) (*dns.Msg, err
 	p.mu.Lock()
 	p.primaryRetry = time.Now().Add(30 * time.Second)
 	p.mu.Unlock()
-	answer, other := p.backup.Exchange(ctx, q)
+	answer, other := p.exchange(ctx, q, true)
 	if other != nil {
 		return nil, p.failure(dnsFailureStage(e), other)
 	}
 	return answer, nil
 }
+
+// A response proves which transport actually served this query, including backup/cooldown.
+func (p *encryptedPool) exchange(ctx context.Context, q *dns.Msg, backup bool) (*dns.Msg, error) {
+	peer, server := p.primary, p.primaryServer
+	if backup {
+		peer, server = p.backup, p.backupServer
+	}
+	answer, err := peer.Exchange(ctx, q)
+	if err == nil && answer != nil {
+		paxobs.Emit(ctx, paxobs.Event{Stage: "dns_upstream", Network: "doh", IP: server, Outbound: p.outbound, Rule: p.pool})
+	}
+	return answer, err
+}
+
 func (p *encryptedPool) ExchangeAsync(ctx context.Context, q *dns.Msg, cb func(*dns.Msg, error)) {
 	go func() { cb(p.Exchange(ctx, q)) }()
 }

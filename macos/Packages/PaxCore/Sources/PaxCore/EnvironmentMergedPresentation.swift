@@ -160,6 +160,7 @@ extension EnvironmentDiagnosticPresentation {
           title: rtc.title, symbol: rtc.symbol, value: "\(browserName)：" + rtcValue,
           detail: rtc.detail, tone: rtc.tone))
     }
-    return result
+    return result + [ipv6Row(report, waiting: waiting)]
+      + locationRows(report, local: local, waiting: waiting)
   }
 }

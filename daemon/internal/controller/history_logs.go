@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"path/filepath"
@@ -18,9 +17,9 @@ import (
 const (
 	// logsPollInterval is only a safety net: ingest pokes the job as soon as it stores new rows.
 	logsPollInterval     = cadence.HistoryLogsFallback
-	logsBatchRecords     = 2000
+	logsBatchRecords     = 128
 	logsInboxCapacity    = 64
-	logsCapacityBytes    = 512 << 20
+	logsCapacityBytes    = 2 << 30
 	logsMetaTimeout      = 2 * time.Second
 	logsStopFlushTimeout = 3 * time.Second
 	logsRetentionHours   = 24
@@ -49,6 +48,7 @@ type logsStore interface {
 	Prune(ctx context.Context, before time.Time, limits historystore.Limits) (historystore.Pruned, error)
 	EvictOldest(ctx context.Context, capBytes int64, limits historystore.Limits) (bool, error)
 	LiveBytes(ctx context.Context) (int64, error)
+	CapacityBytes(ctx context.Context) (int64, error)
 	IncrementalVacuum(ctx context.Context, pages int) error
 	Checkpoint(ctx context.Context) (bool, error)
 	Close() error
@@ -71,7 +71,7 @@ type logsState struct {
 // retention while idle.
 // Other goroutines only enqueue events and set overflow; they never touch the database.
 type historyLogs struct {
-	model          *historyLogModel
+	columnUpgrade  *columnUpgradeJob
 	attemptStarted time.Time
 	logs           logsStore
 	journal        logsJournal
@@ -118,6 +118,11 @@ func newHistoryLogs(ctx context.Context, logs logsStore, journal logsJournal, co
 	if err != nil {
 		return nil, err
 	}
+	if projector, ok := logs.(interface {
+		SetColumnProjector(func(context.Context, *historystore.ColumnsTx, historystore.ColumnImportBatch) error)
+	}); ok {
+		projector.SetColumnProjector(projectColumnBatch)
+	}
 	if ok {
 		l.state.cursor = cursor
 		if !strings.HasPrefix(cursor.Session, journalGapSession) {
@@ -129,9 +134,6 @@ func newHistoryLogs(ctx context.Context, logs logsStore, journal logsJournal, co
 	}
 	l.state.revision = l.committed.LogsRevision
 	l.clearedAt = l.committed.ClearedAt
-	if err = l.installReadModel(ctx); err != nil {
-		return nil, err
-	}
 	return l, nil
 }
 
@@ -282,6 +284,9 @@ func (l *historyLogs) takeInbox() ([]config.HistoryEvent, bool) {
 // the poll interval when idle, and a backoff while the database is degraded.
 func (l *historyLogs) step(ctx context.Context) time.Duration {
 	delay, _ := l.stepOnce(ctx)
+	if l.advanceColumnUpgrade(ctx) {
+		delay = 0
+	}
 	l.runCommands(ctx)
 	l.publishState(ctx)
 	return delay
@@ -322,6 +327,16 @@ func (l *historyLogs) pass(ctx context.Context) time.Duration {
 	})
 	if err != nil {
 		l.requeue(events, overflow)
+		if errors.Is(err, historystore.ErrColumnProjection) {
+			if columns, ok := l.logs.(interface {
+				DisableColumnProjection(context.Context, string) error
+			}); ok {
+				if stopErr := columns.DisableColumnProjection(ctx, "history_store_failed"); stopErr == nil {
+					slog.Warn("history projection stopped", "library", "logs", "code", "history_store_failed")
+					return 0
+				}
+			}
+		}
 		return l.fail(ctx, "history_logs_write_failed")
 	}
 	l.state = state
@@ -397,6 +412,11 @@ func (c *Controller) ConfigureHistoryLogs(ctx context.Context, directory string,
 	if err != nil {
 		return err
 	}
+	logs.ConfigureColumnProjector(projectColumnBatch)
+	if err = logs.Columns().EnsureProjections(ctx); err != nil {
+		_ = logs.Close()
+		return err
+	}
 	if err = ensureLogGenerations(ctx, logs); err != nil {
 		_ = logs.Close()
 		return err
@@ -433,17 +453,10 @@ func (c *Controller) ConfigureHistoryLogs(ctx context.Context, directory string,
 		l.route = c.mapHistoryRoute
 		l.reads = c.readTokens
 		l.onMeta = c.acceptLogMeta
+		l.columnUpgrade = &columnUpgradeJob{store: logs, owner: owner}
 	}
 	if err != nil {
 		c.consumers.Unregister(HistoryConsumerLogs)
-		_ = journal.Close()
-		_ = logs.Close()
-		return err
-	}
-	if l.model == nil {
-		err = l.installReadModel(ctx)
-	}
-	if err != nil {
 		_ = journal.Close()
 		_ = logs.Close()
 		return err
@@ -520,26 +533,19 @@ func resetLogSummaryBytes(ctx context.Context, logs *historystore.Logs) error {
 	for {
 		written := 0
 		err := logs.Update(ctx, func(tx *historystore.LogsTx) error {
-			rows, err := tx.ConnectionsPage(ctx, after, logsResetBatch)
+			rows, err := tx.SummariesPage(ctx, after, logsResetBatch)
 			if err != nil {
 				return err
 			}
-			for _, row := range rows {
-				var summary config.LogConnectionSummary
-				if err = json.Unmarshal(row.Body, &summary); err != nil {
-					return err
-				}
+			for _, summary := range rows {
 				summary.Metrics.BytesState = "unknown"
 				summary.Metrics.Reason = "legacy_history"
 				summary.Metrics.Upload, summary.Metrics.Download = 0, 0
 				summary.Metrics.BytesFrom = time.Time{}
-				if row.Body, err = json.Marshal(summary); err != nil {
+				if err = tx.PutSummary(ctx, summary); err != nil {
 					return err
 				}
-				if err = tx.PutConnection(ctx, row); err != nil {
-					return err
-				}
-				after = row.FlowKey
+				after = summary.Fact.Key
 				written++
 			}
 			return nil

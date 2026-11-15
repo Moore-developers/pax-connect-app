@@ -6,7 +6,38 @@ import (
 	"pax-connect/daemon/internal/historystore"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+	pb "pax-connect/daemon/gen/proto/paxv1"
 )
+
+func TestTrafficFrozenClockPreservesRequestedCutoff(t *testing.T) {
+	h := newTrafficHarness(t)
+	epoch := time.Date(2021, 3, 14, 10, 0, 0, 0, time.UTC)
+	h.clock = epoch.Add(12 * time.Second)
+	f := trafficFlow("s/frozen-cutoff", func(*config.FlowFact) {})
+	first, last := h.obs(11*time.Second, "started", f, 10, 90), h.obs(13*time.Second, "sample", f, 100, 900)
+	first.At, last.At = epoch.Add(11*time.Second), epoch.Add(13*time.Second)
+	h.append(h.clock, true, first, last)
+	h.settle()
+	c := New("test", "test")
+	c.traffic = h.tr
+	c.history = &historyOwner{clock: func() time.Time { return h.clock }}
+	query := &pb.TrafficQuery{Dimension: "network", Window: "today", Until: timestamppb.New(h.clock)}
+	read, _, err := c.aggregateTrafficRead(context.Background(), query)
+	if err != nil {
+		t.Fatalf("frozen current cutoff was rejected: %v", err)
+	}
+	if read.upload != 10 || read.download != 90 {
+		t.Fatalf("frozen cutoff included a later observation: %d/%d", read.upload, read.download)
+	}
+	for _, offset := range []time.Duration{-11 * time.Minute, 2 * time.Second} {
+		query.Until = timestamppb.New(h.clock.Add(offset))
+		if _, _, err = c.aggregateTrafficRead(context.Background(), query); err == nil || err.Error() != "invalid_filter" {
+			t.Fatalf("cutoff %s: expected invalid_filter, got %v", offset, err)
+		}
+	}
+}
 
 func TestTrafficCommittedCutoffExcludesLaterObservationInSameFiveSecondBucket(t *testing.T) {
 	h := newTrafficHarness(t)
@@ -150,7 +181,15 @@ func TestTodayConnectionsKeepRetainedLongActiveConnectionWithOneHourLogs(t *test
 		t.Fatal(err)
 	}
 	r := &historyRead{from: midnight, at: time.Now()}
-	if err := c.freezeTrafficConnections(ctx, r, ""); err != nil || len(r.aggregateFlows) != 1 {
-		t.Fatalf("retained active connection hidden: %d %v dir=%s", len(r.aggregateFlows), err, dir)
+	if err := c.freezeTrafficConnections(ctx, r, ""); err != nil {
+		t.Fatal(err)
+	}
+	if r.columnSnapshot == nil {
+		t.Fatal("retained snapshot missing")
+	}
+	page, err := r.columnSnapshot.TrafficConnections(ctx, historystore.ColumnTrafficFilter{Until: r.at, From: r.from}, 0, 1)
+	_ = r.columnSnapshot.Close()
+	if err != nil || page.Total != 1 || len(r.aggregateFlows) != 0 {
+		t.Fatalf("retained active connection hidden: %d %v dir=%s", page.Total, err, dir)
 	}
 }

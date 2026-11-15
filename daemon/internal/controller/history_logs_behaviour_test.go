@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -43,32 +42,20 @@ func TestLogsPaxInboxOverflowIsRecordedAndEventsCarryPaxSource(t *testing.T) {
 		t.Fatalf("step after overflow: %v", d)
 	}
 	var count, wrongSource int
-	if err := h.logs.Reader().QueryRow("SELECT count(*),count(*) FILTER (WHERE source<>'Pax') FROM events").Scan(&count, &wrongSource); err != nil {
+	if err := h.logs.Reader().QueryRow("SELECT count(*),count(*) FILTER (WHERE source<>'Pax') FROM col_events").Scan(&count, &wrongSource); err != nil {
 		t.Fatal(err)
 	}
 	if count != logsInboxCapacity || wrongSource != 0 {
 		t.Fatalf("events %d, non-Pax %d", count, wrongSource)
 	}
-	rows, err := h.logs.Reader().Query("SELECT seq,body FROM events ORDER BY seq")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var seq int64
-		var body []byte
-		if err = rows.Scan(&seq, &body); err != nil {
-			t.Fatal(err)
+	var expectedSequence uint64
+	if err := h.logs.Columns().EachEvent(ctx, func(e config.HistoryEvent) error {
+		expectedSequence++
+		if e.Sequence != expectedSequence || e.Source != "Pax" {
+			t.Fatalf("event sequence/source: %d %q", e.Sequence, e.Source)
 		}
-		var e config.HistoryEvent
-		if err = json.Unmarshal(body, &e); err != nil {
-			t.Fatal(err)
-		}
-		if e.Sequence != uint64(seq) || e.Source != "Pax" {
-			t.Fatalf("event body sequence/source: %d %q", e.Sequence, e.Source)
-		}
-	}
-	if err = rows.Err(); err != nil {
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if v, ok, err := h.logs.Meta(ctx, historystore.MetaPartial); err != nil || !ok || v != "1" {
@@ -91,7 +78,7 @@ func TestLogsRetentionAndCapacityMaintenance(t *testing.T) {
 	old.At = logsEpoch.Add(-2 * time.Hour)
 	h.appendRows([]config.Observation{old})
 	h.settle()
-	for _, table := range []string{"connections", "events", "diagnostics"} {
+	for _, table := range []string{"col_connections", "col_events", "diagnostics"} {
 		var n int
 		if err := h.logs.Reader().QueryRow("SELECT count(*) FROM " + table).Scan(&n); err != nil {
 			t.Fatal(err)
@@ -105,7 +92,7 @@ func TestLogsRetentionAndCapacityMaintenance(t *testing.T) {
 	h.appendRows([]config.Observation{logObservation(2, "started", testLogFlow("s/1/new"), 0, 0, "", "")})
 	h.settle()
 	var connections int
-	if err := h.logs.Reader().QueryRow("SELECT count(*) FROM connections").Scan(&connections); err != nil {
+	if err := h.logs.Reader().QueryRow("SELECT count(*) FROM col_connections").Scan(&connections); err != nil {
 		t.Fatal(err)
 	}
 	if connections != 0 {
@@ -233,7 +220,7 @@ func TestLogsRestartResumesFromCommittedCursor(t *testing.T) {
 		t.Fatalf("restored cursor %+v", l.state.cursor)
 	}
 	var total, distinct int
-	if err = logs.Reader().QueryRow("SELECT count(*),count(DISTINCT event_id) FROM events").Scan(&total, &distinct); err != nil {
+	if err = logs.Reader().QueryRow("SELECT count(*),count(DISTINCT event_id) FROM col_events").Scan(&total, &distinct); err != nil {
 		t.Fatal(err)
 	}
 	if total != 5 || distinct != 5 {
@@ -268,13 +255,9 @@ func TestEnqueueHistoryEventReachesLogJobWithSystemEvidence(t *testing.T) {
 	if d := h.l.step(ctx); d != logsPollInterval {
 		t.Fatalf("step after enqueue: %v", d)
 	}
-	var body []byte
-	if err := h.logs.Reader().QueryRow("SELECT body FROM events WHERE event_id=?", event.ID).Scan(&body); err != nil {
-		t.Fatal(err)
-	}
-	var stored config.HistoryEvent
-	if err := json.Unmarshal(body, &stored); err != nil {
-		t.Fatal(err)
+	stored, found, err := h.logs.Columns().Event(ctx, event.ID)
+	if err != nil || !found {
+		t.Fatal(found, err)
 	}
 	if stored.Source != "Pax" || stored.System == nil || stored.System.Category.Key != "trust" || stored.System.Category.Name != "证书与信任" {
 		t.Fatalf("Pax event evidence lost: %+v", stored)
@@ -312,6 +295,12 @@ func TestConfigureHistoryLogsOpensAndStops(t *testing.T) {
 
 func countRows(t *testing.T, logs *historystore.Logs, table string) int {
 	t.Helper()
+	if table == "events" {
+		table = "col_events"
+	}
+	if table == "connections" {
+		table = "col_connections"
+	}
 	var n int
 	if err := logs.Reader().QueryRow("SELECT count(*) FROM " + table).Scan(&n); err != nil {
 		t.Fatal(err)

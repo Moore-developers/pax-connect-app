@@ -24,7 +24,12 @@ extension EnvironmentDiagnosticPresentation {
     default: return NetworkDiagnosticPresentation.problem(code)
     }
   }
-  public static func checkOutcome(_ check: EnvironmentDiagnosticReport.Check) -> String {
+  public static func checkOutcome(
+    _ check: EnvironmentDiagnosticReport.Check, ipv6Off: Bool = false
+  ) -> String {
+    if ipv6Off && check.kind == "ipv6" && check.state != "observed" {
+      return "不适用：本机未开启 IPv6 · \(check.durationMS) ms"
+    }
     let result: String
     switch check.state {
     case "observed": result = check.value.isEmpty ? "取得响应" : check.value
@@ -39,8 +44,10 @@ extension EnvironmentDiagnosticPresentation {
       ? " · " + checkProblem(check.errorCode) : ""
     return result + error + " · \(check.durationMS) ms"
   }
-  @MainActor public static func checkText(_ check: EnvironmentDiagnosticReport.Check) -> String {
-    checkOutcome(check) + " · " + MeasurementTimestamp.text(check.at)
+  @MainActor public static func checkText(
+    _ check: EnvironmentDiagnosticReport.Check, ipv6Off: Bool = false
+  ) -> String {
+    checkOutcome(check, ipv6Off: ipv6Off) + " · " + MeasurementTimestamp.text(check.at)
   }
   public static func familyValue(_ sample: EnvironmentDiagnosticReport.Sample?, v6: Bool) -> String
   {

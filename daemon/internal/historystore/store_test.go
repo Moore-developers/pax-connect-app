@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/storage"
 )
 
@@ -30,7 +31,7 @@ func TestStoresOpenWithPrivateModesAndPragmas(t *testing.T) {
 	traffic := mustTraffic(t, dir)
 	journal := mustJournal(t, dir)
 	if err := logs.Update(ctx, func(tx *LogsTx) error {
-		return tx.PutConnection(ctx, LogConnection{FlowKey: "o", LastActivityMs: 1, Body: []byte("{}")})
+		return tx.PutSummary(ctx, config.LogConnectionSummary{Fact: config.FlowFact{Key: "o"}, LastLogAt: time.UnixMilli(1)})
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,7 @@ func TestReaderIsNotBlockedByLongWriteTransaction(t *testing.T) {
 	inTx, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
 		done <- logs.Update(ctx, func(tx *LogsTx) error {
-			if err := tx.PutConnection(ctx, LogConnection{FlowKey: "slow", LastActivityMs: 1, Body: []byte("{}")}); err != nil {
+			if err := tx.PutSummary(ctx, config.LogConnectionSummary{Fact: config.FlowFact{Key: "slow"}, LastLogAt: time.UnixMilli(1)}); err != nil {
 				return err
 			}
 			close(inTx)
@@ -93,7 +94,7 @@ func TestReaderIsNotBlockedByLongWriteTransaction(t *testing.T) {
 	<-inTx
 	readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	if n := count(t, logs.Reader(), "SELECT count(*) FROM connections"); n != 0 {
+	if n := count(t, logs.Reader(), "SELECT count(*) FROM col_connections"); n != 0 {
 		t.Fatalf("reader saw uncommitted row: %d", n)
 	}
 	if _, _, err := logs.Meta(readCtx, "schema_version"); err != nil {
@@ -103,7 +104,7 @@ func TestReaderIsNotBlockedByLongWriteTransaction(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	if n := count(t, logs.Reader(), "SELECT count(*) FROM connections"); n != 1 {
+	if n := count(t, logs.Reader(), "SELECT count(*) FROM col_connections"); n != 1 {
 		t.Fatalf("committed row invisible: %d", n)
 	}
 }
@@ -137,7 +138,7 @@ func TestCorruptDatabaseIsQuarantinedAndRecreated(t *testing.T) {
 		}
 	}
 	if err = logs.Update(ctx, func(tx *LogsTx) error {
-		return tx.PutConnection(ctx, LogConnection{FlowKey: "o", LastActivityMs: 1, Body: []byte("{}")})
+		return tx.PutSummary(ctx, config.LogConnectionSummary{Fact: config.FlowFact{Key: "o"}, LastLogAt: time.UnixMilli(1)})
 	}); err != nil {
 		t.Fatal("fresh database unusable:", err)
 	}

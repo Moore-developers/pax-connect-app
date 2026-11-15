@@ -108,8 +108,8 @@ import Testing
       let row = EnvironmentDiagnosticPresentation.rows(
         report.browser, browser: true, waiting: false
       ).last
-      #expect(row?.value.contains("1 个公网地址") == true)
-      #expect(row?.tone == (known ? .matching : .information))
+      #expect(row?.value.contains(known ? "本次未发现公网地址泄露" : "缺少同地址族") == true)
+      #expect(row?.tone == (known ? .matching : .pending))
     }
   }
   @Test("WebRTC 不跨地址族判断出口不同")
@@ -125,8 +125,8 @@ import Testing
       })
     let row = EnvironmentDiagnosticPresentation.rows(report.browser, browser: true, waiting: false)
       .last
-    #expect(row?.tone == .information)
-    #expect(row?.value.contains("未取得同地址族") == true)
+    #expect(row?.tone == .pending)
+    #expect(row?.value.contains("缺少同地址族") == true)
   }
   @Test("环境差异只对照双方已取得的项目，导出冻结并脱敏")
   func differencesAndExport() async {
@@ -195,5 +195,41 @@ import Testing
     try? await Task.sleep(for: .milliseconds(100))
     #expect(!store.busy)
     #expect(store.report == nil)
+  }
+
+  @Test("扫描进行中取消：不标记完成")
+  func cancelDuringLocationScan() async {
+    final class Latch: @unchecked Sendable {
+      let started = DispatchSemaphore(value: 0)
+      let release = DispatchSemaphore(value: 0)
+    }
+    let latch = Latch()
+    let report = EnvironmentDiagnosticReport(
+      .with {
+        $0.sessionID = "scan-fixture"
+        $0.mac.complete = true
+        $0.browser.complete = true
+      })
+    let store = EnvironmentDiagnosticStore(
+      request: { _, _ in report }, openBrowser: { _ in false },
+      scanLocation: {
+        latch.started.signal()
+        latch.release.wait()
+        return LocationExposure(
+          systemEnabled: true, authorizationsReadable: true, browsers: [], apps: [])
+      })
+    store.start()
+    // The run reaches the post-sampling scan wait after the 1s poll.
+    for _ in 0..<400 where store.runState == .running && store.progressReport == nil {
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    try? await Task.sleep(for: .milliseconds(1300))
+    store.cancel()
+    let stoppedMessage = store.message
+    latch.release.signal()
+    try? await Task.sleep(for: .milliseconds(200))
+    #expect(store.runState == .stopped)
+    #expect(store.message == stoppedMessage)
+    #expect(!store.busy)
   }
 }

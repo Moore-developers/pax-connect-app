@@ -116,14 +116,14 @@
       const response = await timed(base + 'dns/start', { method: 'POST' });
       c.httpStatus = response.status;
       if (!response.ok) { try { c.errorCode = (await response.json()).errorCode || 'probe_http_' + response.status; } catch { c.errorCode = 'probe_http_' + response.status; } return; }
-      const { id } = await response.json();
-      if (!/^[a-zA-Z0-9]{8,64}$/.test(id)) { c.errorCode = 'dns_session_invalid'; return; }
+      const { id, names } = await response.json();
+      if (!/^[a-zA-Z0-9]{8,64}$/.test(id) || !Array.isArray(names) || names.length !== 12 || !names.every(name => typeof name === 'string' && /^[a-zA-Z0-9]{8,64}\.[a-zA-Z0-9]{8,64}\.bash\.ws$/.test(name) && name.endsWith('.' + id + '.bash.ws'))) { c.errorCode = 'dns_session_invalid'; return; }
       c.state = 'observed';
       const q = check('dns_query', 'bash.ws'), begin = performance.now();
       let resolved = 0;
-      await Promise.all(Array.from({ length: 12 }, async () => {
+      await Promise.all(names.map(async name => {
         try {
-          await timed('https://' + crypto.randomUUID().replaceAll('-', '') + '.' + id + '.bash.ws/css/z.css', { mode: 'no-cors' }, 3000);
+          await timed('https://' + name + '/css/z.css', { mode: 'no-cors' }, 3000);
           resolved++;
         } catch { /* Opaque triggers are counted separately from authority results. */ }
       }));
@@ -138,35 +138,50 @@
     if (!globalThis.RTCPeerConnection) {
       c.state = 'unsupported'; c.errorCode = 'rtc_api_unavailable'; result.checks.push(c); return [];
     }
-    let pc, addresses = new Set(), candidates = [];
+    let pc, addresses = new Set(), candidates = [], seenCandidates = new Set(), errors = [], serverCodes = [], srflx = false, grace;
+    const isPublic = a => {
+      if (!a || a.endsWith('.local')) return false;
+      if (a.includes(':')) return !/^(::1?$|f[cd]|fe[89ab])/i.test(a);
+      const p = a.split('.').map(Number);
+      return p.length === 4 && !(p[0] === 10 || p[0] === 127 || p[0] === 0 || (p[0] === 169 && p[1] === 254) || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) || (p[0] === 100 && p[1] >= 64 && p[1] <= 127));
+    };
     try {
       pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:' + target }] });
       pc.createDataChannel('pax-environment');
       await new Promise(resolve => {
-        const timer = setTimeout(() => {
-          c.state = 'timeout'; if (!c.errorCode) c.errorCode = 'rtc_gathering_timeout'; resolve();
-        }, 6500);
-        const done = () => { clearTimeout(timer); if (c.state !== 'timeout') c.state = addresses.size ? 'observed' : 'empty'; resolve(); };
+        const timer = setTimeout(() => { c.state = 'timeout'; resolve(); }, 6500);
+        const done = () => { clearTimeout(timer); clearTimeout(grace); if (c.state !== 'timeout') c.state = addresses.size ? 'observed' : 'empty'; resolve(); };
         pc.onicecandidate = e => {
           if (!e.candidate) { done(); return; }
           const a = e.candidate.address || e.candidate.candidate.split(' ')[4];
-          if (a && addresses.size < 16) {
+          if (!a) return;
+          const key = [e.candidate.type, e.candidate.protocol, a, e.candidate.port].join(' ');
+          if (!seenCandidates.has(key) && candidates.length < 16) {
+            seenCandidates.add(key);
             addresses.add(a);
             candidates.push([e.candidate.type, e.candidate.protocol, a, e.candidate.port].filter(Boolean).join(' '));
           }
+          if (e.candidate.type === 'srflx' && isPublic(a) && !srflx) { srflx = true; grace = setTimeout(done, 1500); }
         };
         pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') done(); };
         pc.onicecandidateerror = e => {
-          if (e.errorCode >= 300 && e.errorCode <= 799) c.errorCode = 'rtc_server_' + e.errorCode;
+          if (!(e.errorCode >= 300 && e.errorCode <= 799)) return;
+          const code = 'rtc_server_' + e.errorCode;
+          const where = e.url || (e.address ? (e.address.includes(':') ? 'ipv6' : 'ipv4') : 'unknown');
+          const entry = code + '@' + where;
+          if (!errors.includes(entry) && errors.length < 8) errors.push(entry);
+          if (!serverCodes.length) serverCodes.push(code);
         };
         (async () => {
           try { await pc.setLocalDescription(await pc.createOffer()); }
           catch { clearTimeout(timer); c.state = 'failed'; c.errorCode = 'rtc_operation_failed'; resolve(); }
         })();
       });
+      if (!c.errorCode && !srflx) c.errorCode = serverCodes[0] || (c.state === 'timeout' ? 'rtc_gathering_timeout' : '');
     } catch { c.state = 'failed'; c.errorCode = 'rtc_operation_failed'; }
     finally {
-      c.value = candidates.join('; ').slice(0, 4096);
+      const errorText = errors.length ? '; errors: ' + errors.join(', ') : '';
+      c.value = (candidates.join('; ').slice(0, 4096 - errorText.length) + errorText).slice(0, 4096);
       c.durationMS = Math.min(45000, Math.round(performance.now() - start));
       result.checks.push(c); pc?.close();
     }
@@ -192,7 +207,8 @@
     stage('submitting', '正在回传检测结果…', '回传成功后 5 秒尝试自动关闭。');
     const response = await timed(base + 'result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result) }, 25000);
     if (!response.ok) throw Error();
-    const partial = result.checks.some(c => ['failed', 'timeout', 'unsupported'].includes(c.state));
+    const noIPv6 = response.headers.get('X-Pax-IPv6-Route') === 'absent';
+    const partial = result.checks.some(c => ['failed', 'timeout', 'unsupported'].includes(c.state) && !(noIPv6 && c.kind === 'ipv6'));
     stage(partial ? 'partial' : 'complete', partial ? '检测结束，部分项目未完成' : '浏览器检测完成', '结果已回传 Pax Connect，请返回 App 查看。');
     submitted = true;
     countdown.hidden = false;

@@ -1,28 +1,24 @@
 package controller
 
 // Opened traffic details own a frozen read, independent of list/database retention.
-// The cache's existing TTL, token/projection limits and shared-model budget still apply.
+// The cache's existing TTL, token/projection limits and snapshot budget still apply.
 const trafficDetailReadKind = "traffic-detail"
 
-func (r *historyRead) logModelRevoked() bool {
-	if r.kind == trafficDetailReadKind || r.logVersion == nil {
-		return false
-	}
-	v := r.logVersion
-	if !v.valid.Load() {
+func (r *historyRead) snapshotRevoked() bool {
+	if r.columnSnapshot != nil && !r.columnSnapshot.Valid() {
 		return true
 	}
-	if v.removedBefore != nil {
-		before := v.removedBefore.Load()
-		if before > v.meta.LogRemovalBeforeMs {
-			return r.kind != "logs" || r.from.UnixMilli() < before
-		}
+	if r.kind == "traffic" && r.columnSnapshot != nil && r.columnSnapshot.Removed() {
+		return true
+	}
+	if r.kind == "logs" && r.columnSnapshot != nil && !r.columnSnapshot.ListValid(r.from.UnixMilli()) {
+		return true
 	}
 	return false
 }
 
 func (cache *readTokenCache) freezeTrafficDetail(r *historyRead) (*historyRead, string, error) {
-	frozen := *r // All fact collections and model versions are immutable after publication.
+	frozen := *r // All fact collections and snapshots are immutable after publication.
 	frozen.kind = trafficDetailReadKind
 	token, err := cache.save(&frozen)
 	return &frozen, token, err

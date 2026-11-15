@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"errors"
 	"time"
 )
@@ -28,4 +27,3 @@ type historyMetadata struct {
 func historyTimeKey(at time.Time, id string) []byte {
 	return []byte(at.UTC().Format("20060102150405.000000000") + "|" + id)
 }
-func decodeJSON(raw []byte, v any) error { return json.Unmarshal(raw, v) }

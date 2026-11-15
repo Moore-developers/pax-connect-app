@@ -72,22 +72,18 @@ func applyLogSettingsTo(settings *pb.Settings, meta historystore.LogsMeta) {
 // recentLogs returns the newest stored events in chronological order for a Watch replace.
 // A read failure reports an empty replace, exactly like the legacy best-effort view.
 func (c *Controller) recentLogs(ctx context.Context) []*pb.ProductLog {
-	source, err := c.logStore()
+	source, err := c.logStore(ctx)
 	if err != nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	rows, err := source.RecentLogEvents(ctx, 20)
+	rows, err := source.RecentEvents(ctx, 20)
 	if err != nil {
 		return nil
 	}
 	out := make([]*pb.ProductLog, 0, len(rows))
-	for _, row := range rows {
-		event, err := logQueryEvent(row)
-		if err != nil {
-			continue
-		}
+	for _, event := range rows {
 		out = append(out, eventProto(event))
 	}
 	return out

@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
+
 	"google.golang.org/protobuf/proto"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/stats"
-	"sort"
-	"strings"
 )
 
 func (c *Controller) finishTrafficRead(ctx context.Context, r *historyRead, q *pb.TrafficQuery, values []stats.FlowWindow) (*historyRead, string, error) {
@@ -91,9 +93,6 @@ func (c *Controller) projectTrafficRead(ctx context.Context, r *historyRead, q *
 			}
 			bases[key].Connections++
 			lines[config.TrafficBasisLine(f.Fact.Rule, f.Fact.RuleSource)] = true
-			if r.logVersion != nil {
-				continue
-			}
 			v := flowProto(f.Fact)
 			v.Upload = f.Upload
 			v.Download = f.Download

@@ -7,11 +7,20 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
   public let languages: [String]
   public let region: String
   public let at: Date
-  public init(timezone: String, languages: [String], region: String, at: Date) {
+  /// nil in records saved before the location scan existed.
+  public let location: LocationExposure?
+  public init(
+    timezone: String, languages: [String], region: String, at: Date,
+    location: LocationExposure? = nil
+  ) {
     self.timezone = timezone
     self.languages = languages
     self.region = region
     self.at = at
+    self.location = location
+  }
+  public func withLocation(_ location: LocationExposure?) -> Self {
+    Self(timezone: timezone, languages: languages, region: region, at: at, location: location)
   }
   public static func current() -> Self {
     Self(

@@ -2,7 +2,11 @@ import AppKit
 
 /// Shared settings section: heading, card, rows and separators, without feature state.
 public final class PaxPreferenceGroup: NSStackView {
-  public init(title: String, symbol: String, rows: [NSView]) {
+  public enum Style { case standard, compact }
+
+  public init(
+    title: String, symbol: String, rows: [NSView], style: Style = .standard, footer: NSView? = nil
+  ) {
     super.init(frame: .zero)
     orientation = .vertical
     alignment = .leading
@@ -28,13 +32,35 @@ public final class PaxPreferenceGroup: NSStackView {
       body.addArrangedSubview(row)
       row.widthAnchor.constraint(equalTo: body.widthAnchor).isActive = true
     }
-    let card = PaxCard(style: .routesSection)
+    let verticalInset = style == .compact ? 0 : PaxTheme.Routes.sectionTop
+    let horizontalInset =
+      style == .compact ? PaxTheme.Settings.compactHorizontalInset : PaxTheme.Routes.sectionInset
+    let card = PaxCard(
+      insets: NSEdgeInsets(
+        top: verticalInset, left: horizontalInset,
+        bottom: verticalInset, right: horizontalInset),
+      style: .routesSection)
     card.contentView = body
-    body.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -PaxTheme.Routes.sectionTop)
+    body.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -verticalInset)
       .isActive = true
     for item in [heading, card] {
       addArrangedSubview(item)
       item.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
+    }
+    if let footer {
+      let container = NSView()
+      footer.translatesAutoresizingMaskIntoConstraints = false
+      container.addSubview(footer)
+      addArrangedSubview(container)
+      NSLayoutConstraint.activate([
+        container.widthAnchor.constraint(equalTo: widthAnchor),
+        footer.leadingAnchor.constraint(
+          equalTo: container.leadingAnchor, constant: horizontalInset),
+        footer.trailingAnchor.constraint(
+          equalTo: container.trailingAnchor, constant: -horizontalInset),
+        footer.topAnchor.constraint(equalTo: container.topAnchor),
+        footer.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      ])
     }
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }

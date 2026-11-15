@@ -191,7 +191,7 @@ public enum NetworkDiagnosticPresentation {
     lines.insert(
       contentsOf: [
         "", "## 摘要判断",
-        "- 定位：" + sourceOverview(report.sources).text,
+        "- 定位：" + sourceListOverview(report).text,
         "- 服务：" + serviceOverview(Array(latest.values)).text,
         "- 风险：" + riskOverview(report.facts.filter { $0.group == "risk" }).text,
       ], at: 7)
@@ -199,6 +199,9 @@ public enum NetworkDiagnosticPresentation {
       lines.append(
         "- \(s.name)：\(s.country) / \(s.city) · ASN \(s.asn) · 来源时间标记 \(value(s.providerDate)) · \(channel(s.providerID))"
       )
+    }
+    for row in sourceRows(report) where row.unavailable {
+      lines.append("- " + row.title + "：" + row.value)
     }
     lines += ["", "## 资料获取", acquisitionSummary(report)]
     for provider in report.providers ?? [] {

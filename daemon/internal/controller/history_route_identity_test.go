@@ -8,6 +8,7 @@ import (
 
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
+	"pax-connect/daemon/internal/historystore"
 )
 
 func TestHistoryRouteSurvivesSavedEditAndRetirement(t *testing.T) {
@@ -103,13 +104,9 @@ func TestHistoryRouteFrozenJournalFeedsBothStores(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	var got config.LogConnectionSummary
-	rows, err := logs.logs.LogConnections(context.Background(), []string{flow.Key})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = json.Unmarshal(rows[flow.Key].Body, &got); err != nil {
-		t.Fatal(err)
+	got, found, err := logs.logs.(*historystore.Logs).Columns().Connection(context.Background(), flow.Key)
+	if err != nil || !found {
+		t.Fatal(found, err)
 	}
 	if got.Fact.RouteID != "route" || got.Fact.RouteName != "Original" {
 		t.Fatalf("log identity changed: %+v", got.Fact)

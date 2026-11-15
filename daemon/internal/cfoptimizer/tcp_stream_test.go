@@ -109,8 +109,8 @@ func TestTCPCancellationPreservesCompletedFailure(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		cancel()
-		<-done
-		t.Fatal("completed failure waited for unfinished peer")
+		err := <-done
+		t.Fatalf("completed failure waited for unfinished peer: %v", err)
 	}
 	cancel()
 	if err := <-done; err != context.Canceled {

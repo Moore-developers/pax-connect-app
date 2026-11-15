@@ -15,17 +15,22 @@ func TestNetworkPrivacyPersistenceAndMalformedStore(t *testing.T) {
 	_ = os.Chmod(dir, 0700)
 	store := NewNetworkPrivacyStore(filepath.Join(dir, "privacy.json"), uint32(os.Geteuid()))
 	p, exists, e := store.Load()
-	if e != nil || exists || p.DNSMode != "balanced" || p.WebRTC {
+	if e != nil || exists || p.DNSMode != "balanced" || !p.WebRTC {
 		t.Fatal(p, exists, e)
 	}
 	p.DNSMode = "strict"
-	p.WebRTC = true
+	p.WebRTC = false
 	if e = store.Save(context.Background(), p); e != nil {
 		t.Fatal(e)
 	}
 	got, exists, e := store.Load()
 	if e != nil || !exists || got != p {
 		t.Fatal("restart changed policy")
+	}
+	// Legacy files without the key predate the ON default and were saved under OFF: they stay OFF.
+	_ = os.WriteFile(filepath.Join(dir, "privacy.json"), []byte(`{"revision":1,"dns_mode":"balanced"}`), 0600)
+	if legacy, _, e := store.Load(); e != nil || legacy.WebRTC {
+		t.Fatal("missing webrtc key flipped to ON", legacy, e)
 	}
 	_ = os.WriteFile(filepath.Join(dir, "privacy.json"), []byte(`{"revision":1,"dns_mode":"invalid"}`), 0600)
 	if _, _, e = store.Load(); e == nil {

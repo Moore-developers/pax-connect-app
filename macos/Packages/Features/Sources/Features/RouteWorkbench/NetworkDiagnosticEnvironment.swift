@@ -60,15 +60,19 @@ extension NetworkDiagnosticView {
         spacing: PaxTheme.Spacing.tight),
       metricCard(
         "风险记录", value: intel == nil ? "—" : "\(counts.hits) 命中 / \(counts.unknown) 未知",
-        tone: counts.hits > 0 ? .difference : .pending,
+        color: summaryColor(counts.hits > 0 ? .difference : .pending),
         detail: P.acquisitionSummary(intel) + "；按检查项统计，不是安全分"),
       metricCard(
-        "原生性 · 来源判断", value: native.text, tone: native.tone,
+        "原生性 · 来源判断", value: native.text,
+        color: native.tone == .pending
+          ? PaxTheme.Color.textSecondary : PaxTheme.NetworkDiagnostics.summaryAccent,
         detail: "ipx.al 根据登记国和推定使用国判断；不证明原生家宽。\n" + P.providerDetails(intel, id: "ipx.al")),
       metricCard(
-        "类型", value: shortType, tone: intel?.ipType.isEmpty == false ? .information : .pending,
+        "类型", value: shortType,
+        color: intel?.ipType.isEmpty == false
+          ? PaxTheme.NetworkDiagnostics.summaryText : PaxTheme.Color.textSecondary,
         detail: "资料供应方分类；未标记机房不代表住宅网络"),
-      metricCard("黑名单", value: risk.text, tone: risk.tone, detail: risk.detail),
+      metricCard("黑名单", value: risk.text, color: summaryColor(risk.tone), detail: risk.detail),
     ]
     var columns: [NSView] = []
     for (index, cell) in cells.enumerated() {
@@ -94,14 +98,15 @@ extension NetworkDiagnosticView {
     return result
   }
 
-  private func metricCard(_ title: String, value: String, tone: E.Tone, detail: String) -> NSView {
+  private func metricCard(_ title: String, value: String, color: NSColor, detail: String) -> NSView
+  {
     let parts =
       ["黑名单", "风险记录"].contains(title)
       ? value.split(separator: " ", maxSplits: 1).map(String.init) : [value]
     let label = text(parts[0])
     label.font = PaxTheme.Typography.label(
       size: PaxTheme.NetworkDiagnostics.metricFont, weight: .medium)
-    label.textColor = environmentColor(tone)
+    label.textColor = color
     let valueRow = horizontal(
       [label] + (parts.count > 1 ? [text(parts[1], secondary: true)] : []) + [NSView()],
       spacing: PaxTheme.Spacing.xs)
@@ -193,7 +198,10 @@ extension NetworkDiagnosticView {
           "时区说明：" + E.timezone(zone, at: report.at),
         ]
       case "DNS":
-        lines += ["解析器数量：\(sample.resolvers.count)", "检测来源：bash.ws · 本轮随机域名采样"]
+        lines += [
+          E.dnsPathDetails(sample, name: browser ? "浏览器" : "Mac"),
+          "解析器数量：\(sample.resolvers.count)", "检测来源：bash.ws · 本轮随机域名采样",
+        ]
         if !sample.dnsError.isEmpty { lines.append("未完成原因：" + E.checkProblem(sample.dnsError)) }
         lines += sample.resolvers.map {
           $0.ip + " · " + P.countryName($0.country) + " · " + $0.organization
@@ -207,24 +215,28 @@ extension NetworkDiagnosticView {
       let checks = (sample.checks ?? []).filter { check in
         switch row.title {
         case "公网 IP": ["ipv4", "ipv6", "ipv6_route", "intelligence"].contains(check.kind)
-        case "DNS": check.kind.hasPrefix("dns_")
+        case "DNS": ["dns_session", "dns_query", "dns_result"].contains(check.kind)
         case "WebRTC": check.kind.hasPrefix("rtc_")
         default: false
         }
       }
       if !checks.isEmpty {
         lines.append("采样证据")
-        lines += checks.map { $0.target + "：" + E.checkText($0) }
+        lines += checks.map {
+          $0.target + "：" + E.checkText($0, ipv6Off: E.ipv6Exposure(report) == .off)
+        }
       }
     }
+    let explanation = E.riskExplanation(for: row.title)
+    if !explanation.isEmpty { lines.append(explanation) }
     return lines.joined(separator: "\n")
   }
 
-  private func environmentColor(_ tone: E.Tone) -> NSColor {
+  private func summaryColor(_ tone: E.Tone) -> NSColor {
     switch tone {
-    case .information: PaxTheme.Color.accent
-    case .matching: PaxTheme.Color.healthy
-    case .difference: PaxTheme.Color.amberLabel
+    case .information: PaxTheme.NetworkDiagnostics.summaryText
+    case .matching: PaxTheme.NetworkDiagnostics.summaryClear
+    case .difference: PaxTheme.NetworkDiagnostics.summaryWarning
     case .failure: PaxTheme.Color.error
     case .pending: PaxTheme.Color.textSecondary
     }

@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"testing"
+	"time"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/historystore"
-	"testing"
-	"time"
 )
 
 func TestBlockedTrafficRetainedDetailsArePagedFromRealSummaries(t *testing.T) {
@@ -35,8 +35,13 @@ func TestBlockedTrafficRetainedDetailsArePagedFromRealSummaries(t *testing.T) {
 	if err := c.freezeTrafficConnections(ctx, frozen, ""); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("retained connection summaries=%d", len(frozen.aggregateFlows))
-	if len(frozen.aggregateFlows) != 25 {
+	if frozen.columnSnapshot == nil {
+		t.Fatal("missing column snapshot")
+	}
+	probe, err := frozen.columnSnapshot.TrafficConnections(ctx, historystore.ColumnTrafficFilter{Until: frozen.at}, 0, 1)
+	_ = frozen.columnSnapshot.Close()
+	t.Logf("retained connection summaries=%d", probe.Total)
+	if err != nil || probe.Total != 25 || len(frozen.aggregateFlows) != 0 {
 		t.Fatal("rejected observations did not persist summaries")
 	}
 	for _, window := range []string{"day", "today", "week"} {
@@ -113,15 +118,11 @@ func TestLegacyBlockedDetailProjectionNeedsItsOwnRetainedEvent(t *testing.T) {
 	}
 	// Persist exactly the older broken fold. The original event remains independently stored.
 	if err = job.logs.Update(ctx, func(tx *historystore.LogsTx) error {
-		rows, e := tx.Connections(ctx)
+		rows, e := tx.Summaries(ctx)
 		if e != nil {
 			return e
 		}
-		for i, row := range rows {
-			var summary config.LogConnectionSummary
-			if e = json.Unmarshal(row.Body, &summary); e != nil {
-				return e
-			}
+		for i, summary := range rows {
 			summary.Fact.Direction, summary.Fact.Rule, summary.Fact.RuleSource = "unknown", "", ""
 			if i == 1 {
 				summary.LastEventID = "missing-event"
@@ -134,20 +135,12 @@ func TestLegacyBlockedDetailProjectionNeedsItsOwnRetainedEvent(t *testing.T) {
 			}
 			if i == 4 {
 				future := config.HistoryEvent{ID: "future-rejection", At: time.Now().Add(time.Hour), Kind: "rejected", Flow: &config.FlowFact{Key: summary.Fact.Key, Direction: "blocked", Failure: "rule_rejected"}}
-				body, marshalErr := json.Marshal(future)
-				if marshalErr != nil {
-					return marshalErr
-				}
-				if _, _, putErr := tx.PutEvent(ctx, historystore.LogEvent{EventID: future.ID, AtMs: future.At.UnixMilli(), FlowKey: summary.Fact.Key, Kind: future.Kind, Body: body}); putErr != nil {
+				if _, _, putErr := tx.AppendEvent(ctx, future); putErr != nil {
 					return putErr
 				}
 				summary.LastEventID = future.ID
 			} // no proven rejected summary
-			row.Body, e = json.Marshal(summary)
-			if e != nil {
-				return e
-			}
-			if e = tx.PutConnection(ctx, row); e != nil {
+			if e = tx.PutSummary(ctx, summary); e != nil {
 				return e
 			}
 		}
@@ -165,13 +158,9 @@ func TestLegacyBlockedDetailProjectionNeedsItsOwnRetainedEvent(t *testing.T) {
 	}
 	// Read projection never repairs storage or manufactures a recorded connection.
 	if err = job.logs.Update(ctx, func(tx *historystore.LogsTx) error {
-		row, ok, e := tx.Connection(ctx, "legacy-reject/0")
+		summary, ok, e := tx.Summary(ctx, "legacy-reject/0")
 		if e != nil || !ok {
 			return fmt.Errorf("summary missing: %w", e)
-		}
-		var summary config.LogConnectionSummary
-		if e = json.Unmarshal(row.Body, &summary); e != nil {
-			return e
 		}
 		if summary.Fact.Direction != "unknown" {
 			t.Error("read mutated persisted history")

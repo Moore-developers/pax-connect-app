@@ -27,8 +27,11 @@ type FlowFact struct {
 
 // DNSFact describes one intercepted query, not a connection to an answer IP.
 type DNSFact struct {
-	QueryType, Result string
-	Answers           []string
+	// Runtime-only upstream proof; column history deliberately does not persist it.
+	Upstream, Outbound, Pool string    `json:",omitempty"`
+	UpstreamAt               time.Time `json:",omitempty"`
+	QueryType, Result        string
+	Answers                  []string
 }
 
 // IsDNSControl requires recorded purpose or an explicit historical DNS action.

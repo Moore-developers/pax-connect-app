@@ -87,7 +87,11 @@ AIUsage 已移除质量测试专用 AIQualityController.swift、AIQualityRun.swi
 
 实际连接归属：controller/history_route_identity.go沿routeData现有有界标识表保存运行版名称，history_ingest在journal入口冻结。定向回归history_route_identity_test.go覆盖编辑/移除与双库加工；tests/traffic-route-identity/repair以临时Go overlay复用正式聚合合并并封装离线SQLite维护，不加入产品入口或自动迁移。
 
+列式日志库：historystore/columns*.go负责事实与有序子表，column_import/upgrade*.go负责v3→v4转换、gap记录与分批空间回收，column_projection*.go负责派生行I/O，column_snapshot*.go负责短读视图/有界旧版本，column_log_query/traffic_query*.go负责SQL筛选与分页；controller/history_column*.go调用生产投影并在现有owner调度升级，history_traffic_columns*.go接流量日志取材。config/log_gap.go统一断档纯规则，Logs.CapacityBytes在升级失败时排除冻结旧表。history_read_tokens.go与history_read_validity.go管理令牌与返回校验；history_connection_flow.go保留归属规则，history_activity_record.go保留展示投影，column_time_ranges.go处理查询时间边界。logs_v3_fixture_test.go仅生成升级夹具，history_projection_{oracle,filters}_test.go保留纯标准值投影对照。tests/log-store-columns/为208，log-store-switch/为209–210证据，不改原型保护区。
+
 ## 18. 测试与验证
+
+列式日志的用户路径、数据集与性能门槛见[测试计划](../changes/pax-connect-network-control-plane/history-log-test-plan.md)。
 
 | 层 | 内容 | 工具 |
 |---|---|---|
@@ -128,13 +132,15 @@ IPv4运行：network/ipv6.go与ipv6_configuration_darwin.go读取/判定物理�
 
 最近命中实现沿既有config观测/格式化、controller历史聚合与stats分钟统计、PaxClient模型映射、PaxCore/Features列表详情；票114专属验收记录在tests/latest-routing-match。controller/traffic_latest_match.go负责冻结候选、同刻稳定比较与旧JSON未知边界；traffic_latest_metadata_test验证SQLite重启/JSON往返，traffic_latest_match_test验证单行RPC与冻结分页；PaxClient TrafficRoutingMatchMappingTests验证可选presence映射；PaxCore TrafficLatestMatchFormattingTests验证格式；Features列、说明与日志状态走真实页面验收。
 
-阻断详情（票115）：telemetry事实合并保留明确blocked空出口；historystore的ConnectionSnapshot关联LastEventID仅读取同快照原事件证据，controller只纠正明确旧unknown拒绝副本，不回写历史。测试和验收见tests/blocked-traffic。
+阻断详情（票115）：telemetry事实合并保留明确blocked空出口；列式投影关联LastEventID保留原事件证据，查询按固定快照和截止时间使用，controller只纠正明确旧unknown拒绝副本，不回写历史。测试和验收见tests/blocked-traffic。
 
-等价历史读取（票116）：`historystore/logs_changes.go`提供提交后增量与短读取屏障；`controller/history_log_model.go`发布共享不可变版本，`history_activity_model.go`缓存按连接/独立事件归组的生产摘要，`history_model_budget.go`计量当前及令牌引用版本。`history_log_detail_read.go`保留事件/原文按需读取；`history_log_model_test.go`验证字节版本、删除迟到、超旧预算分页、发布恢复、deadline与DNS分页。合同见history-read-model.md，真实差分与性能证据见tests/history-read-model。
+历史读取令牌合同见history-read-model.md §4；当前文件分工见本节列式日志库，旧票116证据见tests/history-read-model。
 
 Codex身份：`internal/aiusage/parse_codex.go`解析白名单元数据，`codex_evidence.go`索引证据，`write_codex.go`与既有writer同事务去重/晚模型修桶，`rebuild_codex.go`保留退役marker，`codex_owner{,_test}.go`处理子文件身份/旧游标补读与同事务归属校正；合同见[Codex身份](../changes/pax-connect-network-control-plane/codex-usage-identity.md)，隔离验收`tests/codex-usage-identity/`。
 
 手动代理：`api/operation.proto`独立命令结果合同；controller/route_add.go负责新增编排；PaxCore/ProxyRouteDraft.swift负责表单值与单条解析，RoutesStoreProxy.swift提供保存结果；Features/RouteWorkbench的RouteProxyForm/Controller、RouteWorkbenchProxy与RouteDetailConfiguration复用新增/编辑。PaxUI/PaxProxyRouteTheme集中尺寸；tests/manual-proxy-routes保存真实验收。
+
+设置：Features/SettingsWorkbench四控制器，合同P05。
 
 关于页沿Features/About组织，复用系统设置分组卡显示版本与许可摘要；专用尺寸在PaxUI/PaxAboutTheme。
 
@@ -157,3 +163,5 @@ Codex身份：`internal/aiusage/parse_codex.go`解析白名单元数据，`codex
 模型用量概览时间桶由Features/AIUsage/AIUsageDataProjection投影；PaxUI/PaxStackedChart+Categorical承载可选最少时间格、右轴平滑数列与对齐hover，PaxCharts保留共享状态/事件；Features/AIUsage/AIUsageTrendReadout投影结构化读数，PaxUI/PaxChartStructuredReadout在共享popover复用H1卡。合同见P07c「趋势时间与单位费用」，不改存储与RPC。
 
 CF顶部显式测试回归沿controller/cf_displayed_tests_test.go覆盖旧/空/失败扫描后的延迟、地区、下载与落盘；真实验收见tests/cf-explicit-tests/。
+
+测试截图按tests/SCREENSHOTS.md保留最新功能批次；旧图片从清理前Git提交取回，文字验收结论保留。

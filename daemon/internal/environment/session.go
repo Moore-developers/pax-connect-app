@@ -38,12 +38,15 @@ type Session struct {
 	lookup            *measurement.ExitLookup
 	intelligenceTasks map[string]*intelligenceTask
 	browserDNS        string
+	browserDNSNames   []string
+	browserDNSStarted time.Time
 	browserSubmitted  bool
 	origin, path      string
+	provider          EvidenceProvider
 }
 
 // Start serves a single-use browser page exclusively on IPv4 loopback.
-func Start(parent context.Context, lookup *measurement.ExitLookup) (*Session, error) {
+func Start(parent context.Context, lookup *measurement.ExitLookup, provider EvidenceProvider) (*Session, error) {
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
@@ -51,7 +54,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup) (*Session, er
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	transport := &http.Transport{Proxy: nil, TLSHandshakeTimeout: 5 * time.Second, ResponseHeaderTimeout: 7 * time.Second}
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	s := &Session{cancel: cancel, client: client, lookup: lookup, origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
+	s := &Session{cancel: cancel, client: client, lookup: lookup, provider: provider, origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
 	s.state = Snapshot{ID: randomToken(), BrowserURL: s.origin + s.path, At: time.Now()}
 	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.serve(ctx, w, r) }), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 3 * time.Second, MaxHeaderBytes: 8192}
 	go func() { _ = server.Serve(listener) }()
@@ -78,7 +81,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup) (*Session, er
 		s.state.Complete = true
 	}()
 	go func() {
-		sample := macSample(ctx, client)
+		sample := macSample(ctx, client, provider)
 		sample.Complete = false
 		s.mu.Lock()
 		if ctx.Err() == nil {
@@ -145,9 +148,12 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 		s.mu.Lock()
 		s.browserDNS = id
+		s.browserDNSNames = dnsProbeNames(id)
+		s.browserDNSStarted = time.Now()
+		names := append([]string(nil), s.browserDNSNames...)
 		s.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": id, "names": names})
 	case endpoint == "result" && r.Method == http.MethodPost:
 		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 			http.Error(w, "JSON required", http.StatusUnsupportedMediaType)
@@ -172,7 +178,11 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 		s.browserSubmitted = true
 		id := s.browserDNS
+		names := append([]string(nil), s.browserDNSNames...)
+		dnsStarted := s.browserDNSStarted
+		started := s.state.At
 		s.mu.Unlock()
+		returned := time.Now()
 		sample.Complete = false
 		sample.IPError = ""
 		sample.IPv4 = publicIP(sample.IPv4)
@@ -198,6 +208,41 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 		s.mu.Unlock()
 		s.enrich(ctx, &sample)
+		s.mu.Lock()
+		if ctx.Err() == nil {
+			s.state.Browser = sample
+		}
+		s.mu.Unlock()
+		// Answer the page first: route evidence waits for the ingest cadence, which the page need not.
+		// The page only needs the Mac's route state to skip an IPv6 request that cannot apply.
+		s.mu.Lock()
+		route := "unknown"
+		for _, check := range s.state.Mac.Checks {
+			if check.Kind == "ipv6_route" {
+				route = check.State
+			}
+		}
+		s.mu.Unlock()
+		w.Header().Set("X-Pax-IPv6-Route", route)
+		w.WriteHeader(http.StatusNoContent)
+		_ = http.NewResponseController(w).Flush()
+		var routeChecks, dnsChecks []Check
+		var evidence sync.WaitGroup
+		evidence.Add(1)
+		go func() {
+			defer evidence.Done()
+			routeChecks = s.collectRouteEvidence(ctx, s.provider, started, returned)
+		}()
+		if len(names) > 0 {
+			evidence.Add(1)
+			go func() {
+				defer evidence.Done()
+				dnsChecks = collectDNSPath(ctx, s.provider, names, dnsStarted, returned)
+			}()
+		}
+		evidence.Wait()
+		sample.Checks = append(append(append([]Check(nil), sample.Checks...), routeChecks...), dnsChecks...)
+
 		sample.Complete = true
 		s.mu.Lock()
 		if ctx.Err() == nil {
@@ -206,8 +251,6 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		done := s.state.Mac.Complete && s.state.Browser.Complete
 		s.state.Complete = done
 		s.mu.Unlock()
-		w.WriteHeader(http.StatusNoContent)
-		_ = http.NewResponseController(w).Flush()
 		if done {
 			s.cancel()
 		}

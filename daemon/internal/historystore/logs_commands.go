@@ -53,38 +53,34 @@ func (t *LogsTx) PruneCommands(ctx context.Context, beforeMs int64) (int, error)
 // ClearLogTables deletes every connection, event and diagnostic row. The event sequence in
 // sqlite_sequence is deliberately kept: a cleared log keeps its head watermark.
 func (t *LogsTx) ClearLogTables(ctx context.Context) error {
-	if t.changes != nil {
-		t.changes.Reset = true
-	}
-	for _, table := range []string{"events", "connections", "diagnostics"} {
+	t.summaries = nil
+	t.columns.identities = nil
+	t.columns.objects = nil
+	t.columns.events = nil
+	t.columns.optionIDs = nil
+	for _, table := range []string{"col_group_options", "col_option_values", "col_events", "col_connections", "col_event_index", "col_groups", "col_members", "col_objects", "col_answers", "col_raw", "col_sections", "col_fields", "col_identities", "col_traffic", "diagnostics"} {
 		if _, err := t.tx.ExecContext(ctx, "DELETE FROM "+table); err != nil {
 			return fmt.Errorf("historystore: clear %s: %w", table, err)
 		}
 	}
-	return nil
-}
-
-// ConnectionsPage returns up to limit summaries with flow_key greater than after, ordered
-// by key. Startup normalization walks the table in bounded transactions with it.
-func (t *LogsTx) ConnectionsPage(ctx context.Context, after string, limit int) ([]LogConnection, error) {
-	if limit <= 0 {
-		return nil, ErrInvalidLimits
+	if _, err := t.tx.ExecContext(ctx, "UPDATE col_meta SET value='1' WHERE key='traffic_ready';UPDATE col_meta SET value='' WHERE key='traffic_progress'"); err != nil {
+		return err
 	}
-	rows, err := t.tx.QueryContext(ctx, connectionSelect+" WHERE flow_key>? ORDER BY flow_key LIMIT ?", after, limit)
+	state, _, err := t.Meta(ctx, "column_upgrade_state")
 	if err != nil {
-		return nil, fmt.Errorf("historystore: connections page: %w", err)
+		return err
 	}
-	defer func() { _ = rows.Close() }()
-	var out []LogConnection
-	for rows.Next() {
-		c, err := scanConnection(rows)
-		if err != nil {
-			return nil, err
+	if state == "building" || state == "failed" {
+		// A clear applies to the old retained facts too. An in-flight import must
+		// never resurrect them after the command's transaction commits.
+		for _, table := range []string{"events", "connections"} {
+			if _, err = t.tx.ExecContext(ctx, "DROP TABLE IF EXISTS "+table); err != nil {
+				return err
+			}
 		}
-		out = append(out, c)
+		if err = t.SetMeta(ctx, "column_upgrade_state", "ready"); err != nil {
+			return err
+		}
 	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("historystore: connections page: %w", err)
-	}
-	return out, nil
+	return nil
 }

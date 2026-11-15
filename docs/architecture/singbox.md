@@ -50,6 +50,8 @@ sing-box 的 `StartedService` proto 描述状态、日志、连接、测速和 o
 
 ### 7.5 Go module 版本策略
 
+DNSFact追加可选运行时上游字段，经core JSON观测到live view；不改变DNS方向或列式历史投影。诊断按测试域名关联，EnvironmentCheck的dns_path/dns_upstream合同见[DNS路径](../changes/pax-connect-network-control-plane/network-diagnostics-dns-path.md)。
+
 NetworkDiagnosticProgress是本轮临时计数/阶段标准值，measurement发布、controller拥有，proto与Swift同名映射；与历史报告分开，不落盘。合同见[实时进度](../changes/pax-connect-network-control-plane/network-diagnostics-progress.md)。
 
 网络诊断标准值为measurement.NetworkDiagnosticReport / api.NetworkDiagnosticReport / Swift.NetworkDiagnosticReport，含逐源资料、独立提供者请求/备用证据、可选供应方评分、归因事实（供应方原始风险、保存策略、域名候选规则）和请求样本；仅singbox适配持有上游出站。当前环境另用EnvironmentDiagnosticReport / EnvironmentSample / EnvironmentCheck，daemon environment包持Mac实际网络与真实浏览器loopback短时会话；系统语言/时区保留App本机快照，不冒充浏览器；合同见[网络诊断](../changes/pax-connect-network-control-plane/network-diagnostics.md)。

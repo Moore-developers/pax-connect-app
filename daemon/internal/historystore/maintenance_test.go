@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"pax-connect/daemon/internal/config"
 )
 
 func fillConnections(t *testing.T, l *Logs, from, to int, pad string) {
@@ -14,11 +16,11 @@ func fillConnections(t *testing.T, l *Logs, from, to int, pad string) {
 	ctx := context.Background()
 	err := l.Update(ctx, func(tx *LogsTx) error {
 		for i := from; i < to; i++ {
-			c := LogConnection{FlowKey: fmt.Sprintf("k%06d", i), StartedMs: int64(i), LastActivityMs: int64(i), Domain: pad, Body: []byte(pad)}
-			if err := tx.PutConnection(ctx, c); err != nil {
+			summary := config.LogConnectionSummary{Fact: config.FlowFact{Key: fmt.Sprintf("k%06d", i), Domain: pad, StartedAt: time.UnixMilli(int64(i))}, LastLogAt: time.UnixMilli(int64(i))}
+			if err := tx.PutSummary(ctx, summary); err != nil {
 				return err
 			}
-			if _, _, err := tx.PutEvent(ctx, LogEvent{EventID: fmt.Sprintf("s:%d", i), FlowKey: c.FlowKey, AtMs: int64(i), Kind: "start", Body: []byte(pad)}); err != nil {
+			if _, _, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: fmt.Sprintf("s:%d", i), At: time.UnixMilli(int64(i)), Kind: "start", Flow: &summary.Fact}); err != nil {
 				return err
 			}
 		}
@@ -59,13 +61,13 @@ func TestPruneRespectsRowAndTimeLimits(t *testing.T) {
 	if total != 1000 || passes != 9 {
 		t.Fatalf("deleted %d in %d passes", total, passes)
 	}
-	if n := count(t, l.Reader(), "SELECT count(*) FROM connections WHERE last_activity_ms < 500"); n != 0 {
+	if n := count(t, l.Reader(), "SELECT count(*) FROM col_connections WHERE last_activity_ms < 500"); n != 0 {
 		t.Fatalf("old rows left: %d", n)
 	}
-	if n := count(t, l.Reader(), "SELECT count(*) FROM connections"); n != 500 {
+	if n := count(t, l.Reader(), "SELECT count(*) FROM col_connections"); n != 500 {
 		t.Fatalf("newer rows touched: %d", n)
 	}
-	if n := count(t, l.Reader(), "SELECT count(*) FROM events"); n != 500 {
+	if n := count(t, l.Reader(), "SELECT count(*) FROM col_events"); n != 500 {
 		t.Fatalf("newer events touched: %d", n)
 	}
 }
@@ -97,7 +99,7 @@ func TestEvictOldestShrinksLiveSizeBelowCapAndReports(t *testing.T) {
 		t.Fatal("capacity_evicted not recorded")
 	}
 	var oldest, newest int64
-	if err = l.Reader().QueryRow("SELECT min(last_activity_ms), max(last_activity_ms) FROM connections").Scan(&oldest, &newest); err != nil {
+	if err = l.Reader().QueryRow("SELECT min(last_activity_ms), max(last_activity_ms) FROM col_connections").Scan(&oldest, &newest); err != nil {
 		t.Fatal(err)
 	}
 	if oldest == 0 || newest != 3999 {

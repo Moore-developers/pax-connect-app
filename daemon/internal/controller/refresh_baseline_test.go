@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"context"
+	"errors"
 	"google.golang.org/grpc"
 	"os"
 	"path/filepath"
@@ -50,7 +51,9 @@ func TestRefreshIdleBaseline(t *testing.T) {
 	<-stream.first
 	time.Sleep(2200 * time.Millisecond)
 	cancel()
-	<-done
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled Watch returned %v", err)
+	}
 	t.Logf("idle2.2s full snapshots=%d (includes initial)", stream.snapshots.Load())
 }
 
@@ -73,7 +76,9 @@ func TestIdleHistoryDoesNotRepublishFullSnapshots(t *testing.T) {
 	<-stream.first
 	time.Sleep(1150 * time.Millisecond)
 	cancel()
-	<-done
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled Watch returned %v", err)
+	}
 	if stream.snapshots.Load() != 1 {
 		t.Fatalf("idle history republished %d complete snapshots", stream.snapshots.Load())
 	}

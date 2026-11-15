@@ -5,7 +5,8 @@
 // 负责什么：每个库一条写连接加最多 4 条只读连接；文件 0600、目录 0700、拒绝符号链接、
 // 校验属主；完整性检查失败时改名保留并重建。
 // 不负责什么：不解析观测、不做加工与查询映射、不 import proto / controller / sing-box；
-// 迁移 schema 版本不在本包范围，版本不符时返回 ErrSchemaVersion（journal 则另起新文件）。
+// logs v3→v4 备份与分批迁移由 controller owner 调度本包执行；不支持的版本返回
+// ErrSchemaVersion。短读快照的旧行/索引缓存按字节计费，不持有跨页 SQLite 事务。
 // 并发：每个库的写入只应由一个 owner 协程发起；读连接池可被多个协程并发使用，
 // 且不会被写事务阻塞（WAL）。依赖方向：controller → historystore → storage。
 package historystore

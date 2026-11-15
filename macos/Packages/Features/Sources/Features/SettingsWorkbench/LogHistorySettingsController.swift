@@ -7,7 +7,7 @@ import PaxUI
 @MainActor
 final class LogHistorySettingsController: NSViewController {
   private let telemetry: TelemetryStore
-  private let retention = NSPopUpButton(frame: .zero, pullsDown: false)
+  private let retention = PaxRoutePicker(style: .toolbar)
   private let retentionHours: [UInt32] = [1, 12, 24]
   private let status = PaxText.label("", font: PaxTheme.Typography.caption(), wrapping: true)
   private lazy var clear = PaxRouteButton("清除日志…", target: self, action: #selector(clearHistory))
@@ -19,22 +19,30 @@ final class LogHistorySettingsController: NSViewController {
   override func loadView() {
     clear.setAccessibilityIdentifier("history-clear")
     retention.addItems(withTitles: ["1小时", "12小时", "24小时"])
+    retention.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
+    retention.setAccessibilityLabel("日志保留时间")
     retention.target = self
     retention.action = #selector(changeRetention)
     retention.selectItem(at: 2)
     retention.setAccessibilityIdentifier("history-retention")
-    let group = PaxPreferenceGroup(
-      title: "本地记录", symbol: "internaldrive",
+    let note = PaxText.label(
+      "清除日志不影响流量统计和当前连接。",
+      font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
+    let footer = NSStackView(views: [note, status])
+    footer.orientation = .vertical
+    footer.alignment = .leading
+    footer.spacing = PaxTheme.Spacing.tight
+    for item in footer.arrangedSubviews {
+      item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
+    }
+    view = PaxPreferenceGroup(
+      title: "日志", symbol: "internaldrive",
       rows: [
         PaxPreferenceRow(
-          title: "日志保留", detail: "最多24小时。普通列表查看30分钟、6小时或24小时；容量不足时显示实际覆盖。", control: retention),
+          title: "保留时间", detail: "到期自动删除日志与连接明细。", control: retention, style: .compact),
         PaxPreferenceRow(
-          title: "流量历史", detail: "流量近7天/30天只保留汇总与图表。连接明细随日志保留期清理。",
-          control: PaxText.label(
-            "最多30天", font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont))),
-        PaxPreferenceRow(title: "历史日志", detail: "清除事件与原文；流量统计、线路和当前连接保持。", control: clear), status,
-      ])
-    view = group
+          title: "历史日志", detail: "删除已记录的日志及原文，新事件继续记录。", control: clear, style: .compact),
+      ], style: .compact, footer: footer)
     observe()
   }
   private func observe() {
@@ -50,6 +58,7 @@ final class LogHistorySettingsController: NSViewController {
     retention.selectItem(
       at: retentionHours.firstIndex(of: telemetry.settings.logRetentionHours) ?? 2)
     status.stringValue = telemetry.message.isEmpty ? telemetry.qualityMessage : telemetry.message
+    status.isHidden = status.stringValue.isEmpty
   }
   @objc private func changeRetention() {
     guard retentionHours.indices.contains(retention.indexOfSelectedItem) else { return }

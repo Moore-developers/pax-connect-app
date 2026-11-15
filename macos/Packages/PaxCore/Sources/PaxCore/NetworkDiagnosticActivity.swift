@@ -68,10 +68,13 @@ extension EnvironmentDiagnosticStore {
     let name = browser ? "浏览器检测" : "Mac 检测"
     let sample = browser ? progressReport?.browser : progressReport?.mac
     if let sample, sample.complete {
+      let ipv6Off = EnvironmentDiagnosticPresentation.ipv6Exposure(progressReport) == .off
       let partial =
         !sample.dnsError.isEmpty || !sample.ipError.isEmpty
-        || sample.checks?.contains { ["failed", "timeout", "unsupported"].contains($0.state) }
-          == true
+        || sample.checks?.contains {
+          ["failed", "timeout", "unsupported"].contains($0.state)
+            && !(ipv6Off && $0.kind == "ipv6")
+        } == true
       return .init(
         name: name, detail: partial ? "已结束，部分项目未完成" : "已结束，结果已返回",
         state: partial ? .partial : .finished)

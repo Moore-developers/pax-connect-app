@@ -72,41 +72,17 @@ public enum EnvironmentDiagnosticPresentation {
     if browser {
       let addresses = (sample?.rtcAddresses ?? []).filter { isPublicAddress($0) }
       let state = sample?.rtcState ?? ""
-      let value: String
-      let tone: Tone
-      if !addresses.isEmpty {
-        let comparable = addresses.allSatisfy { address in
-          address.contains(":") ? !(sample?.ipv6.isEmpty ?? true) : !(sample?.ipv4.isEmpty ?? true)
-        }
-        let same = comparable && addresses.allSatisfy { ips.contains($0) }
-        value =
-          "检测到 \(addresses.count) 个公网地址：" + addresses.joined(separator: "、") + "；"
-          + (!comparable ? "未取得同地址族网页出口供对照" : same ? "与网页出口相同" : "与网页出口不同")
-        tone = !comparable ? .information : same ? .matching : .difference
-      } else if state == "unsupported" {
-        value = "此浏览器不支持 WebRTC"
-        tone = .difference
-      } else if pending {
-        value = "正在检测 WebRTC 地址…"
-        tone = .pending
-      } else if state == "failed" {
-        value = "WebRTC 检测未完成"
-        tone = .failure
-      } else {
-        value =
-          "采集到 \(sample?.rtcAddresses.count ?? 0) 个 ICE 候选，0 个公网地址；"
-          + ((sample?.rtcAddresses.isEmpty ?? true) ? "原因未确定" : "局域网 / mDNS 候选见详情")
-        tone = .difference
-      }
+      let verdict = webRTCVerdict(sample, pending: pending)
       let evidence = (sample?.checks ?? []).filter { $0.kind.hasPrefix("rtc_") }
-        .map { $0.target + "：" + checkOutcome($0) }.joined(separator: "；")
+        .map { $0.target + "：" + checkOutcome($0) }
+      var lines =
+        addresses.isEmpty
+        ? (pending || state == "unsupported" ? [] : ["可能已禁用或受到限制；不代表已确认防泄露"]) : addresses
+      lines += verdict.routeDetails + evidence
       rows.append(
         Row(
           title: "WebRTC", symbol: "point.3.connected.trianglepath.dotted",
-          value: value + (evidence.isEmpty ? "" : "；" + evidence),
-          detail: addresses.isEmpty
-            ? (pending || state == "unsupported" ? "" : "可能已禁用或受到限制；不代表已确认防泄露")
-            : addresses.joined(separator: "\n"), tone: tone))
+          value: verdict.text, detail: lines.joined(separator: "\n"), tone: verdict.tone))
     }
     return rows
   }
@@ -228,8 +204,14 @@ public enum EnvironmentDiagnosticPresentation {
     ]
     lines.append("\n### 环境结果")
     lines.append("- 出口判断：" + exitAssessment(store.report?.browser.checks ?? []).text)
-    for row in assessedRows(store.report, local: store.local, waiting: store.busy) {
-      lines.append("- " + row.title + "：" + row.value + "\n  依据：" + row.detail)
+    for row in assessedRows(
+      store.report, local: store.local, waiting: store.busy, includePhysical: false)
+    {
+      let detail =
+        row.title == locationTitle
+        ? locationReportDetail(local: store.local)
+        : row.title == ipv6Title ? ipv6ReportDetail(store.report) : row.detail
+      lines.append("- " + row.title + "：" + row.value + "\n  依据：" + detail)
     }
     for browser in [false, true] {
       let sample = browser ? store.report?.browser : store.report?.mac
@@ -263,7 +245,17 @@ public enum EnvironmentDiagnosticPresentation {
       }
       if sample?.checks == nil { lines.append("- 分项诊断：旧记录未采集") }
       for check in sample?.checks ?? [] {
-        lines.append("- " + check.kind + " · " + check.target + "：" + checkText(check))
+        if check.kind == "egress_physical" {
+          lines.append("- egress_physical · " + check.target + "：" + check.state + "（地址不写入报告）")
+          continue
+        }
+        if check.kind == "ipv6_route" {
+          lines.append("- ipv6_route · " + check.target + "：" + check.state + "（接口名不写入报告）")
+          continue
+        }
+        lines.append(
+          "- " + check.kind + " · " + check.target + "："
+            + checkText(check, ipv6Off: ipv6Exposure(store.report) == .off))
       }
       for resolver in sample?.resolvers ?? [] {
         lines.append("- DNS：\(resolver.ip) · \(resolver.country) · \(resolver.organization)")
@@ -285,14 +277,23 @@ public enum EnvironmentDiagnosticPresentation {
       [$0.ipv4, $0.ipv6] + $0.rtcAddresses + $0.resolvers.map(\.ip)
         + ($0.intelligence?.providers ?? []).map(\.queryIP)
     }
+    let physicalAddresses = samples.flatMap {
+      ($0.checks ?? []).filter { $0.kind == "egress_physical" }.flatMap {
+        $0.value.components(separatedBy: ";").compactMap { part in
+          part.split(separator: "=", maxSplits: 1).last.map(String.init)
+        }
+      }
+    }
     let echoAddresses = samples.flatMap {
       ($0.checks ?? []).filter { $0.kind.hasPrefix("echo_") }.map {
         $0.value.components(separatedBy: " · ")[0]
       }
     }
-    for address in Set(addresses + echoAddresses).filter({ !$0.isEmpty }).sorted(by: {
-      $0.count > $1.count
-    }) {
+    for address in Set(addresses + echoAddresses + physicalAddresses).filter({ !$0.isEmpty })
+      .sorted(by: {
+        $0.count > $1.count
+      })
+    {
       output = output.replacingOccurrences(of: address, with: "[已脱敏]")
     }
     return output

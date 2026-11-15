@@ -2,20 +2,18 @@ package controller
 
 import (
 	"context"
-	"pax-connect/daemon/internal/stats"
 
 	"google.golang.org/protobuf/proto"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 )
 
 func aggregateConnectionPage(ctx context.Context, r *historyRead, q *pb.TrafficDetailRequest, out *pb.TrafficDetail) error {
+	if r.columnSnapshot != nil {
+		return r.columnConnectionPage(ctx, q, out)
+	}
 	members := r.aggregateFlowRows[q.RowId]
 	count := len(members)
-	var modelMembers []*logModelConnection
-	if r.logVersion != nil {
-		modelMembers = r.selectedConnections(q.RowId)
-		count = len(modelMembers)
-	}
 	signature := querySignature([]string{q.RowId, q.ConnectionKey, q.DnsGroupId})
 	start, end := 0, count
 	var err error
@@ -32,16 +30,7 @@ func aggregateConnectionPage(ctx context.Context, r *historyRead, q *pb.TrafficD
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		var f stats.FlowWindow
-		if r.logVersion != nil {
-			at := r.detailAt
-			if at.IsZero() {
-				at = r.at
-			}
-			f = r.logVersion.flow(modelMembers[index], at)
-		} else {
-			f = members[index]
-		}
+		f := members[index]
 		item := flowProto(f.Fact)
 		item.Upload, item.Download = f.Upload, f.Download
 		flows = append(flows, item)

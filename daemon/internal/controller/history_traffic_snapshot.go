@@ -16,6 +16,7 @@ import (
 // The job excludes commits only while pinning and copying, never while projecting a query.
 type trafficSnapshot struct {
 	read     *historystore.TrafficRead
+	now      time.Time
 	entries  []pendingEntry
 	compact  trafficPending
 	meta     historyMetadata
@@ -41,7 +42,7 @@ func (c *Controller) trafficSnapshot(ctx context.Context) (*trafficSnapshot, err
 		t.snapshotMu.RUnlock()
 		return nil, err
 	}
-	s := &trafficSnapshot{read: read}
+	s := &trafficSnapshot{read: read, now: c.now()}
 	if live := t.liveView(); live != nil {
 		s.entries, s.compact = live.pendingSnapshot()
 	}
@@ -154,7 +155,7 @@ func (s *trafficSnapshot) eachBucket(ctx context.Context, from, until time.Time,
 		return err
 	}
 	if until.After(boundary) {
-		if until.Before(time.Now().Add(-10 * time.Minute)) {
+		if until.Before(s.now.Add(-10 * time.Minute)) {
 			if err := s.read.Rows(ctx, false, boundary, boundary.Add(trafficBucket5m), dimensions, add); err != nil {
 				return err
 			}
@@ -243,7 +244,7 @@ func (s *trafficSnapshot) searchMatches(ctx context.Context, from, until time.Ti
 	if err := s.read.MatchingSearch(ctx, 0, from.Truncate(trafficBucket5m), boundary, dimensions, search.term, visit); err != nil {
 		return err
 	}
-	if until.Before(time.Now().Add(-10 * time.Minute)) {
+	if until.Before(s.now.Add(-10 * time.Minute)) {
 		return s.read.MatchingSearch(ctx, 0, boundary, boundary.Add(trafficBucket5m), dimensions, search.term, visit)
 	}
 	return s.read.MatchingSearch(ctx, 1, boundary, until, dimensions, search.term, visit)

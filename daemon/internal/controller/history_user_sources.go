@@ -3,10 +3,11 @@ package controller
 import (
 	"context"
 	"path/filepath"
-	pb "pax-connect/daemon/gen/proto/paxv1"
-	"pax-connect/daemon/internal/config"
 	"strings"
 	"time"
+
+	pb "pax-connect/daemon/gen/proto/paxv1"
+	"pax-connect/daemon/internal/config"
 )
 
 type historyApplicationInventory struct {
@@ -63,21 +64,7 @@ func userApplicationMatch(id, path string, apps []config.RoutingApplication) (co
 	}
 	return config.RoutingApplication{}, false
 }
-func classifyLogSources(records []*pb.LogRecord, apps []config.RoutingApplication) map[string]config.RoutingApplication {
-	result := map[string]config.RoutingApplication{}
-	for _, record := range records {
-		if f := record.Flow; f != nil {
-			if app, ok := userApplicationMatch(f.ApplicationId, f.Process, apps); ok {
-				result[record.RecordId] = app
-				record.CategoryName, record.CategorySymbol = app.Name, "app"
-			} else {
-				_, record.CategoryName = logSystemSource(record)
-				record.CategorySymbol = "gearshape"
-			}
-		}
-	}
-	return result
-}
+
 func logSystemSource(v *pb.LogRecord) (string, string) {
 	f := v.Flow
 	if f == nil {

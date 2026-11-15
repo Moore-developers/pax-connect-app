@@ -4,45 +4,46 @@ import PaxClient
 extension EnvironmentDiagnosticPresentation {
   /// Compact conclusions preserve full readings in the same row's details.
   public static func assessedRows(
-    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool
+    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool,
+    includePhysical: Bool = true
   ) -> [Row] {
     let raw = mergedRows(report, local: local, waiting: waiting)
     guard let report else { return raw }
     let mac = report.mac
     let web = report.browser
     return raw.map { row in
+      if row.title == locationTitle || row.title == ipv6Title { return row }
       var value = row.value
       var tone = row.tone
+      var extra = riskExplanation(for: row.title)
       switch row.title {
       case "公网 IP":
         let pairs = [("IPv4", mac.ipv4, web.ipv4), ("IPv6", mac.ipv6, web.ipv6)].filter {
           !$0.1.isEmpty && !$0.2.isEmpty
         }
         if let different = pairs.first(where: { $0.1 != $0.2 }) {
-          value = "Mac 与浏览器 \(different.0) 出口不同"
+          value = "发现出口差异 · Mac 与浏览器 \(different.0) 出口不同"
           tone = .difference
         } else if let first = pairs.first {
-          value = "Mac 与浏览器 \(first.0) 同出口 · \(first.1)"
+          value = "未发现出口差异 · \(first.0) 出口一致 · \(first.1)"
           tone = .information
         } else {
-          value = waiting ? "正在获取两侧出口" : "出口资料不全，无法对照"
+          value = waiting ? "正在获取两侧出口" : "出口风险待确认 · 资料不全，无法对照"
           tone = waiting ? .pending : .failure
-        }
-        if mac.checks?.contains(where: { $0.kind == "ipv6_route" && $0.state == "absent" }) == true
-        {
-          value += "；本机无 IPv6 默认路由"
         }
       case "语言":
         let a = local?.languages.map { Locale(identifier: $0).identifier } ?? []
         let b = web.languages.map { Locale(identifier: $0).identifier }
         if !a.isEmpty && !b.isEmpty {
+          let locale = Locale(identifier: "zh_CN")
+          let names = web.languages.map { locale.localizedString(forIdentifier: $0) ?? $0 }
           value =
             a == b
-            ? "Mac 与浏览器语言顺序相同 · " + web.languages.joined(separator: " → ")
-            : "Mac 与浏览器语言偏好不同，按使用习惯核对"
+            ? "未发现语言差异 · " + names.joined(separator: " → ")
+            : "发现语言差异 · Mac 与浏览器的语言顺序不同"
           tone = .information
         } else {
-          value = waiting ? "正在读取两侧语言" : "两侧语言资料不全，无法对照"
+          value = waiting ? "正在读取两侧语言" : "语言差异待确认 · 资料不全，无法对照"
         }
       case "时区":
         if let zone = local?.timezone, !zone.isEmpty, !web.timezone.isEmpty,
@@ -50,60 +51,33 @@ extension EnvironmentDiagnosticPresentation {
         {
           if zone == web.timezone {
             value =
-              "Mac 与浏览器同为 " + zone + " · "
-              + NetworkDiagnosticPresentation.utcOffset(zone, at: report.at)
+              "未发现时区差异 · " + timezone(zone, at: report.at)
           } else {
             value =
               a.secondsFromGMT(for: report.at) == b.secondsFromGMT(for: report.at)
-              ? "时区名称不同，本次 UTC 偏移相同" : "Mac 与浏览器时差不同，核对预期设置"
+              ? "发现时区差异 · 名称不同，本次 UTC 偏移相同" : "发现时区差异 · Mac 与浏览器的时差不同"
           }
           tone = zone == web.timezone ? .information : .difference
         } else {
-          value = waiting ? "正在读取两侧时区" : "两侧时区资料不全，无法对照"
+          value = waiting ? "正在读取两侧时区" : "时区差异待确认 · 资料不全，无法对照"
         }
       case "DNS":
+        let verdict = dnsPathAssessment(report, waiting: waiting)
+        value = verdict.text
+        tone = verdict.tone
         let a = Set(mac.resolvers.map(\.ip))
         let b = Set(web.resolvers.map(\.ip))
-        if !a.isEmpty && !b.isEmpty {
-          value =
-            a == b
-            ? "两侧观察到相同解析器 · \(a.count) 个" : "Mac \(a.count) 个 / 浏览器 \(b.count) 个解析器；集合不同，不等于泄露"
-          tone = .information
-        } else {
-          value = waiting ? "正在检测解析路径" : "DNS 采样不完整，不能判断解析路径"
-          tone = waiting ? .pending : .failure
-        }
+        extra =
+          "Mac \(a.count) 个解析器，浏览器 \(b.count) 个解析器。\n"
+          + dnsPathDetails(mac, name: "Mac") + "\n" + dnsPathDetails(web, name: "浏览器")
       case "WebRTC":
-        let publicAddresses = web.rtcAddresses.filter(isPublicAddress)
-        let checks = (web.checks ?? []).filter { $0.kind.hasPrefix("rtc_") }
-        if web.rtcState == "unsupported" {
-          value = "浏览器不支持 WebRTC，无法检测"
-          tone = .pending
-        } else if !publicAddresses.isEmpty {
-          let known = publicAddresses.allSatisfy {
-            $0.contains(":") ? !web.ipv6.isEmpty : !web.ipv4.isEmpty
-          }
-          let equal = publicAddresses.allSatisfy { [web.ipv4, web.ipv6].contains($0) }
-          value =
-            !known
-            ? "发现 \(publicAddresses.count) 个公网地址，缺少同地址族网页出口"
-            : equal ? "公网候选与网页同出口 · \(publicAddresses.count) 个" : "公网候选与网页出口不同，需核对保护策略"
-          tone = known && !equal ? .difference : .information
-        } else if checks.contains(where: {
-          $0.state == "timeout" || $0.state == "failed" || !$0.errorCode.isEmpty
-        }) || web.rtcState == "failed" {
-          value = "STUN 采集失败或到期，不能判断公网暴露"
-          tone = .failure
-        } else if !web.rtcState.isEmpty {
-          value = web.rtcAddresses.isEmpty ? "未取得候选地址，不能据此确认防泄露" : "仅取得局域网 / mDNS 候选，未见公网地址"
-          tone = .information
-        } else {
-          value = waiting ? "正在采集浏览器候选地址" : "浏览器未返回候选，无法判断"
-          tone = .pending
-        }
+        let verdict = webRTCVerdict(web, pending: web.complete != true && waiting)
+        value = verdict.text
+        tone = verdict.tone
+        if includePhysical, let physical = verdict.physicalDetail { extra = physical }
       default: break
       }
-      var detail = row.value + "\n" + row.detail
+      var detail = row.value + "\n" + row.detail + (extra.isEmpty ? "" : "\n" + extra)
       if row.title == "DNS" {
         for (name, sample) in [("Mac", mac), ("浏览器", web)] {
           detail +=
@@ -115,6 +89,17 @@ extension EnvironmentDiagnosticPresentation {
         }
       }
       return Row(title: row.title, symbol: row.symbol, value: value, detail: detail, tone: tone)
+    }
+  }
+
+  /// Shared by structured UI details and the report's evidence text.
+  public static func riskExplanation(for title: String) -> String {
+    switch title {
+    case "公网 IP": "仅对照本次 Mac 与浏览器的同地址族出口；出口一致不代表已确认安全。"
+    case "语言": "只对照两侧语言顺序，不判断是否与出口所在地一致；设置一致不代表安全。"
+    case "时区": "只对照两侧时区，不判断是否与出口所在地一致；设置一致不代表安全。"
+    case "DNS": "解析器地区和集合差异不能判定请求是否经代理，以下以本轮请求路径证据为准。"
+    default: ""
     }
   }
 

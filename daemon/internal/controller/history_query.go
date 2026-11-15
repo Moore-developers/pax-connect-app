@@ -81,7 +81,7 @@ func historyError(err error) error {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return status.FromContextError(err).Err()
 	}
-	known := map[string]bool{"icon_cache_unavailable": true, "invalid_filter": true, "invalid_event": true, "history_unavailable": true, "history_cursor_expired": true, "history_expired": true, "history_store_failed": true, "history_query_busy": true, "history_capacity_reached": true, "settings_conflict": true, "operation_expired": true}
+	known := map[string]bool{"history_converting": true, "history_building": true, "icon_cache_unavailable": true, "invalid_filter": true, "invalid_event": true, "history_unavailable": true, "history_cursor_expired": true, "history_expired": true, "history_store_failed": true, "history_query_busy": true, "history_capacity_reached": true, "settings_conflict": true, "operation_expired": true}
 	code := err.Error()
 	if !known[code] {
 		code = "history_store_failed"

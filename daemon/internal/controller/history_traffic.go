@@ -3,13 +3,14 @@ package controller
 import (
 	"context"
 	"errors"
+	"sort"
+	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/stats"
-	"sort"
-	"time"
 )
 
 func (c *Controller) trafficRead(ctx context.Context, q *pb.TrafficQuery) (*historyRead, string, error) {
@@ -117,18 +118,69 @@ func (c *Controller) QueryTraffic(ctx context.Context, q *pb.TrafficQuery) (*pb.
 		}
 		items := make([]*pb.TrafficRow, 0, end-start)
 		for _, row := range r.rows[start:end] {
-			items = append(items, r.trafficOutputRow(row))
+			item, err := r.columnTrafficOutputRow(ctx, row)
+			if err != nil {
+				return err
+			}
+			items = append(items, item)
 		}
-		out = &pb.TrafficPage{UnknownSource: r.trafficOutputRow(r.unknown), DnsSummary: r.trafficOutputRow(r.dns), Items: items, ReadToken: token, NextCursor: historyBoundNext(end, len(r.rows), r.signature), AsOf: timestamppb.New(r.at), From: timestamppb.New(r.from), Upload: r.upload, Download: r.download, Connections: r.connections, SystemUpload: r.systemUpload, SystemDownload: r.systemDownload, OtherProcessUpload: r.otherProcessUpload, OtherProcessDownload: r.otherProcessDownload, OtherProcessConnections: r.otherProcessConnections, Trend: r.trend, History: aggregateHistoryState(r), Window: r.window, TotalRows: uint64(len(r.rows))}
+		unknown, err := r.columnTrafficOutputRow(ctx, r.unknown)
+		if err != nil {
+			return err
+		}
+		dns, err := r.columnTrafficOutputRow(ctx, r.dns)
+		if err != nil {
+			return err
+		}
+		out = &pb.TrafficPage{UnknownSource: unknown, DnsSummary: dns, Items: items, ReadToken: token, NextCursor: historyBoundNext(end, len(r.rows), r.signature), AsOf: timestamppb.New(r.at), From: timestamppb.New(r.from), Upload: r.upload, Download: r.download, Connections: r.connections, SystemUpload: r.systemUpload, SystemDownload: r.systemDownload, OtherProcessUpload: r.otherProcessUpload, OtherProcessDownload: r.otherProcessDownload, OtherProcessConnections: r.otherProcessConnections, Trend: r.trend, History: aggregateHistoryState(r), Window: r.window, TotalRows: uint64(len(r.rows))}
 		return nil
 	}()
 	if err != nil {
 		return nil, historyError(err)
 	}
+	if q.ReadToken != "" {
+		if err := c.ensureTrafficListToken(ctx, q.ReadToken); err != nil {
+			return nil, historyError(err)
+		}
+	}
 	if err := c.readTokens.ensureLive(ctx, out.ReadToken); err != nil {
 		return nil, historyError(err)
 	}
 	return out, nil
+}
+
+// Direct maintenance calls and the owner observer share the same generation
+// contract. Recheck the committed metadata before every list page so a clear or
+// retention prune cannot leave a list cursor alive merely because no publisher
+// wake was delivered.
+func (c *Controller) ensureTrafficListToken(ctx context.Context, token string) error {
+	c.readTokens.mu.Lock()
+	r := c.readTokens.reads[token]
+	c.readTokens.mu.Unlock()
+	if r == nil || r.kind != "traffic" {
+		return errors.New("history_cursor_expired")
+	}
+	if r.columnSnapshot == nil {
+		return nil
+	}
+	store, err := c.logStore(ctx)
+	if err != nil {
+		return err
+	}
+	if r.columnSnapshot.Removed() {
+		c.readTokens.invalidate("traffic")
+		return errors.New("history_cursor_expired")
+	}
+
+	meta, err := store.SnapshotMeta(ctx)
+	if err != nil {
+		return err
+	}
+	if meta.LogDeletionGeneration != r.deletionGeneration || meta.ClearGeneration != r.meta.ClearGeneration || meta.SummaryGeneration != r.summaryGeneration {
+		c.readTokens.invalidate("traffic")
+		return errors.New("history_cursor_expired")
+	}
+	return nil
 }
 
 // QueryTrafficDetail keeps summary values fixed while connection pages are loaded.
@@ -164,32 +216,35 @@ func (c *Controller) QueryTrafficDetail(ctx context.Context, q *pb.TrafficDetail
 				return err
 			}
 		}
-		if r.logVersion != nil && !r.aggregate && r.aggregateConnectionRows != nil {
+		if r.columnSnapshot != nil && !r.aggregate && q.ConnectionKey != "" {
 			local := *r
 			local.flows = map[string][]*pb.FlowRecord{}
-			ids := []string{q.RowId}
-			if q.ConnectionKey != "" {
-				ids = nil
-				for id := range r.aggregateConnectionRows {
-					ids = append(ids, id)
+			for id := range r.aggregateMemberKeys {
+				filter := r.columnTrafficFilter(id)
+				filter.ConnectionKey = q.ConnectionKey
+				page, err := r.columnSnapshot.TrafficConnections(ctx, filter, 0, 1)
+				if err != nil {
+					return err
+				}
+				if len(page.Items) > 0 {
+					local.flows[id] = []*pb.FlowRecord{columnTrafficFlow(page.Items[0])}
+					break
 				}
 			}
-			for _, id := range ids {
-				for _, entry := range r.selectedConnections(id) {
-					if q.ConnectionKey != "" && entry.summary.Fact.Key != q.ConnectionKey {
-						continue
-					}
-					f := r.logVersion.flow(entry, r.at)
-					item := flowProto(f.Fact)
-					item.Upload, item.Download = f.Upload, f.Download
-					local.flows[id] = append(local.flows[id], item)
-				}
+			// The direct no-token lookup already carries its one frozen fact.
+			if len(r.aggregateMemberKeys) == 0 {
+				local.flows = r.flows
 			}
 			r = &local
 		}
 		if r.aggregate {
 			var err error
 			out, err = aggregateDetail(ctx, r, token, q)
+			return err
+		}
+		if r.columnSnapshot != nil && q.ConnectionKey == "" {
+			var err error
+			out, err = r.columnPeriodDetail(ctx, token, q)
 			return err
 		}
 		if r.dns != nil && q.RowId == r.dns.Id && q.ConnectionKey == "" {

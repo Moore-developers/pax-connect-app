@@ -3,19 +3,21 @@ package controller
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"time"
+
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
+	"pax-connect/daemon/internal/historystore"
 	"pax-connect/daemon/internal/stats"
-	"time"
 )
 
 // A frozen read belongs to one read cache: traffic tokens stay on the legacy owner,
 // log tokens on their own cache (history-storage §4.2).
 type historyRead struct {
-	logVersion                                 *logModelVersion
+	columnLogRead                              *columnLogReadState
+	columnSnapshot                             *historystore.ColumnSnapshot
 	aggregateMemberKeys                        map[string]string
 	aggregateDirection                         string
-	aggregateConnectionRows                    map[string][]*logModelConnection
 	aggregateFlows                             []stats.FlowWindow
 	aggregateFlowRows                          map[string][]stats.FlowWindow
 	ruleMemberBuckets                          map[string]map[int64]bool
@@ -33,11 +35,6 @@ type historyRead struct {
 	at, from, until, timeUsed                  time.Time
 	createdAt, detailAt                        time.Time
 	kind, signature                            string
-	logs                                       []config.HistoryEvent
-	problemLogs                                []config.HistoryEvent
-	records                                    []*pb.LogRecord
-	recordByID                                 map[string]*pb.LogRecord
-	recordEvents                               map[string][]string
 	rows                                       []*pb.TrafficRow
 	dns, unknown                               *pb.TrafficRow
 	flows                                      map[string][]*pb.FlowRecord

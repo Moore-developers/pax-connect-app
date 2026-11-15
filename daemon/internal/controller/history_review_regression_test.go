@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -95,9 +94,8 @@ func TestRecentConnectionScanKeepsNewestDomainsAtLimit(t *testing.T) {
 	defer func() { _ = store.Close() }()
 	err = store.Update(ctx, func(tx *historystore.LogsTx) error {
 		for i := 0; i < 40; i++ {
-			f := config.FlowFact{Key: fmt.Sprint(i), Domain: fmt.Sprintf("host-%02d.test", i)}
-			body, _ := json.Marshal(config.LogConnectionSummary{Fact: f})
-			if err := tx.PutConnection(ctx, historystore.LogConnection{FlowKey: f.Key, StartedMs: 1, LastActivityMs: int64(i + 1), Body: body}); err != nil {
+			f := config.FlowFact{Key: fmt.Sprint(i), Domain: fmt.Sprintf("host-%02d.test", i), StartedAt: time.UnixMilli(1)}
+			if err := tx.PutSummary(ctx, config.LogConnectionSummary{Fact: f, LastLogAt: time.UnixMilli(int64(i + 1))}); err != nil {
 				return err
 			}
 		}
@@ -107,14 +105,10 @@ func TestRecentConnectionScanKeepsNewestDomainsAtLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var domains []string
-	err = store.EachRecentConnection(ctx, 0, 100, 32, func(row historystore.LogConnection) error {
-		var summary config.LogConnectionSummary
-		if err := json.Unmarshal(row.Body, &summary); err != nil {
-			return err
-		}
+	summaries, err := store.RecentSummaries(ctx, 0, 100, 32)
+	for _, summary := range summaries {
 		domains = append(domains, summary.Fact.Domain)
-		return nil
-	})
+	}
 	if err != nil || len(domains) != 32 || domains[0] != "host-39.test" || domains[31] != "host-08.test" {
 		t.Fatal(domains, err)
 	}
@@ -281,8 +275,7 @@ func TestRoutingApplicationDomainsKeepLatestObservedThirtyTwo(t *testing.T) {
 	if err := job.logs.Update(ctx, func(tx *historystore.LogsTx) error {
 		for i := 0; i < 40; i++ {
 			f := config.FlowFact{Key: fmt.Sprintf("latest/%02d", i), StartedAt: now.Add(-time.Hour), ApplicationID: "fixture.latest", Application: "Fixture", Process: filepath.Join(bundle, "Contents/MacOS/pax-identity"), Domain: fmt.Sprintf("host-%02d.example.test", i)}
-			body, _ := json.Marshal(config.LogConnectionSummary{Fact: f})
-			if err := tx.PutConnection(ctx, historystore.LogConnection{FlowKey: f.Key, StartedMs: f.StartedAt.UnixMilli(), LastActivityMs: now.Add(-time.Duration(40-i) * time.Second).UnixMilli(), Body: body}); err != nil {
+			if err := tx.PutSummary(ctx, config.LogConnectionSummary{Fact: f, LastLogAt: now.Add(-time.Duration(40-i) * time.Second)}); err != nil {
 				return err
 			}
 		}

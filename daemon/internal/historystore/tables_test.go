@@ -1,11 +1,13 @@
 package historystore
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"reflect"
 	"testing"
+	"time"
+
+	"pax-connect/daemon/internal/config"
 )
 
 func TestLogsUpdateCommitsRowsAndCursorAtomically(t *testing.T) {
@@ -13,7 +15,7 @@ func TestLogsUpdateCommitsRowsAndCursorAtomically(t *testing.T) {
 	ctx := context.Background()
 	fail := errors.New("boom")
 	err := l.Update(ctx, func(tx *LogsTx) error {
-		if err := tx.PutConnection(ctx, LogConnection{FlowKey: "k", LastActivityMs: 1, Body: []byte("{}")}); err != nil {
+		if err := tx.PutSummary(ctx, config.LogConnectionSummary{Fact: config.FlowFact{Key: "k"}, LastLogAt: time.UnixMilli(1)}); err != nil {
 			return err
 		}
 		if err := tx.SetCursor(ctx, "logs", Cursor{"s", 7}); err != nil {
@@ -24,16 +26,16 @@ func TestLogsUpdateCommitsRowsAndCursorAtomically(t *testing.T) {
 	if !errors.Is(err, fail) {
 		t.Fatal(err)
 	}
-	if _, ok, _ := l.Cursor(ctx, "logs"); ok || count(t, l.Reader(), "SELECT count(*) FROM connections") != 0 {
+	if _, ok, _ := l.Cursor(ctx, "logs"); ok || count(t, l.Reader(), "SELECT count(*) FROM col_connections") != 0 {
 		t.Fatal("failed update left rows or cursor behind")
 	}
-	want := LogConnection{FlowKey: "k", StartedMs: 1, LastActivityMs: 3, AppID: "a", Domain: "d",
-		IP: "1.1.1.1", IssueCode: "x", Body: []byte(`{"fact":{"Key":"k"}}`)}
-	event := LogEvent{EventID: "s:1", AtMs: 1, Kind: "started", FlowKey: "k", Level: "info",
-		Source: "sing-box", ProblemKey: "problem:1", Body: []byte(`{"id":"s:1"}`)}
+	summary := config.LogConnectionSummary{Fact: config.FlowFact{Key: "k", StartedAt: time.UnixMilli(1), ApplicationID: "a", Domain: "d", IP: "1.1.1.1", Failure: "x"}, LastLogAt: time.UnixMilli(3)}
+	want := summary
+	value := config.HistoryEvent{ID: "s:1", At: time.UnixMilli(1), Kind: "started", Level: "info", Source: "sing-box", Flow: &summary.Fact}
+	event := value
 	err = l.Update(ctx, func(tx *LogsTx) error {
 		for _, step := range []error{
-			tx.PutConnection(ctx, want), tx.PutConnection(ctx, want),
+			tx.PutSummary(ctx, want), tx.PutSummary(ctx, want),
 			tx.PutDiagnostic(ctx, LogDiagnostic{FlowKey: "k", Seq: 1, AtMs: 1, Text: "t"}),
 			tx.SetCursor(ctx, "logs", Cursor{"s", 7}), tx.SetMeta(ctx, "m", "v"),
 		} {
@@ -41,11 +43,11 @@ func TestLogsUpdateCommitsRowsAndCursorAtomically(t *testing.T) {
 				return step
 			}
 		}
-		inserted, seq, err := tx.PutEvent(ctx, event)
+		inserted, seq, err := tx.AppendEvent(ctx, event)
 		if err != nil || !inserted || seq != 1 {
 			return errors.New("first event not inserted as sequence 1")
 		}
-		if inserted, seq, err = tx.PutEvent(ctx, event); err != nil || inserted || seq != 0 {
+		if inserted, seq, err = tx.AppendEvent(ctx, event); err != nil || inserted || seq != 0 {
 			return errors.New("duplicate event was inserted or numbered")
 		}
 		return nil
@@ -53,21 +55,23 @@ func TestLogsUpdateCommitsRowsAndCursorAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got LogConnection
-	row := l.Reader().QueryRow(`SELECT flow_key,started_ms,last_activity_ms,app_id,domain,ip,issue_code,body FROM connections`)
-	if err = row.Scan(&got.FlowKey, &got.StartedMs, &got.LastActivityMs, &got.AppID, &got.Domain, &got.IP, &got.IssueCode, &got.Body); err != nil || !reflect.DeepEqual(got, want) {
-		t.Fatalf("connection round trip: %+v %v", got, err)
+	got, ok, err := l.Columns().Connection(ctx, "k")
+	if err != nil || !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("connection roundtrip: %+v %v", got, err)
 	}
-	for table, n := range map[string]int{"connections": 1, "events": 1, "diagnostics": 1, "commands": 0} {
+	for table, n := range map[string]int{"col_connections": 1, "col_events": 1, "diagnostics": 1, "commands": 0} {
 		if c := count(t, l.Reader(), "SELECT count(*) FROM "+table); c != n {
 			t.Fatalf("%s: %d rows", table, c)
 		}
 	}
-	var kind, source, problem string
-	var body []byte
-	if err = l.Reader().QueryRow("SELECT kind,source,problem_key,body FROM events WHERE event_id=?", event.EventID).Scan(&kind, &source, &problem, &body); err != nil ||
-		kind != event.Kind || source != event.Source || problem != event.ProblemKey || !bytes.Equal(body, event.Body) {
-		t.Fatalf("event round trip: %s %s %s %s %v", kind, source, problem, body, err)
+	stored, ok, err := l.Columns().Event(ctx, event.ID)
+	if err != nil || !ok {
+		t.Fatal(stored, ok, err)
+	}
+	gotEvent := stored
+	value.Sequence = 1
+	if !reflect.DeepEqual(gotEvent, value) {
+		t.Fatalf("event roundtrip: %+v want %+v", gotEvent, value)
 	}
 	if c, ok, err := l.Cursor(ctx, "logs"); err != nil || !ok || c != (Cursor{"s", 7}) {
 		t.Fatalf("cursor: %+v %v %v", c, ok, err)
@@ -98,7 +102,7 @@ func TestLogsDefaultsEventsAndDiagnosticsBounds(t *testing.T) {
 			return err
 		}
 		for i := range 3 {
-			inserted, seq, err := tx.PutEvent(ctx, LogEvent{EventID: "e" + string(rune('a'+i)), AtMs: int64(i), Body: []byte("{}")})
+			inserted, seq, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: "e" + string(rune('a'+i)), At: time.UnixMilli(int64(i))})
 			if err != nil || !inserted || seq != int64(i+1) {
 				return errors.New("event sequence is not dense from 1")
 			}
@@ -117,14 +121,14 @@ func TestLogsDefaultsEventsAndDiagnosticsBounds(t *testing.T) {
 	}
 	// A replay after reopen is still a no-op and does not consume a sequence.
 	if err = l.Update(ctx, func(tx *LogsTx) error {
-		if inserted, _, err := tx.PutEvent(ctx, LogEvent{EventID: "ea", AtMs: 0, Body: []byte("{}")}); err != nil || inserted {
+		if inserted, _, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: "ea", At: time.UnixMilli(0)}); err != nil || inserted {
 			return errors.New("replayed event inserted")
 		}
 		exists, err := tx.EventExists(ctx, "ea")
 		if err != nil || !exists {
 			return errors.New("event lookup failed")
 		}
-		inserted, seq, err := tx.PutEvent(ctx, LogEvent{EventID: "ed", AtMs: 9, Body: []byte("{}")})
+		inserted, seq, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: "ed", At: time.UnixMilli(9)})
 		if err != nil || !inserted || seq != 4 {
 			return errors.New("event sequence advanced by a replay")
 		}

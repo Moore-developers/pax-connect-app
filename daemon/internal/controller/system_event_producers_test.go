@@ -92,7 +92,10 @@ func TestPowerCancelledCallerDoesNotRaceHistoryOwner(t *testing.T) {
 	<-f.started
 	cancel()
 	select {
-	case <-done:
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("cancelled power RPC returned %v", err)
+		}
 	case <-time.After(time.Second):
 		t.Fatal("cancelled RPC stayed blocked")
 	}
