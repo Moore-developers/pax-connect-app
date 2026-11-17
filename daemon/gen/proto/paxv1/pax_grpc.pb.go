@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	PaxService_GetOperation_FullMethodName                   = "/pax.v1.PaxService/GetOperation"
 	PaxService_RecheckCurrentPath_FullMethodName             = "/pax.v1.PaxService/RecheckCurrentPath"
 	PaxService_QueryLogUpdates_FullMethodName                = "/pax.v1.PaxService/QueryLogUpdates"
 	PaxService_QueryRoutingRules_FullMethodName              = "/pax.v1.PaxService/QueryRoutingRules"
@@ -45,6 +46,8 @@ const (
 	PaxService_UpdateRoute_FullMethodName                    = "/pax.v1.PaxService/UpdateRoute"
 	PaxService_DeleteRoute_FullMethodName                    = "/pax.v1.PaxService/DeleteRoute"
 	PaxService_GetRouteEditor_FullMethodName                 = "/pax.v1.PaxService/GetRouteEditor"
+	PaxService_GetRouteEditView_FullMethodName               = "/pax.v1.PaxService/GetRouteEditView"
+	PaxService_SaveRouteEdit_FullMethodName                  = "/pax.v1.PaxService/SaveRouteEdit"
 	PaxService_UpdateRouteTLS_FullMethodName                 = "/pax.v1.PaxService/UpdateRouteTLS"
 	PaxService_ConfirmRouteTLSBatch_FullMethodName           = "/pax.v1.PaxService/ConfirmRouteTLSBatch"
 	PaxService_SaveChainRoute_FullMethodName                 = "/pax.v1.PaxService/SaveChainRoute"
@@ -72,10 +75,15 @@ const (
 	PaxService_DiagnoseConnection_FullMethodName             = "/pax.v1.PaxService/DiagnoseConnection"
 	PaxService_DiagnoseNetwork_FullMethodName                = "/pax.v1.PaxService/DiagnoseNetwork"
 	PaxService_InspectEnvironment_FullMethodName             = "/pax.v1.PaxService/InspectEnvironment"
+	PaxService_StartConnectionDiagnostic_FullMethodName      = "/pax.v1.PaxService/StartConnectionDiagnostic"
+	PaxService_StartNetworkDiagnostic_FullMethodName         = "/pax.v1.PaxService/StartNetworkDiagnostic"
+	PaxService_StartEnvironmentSources_FullMethodName        = "/pax.v1.PaxService/StartEnvironmentSources"
 	PaxService_QueryCFCandidates_FullMethodName              = "/pax.v1.PaxService/QueryCFCandidates"
 	PaxService_ValidateCFCandidate_FullMethodName            = "/pax.v1.PaxService/ValidateCFCandidate"
 	PaxService_QueryCFWorkspace_FullMethodName               = "/pax.v1.PaxService/QueryCFWorkspace"
 	PaxService_RunCFTask_FullMethodName                      = "/pax.v1.PaxService/RunCFTask"
+	PaxService_StartCFValidation_FullMethodName              = "/pax.v1.PaxService/StartCFValidation"
+	PaxService_SaveValidatedCFRoute_FullMethodName           = "/pax.v1.PaxService/SaveValidatedCFRoute"
 )
 
 // PaxServiceClient is the client API for PaxService service.
@@ -89,6 +97,7 @@ const (
 // 事件流只有一条 Watch。变更命令返回 OperationAck，最终结果经 Watch；
 // 历史、规则等查询返回只读快照，不返回私有内核 profile 或凭据。
 type PaxServiceClient interface {
+	GetOperation(ctx context.Context, in *GetOperationRequest, opts ...grpc.CallOption) (*OperationState, error)
 	RecheckCurrentPath(ctx context.Context, in *CurrentPathRecheckRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	QueryLogUpdates(ctx context.Context, in *LogUpdateRequest, opts ...grpc.CallOption) (*LogUpdatePage, error)
 	QueryRoutingRules(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RoutingRulesSnapshot, error)
@@ -119,6 +128,8 @@ type PaxServiceClient interface {
 	UpdateRoute(ctx context.Context, in *RouteEditRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	DeleteRoute(ctx context.Context, in *DeleteRouteRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	GetRouteEditor(ctx context.Context, in *GetRouteEditorRequest, opts ...grpc.CallOption) (*RouteEditor, error)
+	GetRouteEditView(ctx context.Context, in *GetRouteEditorRequest, opts ...grpc.CallOption) (*RouteEditView, error)
+	SaveRouteEdit(ctx context.Context, in *SaveRouteEditRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	UpdateRouteTLS(ctx context.Context, in *UpdateRouteTLSRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	ConfirmRouteTLSBatch(ctx context.Context, in *ConfirmRouteTLSBatchRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	SaveChainRoute(ctx context.Context, in *SaveChainRouteRequest, opts ...grpc.CallOption) (*OperationAck, error)
@@ -147,10 +158,15 @@ type PaxServiceClient interface {
 	DiagnoseConnection(ctx context.Context, in *ConnectionDiagnosticRequest, opts ...grpc.CallOption) (*TrafficPathDiagnostics, error)
 	DiagnoseNetwork(ctx context.Context, in *NetworkDiagnosticRequest, opts ...grpc.CallOption) (*NetworkDiagnosticReport, error)
 	InspectEnvironment(ctx context.Context, in *EnvironmentDiagnosticRequest, opts ...grpc.CallOption) (*EnvironmentDiagnosticReport, error)
+	StartConnectionDiagnostic(ctx context.Context, in *StartConnectionDiagnosticRequest, opts ...grpc.CallOption) (*OperationAck, error)
+	StartNetworkDiagnostic(ctx context.Context, in *StartNetworkDiagnosticRequest, opts ...grpc.CallOption) (*OperationAck, error)
+	StartEnvironmentSources(ctx context.Context, in *StartEnvironmentSourcesRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	QueryCFCandidates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CFCandidates, error)
 	ValidateCFCandidate(ctx context.Context, in *CFValidationRequest, opts ...grpc.CallOption) (*CFCandidate, error)
 	QueryCFWorkspace(ctx context.Context, in *CFWorkspaceRequest, opts ...grpc.CallOption) (*CFWorkspace, error)
 	RunCFTask(ctx context.Context, in *CFTaskRequest, opts ...grpc.CallOption) (*OperationAck, error)
+	StartCFValidation(ctx context.Context, in *StartCFValidationRequest, opts ...grpc.CallOption) (*OperationAck, error)
+	SaveValidatedCFRoute(ctx context.Context, in *SaveValidatedCFRouteRequest, opts ...grpc.CallOption) (*OperationAck, error)
 }
 
 type paxServiceClient struct {
@@ -159,6 +175,16 @@ type paxServiceClient struct {
 
 func NewPaxServiceClient(cc grpc.ClientConnInterface) PaxServiceClient {
 	return &paxServiceClient{cc}
+}
+
+func (c *paxServiceClient) GetOperation(ctx context.Context, in *GetOperationRequest, opts ...grpc.CallOption) (*OperationState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationState)
+	err := c.cc.Invoke(ctx, PaxService_GetOperation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *paxServiceClient) RecheckCurrentPath(ctx context.Context, in *CurrentPathRecheckRequest, opts ...grpc.CallOption) (*OperationAck, error) {
@@ -414,6 +440,26 @@ func (c *paxServiceClient) GetRouteEditor(ctx context.Context, in *GetRouteEdito
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RouteEditor)
 	err := c.cc.Invoke(ctx, PaxService_GetRouteEditor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) GetRouteEditView(ctx context.Context, in *GetRouteEditorRequest, opts ...grpc.CallOption) (*RouteEditView, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RouteEditView)
+	err := c.cc.Invoke(ctx, PaxService_GetRouteEditView_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) SaveRouteEdit(ctx context.Context, in *SaveRouteEditRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_SaveRouteEdit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -690,6 +736,36 @@ func (c *paxServiceClient) InspectEnvironment(ctx context.Context, in *Environme
 	return out, nil
 }
 
+func (c *paxServiceClient) StartConnectionDiagnostic(ctx context.Context, in *StartConnectionDiagnosticRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_StartConnectionDiagnostic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) StartNetworkDiagnostic(ctx context.Context, in *StartNetworkDiagnosticRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_StartNetworkDiagnostic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) StartEnvironmentSources(ctx context.Context, in *StartEnvironmentSourcesRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_StartEnvironmentSources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *paxServiceClient) QueryCFCandidates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CFCandidates, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CFCandidates)
@@ -730,6 +806,26 @@ func (c *paxServiceClient) RunCFTask(ctx context.Context, in *CFTaskRequest, opt
 	return out, nil
 }
 
+func (c *paxServiceClient) StartCFValidation(ctx context.Context, in *StartCFValidationRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_StartCFValidation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) SaveValidatedCFRoute(ctx context.Context, in *SaveValidatedCFRouteRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, PaxService_SaveValidatedCFRoute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaxServiceServer is the server API for PaxService service.
 // All implementations must embed UnimplementedPaxServiceServer
 // for forward compatibility.
@@ -741,6 +837,7 @@ func (c *paxServiceClient) RunCFTask(ctx context.Context, in *CFTaskRequest, opt
 // 事件流只有一条 Watch。变更命令返回 OperationAck，最终结果经 Watch；
 // 历史、规则等查询返回只读快照，不返回私有内核 profile 或凭据。
 type PaxServiceServer interface {
+	GetOperation(context.Context, *GetOperationRequest) (*OperationState, error)
 	RecheckCurrentPath(context.Context, *CurrentPathRecheckRequest) (*OperationAck, error)
 	QueryLogUpdates(context.Context, *LogUpdateRequest) (*LogUpdatePage, error)
 	QueryRoutingRules(context.Context, *emptypb.Empty) (*RoutingRulesSnapshot, error)
@@ -771,6 +868,8 @@ type PaxServiceServer interface {
 	UpdateRoute(context.Context, *RouteEditRequest) (*OperationAck, error)
 	DeleteRoute(context.Context, *DeleteRouteRequest) (*OperationAck, error)
 	GetRouteEditor(context.Context, *GetRouteEditorRequest) (*RouteEditor, error)
+	GetRouteEditView(context.Context, *GetRouteEditorRequest) (*RouteEditView, error)
+	SaveRouteEdit(context.Context, *SaveRouteEditRequest) (*OperationAck, error)
 	UpdateRouteTLS(context.Context, *UpdateRouteTLSRequest) (*OperationAck, error)
 	ConfirmRouteTLSBatch(context.Context, *ConfirmRouteTLSBatchRequest) (*OperationAck, error)
 	SaveChainRoute(context.Context, *SaveChainRouteRequest) (*OperationAck, error)
@@ -799,10 +898,15 @@ type PaxServiceServer interface {
 	DiagnoseConnection(context.Context, *ConnectionDiagnosticRequest) (*TrafficPathDiagnostics, error)
 	DiagnoseNetwork(context.Context, *NetworkDiagnosticRequest) (*NetworkDiagnosticReport, error)
 	InspectEnvironment(context.Context, *EnvironmentDiagnosticRequest) (*EnvironmentDiagnosticReport, error)
+	StartConnectionDiagnostic(context.Context, *StartConnectionDiagnosticRequest) (*OperationAck, error)
+	StartNetworkDiagnostic(context.Context, *StartNetworkDiagnosticRequest) (*OperationAck, error)
+	StartEnvironmentSources(context.Context, *StartEnvironmentSourcesRequest) (*OperationAck, error)
 	QueryCFCandidates(context.Context, *emptypb.Empty) (*CFCandidates, error)
 	ValidateCFCandidate(context.Context, *CFValidationRequest) (*CFCandidate, error)
 	QueryCFWorkspace(context.Context, *CFWorkspaceRequest) (*CFWorkspace, error)
 	RunCFTask(context.Context, *CFTaskRequest) (*OperationAck, error)
+	StartCFValidation(context.Context, *StartCFValidationRequest) (*OperationAck, error)
+	SaveValidatedCFRoute(context.Context, *SaveValidatedCFRouteRequest) (*OperationAck, error)
 	mustEmbedUnimplementedPaxServiceServer()
 }
 
@@ -813,6 +917,9 @@ type PaxServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPaxServiceServer struct{}
 
+func (UnimplementedPaxServiceServer) GetOperation(context.Context, *GetOperationRequest) (*OperationState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOperation not implemented")
+}
 func (UnimplementedPaxServiceServer) RecheckCurrentPath(context.Context, *CurrentPathRecheckRequest) (*OperationAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecheckCurrentPath not implemented")
 }
@@ -887,6 +994,12 @@ func (UnimplementedPaxServiceServer) DeleteRoute(context.Context, *DeleteRouteRe
 }
 func (UnimplementedPaxServiceServer) GetRouteEditor(context.Context, *GetRouteEditorRequest) (*RouteEditor, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRouteEditor not implemented")
+}
+func (UnimplementedPaxServiceServer) GetRouteEditView(context.Context, *GetRouteEditorRequest) (*RouteEditView, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRouteEditView not implemented")
+}
+func (UnimplementedPaxServiceServer) SaveRouteEdit(context.Context, *SaveRouteEditRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveRouteEdit not implemented")
 }
 func (UnimplementedPaxServiceServer) UpdateRouteTLS(context.Context, *UpdateRouteTLSRequest) (*OperationAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateRouteTLS not implemented")
@@ -969,6 +1082,15 @@ func (UnimplementedPaxServiceServer) DiagnoseNetwork(context.Context, *NetworkDi
 func (UnimplementedPaxServiceServer) InspectEnvironment(context.Context, *EnvironmentDiagnosticRequest) (*EnvironmentDiagnosticReport, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InspectEnvironment not implemented")
 }
+func (UnimplementedPaxServiceServer) StartConnectionDiagnostic(context.Context, *StartConnectionDiagnosticRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartConnectionDiagnostic not implemented")
+}
+func (UnimplementedPaxServiceServer) StartNetworkDiagnostic(context.Context, *StartNetworkDiagnosticRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartNetworkDiagnostic not implemented")
+}
+func (UnimplementedPaxServiceServer) StartEnvironmentSources(context.Context, *StartEnvironmentSourcesRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartEnvironmentSources not implemented")
+}
 func (UnimplementedPaxServiceServer) QueryCFCandidates(context.Context, *emptypb.Empty) (*CFCandidates, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryCFCandidates not implemented")
 }
@@ -980,6 +1102,12 @@ func (UnimplementedPaxServiceServer) QueryCFWorkspace(context.Context, *CFWorksp
 }
 func (UnimplementedPaxServiceServer) RunCFTask(context.Context, *CFTaskRequest) (*OperationAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunCFTask not implemented")
+}
+func (UnimplementedPaxServiceServer) StartCFValidation(context.Context, *StartCFValidationRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartCFValidation not implemented")
+}
+func (UnimplementedPaxServiceServer) SaveValidatedCFRoute(context.Context, *SaveValidatedCFRouteRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveValidatedCFRoute not implemented")
 }
 func (UnimplementedPaxServiceServer) mustEmbedUnimplementedPaxServiceServer() {}
 func (UnimplementedPaxServiceServer) testEmbeddedByValue()                    {}
@@ -1000,6 +1128,24 @@ func RegisterPaxServiceServer(s grpc.ServiceRegistrar, srv PaxServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&PaxService_ServiceDesc, srv)
+}
+
+func _PaxService_GetOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOperationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).GetOperation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_GetOperation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).GetOperation(ctx, req.(*GetOperationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _PaxService_RecheckCurrentPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1441,6 +1587,42 @@ func _PaxService_GetRouteEditor_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PaxServiceServer).GetRouteEditor(ctx, req.(*GetRouteEditorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_GetRouteEditView_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRouteEditorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).GetRouteEditView(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_GetRouteEditView_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).GetRouteEditView(ctx, req.(*GetRouteEditorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_SaveRouteEdit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveRouteEditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).SaveRouteEdit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_SaveRouteEdit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).SaveRouteEdit(ctx, req.(*SaveRouteEditRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1931,6 +2113,60 @@ func _PaxService_InspectEnvironment_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaxService_StartConnectionDiagnostic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartConnectionDiagnosticRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).StartConnectionDiagnostic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_StartConnectionDiagnostic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).StartConnectionDiagnostic(ctx, req.(*StartConnectionDiagnosticRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_StartNetworkDiagnostic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartNetworkDiagnosticRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).StartNetworkDiagnostic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_StartNetworkDiagnostic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).StartNetworkDiagnostic(ctx, req.(*StartNetworkDiagnosticRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_StartEnvironmentSources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartEnvironmentSourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).StartEnvironmentSources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_StartEnvironmentSources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).StartEnvironmentSources(ctx, req.(*StartEnvironmentSourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PaxService_QueryCFCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -2003,6 +2239,42 @@ func _PaxService_RunCFTask_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaxService_StartCFValidation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartCFValidationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).StartCFValidation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_StartCFValidation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).StartCFValidation(ctx, req.(*StartCFValidationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_SaveValidatedCFRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveValidatedCFRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).SaveValidatedCFRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_SaveValidatedCFRoute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).SaveValidatedCFRoute(ctx, req.(*SaveValidatedCFRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaxService_ServiceDesc is the grpc.ServiceDesc for PaxService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2010,6 +2282,10 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "pax.v1.PaxService",
 	HandlerType: (*PaxServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetOperation",
+			Handler:    _PaxService_GetOperation_Handler,
+		},
 		{
 			MethodName: "RecheckCurrentPath",
 			Handler:    _PaxService_RecheckCurrentPath_Handler,
@@ -2105,6 +2381,14 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRouteEditor",
 			Handler:    _PaxService_GetRouteEditor_Handler,
+		},
+		{
+			MethodName: "GetRouteEditView",
+			Handler:    _PaxService_GetRouteEditView_Handler,
+		},
+		{
+			MethodName: "SaveRouteEdit",
+			Handler:    _PaxService_SaveRouteEdit_Handler,
 		},
 		{
 			MethodName: "UpdateRouteTLS",
@@ -2215,6 +2499,18 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _PaxService_InspectEnvironment_Handler,
 		},
 		{
+			MethodName: "StartConnectionDiagnostic",
+			Handler:    _PaxService_StartConnectionDiagnostic_Handler,
+		},
+		{
+			MethodName: "StartNetworkDiagnostic",
+			Handler:    _PaxService_StartNetworkDiagnostic_Handler,
+		},
+		{
+			MethodName: "StartEnvironmentSources",
+			Handler:    _PaxService_StartEnvironmentSources_Handler,
+		},
+		{
 			MethodName: "QueryCFCandidates",
 			Handler:    _PaxService_QueryCFCandidates_Handler,
 		},
@@ -2229,6 +2525,14 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RunCFTask",
 			Handler:    _PaxService_RunCFTask_Handler,
+		},
+		{
+			MethodName: "StartCFValidation",
+			Handler:    _PaxService_StartCFValidation_Handler,
+		},
+		{
+			MethodName: "SaveValidatedCFRoute",
+			Handler:    _PaxService_SaveValidatedCFRoute_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

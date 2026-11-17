@@ -240,7 +240,15 @@ func (c *Controller) finishCurrentPath(done pathCheckDone) {
 
 // RecheckCurrentPath accepts an explicit verification without starting a core or changing routes.
 func (c *Controller) RecheckCurrentPath(ctx context.Context, q *pb.CurrentPathRecheckRequest) (*pb.OperationAck, error) {
-	if q.RequestId == "" || len(q.RequestId) > 128 {
+	if q.Context != nil {
+		return c.contextRequest(ctx, "path.recheck", q, q.Context, func() (*pb.OperationAck, error) {
+			return c.recheckCurrentPath(ctx, &pb.CurrentPathRecheckRequest{RequestId: q.Context.ClientId + "/" + q.Context.RequestId})
+		})
+	}
+	return c.appRequest(ctx, "path.recheck", q, q.RequestId, func() (*pb.OperationAck, error) { return c.recheckCurrentPath(ctx, q) })
+}
+func (c *Controller) recheckCurrentPath(ctx context.Context, q *pb.CurrentPathRecheckRequest) (*pb.OperationAck, error) {
+	if q.RequestId == "" || len(q.RequestId) > 258 {
 		return nil, status.Error(codes.InvalidArgument, "current_path_invalid")
 	}
 	var ack *pb.OperationAck

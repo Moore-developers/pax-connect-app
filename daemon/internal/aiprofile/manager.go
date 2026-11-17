@@ -3,6 +3,7 @@ package aiprofile
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -168,7 +169,7 @@ func (m *Manager) workspace(ctx context.Context) (Workspace, error) {
 // Mutate saves Pax metadata and credentials separately from applying native files.
 func (m *Manager) Mutate(ctx context.Context, r Mutation) (Workspace, error) {
 	w, e := m.mutate(ctx, r)
-	if e != nil || m.modelClient == nil || (r.Action != "save" && r.Action != "import") {
+	if e != nil || r.DeferModels || m.modelClient == nil || (r.Action != "save" && r.Action != "import") {
 		return w, e
 	}
 	id := ""
@@ -243,6 +244,9 @@ func (m *Manager) mutate(ctx context.Context, r Mutation) (Workspace, error) {
 		}
 		return m.workspace(ctx)
 	}
+	if exists && r.ExpectedRevision == 0 && old.Kind != "native" && sameProfileInput(old.Profile, p) && old.Key == key {
+		return m.workspace(ctx)
+	}
 	if exists && old.Revision != r.ExpectedRevision || !exists && r.ExpectedRevision != 0 {
 		return Workspace{}, Conflict
 	}
@@ -276,6 +280,9 @@ func (m *Manager) mutate(ctx context.Context, r Mutation) (Workspace, error) {
 		p.ModelsError = ""
 	}
 	p.HasKey = key != ""
+	if e := m.checkWorkspaceSize(ctx, r.ResultLimit, &p, ""); e != nil {
+		return Workspace{}, e
+	}
 	value := savedProfile{Schema: 2, Profile: p, Key: key, OperationID: r.OperationID, Generated: cloneGenerated(old.Generated), MetadataAt: time.Now().UnixNano()}
 	if err := m.saveProfile(ctx, value); err != nil {
 		return Workspace{}, err
@@ -284,4 +291,35 @@ func (m *Manager) mutate(ctx context.Context, r Mutation) (Workspace, error) {
 		return Workspace{}, e
 	}
 	return m.workspace(ctx)
+}
+
+// The caller reserves a complete result before mutation; check again under the
+// manager lock so concurrent admissions cannot grow it beyond that reservation.
+func (m *Manager) checkWorkspaceSize(ctx context.Context, limit int, replacement *Profile, removed string) error {
+	if limit <= 0 {
+		return nil
+	}
+	w, e := m.workspace(ctx)
+	if e != nil {
+		return e
+	}
+	profiles := make([]Profile, 0, len(w.Profiles)+1)
+	for _, p := range w.Profiles {
+		if p.ID == removed || replacement != nil && p.ID == replacement.ID {
+			continue
+		}
+		profiles = append(profiles, p)
+	}
+	if replacement != nil {
+		profiles = append(profiles, *replacement)
+	}
+	w.Profiles = profiles
+	encoded, e := json.Marshal(w)
+	if e != nil {
+		return StoreInvalid
+	}
+	if len(encoded) > limit {
+		return Failure("result_too_large")
+	}
+	return nil
 }

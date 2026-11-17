@@ -35,7 +35,8 @@ func configureAINativeUIFixture(t *testing.T, c *Controller, ctx context.Context
 	}
 	t.Cleanup(func() { _ = profiles.Close() })
 	const profileID = "4eb87612-9a70-49d3-88e0-a54d40245269"
-	profileServer := NewAIProfilesServer(profiles)
+	profileServer := NewAIProfilesServer(profiles, c)
+	t.Cleanup(profileServer.Close)
 	if _, err = profileServer.MutateAIProfile(ctx, &pb.AIProfileMutation{OperationId: "fixture-save", Action: &pb.AIProfileMutation_Save{Save: &pb.AIProfileSave{Profile: &pb.AIProfileSummary{Id: profileID, Name: "隔离用量测试", BaseUrl: "https://fixture.invalid", Multiplier: 2}, ReplaceKey: true, ApiKey: "fixture-not-a-real-secret"}}}); err != nil {
 		t.Fatal(err)
 	}

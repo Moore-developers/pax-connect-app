@@ -21,7 +21,8 @@ extension DaemonConnection {
         protocolVersion: response.protocolVersion,
         snapshotSeq: response.snapshotSeq, serviceFingerprint: response.serviceFingerprint,
         capabilities: Set(response.capabilities), initialInstall: response.initialInstall,
-        ownerAppPID: response.ownerAppPid
+        ownerAppPID: response.ownerAppPid, daemonInstance: response.daemonInstance,
+        timezone: response.timezone
       )
     }
   }

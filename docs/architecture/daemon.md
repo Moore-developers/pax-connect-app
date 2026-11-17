@@ -34,7 +34,7 @@
 
 - **AI本地用量**：`internal/aiusage` 独立拥有只读CLI日志扫描、解析和 `ai_usage.db` 单写；aiprofile 的应用/来源观测时间线（每次扫描前检查配置并取快照，按请求时间归属）通过cmd注入；schema12新增小时桶来源维度，旧账本不重标，见[来源合同](../changes/pax-connect-network-control-plane/ai-service-sources.md)；`cmd/pax-ai-usage-rebuild` 是重新处理入口；Open仅补保留期内已收录模型的无单价行并同步小时桶，保留历史归属/倍率，见AI采集§5；daemon遇<5旧结构只报`ai_usage_rebuild_required`；5/6仅原事务追加兼容表和索引至7，不重读历史。controller仅映射三RPC，App不读源日志。合同见[AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md)。
 - **地址族事实**：network读取当前物理服务的SystemConfiguration配置、地址和作用域路由；IPv6关闭/仅本地链路/不可用/可用/未知分别呈现。物理网络身份含有效地址族状态，Pax自建TUN不参与判定。私有RouteConfig冻结IPv4Only，不写节点持久化。
-- **环境检测**：controller编排独立45秒environment会话，固定loopback单次浏览器回传及Mac实际网络探测；不绑定所选线路、不落盘。
+- **环境检测**：controller编排独立45秒environment会话，固定loopback单次浏览器回传及Mac实际网络探测；不绑定所选线路、不落盘。MCP环境及诊断任务沿既有testOwner管理寿命与取消，operation结果有界保留；环境start互斥，结束结果不留loopback URL。
 - **网络诊断**：controller在队列外编排45秒显式查询，复用测试owner名额与寿命，measurement解析归因资料，singbox持冻结测量出站；无持久化或系统修改。见[合同](../changes/pax-connect-network-control-plane/network-diagnostics.md)。
 - **只读采集**：`internal/network` 只做只读物理路径 / 路由归属采集，不写系统网络；controller 在队列外有界执行诊断并复核会话边界。
 - **子包边界**：`coreclient`、`measurement`、`cfoptimizer`、`siteicon`、`subfetch` 等包的依赖与职责见 [code-standards/module-boundaries.md](../code-standards/module-boundaries.md)，不在此重复。

@@ -99,13 +99,16 @@ func (c *Controller) testBatch(ctx context.Context, req *paxv1.TestRouteRequest)
 			owner.bandwidth = id
 		}
 		owner.ops[id] = cancel
-		if !download {
-			for _, item := range items {
-				owner.parents[item.id] = id
-			}
+		for _, item := range items {
+			owner.parents[item.id] = id
 		}
 		owner.probes.Add(1 + len(items))
 		owner.mu.Unlock()
+		outcomes := make([]*paxv1.RouteMeasurementResult, 0, len(items))
+		for _, item := range items {
+			outcomes = append(outcomes, &paxv1.RouteMeasurementResult{RouteId: item.record.Config.ID, ConfigRevision: connectionVersion(item.record, item.view)})
+		}
+		c.beginMeasurementOutcome(id, outcomes)
 		c.measurementBatchHolds++
 		for _, item := range items {
 			if download {

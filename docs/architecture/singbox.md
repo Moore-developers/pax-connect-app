@@ -58,7 +58,11 @@ NetworkDiagnosticProgress是本轮临时计数/阶段标准值，measurement发�
 
 后台恢复的跨端握手追加owner_app_pid，Go/Swift同提交同步；行为以[协议§4](protocol.md#4-ipc-与协议)及[恢复合同](../changes/pax-connect-network-control-plane/backend-recovery.md)为准。
 
-AI Profile标准值由Go→proto→PaxClient映射，见P07。AIServiceSource独立标识本机配置来源；请求与桶保存历史来源，渠道金额覆盖缺失独立传递，见[来源合同](../changes/pax-connect-network-control-plane/ai-service-sources.md)。
+CF任务结果沿proto CFWorkspace/CFValidationResult与Swift DaemonNetworkOperation/DaemonCFValidation同步，保留网络、版本、验证失败与过期时间；私有冻结草稿留在controller CF owner，不作为跨端模型传输。协议与预算见[协议§4](protocol.md#4-ipc-与协议)。
+
+设置操作由原controller/log writer冻结SettingsOperationResult，经proto→PaxClient/DaemonSettingsOperation保留NetworkPrivacy、MeasurementPreferences、日志设置版本/清理状态及清空代数；回读不重放写入。NetworkPrivacy、MeasurementPreferences与ExitPoolState归privacy.proto，原消息全名和编号不变。
+
+AI Profile标准值由Go→proto→PaxClient映射，见P07。不含凭据的Workspace/Plan消息归api/ai_profile_state.proto，公共AIProfileOperationResult由Go的原owner冻结，Swift DaemonAIProfileOperation保留workspace/plan、保存或删除ID及outcome；不从当前绑定猜测原操作成败。AIServiceSource独立标识本机配置来源；请求与桶保存历史来源，渠道金额覆盖缺失独立传递，见[来源合同](../changes/pax-connect-network-control-plane/ai-service-sources.md)。
 
 首次引导新增Hello首次身份、AI绑定检测和初始化计划，Go/proto/Swift同步；合同见[首次引导](../changes/pax-connect-network-control-plane/first-run-onboarding.md)，不改变sing-box运行模型。
 
@@ -80,7 +84,7 @@ AI Profile标准值由Go→proto→PaxClient映射，见P07。AIServiceSource独
 
 会话上限投影`SessionLimits`（Go）/`AISessionLimits`（Swift）及对应LimitMoney、ModelLimit、LimitRow、LimitSummary、LimitTrend、LimitDay、LimitComparison由aiusage计算、PaxClient映射，proto见api/ai_usage.proto。正式页面消费daemon汇总，不从已加载日志重算；Features只生成展示百分比、已聚合均费、标签与图形。金额为输入侧USD，平均值保留亚微美元精度；分段已定价数与请求数独立，汇总/日桶/同期的InputTokens/input_tokens/inputTokens是含缓存的总输入Token，可选wire字段缺失为未知，已知0保留；日桶区分不可用与0，同期比较可缺失；合同见[上限视图](../changes/pax-connect-network-control-plane/ui/specs/P07d-ai-session-limits.md)。
 
-AI本地用量跨端值：`AIUsageRequest`、`AIUsageTotals`、`AIUsageBucket` 定义在 aiusage / api/ai_usage.proto / PaxClient/Model/AIUsage；Features只投影。`AIUsageLogPage.state`映射已有日志响应state，用于失效代数核对，无wire字段变化。请求带官方分项单价/推理强度与来源，每条请求都有价格（无未定价/估算状态），DSH只读。性能可缺测，时间/Token与微美元费用在daemon冻结；合同见[AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md) §3–7。
+AI本地用量跨端值：`AIUsageRequest`、`AIUsageTotals`、`AIUsageBucket` 定义在 aiusage / api/ai_usage.proto / PaxClient/Model/AIUsage；Features只投影。`AIUsageLogPage.state`映射已有日志响应state，用于失效代数核对，日志请求可选成对expectedRevision/expectedGeneration绑定分页，PaxClient的AIUsageFilter透传；缺省仍独立查询，响应state为页内事务水位。请求带官方分项单价/推理强度与来源，每条请求都有价格（无未定价/估算状态），DSH只读。性能可缺测，时间/Token与微美元费用在daemon冻结；合同见[AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md) §3–7。
 
 TrafficRoutingMatch是流量行可选的历史最近选择证据（at/rule/source/application_id/application/identity），Go/Swift与api/traffic.proto同步；config.FlowFact.RoutingMatchedAt在实际最终匹配冻结，通过既有内部JSON传递。累计不按包拆分，查询与历史降级见[最近命中](../changes/pax-connect-network-control-plane/latest-routing-match.md)。
 

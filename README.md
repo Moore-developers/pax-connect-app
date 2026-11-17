@@ -76,6 +76,12 @@ Not importable: Clash YAML, sing-box JSON, VLESS over XHTTP. Unsupported options
 - Session analysis with parent and subagent breakdown.
 - Profiles applied to Claude Code `settings.json` and Codex `config.toml`.
 
+## MCP access
+
+Open **Settings → MCP** in Pax to check readiness and connect Codex, Claude Code or DeepSeek Harness. New connections default to read-only; query and diagnostic access is optional. Existing permissions are preserved and conflicting entries are not overwritten. Restart or reconnect the AI client after an app upgrade.
+
+Pax must be running for business tools. MCP does not launch the app or enable the proxy. Data returned to your AI client, including logs, domains and sessions, may be sent to that client's AI service. Entry verification checks initialization and tool discovery; it does not prove a client is connected.
+
 ## Install
 
 > **Requirements:** a Mac with **Apple Silicon**, running **macOS 26 or later**. Intel Macs are not supported.

@@ -68,6 +68,9 @@ public nonisolated struct Pax_V1_AIUsageQuery: Sendable {
   /// Clears the value of `knownRevision`. Subsequent reads from it will return its default value.
   public mutating func clearKnownRevision() {self._knownRevision = nil}
 
+  /// Optional IANA timezone for day grouping; omitted preserves daemon local days.
+  public var timezone: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -267,6 +270,25 @@ public nonisolated struct Pax_V1_AIUsageLogQuery: Sendable {
 
   public var serviceSource: String = String()
 
+  /// Optional paired watermarks from the first page; checked in the same read transaction.
+  public var expectedRevision: UInt64 {
+    get {_expectedRevision ?? 0}
+    set {_expectedRevision = newValue}
+  }
+  /// Returns true if `expectedRevision` has been explicitly set.
+  public var hasExpectedRevision: Bool {self._expectedRevision != nil}
+  /// Clears the value of `expectedRevision`. Subsequent reads from it will return its default value.
+  public mutating func clearExpectedRevision() {self._expectedRevision = nil}
+
+  public var expectedGeneration: UInt64 {
+    get {_expectedGeneration ?? 0}
+    set {_expectedGeneration = newValue}
+  }
+  /// Returns true if `expectedGeneration` has been explicitly set.
+  public var hasExpectedGeneration: Bool {self._expectedGeneration != nil}
+  /// Clears the value of `expectedGeneration`. Subsequent reads from it will return its default value.
+  public mutating func clearExpectedGeneration() {self._expectedGeneration = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -274,6 +296,8 @@ public nonisolated struct Pax_V1_AIUsageLogQuery: Sendable {
   fileprivate var _succeeded: Bool? = nil
   fileprivate var _minOfficialCostMicro: Int64? = nil
   fileprivate var _maxOfficialCostMicro: Int64? = nil
+  fileprivate var _expectedRevision: UInt64? = nil
+  fileprivate var _expectedGeneration: UInt64? = nil
 }
 
 public nonisolated struct Pax_V1_AIUsageUnitPrice: Sendable {
@@ -1733,7 +1757,7 @@ nonisolated extension Pax_V1_AIUsageState: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pax_V1_AIUsageQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageQuery"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}granularity\0\u{3}known_revision\0\u{b}visible\0\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}granularity\0\u{3}known_revision\0\u{2}\u{2}timezone\0\u{b}visible\0\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1745,6 +1769,7 @@ nonisolated extension Pax_V1_AIUsageQuery: SwiftProtobuf.Message, SwiftProtobuf.
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.toMs) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.granularity) }()
       case 4: try { try decoder.decodeSingularUInt64Field(value: &self._knownRevision) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.timezone) }()
       default: break
       }
     }
@@ -1767,6 +1792,9 @@ nonisolated extension Pax_V1_AIUsageQuery: SwiftProtobuf.Message, SwiftProtobuf.
     try { if let v = self._knownRevision {
       try visitor.visitSingularUInt64Field(value: v, fieldNumber: 4)
     } }()
+    if !self.timezone.isEmpty {
+      try visitor.visitSingularStringField(value: self.timezone, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1775,6 +1803,7 @@ nonisolated extension Pax_V1_AIUsageQuery: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs.toMs != rhs.toMs {return false}
     if lhs.granularity != rhs.granularity {return false}
     if lhs._knownRevision != rhs._knownRevision {return false}
+    if lhs.timezone != rhs.timezone {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2092,7 +2121,7 @@ nonisolated extension Pax_V1_AIUsageBuckets: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageLogQuery"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}succeeded\0\u{1}query\0\u{3}profile_id\0\u{3}model_id\0\u{1}cli\0\u{1}page\0\u{3}min_official_cost_micro\0\u{3}max_official_cost_micro\0\u{3}service_source\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}from_ms\0\u{3}to_ms\0\u{1}succeeded\0\u{1}query\0\u{3}profile_id\0\u{3}model_id\0\u{1}cli\0\u{1}page\0\u{3}min_official_cost_micro\0\u{3}max_official_cost_micro\0\u{3}service_source\0\u{3}expected_revision\0\u{3}expected_generation\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2111,6 +2140,8 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
       case 9: try { try decoder.decodeSingularInt64Field(value: &self._minOfficialCostMicro) }()
       case 10: try { try decoder.decodeSingularInt64Field(value: &self._maxOfficialCostMicro) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self.serviceSource) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self._expectedRevision) }()
+      case 13: try { try decoder.decodeSingularUInt64Field(value: &self._expectedGeneration) }()
       default: break
       }
     }
@@ -2154,6 +2185,12 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
     if !self.serviceSource.isEmpty {
       try visitor.visitSingularStringField(value: self.serviceSource, fieldNumber: 11)
     }
+    try { if let v = self._expectedRevision {
+      try visitor.visitSingularUInt64Field(value: v, fieldNumber: 12)
+    } }()
+    try { if let v = self._expectedGeneration {
+      try visitor.visitSingularUInt64Field(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2169,6 +2206,8 @@ nonisolated extension Pax_V1_AIUsageLogQuery: SwiftProtobuf.Message, SwiftProtob
     if lhs._minOfficialCostMicro != rhs._minOfficialCostMicro {return false}
     if lhs._maxOfficialCostMicro != rhs._maxOfficialCostMicro {return false}
     if lhs.serviceSource != rhs.serviceSource {return false}
+    if lhs._expectedRevision != rhs._expectedRevision {return false}
+    if lhs._expectedGeneration != rhs._expectedGeneration {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -1,6 +1,7 @@
 syntax = "proto3";
 package pax.v1;
 import "google/protobuf/timestamp.proto";
+import "operation_context.proto";
 option go_package = "pax-connect/daemon/gen/proto/paxv1";
 message Settings {
   // auto_connect is daemon-owned.
@@ -17,10 +18,11 @@ message UpdateSettingsRequest {
   uint64 expected_revision = 3;
   string operation_id = 4;
   google.protobuf.Timestamp requested_at = 5;
+  OperationContext context = 6;
 }
 
 // Saved intent; changes apply on next explicit proxy activation.
-message NetworkPrivacy { uint64 revision=1; string dns_mode=2; bool webrtc=3; }
+message NetworkPrivacy { uint64 revision=1; string dns_mode=2; bool webrtc=3; OperationContext context=4; }
 
 // Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
 // interface 如 utun6；target 为被承接的路由目标（如 128.0/1）；at 为观测时间。
@@ -28,4 +30,34 @@ message ExternalTUN {
   string interface = 1;
   string target = 2;
   google.protobuf.Timestamp at = 3;
+}
+
+message MeasurementPreferences {
+ uint64 revision = 1;
+ uint32 latency_parallel = 2;
+ uint32 exit_parallel = 3;
+ uint32 download_parallel = 4;
+ string mode = 5;
+ uint32 recommended_latency = 6;
+ uint32 recommended_exit = 7;
+ uint32 recommended_download = 8;
+ string recommendation_network = 9;
+ google.protobuf.Timestamp evaluated_at = 10;
+ string latency_mode = 11;
+ string exit_mode = 12;
+ string download_mode = 13;
+ // Read-only; ignored by SaveMeasurementPreferences.
+ ExitPoolState exit_pool_state = 14;
+ OperationContext context = 15;
+}
+
+message ExitPoolState {
+ uint32 configured_limit = 1;
+ uint32 in_flight = 2;
+ uint32 queued = 3;
+ // Subset of queued, not an additional task count.
+ uint32 retrying = 4;
+ uint32 available_providers = 5;
+ uint32 total_providers = 6;
+ google.protobuf.Timestamp at = 7;
 }

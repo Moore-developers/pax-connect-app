@@ -68,3 +68,42 @@ func TestOfficialCostRangeFiltersTotalsBeforePagination(t *testing.T) {
 		}
 	}
 }
+
+// App may read independent pages; MCP must reject a chain after either append or reprice.
+func TestLogSnapshotPaginationRejectsCommittedChanges(t *testing.T) {
+	f := repriceFixture(t, profileP(1, nil))
+	ctx := context.Background()
+	q := Query{From: 1, To: repriceNow.UnixMilli()}
+	first, err := f.store.List(ctx, q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q.ExpectedRevision, q.ExpectedGeneration = &first.State.Revision, &first.State.Generation
+	q.Page = 1
+	if _, err = f.store.List(ctx, q); err != nil {
+		t.Fatal(err)
+	}
+	appendTo(t, f.log, lineAt("new-page-head", modelA, repriceNow.Add(-time.Minute)))
+	if err = f.store.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.store.List(ctx, q); !errors.Is(err, ErrQueryChanged) {
+		t.Fatalf("append accepted stale offset: %v", err)
+	}
+	q.ExpectedRevision, q.ExpectedGeneration = nil, nil
+	fresh, err := f.store.List(ctx, q)
+	if err != nil || fresh.All != first.All+1 {
+		t.Fatalf("independent App page failed: %+v %v", fresh, err)
+	}
+	q.ExpectedRevision, q.ExpectedGeneration = &fresh.State.Revision, &fresh.State.Generation
+	if _, err = f.store.Reprice(ctx, RepriceQuery{ProfileID: "p", All: true, Multiplier: .5}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.store.List(ctx, q); !errors.Is(err, ErrQueryChanged) {
+		t.Fatalf("reprice accepted stale page: %v", err)
+	}
+	q.ExpectedGeneration = nil
+	if _, err = f.store.List(ctx, q); !errors.Is(err, ErrRange) {
+		t.Fatalf("unpaired watermark: %v", err)
+	}
+}

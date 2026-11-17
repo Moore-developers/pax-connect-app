@@ -48,6 +48,8 @@ public struct EnvironmentDiagnosticReport: Sendable, Equatable, Codable {
     }
   }
   public let sessionID, browserURL: String
+  public let operationID: String
+  public let expiresAt: Date?
   public let at: Date
   public let mac, browser: Sample
   public let complete: Bool
@@ -59,12 +61,16 @@ public struct EnvironmentDiagnosticReport: Sendable, Equatable, Codable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     sessionID = ""
     browserURL = ""
+    operationID = ""
+    expiresAt = nil
     at = try container.decode(Date.self, forKey: .at)
     mac = try container.decode(Sample.self, forKey: .mac)
     browser = try container.decode(Sample.self, forKey: .browser)
     complete = try container.decode(Bool.self, forKey: .complete)
   }
   init(_ p: Pax_V1_EnvironmentDiagnosticReport) {
+    operationID = p.operationID
+    expiresAt = p.hasExpiresAt ? p.expiresAt.date : nil
     sessionID = p.sessionID
     browserURL = p.browserURL
     at = p.at.date

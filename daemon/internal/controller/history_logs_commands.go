@@ -40,8 +40,9 @@ type logsCommand struct {
 
 type logsCommandResult struct {
 	// deletionGeneration is returned by a clear so the caller can expire the icon cache.
-	deletionGeneration uint64
-	err                error
+	deletionGeneration                              uint64
+	clearGeneration, logsRevision, settingsRevision uint64
+	err                                             error
 }
 
 func (l *historyLogs) reply(cmd logsCommand, result logsCommandResult) {
@@ -126,7 +127,15 @@ func (l *historyLogs) execute(ctx context.Context, cmd logsCommand) {
 	}
 	// Publish before acknowledging: a caller that immediately reads a snapshot must see the
 	// generations its command just produced.
+	if result.err == nil && cmd.kind != logsCommandFlush {
+		if _, err := l.refreshCommitted(ctx); err != nil {
+			result.err = errors.New("history_store_failed")
+		}
+	}
 	l.publishState(ctx)
+	result.clearGeneration = l.committed.ClearGeneration
+	result.logsRevision = l.committed.LogsRevision
+	result.settingsRevision = l.committed.SettingsRevision
 	l.reply(cmd, result)
 }
 

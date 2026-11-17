@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	paxv1 "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/cfoptimizer"
 	"pax-connect/daemon/internal/config"
@@ -27,6 +27,9 @@ type CatalogRepository interface {
 	Save(context.Context, config.Catalog) error
 }
 type previewEntry struct {
+	requestID   string
+	digest      [32]byte
+	view        *paxv1.RoutesPreview
 	clientID    string
 	expires     time.Time
 	revision    uint64
@@ -59,6 +62,7 @@ type routesOwner struct {
 }
 type routeOperation struct {
 	result          *paxv1.RouteSaveResult
+	settingsResult  *paxv1.SettingsOperationResult
 	evidence        *config.SystemEvent
 	label           string
 	ctx             context.Context
@@ -193,23 +197,7 @@ func (c *Controller) publishCatalog(ctx context.Context) {
 		node.Hidden = record.Hidden
 		node.SourceRemoved = record.SourceRemoved
 		if result, ok := c.routes.testResults[record.Config.ID]; ok {
-			summary := &paxv1.RouteTestSummary{
-				At:       timestamppb.New(result.at),
-				StableMs: uint32(result.measurement.Stable.Milliseconds()), StableSamples: result.measurement.StableSamples, StableError: result.measurement.StableError, TestTarget: result.measurement.TestTarget,
-				ExitIp:       result.exitIP,
-				ExitLocation: exitLocationProto(result.measurement.ExitLocation), LastExitLocation: exitLocationProto(result.measurement.LastExitLocation),
-				ColdMs: uint32(result.measurement.Cold.Milliseconds()), SecondMs: uint32(result.measurement.Second.Milliseconds()), Reused: result.measurement.Reused, Method: result.measurement.Method, FirstError: result.measurement.FirstError, SecondError: result.measurement.SecondError,
-				Success:              result.success,
-				DurationMs:           uint32(result.duration.Milliseconds()),
-				TestedRevision:       result.revision,
-				TestedConfigRevision: result.configRevision,
-			}
-			if result.exitError != "" {
-				summary.ExitError = &paxv1.ProductError{Code: result.exitError}
-			}
-			if result.code != "" {
-				summary.Error = &paxv1.ProductError{Code: result.code, MessageParams: result.params}
-			}
+			summary := routeTestSummary(result)
 			node.TestSummary = summary
 		}
 		routes = append(routes, node)
@@ -381,7 +369,15 @@ func (c *Controller) admitNamedRoute(ctx context.Context, action, name string, a
 	e := operationEvidence("线路操作", "", "", "")
 	e.Type = action
 	e.Name = name
-	return c.admitRouteOperation(ctx, &routeOperation{label: name, evidence: e, apply: apply})
+	outcome := &paxv1.RouteSaveResult{}
+	return c.admitRouteOperation(ctx, &routeOperation{label: name, evidence: e, result: outcome, apply: func(ctx context.Context) error {
+		before := c.routes.catalog.Clone()
+		if err := apply(ctx); err != nil {
+			return err
+		}
+		catalogOutcome(outcome, before, c.routes.catalog, action)
+		return nil
+	}})
 }
 
 func (c *Controller) admitRouteOperation(_ context.Context, operation *routeOperation) (*paxv1.OperationAck, error) {
@@ -439,6 +435,19 @@ func (c *Controller) saveCatalog(ctx context.Context, next config.Catalog) error
 	return nil
 }
 func (c *Controller) PreviewRoutes(ctx context.Context, req *paxv1.PreviewRoutesRequest) (*paxv1.RoutesPreview, error) {
+	if err := c.checkPreviewContext(req.Context); err != nil {
+		return nil, err
+	}
+	var existing *paxv1.RoutesPreview
+	var existingErr error
+	if req.Context != nil {
+		if err := c.query(ctx, func(context.Context) { existing, existingErr = c.previousPreview(req) }); err != nil {
+			return nil, err
+		}
+		if existing != nil || existingErr != nil {
+			return existing, existingErr
+		}
+	}
 	if len(req.ClientId) > 128 {
 		return nil, status.Error(codes.InvalidArgument, "request_invalid")
 	}
@@ -478,10 +487,18 @@ func (c *Controller) PreviewRoutes(ctx context.Context, req *paxv1.PreviewRoutes
 				return
 			}
 		}
+		if result, failure = c.previousPreview(req); result != nil || failure != nil {
+			return
+		}
 		result, failure = c.createPreview(ctx, batch, source)
 		if failure == nil {
 			entry := c.routes.previews[result.Token]
-			entry.clientID = req.ClientId
+			entry.clientID = requestClient(req.ClientId, req.Context)
+			if req.Context != nil {
+				entry.requestID = req.Context.RequestId
+				entry.digest = previewDigest(req)
+				entry.view = proto.Clone(result).(*paxv1.RoutesPreview)
+			}
 			c.routes.previews[result.Token] = entry
 		}
 	}); err != nil {
@@ -617,9 +634,12 @@ func fetchFailure(err error) (codes.Code, string) {
 	}
 }
 func (c *Controller) CancelRoutesPreview(ctx context.Context, req *paxv1.CancelRoutesPreviewRequest) (*emptypb.Empty, error) {
+	if err := c.checkPreviewContext(req.Context); err != nil {
+		return nil, err
+	}
 	var failure error
 	err := c.query(ctx, func(context.Context) {
-		if p, ok := c.routes.previews[req.Token]; ok && p.clientID != req.ClientId {
+		if p, ok := c.routes.previews[req.Token]; ok && p.clientID != requestClient(req.ClientId, req.Context) {
 			failure = status.Error(codes.PermissionDenied, "preview_owner_mismatch")
 			return
 		}
@@ -639,7 +659,7 @@ func (c *Controller) confirmImportRoutes(ctx context.Context, req *paxv1.Confirm
 		if !ok || time.Now().After(p.expires) {
 			return errors.New("preview_expired")
 		}
-		if p.clientID != req.ClientId {
+		if p.clientID != requestClient(req.ClientId, req.Context) {
 			return &productError{code: "preview_owner_mismatch"}
 		}
 		if p.revision != req.ExpectedCatalogRevision || p.revision != c.routes.catalog.Revision {
@@ -805,26 +825,36 @@ func (c *Controller) updateRoute(ctx context.Context, req *paxv1.RouteEditReques
 	})
 }
 func (c *Controller) DeleteRoute(ctx context.Context, req *paxv1.DeleteRouteRequest) (*paxv1.OperationAck, error) {
-	return c.admitNamedRoute(ctx, "route.delete", "删除线路", func(ctx context.Context) error {
-		record, ok := c.routes.catalog.Find(req.RouteId)
-		if !ok {
-			return errors.New("route_not_found")
-		}
-		if record.Revision != req.ExpectedRevision {
-			return errors.New("route_stale")
-		}
-		c.mu.Lock()
-		active := c.current.GetCurrentRoute().GetId()
-		c.mu.Unlock()
-		next := c.routes.catalog.Clone()
-		if err := next.Delete(req.RouteId, active); err != nil {
-			return err
-		}
-		delete(c.routes.testResults, req.RouteId)
-		return c.saveCatalog(ctx, next)
+	return c.mutationRequest(ctx, "route.delete", req, "", "", func() (*paxv1.OperationAck, error) {
+		return c.admitNamedRoute(ctx, "route.delete", "删除线路", func(ctx context.Context) error {
+			record, ok := c.routes.catalog.Find(req.RouteId)
+			if !ok {
+				return errors.New("route_not_found")
+			}
+			if record.Revision != req.ExpectedRevision {
+				return errors.New("route_stale")
+			}
+			c.mu.Lock()
+			active := c.current.GetCurrentRoute().GetId()
+			c.mu.Unlock()
+			next := c.routes.catalog.Clone()
+			if err := next.Delete(req.RouteId, active); err != nil {
+				return err
+			}
+			delete(c.routes.testResults, req.RouteId)
+			return c.saveCatalog(ctx, next)
+		})
 	})
 }
+
 func (c *Controller) SelectRoute(ctx context.Context, req *paxv1.SelectRouteRequest) (*paxv1.OperationAck, error) {
+	admit := func() (*paxv1.OperationAck, error) { return c.selectRoute(ctx, req) }
+	if req.Context != nil {
+		return c.contextRequest(ctx, "route.select", req, req.Context, admit)
+	}
+	return c.appRequest(ctx, "route.select", req, "", admit)
+}
+func (c *Controller) selectRoute(ctx context.Context, req *paxv1.SelectRouteRequest) (*paxv1.OperationAck, error) {
 	return c.admitRouteOperation(ctx, &routeOperation{label: "切换线路", switchesRuntime: true, apply: func(ctx context.Context) error {
 		c.mu.Lock()
 		running := c.current.Status != paxv1.ProtectionStatus_PROTECTION_STATUS_OFF
@@ -834,7 +864,7 @@ func (c *Controller) SelectRoute(ctx context.Context, req *paxv1.SelectRouteRequ
 			return errors.New("route_not_found")
 		}
 		if record.Revision != req.ExpectedRouteRevision {
-			return errors.New("route_stale")
+			return &productError{code: "route_stale", params: []string{strconv.FormatUint(record.Revision, 10)}}
 		}
 		if running {
 			return c.selectCoreRoute(ctx, record)

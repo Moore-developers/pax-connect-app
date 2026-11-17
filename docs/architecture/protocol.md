@@ -2,7 +2,20 @@
 
 ## 4. IPC 与协议
 
+MCP公共查询：`HelloResponse.daemon_instance`（字段8）为本次daemon进程随机身份，`timezone`（字段9）为其日历查询使用的时区。`operations.query.v1`提供`GetOperation`，按operation_id或client_id/request_id回读受控状态；实例变化、过期、未找到均是unknown，不能推断失败或重发。`OperationContext`绑定预期实例、稳定客户端和带时间戳UUID请求身份；SetProxyEnabled、SelectRoute、TestRoute、RecheckCurrentPath、CancelOperation、异步诊断/环境启动及M2导入确认、线路保存/删除/TLS/分组/组合、订阅刷新/删除/恢复已接入。旧App不传context仍走既有路径，Watch不重放旧结果。保留/权限合同见[MCP工具](../changes/pax-mcp/tool-contracts.md)§3。
 
+context操作在受理前预留256项有界结果名额，活跃和10分钟内终态不淘汰，满则拒绝；相同请求同内容返回原operation_id，异内容request_conflict，旧时间戳不重新执行。结果variant包含RouteSaveResult、ProxyOperationResult、RouteMeasurementsResult、CurrentPathCheck及线路/网络/环境诊断报告；在原owner提交处冻结，保留选定/运行线路区别及批次逐项失败。OperationProgress的completed/total有presence，未知不造0。单结果≤1MiB、总预算32MiB在入队前预留，超预算拒绝新任务。为避免循环import，ProtectionStatus、RouteTestSummary、DownloadTestSummary、CurrentPathCheck移入operation.proto，EnvironmentDiagnosticRequest移入pax.proto；类型全名及原字段编号不变，不传任意业务JSON。Go协议版本唯一值在ipc.ProtocolVersion，controller转发，与Swift同步。
+
+
+`ai.profiles.operations.v1`将Profile mutation、Plan、Apply及StartAIProfileModels接入公共OperationContext/GetOperation。导入增加客户端生成的稳定UUID；旧App缺省ID仍由owner生成。目录刷新在AIProfilesServer拥有的有界任务中运行，stdio/RPC断开不撤销受理工作，关闭时取消目录读取并排空本地事务；只目录读取可取消。save/import先冻结保存回执，再独立发现模型，不能把目录失败说成未保存。公共结果追加AIProfileOperationResult（workspace/plan/保存或删除ID/应用outcome），引用的不含凭据的Profile状态消息位于ai_profile_state.proto；原消息全名及字段号不变。Go标准Workspace/Plan与Swift AIProfilesWorkspace/AIProfilePlan、DaemonAIProfileOperation同步；没有第二份配置写入或结果数据库。完整权限、DSH拒写与计划合同见[M6](../changes/pax-mcp/tools-ai-settings.md#m6profile与客户端配置)。
+
+`routes.edit_view.v1`：GetRouteEditView在daemon移除凭据，仅返回非秘密单outbound与JSON Pointer存在性；组合返回成员引用。SaveRouteEdit在单写队列内先CAS、同协议合并凭据/显式SecretUpdates，再typed校验并提交。非秘密JSON是整体替换；订阅覆盖沿既有DocumentOverride保存。UpdateRouteTLS.expected_route_revision供MCP绑定可见线路版本，原expected_revision仍是App使用的TLS策略版本；两者在owner内校验。预览context绑定实例、客户端和有界TTL内请求摘要，确认沿公共OperationContext。完整行为见[M2合同](../changes/pax-mcp/tools-routes.md)。
+
+设置：[协议](settings-operations.md)。
+
+CF接口合同见[CF操作协议](cf-operations.md)。
+
+`network.operations.v1`提供StartConnectionDiagnostic、StartNetworkDiagnostic与StartEnvironmentSources；原同步RPC继续服务App，新入口仍由原pathDiagnostics/testOwner管理准入、取消、45秒/20秒预算和关停。InspectEnvironment(start)返回operation_id/expires_at；已有在途环境或资料重试返回environment_busy，不关闭其他会话。仅start返回短期browser_url，终态缓存清除URL；缺浏览器与App元数据的MCP投影见[M4合同](../changes/pax-mcp/tools-actions.md)。显式App代理/选路/测量/通道复查也登记owner=app，供跨客户端查取消；不把client_id作为鉴权。
 
 DiagnoseNetwork进度字段及只读查询见[合同](../changes/pax-connect-network-control-plane/network-diagnostics-progress.md)。
 
@@ -64,28 +77,7 @@ AI日志可选`min_official_cost_micro`/`max_official_cost_micro`及能力`ai.us
 - 长读取走 `Query*` 分页并绑定读令牌，不进 `Watch` 全量推送；产品错误一律 `ProductError{code, message_params}`，不透传内核原文、凭据或完整 URL。
 - 跨端模型（proto / Go `config` 标准值 / Swift `PaxClient`）同一提交更新；上游 sing-box 类型不越过 `internal/singbox`。
 
-**RPC 族**（能力名以 `daemon/internal/controller` 通告为准）：
-
-[新增结果合同](../changes/pax-connect-network-control-plane/manual-proxy-routes.md)。
-
-| 族 | 主要 RPC | 能力前缀 | 合同 |
-|---|---|---|---|
-| 握手 / 快照 / 事件 | Hello、GetSnapshot、Watch、SetViewVisibility（可见页面集合，§4.2 R7） | `proxy.*`、`paxd.user` | 本文 §4 |
-| 开关 / 选路 / 电源 | SetProxyEnabled、SelectRoute、CancelOperation、NotifyPowerEvent；ReconnectProxy 仅留 wire 兼容（返回 Unimplemented，不通告） | `proxy.core`、`proxy.power_events`、`routes.select.*` | [runtime.md](runtime.md) §2.1 |
-| 线路目录 / 编辑 / 组合 | PreviewRoutes、ConfirmImportRoutes、Add / Update / DeleteRoute、GetRouteEditor、SaveRouteGroups、SaveChainRoute、UpdateRouteTLS、ConfirmRouteTLSBatch | `routes.catalog` / `.import` / `.groups` / `.chains` / `.tls.batch` | [spec D-02](../changes/pax-connect-network-control-plane/spec.md#d-02-最小协议增量r-001r-041)、[node-tls-verification](../changes/pax-connect-network-control-plane/decisions/node-tls-verification.md) |
-| 订阅 | RefreshSubscription、DeleteSubscription、RestoreSubscriptionRoute | `subscriptions.*` | spec 订阅章节；刷新 URL 仅 daemon 持有，可借已保存线路取数 |
-| 线路测量 | TestRoute（latency / download / diagnostic，批量 `targets`）、Get / Save / EvaluateMeasurementPreferences、GetPhysicalEgress | `routes.test.*`、`routes.measure.*`、`routes.download.*`、`measurement.*`、`network.physical_egress` | [route-measurements](../changes/pax-connect-network-control-plane/route-measurements.md) |
-| CF 优选 | QueryCFCandidates、ValidateCFCandidate、QueryCFWorkspace、RunCFTask | `routes.cf.*` | [cf-result-feedback](../changes/pax-connect-network-control-plane/cf-result-feedback.md) |
-| 诊断 | GetTrafficPathDiagnostics、DiagnoseConnection、DiagnoseNetwork、InspectEnvironment、RecheckCurrentPath | `network.*diagnostics*`、`connection.current_path.*` | [基础连接](../changes/pax-connect-network-control-plane/protocol-connection-plan.md)、[网络诊断](../changes/pax-connect-network-control-plane/network-diagnostics.md) |
-| 日志 / 流量 / 历史 | QueryLogs、QueryLogObjects、GetLogDetail、QueryLogUpdates、ClearLogs、QueryTraffic、QueryTrafficDetail、QueryObjectIcon、QueryRouteHistory、QueryRouteUsage | `history.*`、`objects.icons.v1`、`routes.history` / `.usage` | [history-storage](../changes/pax-connect-network-control-plane/history-storage.md)、[traffic-system-latency](../changes/pax-connect-network-control-plane/traffic-system-latency.md)、[traffic-source-classification](../changes/pax-connect-network-control-plane/traffic-source-classification.md) |
-| 规则 | QueryRoutingRules、QueryRoutingLibrary、MutateRoutingLibrary、QueryGeoRules | `routing.*` | [routing-precedence](../changes/pax-connect-network-control-plane/decisions/routing-precedence.md)、[geo-dns-protection](../changes/pax-connect-network-control-plane/decisions/geo-dns-protection.md) |
-| 网络保护 / 设置 | GetNetworkPrivacy、SaveNetworkPrivacy、UpdateSettings（仅日志保留 field mask） | `network.privacy.v1`、`history.retention.v1` | [network-privacy](../changes/pax-connect-network-control-plane/network-privacy.md) |
-| AI 配置 | `api/ai_profiles.proto` 的 AIProfilesService | `ai.profiles.v1` / `ai.cli_apply.v1` | [P07](../changes/pax-connect-network-control-plane/ui/specs/P07-ai-usage.md) |
-| AI 本地用量 | `api/ai_usage.proto` 的 AIUsageService：QueryAIUsageBuckets、SummarizeAIUsage、ListAIUsageLogs、RepriceAIUsage | `ai.usage.v1` / `ai.usage.cost_range.v1` | [AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md) §3–7 |
-
-TrafficRow.latest_match为可选最近匹配证据；语义见[最近命中](../changes/pax-connect-network-control-plane/latest-routing-match.md)。近期响应见[统一延迟](../changes/pax-connect-network-control-plane/traffic-system-latency.md)。
-
-网络诊断提供者证据见`api/network_diagnostics.proto`：NetworkDiagnosticProvider保留确切查询IP/地址族、已返回能力、逐源状态/错误/HTTP/耗时/时间与备用能力/原因；source/fact以provider_id归因获取渠道。旧报告缺providers不冒充直接请求；provider_error只表示整体无可用资料，不能遮住部分成功。补充原因independent_coverage_missing兼容原备用历史；实际来源及预算以[诊断合同](../changes/pax-connect-network-control-plane/network-diagnostics.md#独立资料来源票1572026-11-09用户批准)为准。
+**RPC族与消息入口**：见[服务索引](rpc-services.md)，字段编号仍以api/*.proto为准。
 
 ### 4.2 推送与版本号规则
 
@@ -115,7 +107,7 @@ TrafficRow.latest_match为可选最近匹配证据；语义见[最近命中](../
 
 内部 `pax_core.proto` 另含 UpdateRouting（只改路由匹配表，不重启实例、不关旧连接）、ReadObservations / ReadUsage（只读、不传连接明细）、IdentifyTUNOwner（只识别）。
 
-AI日志跨generation返回`ai_usage_busy`。
+`ai.usage.buckets.timezone.v1`支持QueryAIUsageBuckets可选IANA timezone，日桶在原owner按该时区分组；缺省保留本机口径。AI日志在同一reader事务读取revision/generation与计数/合计/行。`ai.usage.logs.snapshot.v1`支持可选成对expected_revision/expected_generation，续页或缓存余项回源核验不符返回`query_changed`；不带水位保留App独立页合同。读取后跨generation仍返回`ai_usage_busy`，响应state保留该页事务的水位，不冒用稍后追加版本。
 
 AI用量RPC限用户socket、5秒（重算30秒）、范围≤367天；不传正文/密钥。known_revision未变只回state/not_modified；可见性由SetViewVisibility上报。日志10条分页，结果计数排除自身筛选；可选值用presence。last_used不受时段限制；全时段汇总读永久小时桶。
 

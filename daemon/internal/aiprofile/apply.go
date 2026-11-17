@@ -9,7 +9,7 @@ import (
 func (m *Manager) Plan(ctx context.Context, r PlanRequest) (Plan, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if r.CLI == DSH && (m.usageOnlyDSH || !m.supportsDSH()) {
+	if r.CLI != Codex && r.CLI != Claude && r.CLI != DSH || r.CLI == DSH && (m.usageOnlyDSH || !m.supportsDSH()) {
 		return Plan{}, Unsupported
 	}
 	if ctx.Err() != nil {
@@ -22,7 +22,7 @@ func (m *Manager) Plan(ctx context.Context, r PlanRequest) (Plan, error) {
 	if e != nil {
 		return Plan{}, e
 	}
-	p := planned{Plan: Plan{ID: newID(), CLI: r.CLI, ProfileID: r.ProfileID, ExpiresAt: time.Now().Add(time.Minute)}, request: r, before: files}
+	p := planned{Plan: Plan{ID: newID(), CLI: r.CLI, ProfileID: r.ProfileID, TargetPath: m.targetDir(r.CLI), ExpiresAt: time.Now().Add(time.Minute)}, request: r, before: files}
 	if r.Restore {
 		return Plan{}, Unsupported
 	}
@@ -136,6 +136,9 @@ func (m *Manager) Apply(ctx context.Context, r ApplyRequest) (Workspace, error) 
 
 	}
 
+	if e := m.checkWorkspaceSize(ctx, r.ResultLimit, nil, ""); e != nil {
+		return Workspace{}, e
+	}
 	a := application{EventSource: sourceOfEndpoint(p.CLI, m.profiles[p.ProfileID].BaseURL), ConnectionDigest: connectionDigest(p.CLI, p.files), EventAt: time.Now().UnixNano(), EventName: m.profiles[p.ProfileID].Name, EventMultiplier: m.profiles[p.ProfileID].Multiplier, EventModels: m.profiles[p.ProfileID].ModelMultipliers, Schema: 2, PlanID: r.PlanID, ProfileID: p.ProfileID, ConnectionRevision: p.connectionRevision, TemplateRevision: p.request.TemplateRevision, OperationID: r.OperationID, Files: p.files}
 	if m.profiles[p.ProfileID].Kind != "native" {
 		a.Files = nil

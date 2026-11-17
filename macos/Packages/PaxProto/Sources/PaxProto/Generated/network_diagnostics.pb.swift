@@ -386,21 +386,6 @@ public nonisolated struct Pax_V1_EnvironmentCheck: Sendable {
 }
 
 /// One short-lived current-environment session, independent of route selection.
-public nonisolated struct Pax_V1_EnvironmentDiagnosticRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// start, read, cancel, sources (retry exact-IP intelligence)
-  public var action: String = String()
-
-  public var sessionID: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 public nonisolated struct Pax_V1_EnvironmentResolver: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -511,6 +496,20 @@ public nonisolated struct Pax_V1_EnvironmentDiagnosticReport: @unchecked Sendabl
   public var hasAt: Bool {_storage._at != nil}
   /// Clears the value of `at`. Subsequent reads from it will return its default value.
   public mutating func clearAt() {_uniqueStorage()._at = nil}
+
+  public var operationID: String {
+    get {_storage._operationID}
+    set {_uniqueStorage()._operationID = newValue}
+  }
+
+  public var expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_storage._expiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_uniqueStorage()._expiresAt = newValue}
+  }
+  /// Returns true if `expiresAt` has been explicitly set.
+  public var hasExpiresAt: Bool {_storage._expiresAt != nil}
+  /// Clears the value of `expiresAt`. Subsequent reads from it will return its default value.
+  public mutating func clearExpiresAt() {_uniqueStorage()._expiresAt = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1409,41 +1408,6 @@ nonisolated extension Pax_V1_EnvironmentCheck: SwiftProtobuf.Message, SwiftProto
   }
 }
 
-nonisolated extension Pax_V1_EnvironmentDiagnosticRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EnvironmentDiagnosticRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{3}session_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.action) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.sessionID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.action.isEmpty {
-      try visitor.visitSingularStringField(value: self.action, fieldNumber: 1)
-    }
-    if !self.sessionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sessionID, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_EnvironmentDiagnosticRequest, rhs: Pax_V1_EnvironmentDiagnosticRequest) -> Bool {
-    if lhs.action != rhs.action {return false}
-    if lhs.sessionID != rhs.sessionID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Pax_V1_EnvironmentResolver: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnvironmentResolver"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ip\0\u{1}country\0\u{1}organization\0")
@@ -1585,7 +1549,7 @@ nonisolated extension Pax_V1_EnvironmentSample: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnvironmentDiagnosticReport"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}session_id\0\u{3}browser_url\0\u{1}mac\0\u{1}browser\0\u{1}complete\0\u{1}at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}session_id\0\u{3}browser_url\0\u{1}mac\0\u{1}browser\0\u{1}complete\0\u{1}at\0\u{3}operation_id\0\u{3}expires_at\0")
 
   fileprivate class _StorageClass {
     var _sessionID: String = String()
@@ -1594,6 +1558,8 @@ nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message,
     var _browser: Pax_V1_EnvironmentSample? = nil
     var _complete: Bool = false
     var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _operationID: String = String()
+    var _expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -1610,6 +1576,8 @@ nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message,
       _browser = source._browser
       _complete = source._complete
       _at = source._at
+      _operationID = source._operationID
+      _expiresAt = source._expiresAt
     }
   }
 
@@ -1634,6 +1602,8 @@ nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message,
         case 4: try { try decoder.decodeSingularMessageField(value: &_storage._browser) }()
         case 5: try { try decoder.decodeSingularBoolField(value: &_storage._complete) }()
         case 6: try { try decoder.decodeSingularMessageField(value: &_storage._at) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._operationID) }()
+        case 8: try { try decoder.decodeSingularMessageField(value: &_storage._expiresAt) }()
         default: break
         }
       }
@@ -1664,6 +1634,12 @@ nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message,
       try { if let v = _storage._at {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
       } }()
+      if !_storage._operationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._operationID, fieldNumber: 7)
+      }
+      try { if let v = _storage._expiresAt {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1679,6 +1655,8 @@ nonisolated extension Pax_V1_EnvironmentDiagnosticReport: SwiftProtobuf.Message,
         if _storage._browser != rhs_storage._browser {return false}
         if _storage._complete != rhs_storage._complete {return false}
         if _storage._at != rhs_storage._at {return false}
+        if _storage._operationID != rhs_storage._operationID {return false}
+        if _storage._expiresAt != rhs_storage._expiresAt {return false}
         return true
       }
       if !storagesAreEqual {return false}

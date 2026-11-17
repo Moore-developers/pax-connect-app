@@ -54,3 +54,19 @@ printf '%s\n' "$TASK_KERNEL_VERSION" > "${RESOURCES}/kernel-version.txt"
 mkdir -p "${RESOURCES}/rulesets" "${RESOURCES}/licenses"
 cp rulesets/*.srs rulesets/manifest.json "${RESOURCES}/rulesets/"
 cp third_party/licenses/*.txt "${RESOURCES}/licenses/"
+
+# Sign paired MCP executables before sealing their manifest with the outer App.
+for name in pax-mcp pax-mcp-launcher; do
+  test -x "build/$name" || { echo "error: missing $name; run make daemon" >&2; exit 1; }
+  cp "build/$name" "${DESTINATION}/$name"
+  codesign --force --options runtime --timestamp=none --sign "${IDENTITY}" "${DESTINATION}/$name"
+done
+python3 - "$DESTINATION" "$RESOURCES" <<'PYMANIFEST'
+import hashlib, json, sys
+from pathlib import Path
+binary, resources = map(Path, sys.argv[1:])
+hashes = {name: hashlib.sha256((binary/name).read_bytes()).hexdigest()
+          for name in ('pax-mcp', 'pax-mcp-launcher')}
+(resources/'mcp-fingerprints.json').write_text(json.dumps(hashes, indent=2) + '\n')
+PYMANIFEST
+python3 scripts/mcp-notices.py "$RESOURCES/licenses/mcp"

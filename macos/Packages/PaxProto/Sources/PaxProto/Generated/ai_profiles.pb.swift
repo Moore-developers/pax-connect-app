@@ -37,119 +37,20 @@ public nonisolated struct Pax_V1_AIProfileModelsRequest: Sendable {
 
   public var profileID: String = String()
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_AIProviderModel: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var id: String = String()
-
-  public var owner: String = String()
-
-  public var displayName: String = String()
-
-  public var contextWindow: Int64 = 0
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-}
 
-public nonisolated struct Pax_V1_AIProfileSummary: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var id: String = String()
-
-  public var revision: UInt64 = 0
-
-  public var connectionRevision: UInt64 = 0
-
-  public var name: String = String()
-
-  public var baseURL: String = String()
-
-  public var multiplier: Double = 0
-
-  public var modelIds: [String] = []
-
-  public var hasKey_p: Bool = false
-
-  /// Native snapshots are CLI-specific selectable configurations, not API credentials.
-  public var kind: String = String()
-
-  public var nativeCli: String = String()
-
-  public var catalog: [Pax_V1_AIProviderModel] = []
-
-  public var modelsState: String = String()
-
-  public var modelsEndpoint: String = String()
-
-  public var modelsChecked: Int64 = 0
-
-  public var modelsError: String = String()
-
-  /// Per-model multipliers keyed by request model id; a model not listed pays `multiplier`.
-  /// Save replaces the whole map. Every value is within 0..100 with at most three decimals,
-  /// as is `multiplier`.
-  public var modelMultipliers: Dictionary<String,Double> = [:]
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_AIClientBinding: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var cli: String = String()
-
-  public var profileID: String = String()
-
-  public var state: String = String()
-
-  public var reason: String = String()
-
-  public var inspectionID: String = String()
-
-  /// NOTE: This field was marked as deprecated in the .proto file.
-  public var templateRevision: UInt64 = 0
-
-  public var endpoint: String = String()
-
-  public var targetPath: String = String()
-
-  public var requiresModel: Bool = false
-
-  /// Configured authentication route; never proof of a valid subscription or live session.
-  public var serviceSource: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_AIProfilesWorkspace: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var profiles: [Pax_V1_AIProfileSummary] = []
-
-  public var bindings: [Pax_V1_AIClientBinding] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_AIProfileSave: @unchecked Sendable {
@@ -216,6 +117,8 @@ public nonisolated struct Pax_V1_AIProfileImport: Sendable {
 
   public var multiplier: Double = 0
 
+  public var id: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -241,6 +144,15 @@ public nonisolated struct Pax_V1_AIProfileMutation: Sendable {
   // methods supported on all messages.
 
   public var operationID: String = String()
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
 
   public var action: Pax_V1_AIProfileMutation.OneOf_Action? = nil
 
@@ -289,6 +201,8 @@ public nonisolated struct Pax_V1_AIProfileMutation: Sendable {
   }
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_AIProfilePlanRequest: Sendable {
@@ -314,36 +228,20 @@ public nonisolated struct Pax_V1_AIProfilePlanRequest: Sendable {
 
   public var modelID: String = String()
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_AIProfilePlan: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var id: String = String()
-
-  public var cli: String = String()
-
-  public var profileID: String = String()
-
-  public var baseURL: String = String()
-
-  /// NOTE: This field was marked as deprecated in the .proto file.
-  public var externalChanged: Bool = false
-
-  public var expiresUnix: Int64 = 0
-
-  public var initializes: Bool = false
-
-  public var targetPath: String = String()
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_AIProfileApplyRequest: Sendable {
@@ -358,9 +256,20 @@ public nonisolated struct Pax_V1_AIProfileApplyRequest: Sendable {
   /// NOTE: This field was marked as deprecated in the .proto file.
   public var choice: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -388,7 +297,7 @@ nonisolated extension Pax_V1_AIProfilesQuery: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pax_V1_AIProfileModelsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIProfileModelsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}profile_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}profile_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -397,280 +306,29 @@ nonisolated extension Pax_V1_AIProfileModelsRequest: SwiftProtobuf.Message, Swif
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.profileID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.profileID.isEmpty {
       try visitor.visitSingularStringField(value: self.profileID, fieldNumber: 1)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_AIProfileModelsRequest, rhs: Pax_V1_AIProfileModelsRequest) -> Bool {
     if lhs.profileID != rhs.profileID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_AIProviderModel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AIProviderModel"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}owner\0\u{3}display_name\0\u{3}context_window\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.owner) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
-      case 4: try { try decoder.decodeSingularInt64Field(value: &self.contextWindow) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if !self.owner.isEmpty {
-      try visitor.visitSingularStringField(value: self.owner, fieldNumber: 2)
-    }
-    if !self.displayName.isEmpty {
-      try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 3)
-    }
-    if self.contextWindow != 0 {
-      try visitor.visitSingularInt64Field(value: self.contextWindow, fieldNumber: 4)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_AIProviderModel, rhs: Pax_V1_AIProviderModel) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.owner != rhs.owner {return false}
-    if lhs.displayName != rhs.displayName {return false}
-    if lhs.contextWindow != rhs.contextWindow {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_AIProfileSummary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AIProfileSummary"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}revision\0\u{3}connection_revision\0\u{1}name\0\u{3}base_url\0\u{1}multiplier\0\u{3}model_ids\0\u{3}has_key\0\u{1}kind\0\u{3}native_cli\0\u{1}catalog\0\u{3}models_state\0\u{3}models_endpoint\0\u{3}models_checked\0\u{3}models_error\0\u{3}model_multipliers\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.revision) }()
-      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.connectionRevision) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.baseURL) }()
-      case 6: try { try decoder.decodeSingularDoubleField(value: &self.multiplier) }()
-      case 7: try { try decoder.decodeRepeatedStringField(value: &self.modelIds) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.hasKey_p) }()
-      case 9: try { try decoder.decodeSingularStringField(value: &self.kind) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.nativeCli) }()
-      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.catalog) }()
-      case 12: try { try decoder.decodeSingularStringField(value: &self.modelsState) }()
-      case 13: try { try decoder.decodeSingularStringField(value: &self.modelsEndpoint) }()
-      case 14: try { try decoder.decodeSingularInt64Field(value: &self.modelsChecked) }()
-      case 15: try { try decoder.decodeSingularStringField(value: &self.modelsError) }()
-      case 16: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufDouble>.self, value: &self.modelMultipliers) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if self.revision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.revision, fieldNumber: 2)
-    }
-    if self.connectionRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.connectionRevision, fieldNumber: 3)
-    }
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 4)
-    }
-    if !self.baseURL.isEmpty {
-      try visitor.visitSingularStringField(value: self.baseURL, fieldNumber: 5)
-    }
-    if self.multiplier.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.multiplier, fieldNumber: 6)
-    }
-    if !self.modelIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.modelIds, fieldNumber: 7)
-    }
-    if self.hasKey_p != false {
-      try visitor.visitSingularBoolField(value: self.hasKey_p, fieldNumber: 8)
-    }
-    if !self.kind.isEmpty {
-      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 9)
-    }
-    if !self.nativeCli.isEmpty {
-      try visitor.visitSingularStringField(value: self.nativeCli, fieldNumber: 10)
-    }
-    if !self.catalog.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.catalog, fieldNumber: 11)
-    }
-    if !self.modelsState.isEmpty {
-      try visitor.visitSingularStringField(value: self.modelsState, fieldNumber: 12)
-    }
-    if !self.modelsEndpoint.isEmpty {
-      try visitor.visitSingularStringField(value: self.modelsEndpoint, fieldNumber: 13)
-    }
-    if self.modelsChecked != 0 {
-      try visitor.visitSingularInt64Field(value: self.modelsChecked, fieldNumber: 14)
-    }
-    if !self.modelsError.isEmpty {
-      try visitor.visitSingularStringField(value: self.modelsError, fieldNumber: 15)
-    }
-    if !self.modelMultipliers.isEmpty {
-      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufDouble>.self, value: self.modelMultipliers, fieldNumber: 16)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_AIProfileSummary, rhs: Pax_V1_AIProfileSummary) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.revision != rhs.revision {return false}
-    if lhs.connectionRevision != rhs.connectionRevision {return false}
-    if lhs.name != rhs.name {return false}
-    if lhs.baseURL != rhs.baseURL {return false}
-    if lhs.multiplier != rhs.multiplier {return false}
-    if lhs.modelIds != rhs.modelIds {return false}
-    if lhs.hasKey_p != rhs.hasKey_p {return false}
-    if lhs.kind != rhs.kind {return false}
-    if lhs.nativeCli != rhs.nativeCli {return false}
-    if lhs.catalog != rhs.catalog {return false}
-    if lhs.modelsState != rhs.modelsState {return false}
-    if lhs.modelsEndpoint != rhs.modelsEndpoint {return false}
-    if lhs.modelsChecked != rhs.modelsChecked {return false}
-    if lhs.modelsError != rhs.modelsError {return false}
-    if lhs.modelMultipliers != rhs.modelMultipliers {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_AIClientBinding: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AIClientBinding"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}profile_id\0\u{1}state\0\u{1}reason\0\u{3}inspection_id\0\u{3}template_revision\0\u{1}endpoint\0\u{3}target_path\0\u{3}requires_model\0\u{3}service_source\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.cli) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.profileID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.state) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.reason) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.inspectionID) }()
-      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.templateRevision) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.endpoint) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.targetPath) }()
-      case 9: try { try decoder.decodeSingularBoolField(value: &self.requiresModel) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.serviceSource) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.cli.isEmpty {
-      try visitor.visitSingularStringField(value: self.cli, fieldNumber: 1)
-    }
-    if !self.profileID.isEmpty {
-      try visitor.visitSingularStringField(value: self.profileID, fieldNumber: 2)
-    }
-    if !self.state.isEmpty {
-      try visitor.visitSingularStringField(value: self.state, fieldNumber: 3)
-    }
-    if !self.reason.isEmpty {
-      try visitor.visitSingularStringField(value: self.reason, fieldNumber: 4)
-    }
-    if !self.inspectionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.inspectionID, fieldNumber: 5)
-    }
-    if self.templateRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.templateRevision, fieldNumber: 6)
-    }
-    if !self.endpoint.isEmpty {
-      try visitor.visitSingularStringField(value: self.endpoint, fieldNumber: 7)
-    }
-    if !self.targetPath.isEmpty {
-      try visitor.visitSingularStringField(value: self.targetPath, fieldNumber: 8)
-    }
-    if self.requiresModel != false {
-      try visitor.visitSingularBoolField(value: self.requiresModel, fieldNumber: 9)
-    }
-    if !self.serviceSource.isEmpty {
-      try visitor.visitSingularStringField(value: self.serviceSource, fieldNumber: 10)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_AIClientBinding, rhs: Pax_V1_AIClientBinding) -> Bool {
-    if lhs.cli != rhs.cli {return false}
-    if lhs.profileID != rhs.profileID {return false}
-    if lhs.state != rhs.state {return false}
-    if lhs.reason != rhs.reason {return false}
-    if lhs.inspectionID != rhs.inspectionID {return false}
-    if lhs.templateRevision != rhs.templateRevision {return false}
-    if lhs.endpoint != rhs.endpoint {return false}
-    if lhs.targetPath != rhs.targetPath {return false}
-    if lhs.requiresModel != rhs.requiresModel {return false}
-    if lhs.serviceSource != rhs.serviceSource {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_AIProfilesWorkspace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AIProfilesWorkspace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}profiles\0\u{1}bindings\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.profiles) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.bindings) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.profiles.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.profiles, fieldNumber: 1)
-    }
-    if !self.bindings.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.bindings, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_AIProfilesWorkspace, rhs: Pax_V1_AIProfilesWorkspace) -> Bool {
-    if lhs.profiles != rhs.profiles {return false}
-    if lhs.bindings != rhs.bindings {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -804,7 +462,7 @@ nonisolated extension Pax_V1_AIProfileDelete: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pax_V1_AIProfileImport: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIProfileImport"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}inspection_id\0\u{1}name\0\u{1}multiplier\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}inspection_id\0\u{1}name\0\u{1}multiplier\0\u{1}id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -816,6 +474,7 @@ nonisolated extension Pax_V1_AIProfileImport: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularStringField(value: &self.inspectionID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 4: try { try decoder.decodeSingularDoubleField(value: &self.multiplier) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.id) }()
       default: break
       }
     }
@@ -834,6 +493,9 @@ nonisolated extension Pax_V1_AIProfileImport: SwiftProtobuf.Message, SwiftProtob
     if self.multiplier.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.multiplier, fieldNumber: 4)
     }
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -842,6 +504,7 @@ nonisolated extension Pax_V1_AIProfileImport: SwiftProtobuf.Message, SwiftProtob
     if lhs.inspectionID != rhs.inspectionID {return false}
     if lhs.name != rhs.name {return false}
     if lhs.multiplier != rhs.multiplier {return false}
+    if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -884,7 +547,7 @@ nonisolated extension Pax_V1_AIProfileTemplateInitialization: SwiftProtobuf.Mess
 
 nonisolated extension Pax_V1_AIProfileMutation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIProfileMutation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0\u{1}save\0\u{1}delete\0\u{3}import_profile\0\u{3}initialize_template\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0\u{1}save\0\u{1}delete\0\u{3}import_profile\0\u{3}initialize_template\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -945,6 +608,7 @@ nonisolated extension Pax_V1_AIProfileMutation: SwiftProtobuf.Message, SwiftProt
           self.action = .initializeTemplate(v)
         }
       }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -977,11 +641,15 @@ nonisolated extension Pax_V1_AIProfileMutation: SwiftProtobuf.Message, SwiftProt
     }()
     case nil: break
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_AIProfileMutation, rhs: Pax_V1_AIProfileMutation) -> Bool {
     if lhs.operationID != rhs.operationID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.action != rhs.action {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -990,7 +658,7 @@ nonisolated extension Pax_V1_AIProfileMutation: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pax_V1_AIProfilePlanRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIProfilePlanRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}profile_id\0\u{1}revision\0\u{3}template_revision\0\u{3}inspection_id\0\u{1}restore\0\u{1}initialize\0\u{3}model_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{3}profile_id\0\u{1}revision\0\u{3}template_revision\0\u{3}inspection_id\0\u{1}restore\0\u{1}initialize\0\u{3}model_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1006,12 +674,17 @@ nonisolated extension Pax_V1_AIProfilePlanRequest: SwiftProtobuf.Message, SwiftP
       case 6: try { try decoder.decodeSingularBoolField(value: &self.restore) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.initialize) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.modelID) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.cli.isEmpty {
       try visitor.visitSingularStringField(value: self.cli, fieldNumber: 1)
     }
@@ -1036,6 +709,9 @@ nonisolated extension Pax_V1_AIProfilePlanRequest: SwiftProtobuf.Message, SwiftP
     if !self.modelID.isEmpty {
       try visitor.visitSingularStringField(value: self.modelID, fieldNumber: 8)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1048,71 +724,7 @@ nonisolated extension Pax_V1_AIProfilePlanRequest: SwiftProtobuf.Message, SwiftP
     if lhs.restore != rhs.restore {return false}
     if lhs.initialize != rhs.initialize {return false}
     if lhs.modelID != rhs.modelID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_AIProfilePlan: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AIProfilePlan"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}cli\0\u{3}profile_id\0\u{3}base_url\0\u{3}external_changed\0\u{3}expires_unix\0\u{1}initializes\0\u{3}target_path\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.cli) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.profileID) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.baseURL) }()
-      case 5: try { try decoder.decodeSingularBoolField(value: &self.externalChanged) }()
-      case 6: try { try decoder.decodeSingularInt64Field(value: &self.expiresUnix) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.initializes) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.targetPath) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if !self.cli.isEmpty {
-      try visitor.visitSingularStringField(value: self.cli, fieldNumber: 2)
-    }
-    if !self.profileID.isEmpty {
-      try visitor.visitSingularStringField(value: self.profileID, fieldNumber: 3)
-    }
-    if !self.baseURL.isEmpty {
-      try visitor.visitSingularStringField(value: self.baseURL, fieldNumber: 4)
-    }
-    if self.externalChanged != false {
-      try visitor.visitSingularBoolField(value: self.externalChanged, fieldNumber: 5)
-    }
-    if self.expiresUnix != 0 {
-      try visitor.visitSingularInt64Field(value: self.expiresUnix, fieldNumber: 6)
-    }
-    if self.initializes != false {
-      try visitor.visitSingularBoolField(value: self.initializes, fieldNumber: 7)
-    }
-    if !self.targetPath.isEmpty {
-      try visitor.visitSingularStringField(value: self.targetPath, fieldNumber: 8)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_AIProfilePlan, rhs: Pax_V1_AIProfilePlan) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.cli != rhs.cli {return false}
-    if lhs.profileID != rhs.profileID {return false}
-    if lhs.baseURL != rhs.baseURL {return false}
-    if lhs.externalChanged != rhs.externalChanged {return false}
-    if lhs.expiresUnix != rhs.expiresUnix {return false}
-    if lhs.initializes != rhs.initializes {return false}
-    if lhs.targetPath != rhs.targetPath {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1120,7 +732,7 @@ nonisolated extension Pax_V1_AIProfilePlan: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Pax_V1_AIProfileApplyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIProfileApplyRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}plan_id\0\u{3}operation_id\0\u{1}choice\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}plan_id\0\u{3}operation_id\0\u{1}choice\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1131,12 +743,17 @@ nonisolated extension Pax_V1_AIProfileApplyRequest: SwiftProtobuf.Message, Swift
       case 1: try { try decoder.decodeSingularStringField(value: &self.planID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.operationID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.choice) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.planID.isEmpty {
       try visitor.visitSingularStringField(value: self.planID, fieldNumber: 1)
     }
@@ -1146,6 +763,9 @@ nonisolated extension Pax_V1_AIProfileApplyRequest: SwiftProtobuf.Message, Swift
     if !self.choice.isEmpty {
       try visitor.visitSingularStringField(value: self.choice, fieldNumber: 3)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1153,6 +773,7 @@ nonisolated extension Pax_V1_AIProfileApplyRequest: SwiftProtobuf.Message, Swift
     if lhs.planID != rhs.planID {return false}
     if lhs.operationID != rhs.operationID {return false}
     if lhs.choice != rhs.choice {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

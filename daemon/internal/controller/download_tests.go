@@ -100,6 +100,7 @@ func (c *Controller) testDownload(ctx context.Context, req *paxv1.TestRouteReque
 		c.routes.downloading[profile.ID] = id
 		owner.mu.Unlock()
 		locked = false
+		c.beginMeasurementOutcome(id, []*paxv1.RouteMeasurementResult{{RouteId: profile.ID, ConfigRevision: revision}})
 		c.startSingleDownload(owner, downloader)
 		c.publishCatalog(ctx)
 		ack = &paxv1.OperationAck{OperationId: id}
@@ -188,6 +189,10 @@ func (c *Controller) runDownload(ctx context.Context, cancel context.CancelFunc,
 	speed := sampleText(result.Success, fmt.Sprintf("%.0f B/s", result.BytesPerSecond))
 	evidence.Sections = []config.EventSection{{Kind: "metrics", Title: "当次下载测试", Fields: []config.EventField{{Label: "线路", Value: profile.Name}, {Label: "速度", Value: speed}, {Label: "样本时间", Value: result.At.AsTime().Format(time.RFC3339)}}}}
 	if !c.enqueueCatalogEvidence(id, "下载测速", evidence, func(ctx context.Context) error {
+		c.recordMeasurementOutcome(owner, id, &paxv1.RouteMeasurementResult{RouteId: profile.ID, ConfigRevision: revision, Success: result.Success, Error: result.Error, Measurement: &paxv1.RouteMeasurementResult_Download{Download: result}})
+		owner.mu.Lock()
+		delete(owner.parents, id)
+		owner.mu.Unlock()
 		delete(c.routes.downloading, profile.ID)
 		if _, ok := c.routes.catalog.Find(profile.ID); ok && code != "ipv6_unavailable" {
 			c.routes.downloadResults[profile.ID] = result

@@ -1,5 +1,10 @@
 syntax = "proto3";
 package pax.v1;
+import "google/protobuf/timestamp.proto";
+import "route_exit.proto";
+import "ai_profile_state.proto";
+import "privacy.proto";
+import "network_diagnostics.proto";
 option go_package = "pax-connect/daemon/gen/proto/paxv1";
 
 message ProductError {
@@ -19,6 +24,18 @@ message OperationAck {
 message RouteSaveResult {
   string route_id = 1;
   bool created = 2;
+  uint64 catalog_revision = 3;
+  uint64 route_revision = 4;
+  string disposition = 5;
+  repeated string imported_route_ids = 6;
+  repeated string changed_route_ids = 7;
+  repeated RouteGroup groups = 8;
+  string subscription_id = 9;
+  uint64 source_revision = 10;
+  uint32 added = 11; uint32 updated = 12; uint32 hidden = 13; uint32 removed = 14;
+  repeated string deleted_route_ids = 15;
+  repeated string retained_route_ids = 16;
+  uint64 config_revision = 17;
 }
 
 message OperationResult {
@@ -27,4 +44,219 @@ message OperationResult {
   // ok=false 时给出产品错误。
   ProductError error = 3;
   RouteSaveResult route_save = 4;
+  ProxyOperationResult proxy = 5;
+  RouteMeasurementsResult measurements = 6;
+  CurrentPathCheck current_path = 7;
+  TrafficPathDiagnostics connection = 8;
+  NetworkDiagnosticReport network = 9;
+  EnvironmentDiagnosticReport environment = 10;
+  AIProfileOperationResult ai_profile = 11;
+  CFWorkspace cf_workspace = 12;
+  CFValidationResult cf_validation = 13;
+  SettingsOperationResult settings = 14;
 }
+
+message OperationRequestIdentity { string client_id = 1; string request_id = 2; }
+message GetOperationRequest {
+ string daemon_instance = 1;
+ oneof identity {
+  string operation_id = 2;
+  OperationRequestIdentity request = 3;
+ }
+}
+// Unknown is an observation, never a failed or rolled-back outcome.
+message OperationState {
+ string daemon_instance = 1;
+ string operation_id = 2;
+ string request_id = 3;
+ string owner_client_id = 4;
+ string kind = 5;
+ string state = 6; // accepted, running, succeeded, failed, cancelled, unknown
+ bool cancellable = 7;
+ google.protobuf.Timestamp started_at = 8;
+ google.protobuf.Timestamp finished_at = 9;
+ string unknown_reason = 10; // not_found, expired, daemon_restarted
+ ProductError error = 11;
+ oneof result {
+  RouteSaveResult route_save = 12;
+  ProxyOperationResult proxy = 13;
+  RouteMeasurementsResult measurements = 14;
+  CurrentPathCheck current_path = 15;
+  TrafficPathDiagnostics connection = 16;
+  NetworkDiagnosticReport network = 17;
+  EnvironmentDiagnosticReport environment = 18;
+  AIProfileOperationResult ai_profile = 21;
+  CFWorkspace cf_workspace = 22;
+  CFValidationResult cf_validation = 23;
+  SettingsOperationResult settings = 24;
+ }
+ OperationProgress progress = 19;
+ string affected_target = 20;
+}
+
+message RouteGroup {
+  string id = 1;
+  string name = 2;
+  repeated string member_ids = 3;
+}
+
+enum ProtectionStatus {
+  PROTECTION_STATUS_UNSPECIFIED = 0;
+  PROTECTION_STATUS_OFF = 1;
+  PROTECTION_STATUS_STARTING = 2;
+  PROTECTION_STATUS_PROTECTED = 3;
+  PROTECTION_STATUS_DEGRADED = 4;
+}
+
+
+message RouteTestSummary {
+  google.protobuf.Timestamp at = 1;
+  bool success = 2;
+  // Legacy single value: stable median when available, otherwise successful first response; v3 clients use cold_ms/stable_ms independently.
+  uint32 duration_ms = 3;
+  // success=false 时的受控失败码。
+  ProductError error = 4;
+  // 测量时的配置 revision；与当前 revision 不同即显示过期。
+  uint64 tested_revision = 5;
+  uint64 tested_config_revision = 6;
+  string exit_ip = 7;
+  ProductError exit_error = 8;
+  uint32 cold_ms = 9;
+  uint32 second_ms = 10;
+  bool reused = 11;
+  string method = 12;
+  string first_error = 13;
+  string second_error = 14;
+  // New method: median of three valid reused-session requests; absent when incomplete.
+  uint32 stable_ms = 15;
+  uint32 stable_samples = 16;
+  string stable_error = 17;
+  // Controlled target identity: google / gstatic, never a private URL.
+  string test_target = 18;
+  ExitLocation exit_location = 19;
+  ExitLocation last_exit_location = 20;
+}
+
+message DownloadTestSummary {
+ google.protobuf.Timestamp at = 1;
+ bool success = 2;
+ double bytes_per_second = 3;
+ ProductError error = 4;
+ uint64 tested_config_revision = 5;
+ uint64 bytes = 6;
+ uint32 duration_ms = 7;
+ string method = 8;
+ uint32 parallel = 9;
+ uint32 setup_ms = 10;
+ string end_reason = 11;
+}
+
+
+message CurrentPathCheck {
+ string check_id=1; string trigger_operation_id=2; string route_id=3;
+ uint64 config_revision=4; string core_session=5; uint64 runtime_version=6;
+ string network_epoch=7; string state=8; string cause=9;
+ google.protobuf.Timestamp started_at=10; google.protobuf.Timestamp completed_at=11;
+ string evidence_scope=12; repeated string command_operation_ids=13;
+}
+
+message ProxyOperationResult {
+ ProtectionStatus status = 1;
+ string selected_route_id = 2;
+ string running_route_id = 3;
+ repeated ProductError degraded_reasons = 4;
+}
+message RouteMeasurementResult {
+ string route_id = 1;
+ uint64 config_revision = 2;
+ bool success = 3;
+ ProductError error = 4;
+ oneof measurement {
+  RouteTestSummary latency = 5;
+  RouteExitSummary exit = 6;
+  DownloadTestSummary download = 7;
+ }
+}
+message RouteMeasurementsResult { repeated RouteMeasurementResult items = 1; }
+message OperationProgress {
+ string phase = 1;
+ optional uint64 completed = 2;
+ optional uint64 total = 3;
+}
+
+message CFCandidate {
+ string ip = 1;
+ string source = 2;
+ uint32 latency_ms = 3;
+ string network = 4;
+ google.protobuf.Timestamp at = 5;
+ ProductError error = 6;
+}
+message CFSample {
+  double value = 1;
+  google.protobuf.Timestamp measured_at = 2;
+  google.protobuf.Timestamp attempted_at = 3;
+  string error_code = 4;
+  uint32 successful_rounds = 5;
+}
+message CFIPLocation {
+ string country_code=1; string country=2; string region=3; string city=4;
+ string source=5; google.protobuf.Timestamp at=6; string error_code=7;
+}
+message CFRecord {
+  string ip = 1;
+  string prefix = 2;
+  string network = 3;
+  CFSample tcp = 4;
+  CFSample download = 5;
+  CFSample validation = 6;
+  bool reachable = 7;
+  bool proof_current = 8;
+  string issue = 9;
+  bool validation_matches = 10;
+  CFIPLocation location = 11;
+}
+message CFNetwork {
+  string id = 1;
+  uint32 count = 2;
+  google.protobuf.Timestamp at = 3;
+}
+message CFWorkspace {
+  string network = 1;
+  repeated CFRecord records = 2;
+  repeated CFNetwork networks = 3;
+  string operation_id = 4;
+  string phase = 5;
+  uint32 completed = 6;
+  uint32 total = 7;
+  bool monitoring = 8;
+  ProductError error = 9;
+  string current_network = 10;
+  uint32 pending_checks = 11;
+  google.protobuf.Timestamp oldest_check = 12;
+  // Retained task results omit rows; QueryCFWorkspace pages the saved/live list.
+  bool records_omitted = 13;
+  uint32 record_count = 14;
+}
+message CFValidationResult {
+ CFCandidate candidate = 1;
+ string validation_id = 2;
+ string draft_digest = 3; // random correlation ID, never a secret-derived digest
+ string network = 4;
+ uint64 route_revision = 5;
+ uint64 config_revision = 6;
+ google.protobuf.Timestamp expires_at = 7;
+ bool success = 8;
+}
+
+// Frozen at the settings/log owner's commit boundary.
+message SettingsOperationResult {
+ oneof value {
+  NetworkPrivacy privacy = 1;
+  MeasurementPreferences measurement = 2;
+  LogRetentionResult retention = 3;
+  LogsClearResult clear = 4;
+ }
+}
+message LogRetentionResult { uint64 revision = 1; uint32 retention_hours = 2; string cleanup_state = 3; }
+message LogsClearResult { google.protobuf.Timestamp requested_at = 1; uint64 clear_generation = 2; uint64 logs_revision = 3; }

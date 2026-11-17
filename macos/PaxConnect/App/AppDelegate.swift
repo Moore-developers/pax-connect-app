@@ -174,6 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       NSApp.activate(ignoringOtherApps: true)
       return
     }
+    if debugSocket == nil { Task { await MCPInstaller.refresh() } }
     launcher.onUnexpectedExit = { [weak self] code in
       self?.backendExited(code)
     }
@@ -196,10 +197,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     if debugSocket == nil {
       store.requestAuthorization = { [weak self] in self?.authorizeCore() }
     }
+    let mcpAccess = debugSocket == nil ? MCPInstaller.accessActions() : nil
     let window = WorkbenchWindowController(
       routes: routesStore, connection: store, telemetry: telemetry, aiProfiles: aiProfilesStore,
       aiUsage: aiUsageStore, dashboardSources: DashboardSources(connection: commandConnection),
-      refresh: refresh)
+      refresh: refresh, mcpAccess: mcpAccess)
     window.showWindow(nil)
     windowController = window
     menuBar?.attach(

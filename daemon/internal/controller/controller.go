@@ -16,6 +16,7 @@ import (
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/environment"
 	"pax-connect/daemon/internal/historystore"
+	"pax-connect/daemon/internal/ipc"
 	"pax-connect/daemon/internal/measurement"
 	"pax-connect/daemon/internal/siteicon"
 	"sync"
@@ -30,12 +31,13 @@ import (
 )
 
 // ProtocolVersion 是产品协议版本；与 Swift 侧 PaxClient.protocolVersion 必须一致。
-const ProtocolVersion uint32 = 46
+const ProtocolVersion uint32 = ipc.ProtocolVersion
 
 type Controller struct {
 	initialInstallKnown   bool
 	initialInstall        bool
 	aiProfiles            bool
+	profileOperations     *AIProfilesServer
 	aiUsage               bool
 	aiStore               *aiusage.Store // set by ConfigureAIUsage; its state is the Snapshot.ai_usage first frame
 	aiForeground          atomic.Bool    // last AI usage visibility seen by aiUsageViewsChanged
@@ -60,6 +62,8 @@ type Controller struct {
 	pathDiagnostics       *pathDiagnosticsOwner
 	environmentMu         sync.Mutex
 	environmentSession    *environment.Session
+	environmentOperation  string
+	environmentSources    string
 	lastConnectionAttempt *paxv1.TrafficPathDiagnostics
 	sessionStop           context.CancelFunc
 	ownerAppPID           uint32
@@ -75,30 +79,40 @@ type Controller struct {
 	measurementBatchHolds int
 	paxv1.UnimplementedPaxServiceServer
 
-	requestMu           sync.Mutex
-	routeRequests       map[string]routeRequest
-	completedOperations map[string]*paxv1.OperationResult
-	routeRequestResults map[string]*paxv1.OperationResult
-	completedOrder      []string
-	version             string
-	fingerprint         string
-	mu                  sync.Mutex
-	snapshotSeq         uint64
-	subscribers         map[chan *paxv1.WatchEvent]chan struct{}
-	views               map[string]bool // SetViewVisibility set; cleared when the last Watch ends
-	current             *paxv1.Snapshot
-	proxy               *proxyOwner
-	tls                 TLSPolicyRepository
-	tlsPending          string
-	catalogPending      string
-	routes              *routesOwner
-	subs                *subscriptionOwner
-	tester              RouteTester
-	tests               *testOwner
+	timezone               string
+	instance               string
+	operations             map[string]*paxv1.OperationState
+	operationReservations  int
+	operationResultBudgets map[string]int
+	measurementOutcomes    map[string]*paxv1.RouteMeasurementsResult
+	requestMu              sync.Mutex
+	routeRequests          map[string]routeRequest
+	completedOperations    map[string]*paxv1.OperationResult
+	routeRequestResults    map[string]*paxv1.OperationResult
+	completedOrder         []string
+	version                string
+	fingerprint            string
+	mu                     sync.Mutex
+	snapshotSeq            uint64
+	subscribers            map[chan *paxv1.WatchEvent]chan struct{}
+	views                  map[string]bool // SetViewVisibility set; cleared when the last Watch ends
+	current                *paxv1.Snapshot
+	proxy                  *proxyOwner
+	tls                    TLSPolicyRepository
+	tlsPending             string
+	catalogPending         string
+	routes                 *routesOwner
+	subs                   *subscriptionOwner
+	tester                 RouteTester
+	tests                  *testOwner
 }
 
 func New(version, fingerprint string) *Controller {
-	return &Controller{version: version, fingerprint: fingerprint, readTokens: newReadTokenCache(), logsChanged: make(chan struct{}, 1), subscribers: make(map[chan *paxv1.WatchEvent]chan struct{}),
+	instance, err := operationID()
+	if err != nil {
+		panic("daemon instance entropy unavailable")
+	}
+	return &Controller{timezone: localTimezone(), instance: instance, operations: make(map[string]*paxv1.OperationState), version: version, fingerprint: fingerprint, readTokens: newReadTokenCache(), logsChanged: make(chan struct{}, 1), subscribers: make(map[chan *paxv1.WatchEvent]chan struct{}),
 		current: &paxv1.Snapshot{Status: paxv1.ProtectionStatus_PROTECTION_STATUS_OFF,
 			TodayTraffic: &paxv1.TrafficSnapshot{}, Settings: &paxv1.Settings{}}}
 }
@@ -116,7 +130,10 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 		return nil, status.Errorf(codes.FailedPrecondition,
 			"protocol version mismatch: daemon=%d client=%d", ProtocolVersion, req.GetProtocolVersion())
 	}
-	capabilities := []string{"routes.catalog"}
+	capabilities := []string{"routes.catalog", "operations.query.v1", "network.operations.v1"}
+	if c.privacy != nil && c.preferences != nil && c.history != nil && c.logState.Load() != nil && c.routes != nil && c.proxy != nil {
+		capabilities = append(capabilities, "settings.operations.v1")
+	}
 	if c.tests != nil {
 		capabilities = append(capabilities, "network.environment_diagnostics.v1")
 	}
@@ -130,7 +147,7 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 		capabilities = append(capabilities, "routing.library.v1")
 	}
 	if c.routes != nil && c.proxy != nil {
-		capabilities = append(capabilities, "routing.rules.read.v1")
+		capabilities = append(capabilities, "routing.rules.read.v1", "routes.edit_view.v1")
 	}
 	if c.icons != nil {
 		capabilities = append(capabilities, "objects.icons.v1")
@@ -150,10 +167,10 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 		capabilities = append(capabilities, "network.path_diagnostics", "network.connection_diagnostics.v1")
 	}
 	if c.aiUsage && c.userMode {
-		capabilities = append(capabilities, "ai.usage.v1", "ai.usage.sources.v1", "ai.usage.cost_range.v1", "ai.usage.sessions.v1", "ai.usage.context.v1", "ai.usage.session_agents.v1", "ai.usage.limits.v1", "ai.usage.limits.summary.v1", "ai.sessions.catalog.activity.v1", "ai.sessions.catalog.v1", "ai.sessions.catalog.range.v1")
+		capabilities = append(capabilities, "ai.usage.v1", "ai.usage.sources.v1", "ai.usage.cost_range.v1", "ai.usage.logs.snapshot.v1", "ai.usage.buckets.timezone.v1", "ai.usage.sessions.v1", "ai.usage.context.v1", "ai.usage.session_agents.v1", "ai.usage.limits.v1", "ai.usage.limits.summary.v1", "ai.sessions.catalog.activity.v1", "ai.sessions.catalog.v1", "ai.sessions.catalog.range.v1")
 	}
 	if c.aiProfiles && c.userMode {
-		capabilities = append(capabilities, "ai.profiles.v1", "ai.cli_apply.v1", "ai.profiles.sources.v1")
+		capabilities = append(capabilities, "ai.profiles.v1", "ai.cli_apply.v1", "ai.profiles.sources.v1", "ai.profiles.operations.v1")
 	}
 	if c.userMode {
 		capabilities = append(capabilities, "paxd.user")
@@ -184,7 +201,7 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 	if c.cf != nil {
 		capabilities = append(capabilities, "routes.cf.candidates")
 		if c.cf.workspace != nil {
-			capabilities = append(capabilities, "routes.cf.workspace", "routes.cf.single", "routes.cf.regions.v1", "routes.cf.displayed_batch.v1")
+			capabilities = append(capabilities, "routes.cf.operations.v1", "routes.cf.workspace", "routes.cf.single", "routes.cf.regions.v1", "routes.cf.displayed_batch.v1")
 		}
 	}
 	if _, ok := c.tls.(tlsBatchRepository); ok && c.routes != nil && c.proxy != nil {
@@ -214,6 +231,8 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 	}
 	return &paxv1.HelloResponse{
 		DaemonVersion:      c.version,
+		DaemonInstance:     c.instance,
+		Timezone:           c.timezone,
 		ServiceFingerprint: c.fingerprint,
 		ProtocolVersion:    ProtocolVersion,
 		SnapshotSeq:        c.snapshotSeq,

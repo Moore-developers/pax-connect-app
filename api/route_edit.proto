@@ -1,0 +1,42 @@
+syntax = "proto3";
+package pax.v1;
+import "operation_context.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// App's legacy private editor and daemon's redacted MCP editing boundary.
+// SecretUpdates are write-only; GetRouteEditView never returns their values.
+message RouteEditRequest {
+ string route_id = 1; uint64 expected_revision = 2;
+ string name = 3; string protocol = 4; string server = 5; uint32 port = 6;
+ string transport = 7; string security = 8; string server_name = 9;
+ string uuid = 10; string password = 11; bool replace_credentials = 12;
+ string ws_host = 13; string ws_path = 14; repeated string alpn = 15;
+ string fingerprint = 16; string reality_public_key = 17; string reality_short_id = 18;
+ string flow = 19; uint32 alter_id = 20; string vmess_security = 21;
+ string obfs_password = 22; bool tls_skip_suggested = 23;
+ string document_json = 24; string request_id = 25; string client_id = 26;
+ OperationContext context = 27;
+
+}
+
+message GetRouteEditorRequest { string route_id = 1; }
+
+message RouteEditor { RouteEditRequest fields = 1; bool credentials_set = 2; string document_json = 3; uint64 config_revision = 4; }
+
+message RouteCredential { string path = 1; bool present = 2; }
+
+message RouteSecretUpdate { string path = 1; oneof change { string value = 2; bool clear = 3; } }
+
+message RouteEditView {
+ string route_id = 1; uint64 revision = 2; uint64 config_revision = 3;
+ string name = 4; string document_json = 5; repeated RouteCredential credentials = 6;
+ bool hidden = 7; bool source_removed = 8; ChainRoute chain = 9;
+}
+
+message SaveRouteEditRequest {
+ string route_id = 1; uint64 expected_revision = 2; string name = 3;
+ string document_json = 4; repeated RouteSecretUpdate secret_updates = 5;
+ OperationContext context = 6;
+}
+
+message ChainRoute { string front_id=1; string final_id=2; }

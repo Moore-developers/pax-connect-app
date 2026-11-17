@@ -81,6 +81,7 @@ extension DaemonConnection {
               }
             } else {
               $0.importProfile = .with {
+                $0.id = UUID().uuidString
                 $0.cli = cli.code
                 $0.inspectionID = inspection
                 $0.name = name

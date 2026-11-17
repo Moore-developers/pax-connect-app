@@ -129,6 +129,8 @@ type AIUsageQuery struct {
 	ToMs          int64                  `protobuf:"varint,2,opt,name=to_ms,json=toMs,proto3" json:"to_ms,omitempty"`
 	Granularity   string                 `protobuf:"bytes,3,opt,name=granularity,proto3" json:"granularity,omitempty"`
 	KnownRevision *uint64                `protobuf:"varint,4,opt,name=known_revision,json=knownRevision,proto3,oneof" json:"known_revision,omitempty"`
+	// Optional IANA timezone for day grouping; omitted preserves daemon local days.
+	Timezone      string `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,6 +191,13 @@ func (x *AIUsageQuery) GetKnownRevision() uint64 {
 		return *x.KnownRevision
 	}
 	return 0
+}
+
+func (x *AIUsageQuery) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
 }
 
 type AIUsageSummaryQuery struct {
@@ -604,8 +613,11 @@ type AIUsageLogQuery struct {
 	MinOfficialCostMicro *int64 `protobuf:"varint,9,opt,name=min_official_cost_micro,json=minOfficialCostMicro,proto3,oneof" json:"min_official_cost_micro,omitempty"`
 	MaxOfficialCostMicro *int64 `protobuf:"varint,10,opt,name=max_official_cost_micro,json=maxOfficialCostMicro,proto3,oneof" json:"max_official_cost_micro,omitempty"`
 	ServiceSource        string `protobuf:"bytes,11,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Optional paired watermarks from the first page; checked in the same read transaction.
+	ExpectedRevision   *uint64 `protobuf:"varint,12,opt,name=expected_revision,json=expectedRevision,proto3,oneof" json:"expected_revision,omitempty"`
+	ExpectedGeneration *uint64 `protobuf:"varint,13,opt,name=expected_generation,json=expectedGeneration,proto3,oneof" json:"expected_generation,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AIUsageLogQuery) Reset() {
@@ -713,6 +725,20 @@ func (x *AIUsageLogQuery) GetServiceSource() string {
 		return x.ServiceSource
 	}
 	return ""
+}
+
+func (x *AIUsageLogQuery) GetExpectedRevision() uint64 {
+	if x != nil && x.ExpectedRevision != nil {
+		return *x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *AIUsageLogQuery) GetExpectedGeneration() uint64 {
+	if x != nil && x.ExpectedGeneration != nil {
+		return *x.ExpectedGeneration
+	}
+	return 0
 }
 
 type AIUsageUnitPrice struct {
@@ -3548,12 +3574,13 @@ const file_ai_usage_proto_rawDesc = "" +
 	"generation\x12)\n" +
 	"\x10catalog_revision\x18\x06 \x01(\x04R\x0fcatalogRevision\x12#\n" +
 	"\rcatalog_ready\x18\a \x01(\bR\fcatalogReady\x12#\n" +
-	"\rcatalog_error\x18\b \x01(\tR\fcatalogError\"\xac\x01\n" +
+	"\rcatalog_error\x18\b \x01(\tR\fcatalogError\"\xc8\x01\n" +
 	"\fAIUsageQuery\x12\x17\n" +
 	"\afrom_ms\x18\x01 \x01(\x03R\x06fromMs\x12\x13\n" +
 	"\x05to_ms\x18\x02 \x01(\x03R\x04toMs\x12 \n" +
 	"\vgranularity\x18\x03 \x01(\tR\vgranularity\x12*\n" +
-	"\x0eknown_revision\x18\x04 \x01(\x04H\x00R\rknownRevision\x88\x01\x01B\x11\n" +
+	"\x0eknown_revision\x18\x04 \x01(\x04H\x00R\rknownRevision\x88\x01\x01\x12\x1a\n" +
+	"\btimezone\x18\x06 \x01(\tR\btimezoneB\x11\n" +
 	"\x0f_known_revisionJ\x04\b\x05\x10\x06R\avisible\"\x15\n" +
 	"\x13AIUsageSummaryQuery\"\xbe\x04\n" +
 	"\rAIUsageTotals\x12\x14\n" +
@@ -3591,7 +3618,7 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\abuckets\x18\x01 \x03(\v2\x15.pax.v1.AIUsageBucketR\abuckets\x12*\n" +
 	"\x05state\x18\x02 \x01(\v2\x14.pax.v1.AIUsageStateR\x05state\x12!\n" +
 	"\fnot_modified\x18\x03 \x01(\bR\vnotModified\x124\n" +
-	"\tlast_used\x18\x04 \x03(\v2\x17.pax.v1.AIUsageLastUsedR\blastUsed\"\xbd\x03\n" +
+	"\tlast_used\x18\x04 \x03(\v2\x17.pax.v1.AIUsageLastUsedR\blastUsed\"\xd3\x04\n" +
 	"\x0fAIUsageLogQuery\x12\x17\n" +
 	"\afrom_ms\x18\x01 \x01(\x03R\x06fromMs\x12\x13\n" +
 	"\x05to_ms\x18\x02 \x01(\x03R\x04toMs\x12!\n" +
@@ -3605,11 +3632,15 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\x17min_official_cost_micro\x18\t \x01(\x03H\x01R\x14minOfficialCostMicro\x88\x01\x01\x12:\n" +
 	"\x17max_official_cost_micro\x18\n" +
 	" \x01(\x03H\x02R\x14maxOfficialCostMicro\x88\x01\x01\x12%\n" +
-	"\x0eservice_source\x18\v \x01(\tR\rserviceSourceB\f\n" +
+	"\x0eservice_source\x18\v \x01(\tR\rserviceSource\x120\n" +
+	"\x11expected_revision\x18\f \x01(\x04H\x03R\x10expectedRevision\x88\x01\x01\x124\n" +
+	"\x13expected_generation\x18\r \x01(\x04H\x04R\x12expectedGeneration\x88\x01\x01B\f\n" +
 	"\n" +
 	"_succeededB\x1a\n" +
 	"\x18_min_official_cost_microB\x1a\n" +
-	"\x18_max_official_cost_micro\"7\n" +
+	"\x18_max_official_cost_microB\x14\n" +
+	"\x12_expected_revisionB\x16\n" +
+	"\x14_expected_generation\"7\n" +
 	"\x10AIUsageUnitPrice\x12\x19\n" +
 	"\x05value\x18\x01 \x01(\x01H\x00R\x05value\x88\x01\x01B\b\n" +
 	"\x06_value\"\xed\t\n" +

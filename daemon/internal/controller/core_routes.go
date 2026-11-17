@@ -169,6 +169,7 @@ func (c *Controller) selectCoreRoute(ctx context.Context, record config.RouteRec
 		}
 		return err
 	}
+	c.markOperationCommitted(operation)
 	c.routes.catalog = next
 	c.publishCatalog(ctx)
 	c.bindCurrentPath(p)

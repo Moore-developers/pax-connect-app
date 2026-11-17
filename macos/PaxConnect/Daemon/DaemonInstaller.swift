@@ -52,6 +52,16 @@ final class DaemonInstaller {
       .trimmingCharacters(in: .whitespacesAndNewlines),
       SHA256.hash(data: core).map({ String(format: "%02x", $0) }).joined() == expectedCore
     else { return .installationInvalid }
+    guard
+      let manifestData = try? Data(
+        contentsOf: contents.appendingPathComponent("Resources/mcp-fingerprints.json")),
+      let manifest = try? JSONDecoder().decode([String: String].self, from: manifestData)
+    else { return .installationInvalid }
+    for name in ["pax-mcp", "pax-mcp-launcher"] {
+      guard let binary = try? Data(contentsOf: contents.appendingPathComponent("MacOS/\(name)")),
+        SHA256.hash(data: binary).map({ String(format: "%02x", $0) }).joined() == manifest[name]
+      else { return .installationInvalid }
+    }
     var code: SecStaticCode?
     guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess,
       let code,

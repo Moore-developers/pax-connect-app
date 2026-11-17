@@ -92,6 +92,9 @@ type Workspace struct {
 
 // Mutation only changes Pax-owned saved state, never native CLI targets.
 type Mutation struct {
+	// DeferModels lets the daemon task owner publish the saved result before discovery.
+	DeferModels      bool
+	ResultLimit      int
 	Action           string
 	OperationID      string
 	ExpectedRevision uint64
@@ -125,7 +128,10 @@ type Plan struct {
 }
 
 // ApplyRequest confirms provider-only edits to the observed CLI files.
-type ApplyRequest struct{ PlanID, OperationID string }
+type ApplyRequest struct {
+	PlanID, OperationID string
+	ResultLimit         int
+}
 
 var identifier = regexp.MustCompile(`^(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$`)
 

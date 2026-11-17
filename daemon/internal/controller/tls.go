@@ -60,6 +60,9 @@ func (c *Controller) resolveProfile(ctx context.Context) (config.DebugProfile, e
 
 // UpdateRouteTLS only saves a user's next-connection choice; it never restarts a running Box.
 func (c *Controller) UpdateRouteTLS(ctx context.Context, req *paxv1.UpdateRouteTLSRequest) (*paxv1.OperationAck, error) {
+	return c.mutationRequest(ctx, "route.tls", req, "", "", func() (*paxv1.OperationAck, error) { return c.updateRouteTLS(ctx, req) })
+}
+func (c *Controller) updateRouteTLS(ctx context.Context, req *paxv1.UpdateRouteTLSRequest) (*paxv1.OperationAck, error) {
 	if c.proxy == nil || c.tls == nil {
 		return nil, status.Error(codes.FailedPrecondition, "tls policy unavailable")
 	}
@@ -92,18 +95,25 @@ func (c *Controller) UpdateRouteTLS(ctx context.Context, req *paxv1.UpdateRouteT
 	c.tlsPending = id
 	c.current.PendingOperationId = id
 	c.commitLocked()
-	p.queue <- proxyIntent{id: id, label: "证书设置", tls: &tlsIntent{routeID: req.RouteId, token: req.IdentityToken, revision: req.ExpectedRevision, mode: mode, confirm: req.ConfirmSkip}}
+	p.queue <- proxyIntent{id: id, label: "证书设置", tls: &tlsIntent{routeID: req.RouteId, token: req.IdentityToken, revision: req.ExpectedRevision, routeRevision: req.ExpectedRouteRevision, mode: mode, confirm: req.ConfirmSkip}}
 	return &paxv1.OperationAck{OperationId: id}, nil
 }
 
 type tlsIntent struct {
 	routeID, token string
 	revision       uint64
+	routeRevision  uint64
 	mode           config.TLSMode
 	confirm        bool
 }
 
 func (c *Controller) saveTLS(ctx context.Context, intent *tlsIntent) string {
+	if intent.routeRevision != 0 {
+		record, ok := c.routes.catalog.Find(intent.routeID)
+		if !ok || record.Revision != intent.routeRevision {
+			return "route_stale"
+		}
+	}
 	p, err := c.catalogProfile(intent.routeID)
 	if err == nil && c.tls != nil {
 		p.TLSResolved, err = c.tls.Resolve(ctx, p)
@@ -117,7 +127,11 @@ func (c *Controller) saveTLS(ctx context.Context, intent *tlsIntent) string {
 	if p.ID != intent.routeID {
 		return "tls_policy_stale"
 	}
-	if err := c.tls.Update(ctx, p, intent.token, intent.revision, intent.mode, intent.confirm); err != nil {
+	revision := intent.revision
+	if intent.routeRevision != 0 {
+		revision = p.TLSResolved.Revision
+	}
+	if err := c.tls.Update(ctx, p, intent.token, revision, intent.mode, intent.confirm); err != nil {
 		return tlsErrorCode(err)
 	}
 	view := p.TLSResolved

@@ -72,6 +72,8 @@ public struct CFWorkspace: Sendable, Equatable {
   public var network = ""
   public var currentNetwork = ""
   public var records: [CFRecord] = []
+  public var recordsOmitted = false
+  public var recordCount: UInt32 = 0
   public var networks: [CFNetwork] = []
   public var operationID = ""
   public var phase = ""
@@ -86,6 +88,8 @@ public struct CFWorkspace: Sendable, Equatable {
     network = p.network
     currentNetwork = p.currentNetwork
     records = p.records.map(CFRecord.init)
+    recordsOmitted = p.recordsOmitted
+    recordCount = p.recordCount
     networks = p.networks.map {
       CFNetwork(id: $0.id, count: $0.count, at: $0.hasAt ? $0.at.date : nil)
     }

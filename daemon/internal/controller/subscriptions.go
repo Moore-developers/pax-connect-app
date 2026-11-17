@@ -30,6 +30,7 @@ type SubscriptionFetcher interface {
 }
 
 type subscriptionRun struct {
+	tracked  bool
 	request  string
 	sourceID string
 	routeID  string
@@ -86,6 +87,9 @@ func (c *Controller) ConfigureSubscriptions(fetcher SubscriptionFetcher) {
 // RefreshSubscription acknowledges a bounded refresh that runs in its own worker. Repeated
 // requests for the same source reuse the operation already in flight.
 func (c *Controller) RefreshSubscription(ctx context.Context, req *paxv1.RefreshSubscriptionRequest) (*paxv1.OperationAck, error) {
+	return c.mutationRequest(ctx, "subscription.refresh", req, "", "", func() (*paxv1.OperationAck, error) { return c.refreshSubscription(ctx, req) })
+}
+func (c *Controller) refreshSubscription(ctx context.Context, req *paxv1.RefreshSubscriptionRequest) (*paxv1.OperationAck, error) {
 	if c.subs == nil || c.subs.fetcher == nil || c.routes == nil || c.proxy == nil {
 		return nil, status.Error(codes.FailedPrecondition, "subscription_unavailable")
 	}
@@ -168,6 +172,11 @@ func (c *Controller) RefreshSubscription(ctx context.Context, req *paxv1.Refresh
 	requestKey := req.RouteId + "\x00" + req.ReplacementUrl + "\x00" + req.GetUserAgent() + fmt.Sprint(req.UserAgent != nil)
 	owner.mu.Lock()
 	if existing, ok := owner.active[source.ID]; ok {
+		// MCP requests must not claim ownership of a legacy App refresh.
+		if req.Context != nil && owner.ops[existing] != nil && !owner.ops[existing].tracked {
+			owner.mu.Unlock()
+			return nil, status.Error(codes.FailedPrecondition, "subscription_refresh_busy")
+		}
 		if run := owner.ops[existing]; run != nil && (run.routeID != req.RouteId || run.request != requestKey) {
 			owner.mu.Unlock()
 			return nil, status.Error(codes.FailedPrecondition, "subscription_refresh_busy")
@@ -182,7 +191,7 @@ func (c *Controller) RefreshSubscription(ctx context.Context, req *paxv1.Refresh
 	}
 	runCtx, cancel := context.WithCancel(owner.lifetime)
 	owner.active[source.ID] = id
-	owner.ops[id] = &subscriptionRun{sourceID: source.ID, routeID: req.RouteId, request: requestKey, cancel: cancel}
+	owner.ops[id] = &subscriptionRun{sourceID: source.ID, tracked: req.Context != nil, routeID: req.RouteId, request: requestKey, cancel: cancel}
 	owner.mu.Unlock()
 	_ = c.query(owner.lifetime, func(ctx context.Context) { c.publishCatalog(ctx) })
 	go c.runRefresh(runCtx, cancel, id, source, route, req)
@@ -190,7 +199,56 @@ func (c *Controller) RefreshSubscription(ctx context.Context, req *paxv1.Refresh
 }
 
 // CancelOperation cancels one accepted route switch or background operation.
-func (c *Controller) CancelOperation(_ context.Context, req *paxv1.CancelOperationRequest) (*paxv1.OperationAck, error) {
+func (c *Controller) CancelOperation(ctx context.Context, req *paxv1.CancelOperationRequest) (*paxv1.OperationAck, error) {
+	if req.Context != nil {
+		return c.contextRequest(ctx, "operation.cancel", req, req.Context, func() (*paxv1.OperationAck, error) { return c.cancelOperation(ctx, req) })
+	}
+	return c.cancelOperation(ctx, req)
+}
+func (c *Controller) cancelOperation(ctx context.Context, req *paxv1.CancelOperationRequest) (*paxv1.OperationAck, error) {
+	c.mu.Lock()
+	op := c.operations[req.OperationId]
+	terminal, path := false, false
+	if op != nil {
+		terminal = op.FinishedAt != nil
+		path = op.Kind == "path.recheck"
+	}
+	c.mu.Unlock()
+	if terminal {
+		return &paxv1.OperationAck{OperationId: req.OperationId}, nil
+	}
+	if s := c.profileOperations; s != nil {
+		s.tasks.mu.Lock()
+		cancel := s.tasks.jobs[req.OperationId].cancel
+		if cancel != nil {
+			cancel()
+		}
+		s.tasks.mu.Unlock()
+		if cancel != nil {
+			return &paxv1.OperationAck{OperationId: req.OperationId}, nil
+		}
+	}
+	if path && c.proxy != nil {
+		found := false
+		if err := c.query(ctx, func(context.Context) {
+			if state := c.proxy.pathCheck; state != nil {
+				for i, id := range state.commands {
+					if id == req.OperationId {
+						state.commands = append(state.commands[:i], state.commands[i+1:]...)
+						found = true
+						c.completeOperation(id, "验证当前通道", "operation_cancelled")
+						break
+					}
+				}
+			}
+		}); err != nil {
+			return nil, err
+		}
+		if found {
+			return &paxv1.OperationAck{OperationId: req.OperationId}, nil
+		}
+	}
+
 	if c.proxy != nil {
 		c.proxy.mu.Lock()
 		cancel, ok := c.proxy.routeCancels[req.OperationId]
@@ -231,17 +289,22 @@ func (c *Controller) CancelOperation(_ context.Context, req *paxv1.CancelOperati
 			return &paxv1.OperationAck{OperationId: req.OperationId}, nil
 		}
 	}
+	if op != nil {
+		return nil, status.Error(codes.FailedPrecondition, "not_cancellable")
+	}
 	return nil, status.Error(codes.NotFound, "operation_not_found")
 }
 
 // RestoreSubscriptionRoute brings back a node the user deleted from a subscription.
 func (c *Controller) RestoreSubscriptionRoute(ctx context.Context, req *paxv1.RestoreSubscriptionRouteRequest) (*paxv1.OperationAck, error) {
-	return c.admitNamedRoute(ctx, "route.restore_subscription", "恢复订阅线路", func(ctx context.Context) error {
-		next := c.routes.catalog.Clone()
-		if err := next.RestoreRoute(req.RouteId, req.ExpectedRevision); err != nil {
-			return err
-		}
-		return c.saveCatalog(ctx, next)
+	return c.mutationRequest(ctx, "route.restore", req, "", "", func() (*paxv1.OperationAck, error) {
+		return c.admitNamedRoute(ctx, "route.restore_subscription", "恢复订阅线路", func(ctx context.Context) error {
+			next := c.routes.catalog.Clone()
+			if err := next.RestoreRoute(req.RouteId, req.ExpectedRevision); err != nil {
+				return err
+			}
+			return c.saveCatalog(ctx, next)
+		})
 	})
 }
 

@@ -69,12 +69,22 @@ public nonisolated struct Pax_V1_UpdateSettingsRequest: Sendable {
   /// Clears the value of `requestedAt`. Subsequent reads from it will return its default value.
   public mutating func clearRequestedAt() {self._requestedAt = nil}
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _settings: Pax_V1_Settings? = nil
   fileprivate var _requestedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// Saved intent; changes apply on next explicit proxy activation.
@@ -89,9 +99,20 @@ public nonisolated struct Pax_V1_NetworkPrivacy: Sendable {
 
   public var webrtc: Bool = false
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
@@ -104,6 +125,140 @@ public nonisolated struct Pax_V1_ExternalTUN: Sendable {
   public var interface: String = String()
 
   public var target: String = String()
+
+  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_at = newValue}
+  }
+  /// Returns true if `at` has been explicitly set.
+  public var hasAt: Bool {self._at != nil}
+  /// Clears the value of `at`. Subsequent reads from it will return its default value.
+  public mutating func clearAt() {self._at = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+}
+
+public nonisolated struct Pax_V1_MeasurementPreferences: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var revision: UInt64 {
+    get {_storage._revision}
+    set {_uniqueStorage()._revision = newValue}
+  }
+
+  public var latencyParallel: UInt32 {
+    get {_storage._latencyParallel}
+    set {_uniqueStorage()._latencyParallel = newValue}
+  }
+
+  public var exitParallel: UInt32 {
+    get {_storage._exitParallel}
+    set {_uniqueStorage()._exitParallel = newValue}
+  }
+
+  public var downloadParallel: UInt32 {
+    get {_storage._downloadParallel}
+    set {_uniqueStorage()._downloadParallel = newValue}
+  }
+
+  public var mode: String {
+    get {_storage._mode}
+    set {_uniqueStorage()._mode = newValue}
+  }
+
+  public var recommendedLatency: UInt32 {
+    get {_storage._recommendedLatency}
+    set {_uniqueStorage()._recommendedLatency = newValue}
+  }
+
+  public var recommendedExit: UInt32 {
+    get {_storage._recommendedExit}
+    set {_uniqueStorage()._recommendedExit = newValue}
+  }
+
+  public var recommendedDownload: UInt32 {
+    get {_storage._recommendedDownload}
+    set {_uniqueStorage()._recommendedDownload = newValue}
+  }
+
+  public var recommendationNetwork: String {
+    get {_storage._recommendationNetwork}
+    set {_uniqueStorage()._recommendationNetwork = newValue}
+  }
+
+  public var evaluatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_storage._evaluatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_uniqueStorage()._evaluatedAt = newValue}
+  }
+  /// Returns true if `evaluatedAt` has been explicitly set.
+  public var hasEvaluatedAt: Bool {_storage._evaluatedAt != nil}
+  /// Clears the value of `evaluatedAt`. Subsequent reads from it will return its default value.
+  public mutating func clearEvaluatedAt() {_uniqueStorage()._evaluatedAt = nil}
+
+  public var latencyMode: String {
+    get {_storage._latencyMode}
+    set {_uniqueStorage()._latencyMode = newValue}
+  }
+
+  public var exitMode: String {
+    get {_storage._exitMode}
+    set {_uniqueStorage()._exitMode = newValue}
+  }
+
+  public var downloadMode: String {
+    get {_storage._downloadMode}
+    set {_uniqueStorage()._downloadMode = newValue}
+  }
+
+  /// Read-only; ignored by SaveMeasurementPreferences.
+  public var exitPoolState: Pax_V1_ExitPoolState {
+    get {_storage._exitPoolState ?? Pax_V1_ExitPoolState()}
+    set {_uniqueStorage()._exitPoolState = newValue}
+  }
+  /// Returns true if `exitPoolState` has been explicitly set.
+  public var hasExitPoolState: Bool {_storage._exitPoolState != nil}
+  /// Clears the value of `exitPoolState`. Subsequent reads from it will return its default value.
+  public mutating func clearExitPoolState() {_uniqueStorage()._exitPoolState = nil}
+
+  public var context: Pax_V1_OperationContext {
+    get {_storage._context ?? Pax_V1_OperationContext()}
+    set {_uniqueStorage()._context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {_storage._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {_uniqueStorage()._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public nonisolated struct Pax_V1_ExitPoolState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var configuredLimit: UInt32 = 0
+
+  public var inFlight: UInt32 = 0
+
+  public var queued: UInt32 = 0
+
+  /// Subset of queued, not an additional task count.
+  public var retrying: UInt32 = 0
+
+  public var availableProviders: UInt32 = 0
+
+  public var totalProviders: UInt32 = 0
 
   public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
@@ -172,7 +327,7 @@ nonisolated extension Pax_V1_Settings: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 nonisolated extension Pax_V1_UpdateSettingsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateSettingsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}settings\0\u{3}field_mask\0\u{3}expected_revision\0\u{3}operation_id\0\u{3}requested_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}settings\0\u{3}field_mask\0\u{3}expected_revision\0\u{3}operation_id\0\u{3}requested_at\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -185,6 +340,7 @@ nonisolated extension Pax_V1_UpdateSettingsRequest: SwiftProtobuf.Message, Swift
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRevision) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.operationID) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._requestedAt) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -210,6 +366,9 @@ nonisolated extension Pax_V1_UpdateSettingsRequest: SwiftProtobuf.Message, Swift
     try { if let v = self._requestedAt {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     } }()
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -219,6 +378,7 @@ nonisolated extension Pax_V1_UpdateSettingsRequest: SwiftProtobuf.Message, Swift
     if lhs.expectedRevision != rhs.expectedRevision {return false}
     if lhs.operationID != rhs.operationID {return false}
     if lhs._requestedAt != rhs._requestedAt {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -226,7 +386,7 @@ nonisolated extension Pax_V1_UpdateSettingsRequest: SwiftProtobuf.Message, Swift
 
 nonisolated extension Pax_V1_NetworkPrivacy: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NetworkPrivacy"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}dns_mode\0\u{1}webrtc\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}dns_mode\0\u{1}webrtc\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -237,12 +397,17 @@ nonisolated extension Pax_V1_NetworkPrivacy: SwiftProtobuf.Message, SwiftProtobu
       case 1: try { try decoder.decodeSingularUInt64Field(value: &self.revision) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.dnsMode) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.webrtc) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.revision != 0 {
       try visitor.visitSingularUInt64Field(value: self.revision, fieldNumber: 1)
     }
@@ -252,6 +417,9 @@ nonisolated extension Pax_V1_NetworkPrivacy: SwiftProtobuf.Message, SwiftProtobu
     if self.webrtc != false {
       try visitor.visitSingularBoolField(value: self.webrtc, fieldNumber: 3)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -259,6 +427,7 @@ nonisolated extension Pax_V1_NetworkPrivacy: SwiftProtobuf.Message, SwiftProtobu
     if lhs.revision != rhs.revision {return false}
     if lhs.dnsMode != rhs.dnsMode {return false}
     if lhs.webrtc != rhs.webrtc {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -302,6 +471,238 @@ nonisolated extension Pax_V1_ExternalTUN: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: Pax_V1_ExternalTUN, rhs: Pax_V1_ExternalTUN) -> Bool {
     if lhs.interface != rhs.interface {return false}
     if lhs.target != rhs.target {return false}
+    if lhs._at != rhs._at {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_MeasurementPreferences: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MeasurementPreferences"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}latency_parallel\0\u{3}exit_parallel\0\u{3}download_parallel\0\u{1}mode\0\u{3}recommended_latency\0\u{3}recommended_exit\0\u{3}recommended_download\0\u{3}recommendation_network\0\u{3}evaluated_at\0\u{3}latency_mode\0\u{3}exit_mode\0\u{3}download_mode\0\u{3}exit_pool_state\0\u{1}context\0")
+
+  fileprivate class _StorageClass {
+    var _revision: UInt64 = 0
+    var _latencyParallel: UInt32 = 0
+    var _exitParallel: UInt32 = 0
+    var _downloadParallel: UInt32 = 0
+    var _mode: String = String()
+    var _recommendedLatency: UInt32 = 0
+    var _recommendedExit: UInt32 = 0
+    var _recommendedDownload: UInt32 = 0
+    var _recommendationNetwork: String = String()
+    var _evaluatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _latencyMode: String = String()
+    var _exitMode: String = String()
+    var _downloadMode: String = String()
+    var _exitPoolState: Pax_V1_ExitPoolState? = nil
+    var _context: Pax_V1_OperationContext? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _revision = source._revision
+      _latencyParallel = source._latencyParallel
+      _exitParallel = source._exitParallel
+      _downloadParallel = source._downloadParallel
+      _mode = source._mode
+      _recommendedLatency = source._recommendedLatency
+      _recommendedExit = source._recommendedExit
+      _recommendedDownload = source._recommendedDownload
+      _recommendationNetwork = source._recommendationNetwork
+      _evaluatedAt = source._evaluatedAt
+      _latencyMode = source._latencyMode
+      _exitMode = source._exitMode
+      _downloadMode = source._downloadMode
+      _exitPoolState = source._exitPoolState
+      _context = source._context
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularUInt64Field(value: &_storage._revision) }()
+        case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._latencyParallel) }()
+        case 3: try { try decoder.decodeSingularUInt32Field(value: &_storage._exitParallel) }()
+        case 4: try { try decoder.decodeSingularUInt32Field(value: &_storage._downloadParallel) }()
+        case 5: try { try decoder.decodeSingularStringField(value: &_storage._mode) }()
+        case 6: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedLatency) }()
+        case 7: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedExit) }()
+        case 8: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedDownload) }()
+        case 9: try { try decoder.decodeSingularStringField(value: &_storage._recommendationNetwork) }()
+        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._evaluatedAt) }()
+        case 11: try { try decoder.decodeSingularStringField(value: &_storage._latencyMode) }()
+        case 12: try { try decoder.decodeSingularStringField(value: &_storage._exitMode) }()
+        case 13: try { try decoder.decodeSingularStringField(value: &_storage._downloadMode) }()
+        case 14: try { try decoder.decodeSingularMessageField(value: &_storage._exitPoolState) }()
+        case 15: try { try decoder.decodeSingularMessageField(value: &_storage._context) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if _storage._revision != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._revision, fieldNumber: 1)
+      }
+      if _storage._latencyParallel != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._latencyParallel, fieldNumber: 2)
+      }
+      if _storage._exitParallel != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._exitParallel, fieldNumber: 3)
+      }
+      if _storage._downloadParallel != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._downloadParallel, fieldNumber: 4)
+      }
+      if !_storage._mode.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._mode, fieldNumber: 5)
+      }
+      if _storage._recommendedLatency != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._recommendedLatency, fieldNumber: 6)
+      }
+      if _storage._recommendedExit != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._recommendedExit, fieldNumber: 7)
+      }
+      if _storage._recommendedDownload != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._recommendedDownload, fieldNumber: 8)
+      }
+      if !_storage._recommendationNetwork.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._recommendationNetwork, fieldNumber: 9)
+      }
+      try { if let v = _storage._evaluatedAt {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+      } }()
+      if !_storage._latencyMode.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._latencyMode, fieldNumber: 11)
+      }
+      if !_storage._exitMode.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._exitMode, fieldNumber: 12)
+      }
+      if !_storage._downloadMode.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._downloadMode, fieldNumber: 13)
+      }
+      try { if let v = _storage._exitPoolState {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+      } }()
+      try { if let v = _storage._context {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_MeasurementPreferences, rhs: Pax_V1_MeasurementPreferences) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._revision != rhs_storage._revision {return false}
+        if _storage._latencyParallel != rhs_storage._latencyParallel {return false}
+        if _storage._exitParallel != rhs_storage._exitParallel {return false}
+        if _storage._downloadParallel != rhs_storage._downloadParallel {return false}
+        if _storage._mode != rhs_storage._mode {return false}
+        if _storage._recommendedLatency != rhs_storage._recommendedLatency {return false}
+        if _storage._recommendedExit != rhs_storage._recommendedExit {return false}
+        if _storage._recommendedDownload != rhs_storage._recommendedDownload {return false}
+        if _storage._recommendationNetwork != rhs_storage._recommendationNetwork {return false}
+        if _storage._evaluatedAt != rhs_storage._evaluatedAt {return false}
+        if _storage._latencyMode != rhs_storage._latencyMode {return false}
+        if _storage._exitMode != rhs_storage._exitMode {return false}
+        if _storage._downloadMode != rhs_storage._downloadMode {return false}
+        if _storage._exitPoolState != rhs_storage._exitPoolState {return false}
+        if _storage._context != rhs_storage._context {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_ExitPoolState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ExitPoolState"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}configured_limit\0\u{3}in_flight\0\u{1}queued\0\u{1}retrying\0\u{3}available_providers\0\u{3}total_providers\0\u{1}at\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.configuredLimit) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.inFlight) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.queued) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.retrying) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.availableProviders) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.totalProviders) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._at) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.configuredLimit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.configuredLimit, fieldNumber: 1)
+    }
+    if self.inFlight != 0 {
+      try visitor.visitSingularUInt32Field(value: self.inFlight, fieldNumber: 2)
+    }
+    if self.queued != 0 {
+      try visitor.visitSingularUInt32Field(value: self.queued, fieldNumber: 3)
+    }
+    if self.retrying != 0 {
+      try visitor.visitSingularUInt32Field(value: self.retrying, fieldNumber: 4)
+    }
+    if self.availableProviders != 0 {
+      try visitor.visitSingularUInt32Field(value: self.availableProviders, fieldNumber: 5)
+    }
+    if self.totalProviders != 0 {
+      try visitor.visitSingularUInt32Field(value: self.totalProviders, fieldNumber: 6)
+    }
+    try { if let v = self._at {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_ExitPoolState, rhs: Pax_V1_ExitPoolState) -> Bool {
+    if lhs.configuredLimit != rhs.configuredLimit {return false}
+    if lhs.inFlight != rhs.inFlight {return false}
+    if lhs.queued != rhs.queued {return false}
+    if lhs.retrying != rhs.retrying {return false}
+    if lhs.availableProviders != rhs.availableProviders {return false}
+    if lhs.totalProviders != rhs.totalProviders {return false}
     if lhs._at != rhs._at {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

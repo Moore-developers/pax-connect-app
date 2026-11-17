@@ -71,10 +71,6 @@ message EnvironmentCheck {
 }
 
 // One short-lived current-environment session, independent of route selection.
-message EnvironmentDiagnosticRequest {
-  string action = 1; // start, read, cancel, sources (retry exact-IP intelligence)
-  string session_id = 2;
-}
 message EnvironmentResolver {
   string ip = 1; string country = 2; string organization = 3;
 }
@@ -95,6 +91,7 @@ message EnvironmentDiagnosticReport {
   string session_id = 1; string browser_url = 2;
   EnvironmentSample mac = 3; EnvironmentSample browser = 4;
   bool complete = 5; google.protobuf.Timestamp at = 6;
+  string operation_id = 7; google.protobuf.Timestamp expires_at = 8;
 }
 
 // Default reads retained attempt evidence; recheck performs bounded read-only probes.

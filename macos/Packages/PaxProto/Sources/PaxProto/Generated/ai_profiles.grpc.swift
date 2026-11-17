@@ -72,6 +72,19 @@ public enum Pax_V1_AIProfilesService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "StartAIProfileModels" metadata.
+        public enum StartAIProfileModels: Sendable {
+            /// Request type for "StartAIProfileModels".
+            public typealias Input = Pax_V1_AIProfileModelsRequest
+            /// Response type for "StartAIProfileModels".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "StartAIProfileModels".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.AIProfilesService"),
+                method: "StartAIProfileModels",
+                type: .unary
+            )
+        }
         /// Namespace for "ApplyAIProfile" metadata.
         public enum ApplyAIProfile: Sendable {
             /// Request type for "ApplyAIProfile".
@@ -91,6 +104,7 @@ public enum Pax_V1_AIProfilesService: Sendable {
             MutateAIProfile.descriptor,
             PlanAIProfileApply.descriptor,
             RefreshAIProfileModels.descriptor,
+            StartAIProfileModels.descriptor,
             ApplyAIProfile.descriptor
         ]
     }
@@ -189,6 +203,25 @@ extension Pax_V1_AIProfilesService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AIProfilesWorkspace>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfilesWorkspace>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "StartAIProfileModels" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AIProfileModelsRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_AIProfileModelsRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func startAIProfileModels<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AIProfileModelsRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AIProfileModelsRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ApplyAIProfile" method.
@@ -351,6 +384,36 @@ extension Pax_V1_AIProfilesService {
             )
         }
 
+        /// Call the "StartAIProfileModels" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AIProfileModelsRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_AIProfileModelsRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func startAIProfileModels<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AIProfileModelsRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AIProfileModelsRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_AIProfilesService.Method.StartAIProfileModels.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "ApplyAIProfile" method.
         ///
         /// - Parameters:
@@ -481,6 +544,31 @@ extension Pax_V1_AIProfilesService.ClientProtocol {
             request: request,
             serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_AIProfileModelsRequest>(),
             deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_AIProfilesWorkspace>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartAIProfileModels" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_AIProfileModelsRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startAIProfileModels<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_AIProfileModelsRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.startAIProfileModels(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_AIProfileModelsRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
             options: options,
             onResponse: handleResponse
         )
@@ -625,6 +713,35 @@ extension Pax_V1_AIProfilesService.ClientProtocol {
             metadata: metadata
         )
         return try await self.refreshAIProfileModels(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartAIProfileModels" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startAIProfileModels<Result>(
+        _ message: Pax_V1_AIProfileModelsRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_AIProfileModelsRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.startAIProfileModels(
             request: request,
             options: options,
             onResponse: handleResponse

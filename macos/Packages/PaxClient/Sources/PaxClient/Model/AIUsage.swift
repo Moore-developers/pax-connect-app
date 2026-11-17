@@ -261,6 +261,8 @@ public struct AIUsageLogPage: Sendable {
   }
 }
 public struct AIUsageFilter: Equatable, Sendable {
+  public var expectedRevision: UInt64?
+  public var expectedGeneration: UInt64?
   public var minOfficialCostMicro: Int64?
   public var maxOfficialCostMicro: Int64?
   public var result: Bool?

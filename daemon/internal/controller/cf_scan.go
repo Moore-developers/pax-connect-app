@@ -91,6 +91,7 @@ func (c *Controller) commitCFScan(ctx context.Context, id, network string) error
 	w.document = next
 	w.scan = nil
 	w.proofs = map[string]time.Time{}
+	c.cf.validations = map[string]*cfValidatedDraft{}
 	c.cf.cache = map[string]*pb.CFCandidate{}
 	c.cf.mu.Unlock()
 	return nil

@@ -94,7 +94,7 @@ func TestHelloAdvertisesOnlyAvailableRouteActions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hello.Capabilities) != 1 || hello.Capabilities[0] != "routes.catalog" {
+	if len(hello.Capabilities) != 3 || !slices.Contains(hello.Capabilities, "routes.catalog") || !slices.Contains(hello.Capabilities, "operations.query.v1") || !slices.Contains(hello.Capabilities, "network.operations.v1") {
 		t.Fatalf("unconfigured actions advertised: %v", hello.Capabilities)
 	}
 	c.ConfigureCatalog(&memoryCatalog{catalog: config.NewCatalog(), exists: true})
@@ -105,7 +105,7 @@ func TestHelloAdvertisesOnlyAvailableRouteActions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hello.Capabilities) != 11 || !slices.Contains(hello.Capabilities, "routes.select.off") || !slices.Contains(hello.Capabilities, "routes.proxy.create") || !slices.Contains(hello.Capabilities, "proxy.power") || !slices.Contains(hello.Capabilities, "routing.rules.read.v1") {
+	if len(hello.Capabilities) != 14 || !slices.Contains(hello.Capabilities, "routes.select.off") || !slices.Contains(hello.Capabilities, "routes.proxy.create") || !slices.Contains(hello.Capabilities, "proxy.power") || !slices.Contains(hello.Capabilities, "routing.rules.read.v1") || !slices.Contains(hello.Capabilities, "routes.edit_view.v1") {
 		t.Fatalf("unexpected configured capabilities: %v", hello.Capabilities)
 	}
 	if _, err = c.Hello(ctx, &paxv1.HelloRequest{ProtocolVersion: 3}); err == nil {

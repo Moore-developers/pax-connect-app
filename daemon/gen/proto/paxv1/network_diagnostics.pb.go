@@ -923,58 +923,6 @@ func (x *EnvironmentCheck) GetAt() *timestamppb.Timestamp {
 }
 
 // One short-lived current-environment session, independent of route selection.
-type EnvironmentDiagnosticRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"` // start, read, cancel, sources (retry exact-IP intelligence)
-	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EnvironmentDiagnosticRequest) Reset() {
-	*x = EnvironmentDiagnosticRequest{}
-	mi := &file_network_diagnostics_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EnvironmentDiagnosticRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EnvironmentDiagnosticRequest) ProtoMessage() {}
-
-func (x *EnvironmentDiagnosticRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EnvironmentDiagnosticRequest.ProtoReflect.Descriptor instead.
-func (*EnvironmentDiagnosticRequest) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *EnvironmentDiagnosticRequest) GetAction() string {
-	if x != nil {
-		return x.Action
-	}
-	return ""
-}
-
-func (x *EnvironmentDiagnosticRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
 type EnvironmentResolver struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ip            string                 `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
@@ -986,7 +934,7 @@ type EnvironmentResolver struct {
 
 func (x *EnvironmentResolver) Reset() {
 	*x = EnvironmentResolver{}
-	mi := &file_network_diagnostics_proto_msgTypes[9]
+	mi := &file_network_diagnostics_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -998,7 +946,7 @@ func (x *EnvironmentResolver) String() string {
 func (*EnvironmentResolver) ProtoMessage() {}
 
 func (x *EnvironmentResolver) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[9]
+	mi := &file_network_diagnostics_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1011,7 +959,7 @@ func (x *EnvironmentResolver) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentResolver.ProtoReflect.Descriptor instead.
 func (*EnvironmentResolver) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{9}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EnvironmentResolver) GetIp() string {
@@ -1057,7 +1005,7 @@ type EnvironmentSample struct {
 
 func (x *EnvironmentSample) Reset() {
 	*x = EnvironmentSample{}
-	mi := &file_network_diagnostics_proto_msgTypes[10]
+	mi := &file_network_diagnostics_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1069,7 +1017,7 @@ func (x *EnvironmentSample) String() string {
 func (*EnvironmentSample) ProtoMessage() {}
 
 func (x *EnvironmentSample) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[10]
+	mi := &file_network_diagnostics_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1082,7 +1030,7 @@ func (x *EnvironmentSample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentSample.ProtoReflect.Descriptor instead.
 func (*EnvironmentSample) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{10}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *EnvironmentSample) GetIpv4() string {
@@ -1191,13 +1139,15 @@ type EnvironmentDiagnosticReport struct {
 	Browser       *EnvironmentSample     `protobuf:"bytes,4,opt,name=browser,proto3" json:"browser,omitempty"`
 	Complete      bool                   `protobuf:"varint,5,opt,name=complete,proto3" json:"complete,omitempty"`
 	At            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=at,proto3" json:"at,omitempty"`
+	OperationId   string                 `protobuf:"bytes,7,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EnvironmentDiagnosticReport) Reset() {
 	*x = EnvironmentDiagnosticReport{}
-	mi := &file_network_diagnostics_proto_msgTypes[11]
+	mi := &file_network_diagnostics_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1209,7 +1159,7 @@ func (x *EnvironmentDiagnosticReport) String() string {
 func (*EnvironmentDiagnosticReport) ProtoMessage() {}
 
 func (x *EnvironmentDiagnosticReport) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[11]
+	mi := &file_network_diagnostics_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1222,7 +1172,7 @@ func (x *EnvironmentDiagnosticReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentDiagnosticReport.ProtoReflect.Descriptor instead.
 func (*EnvironmentDiagnosticReport) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{11}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EnvironmentDiagnosticReport) GetSessionId() string {
@@ -1267,6 +1217,20 @@ func (x *EnvironmentDiagnosticReport) GetAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *EnvironmentDiagnosticReport) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *EnvironmentDiagnosticReport) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 // Default reads retained attempt evidence; recheck performs bounded read-only probes.
 type ConnectionDiagnosticRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1277,7 +1241,7 @@ type ConnectionDiagnosticRequest struct {
 
 func (x *ConnectionDiagnosticRequest) Reset() {
 	*x = ConnectionDiagnosticRequest{}
-	mi := &file_network_diagnostics_proto_msgTypes[12]
+	mi := &file_network_diagnostics_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1253,7 @@ func (x *ConnectionDiagnosticRequest) String() string {
 func (*ConnectionDiagnosticRequest) ProtoMessage() {}
 
 func (x *ConnectionDiagnosticRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[12]
+	mi := &file_network_diagnostics_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1266,7 @@ func (x *ConnectionDiagnosticRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionDiagnosticRequest.ProtoReflect.Descriptor instead.
 func (*ConnectionDiagnosticRequest) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{12}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ConnectionDiagnosticRequest) GetRecheck() bool {
@@ -1325,7 +1289,7 @@ type ConnectionDiagnosticStep struct {
 
 func (x *ConnectionDiagnosticStep) Reset() {
 	*x = ConnectionDiagnosticStep{}
-	mi := &file_network_diagnostics_proto_msgTypes[13]
+	mi := &file_network_diagnostics_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1337,7 +1301,7 @@ func (x *ConnectionDiagnosticStep) String() string {
 func (*ConnectionDiagnosticStep) ProtoMessage() {}
 
 func (x *ConnectionDiagnosticStep) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[13]
+	mi := &file_network_diagnostics_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1350,7 +1314,7 @@ func (x *ConnectionDiagnosticStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionDiagnosticStep.ProtoReflect.Descriptor instead.
 func (*ConnectionDiagnosticStep) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{13}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ConnectionDiagnosticStep) GetKind() string {
@@ -1400,7 +1364,7 @@ type TrafficPathFinding struct {
 
 func (x *TrafficPathFinding) Reset() {
 	*x = TrafficPathFinding{}
-	mi := &file_network_diagnostics_proto_msgTypes[14]
+	mi := &file_network_diagnostics_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1412,7 +1376,7 @@ func (x *TrafficPathFinding) String() string {
 func (*TrafficPathFinding) ProtoMessage() {}
 
 func (x *TrafficPathFinding) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[14]
+	mi := &file_network_diagnostics_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1425,7 +1389,7 @@ func (x *TrafficPathFinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPathFinding.ProtoReflect.Descriptor instead.
 func (*TrafficPathFinding) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{14}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TrafficPathFinding) GetKind() string {
@@ -1488,7 +1452,7 @@ type TrafficPathDiagnostics struct {
 
 func (x *TrafficPathDiagnostics) Reset() {
 	*x = TrafficPathDiagnostics{}
-	mi := &file_network_diagnostics_proto_msgTypes[15]
+	mi := &file_network_diagnostics_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1500,7 +1464,7 @@ func (x *TrafficPathDiagnostics) String() string {
 func (*TrafficPathDiagnostics) ProtoMessage() {}
 
 func (x *TrafficPathDiagnostics) ProtoReflect() protoreflect.Message {
-	mi := &file_network_diagnostics_proto_msgTypes[15]
+	mi := &file_network_diagnostics_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1513,7 +1477,7 @@ func (x *TrafficPathDiagnostics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPathDiagnostics.ProtoReflect.Descriptor instead.
 func (*TrafficPathDiagnostics) Descriptor() ([]byte, []int) {
-	return file_network_diagnostics_proto_rawDescGZIP(), []int{15}
+	return file_network_diagnostics_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TrafficPathDiagnostics) GetAt() *timestamppb.Timestamp {
@@ -1784,11 +1748,7 @@ const file_network_diagnostics_proto_rawDesc = "" +
 	"durationMs\x12\x1f\n" +
 	"\vhttp_status\x18\a \x01(\rR\n" +
 	"httpStatus\x12*\n" +
-	"\x02at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"U\n" +
-	"\x1cEnvironmentDiagnosticRequest\x12\x16\n" +
-	"\x06action\x18\x01 \x01(\tR\x06action\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"c\n" +
+	"\x02at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"c\n" +
 	"\x13EnvironmentResolver\x12\x0e\n" +
 	"\x02ip\x18\x01 \x01(\tR\x02ip\x12\x18\n" +
 	"\acountry\x18\x02 \x01(\tR\acountry\x12\"\n" +
@@ -1808,7 +1768,7 @@ const file_network_diagnostics_proto_rawDesc = "" +
 	"\trtc_state\x18\v \x01(\tR\brtcState\x12\x19\n" +
 	"\bip_error\x18\f \x01(\tR\aipError\x12C\n" +
 	"\fintelligence\x18\r \x01(\v2\x1f.pax.v1.NetworkDiagnosticReportR\fintelligence\x120\n" +
-	"\x06checks\x18\x0e \x03(\v2\x18.pax.v1.EnvironmentCheckR\x06checks\"\x87\x02\n" +
+	"\x06checks\x18\x0e \x03(\v2\x18.pax.v1.EnvironmentCheckR\x06checks\"\xe5\x02\n" +
 	"\x1bEnvironmentDiagnosticReport\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
@@ -1817,7 +1777,10 @@ const file_network_diagnostics_proto_rawDesc = "" +
 	"\x03mac\x18\x03 \x01(\v2\x19.pax.v1.EnvironmentSampleR\x03mac\x123\n" +
 	"\abrowser\x18\x04 \x01(\v2\x19.pax.v1.EnvironmentSampleR\abrowser\x12\x1a\n" +
 	"\bcomplete\x18\x05 \x01(\bR\bcomplete\x12*\n" +
-	"\x02at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"7\n" +
+	"\x02at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12!\n" +
+	"\foperation_id\x18\a \x01(\tR\voperationId\x129\n" +
+	"\n" +
+	"expires_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"7\n" +
 	"\x1bConnectionDiagnosticRequest\x12\x18\n" +
 	"\arecheck\x18\x01 \x01(\bR\arecheck\"\xa5\x01\n" +
 	"\x18ConnectionDiagnosticStep\x12\x12\n" +
@@ -1871,57 +1834,57 @@ func file_network_diagnostics_proto_rawDescGZIP() []byte {
 	return file_network_diagnostics_proto_rawDescData
 }
 
-var file_network_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_network_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_network_diagnostics_proto_goTypes = []any{
-	(*NetworkDiagnosticRequest)(nil),     // 0: pax.v1.NetworkDiagnosticRequest
-	(*NetworkDiagnosticProgress)(nil),    // 1: pax.v1.NetworkDiagnosticProgress
-	(*NetworkDiagnosticSource)(nil),      // 2: pax.v1.NetworkDiagnosticSource
-	(*NetworkDiagnosticFact)(nil),        // 3: pax.v1.NetworkDiagnosticFact
-	(*NetworkDiagnosticProvider)(nil),    // 4: pax.v1.NetworkDiagnosticProvider
-	(*NetworkDiagnosticProbe)(nil),       // 5: pax.v1.NetworkDiagnosticProbe
-	(*NetworkDiagnosticReport)(nil),      // 6: pax.v1.NetworkDiagnosticReport
-	(*EnvironmentCheck)(nil),             // 7: pax.v1.EnvironmentCheck
-	(*EnvironmentDiagnosticRequest)(nil), // 8: pax.v1.EnvironmentDiagnosticRequest
-	(*EnvironmentResolver)(nil),          // 9: pax.v1.EnvironmentResolver
-	(*EnvironmentSample)(nil),            // 10: pax.v1.EnvironmentSample
-	(*EnvironmentDiagnosticReport)(nil),  // 11: pax.v1.EnvironmentDiagnosticReport
-	(*ConnectionDiagnosticRequest)(nil),  // 12: pax.v1.ConnectionDiagnosticRequest
-	(*ConnectionDiagnosticStep)(nil),     // 13: pax.v1.ConnectionDiagnosticStep
-	(*TrafficPathFinding)(nil),           // 14: pax.v1.TrafficPathFinding
-	(*TrafficPathDiagnostics)(nil),       // 15: pax.v1.TrafficPathDiagnostics
-	(*timestamppb.Timestamp)(nil),        // 16: google.protobuf.Timestamp
-	(*ExitLocation)(nil),                 // 17: pax.v1.ExitLocation
+	(*NetworkDiagnosticRequest)(nil),    // 0: pax.v1.NetworkDiagnosticRequest
+	(*NetworkDiagnosticProgress)(nil),   // 1: pax.v1.NetworkDiagnosticProgress
+	(*NetworkDiagnosticSource)(nil),     // 2: pax.v1.NetworkDiagnosticSource
+	(*NetworkDiagnosticFact)(nil),       // 3: pax.v1.NetworkDiagnosticFact
+	(*NetworkDiagnosticProvider)(nil),   // 4: pax.v1.NetworkDiagnosticProvider
+	(*NetworkDiagnosticProbe)(nil),      // 5: pax.v1.NetworkDiagnosticProbe
+	(*NetworkDiagnosticReport)(nil),     // 6: pax.v1.NetworkDiagnosticReport
+	(*EnvironmentCheck)(nil),            // 7: pax.v1.EnvironmentCheck
+	(*EnvironmentResolver)(nil),         // 8: pax.v1.EnvironmentResolver
+	(*EnvironmentSample)(nil),           // 9: pax.v1.EnvironmentSample
+	(*EnvironmentDiagnosticReport)(nil), // 10: pax.v1.EnvironmentDiagnosticReport
+	(*ConnectionDiagnosticRequest)(nil), // 11: pax.v1.ConnectionDiagnosticRequest
+	(*ConnectionDiagnosticStep)(nil),    // 12: pax.v1.ConnectionDiagnosticStep
+	(*TrafficPathFinding)(nil),          // 13: pax.v1.TrafficPathFinding
+	(*TrafficPathDiagnostics)(nil),      // 14: pax.v1.TrafficPathDiagnostics
+	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
+	(*ExitLocation)(nil),                // 16: pax.v1.ExitLocation
 }
 var file_network_diagnostics_proto_depIdxs = []int32{
-	16, // 0: pax.v1.NetworkDiagnosticProvider.at:type_name -> google.protobuf.Timestamp
-	16, // 1: pax.v1.NetworkDiagnosticProbe.at:type_name -> google.protobuf.Timestamp
-	16, // 2: pax.v1.NetworkDiagnosticReport.at:type_name -> google.protobuf.Timestamp
-	17, // 3: pax.v1.NetworkDiagnosticReport.exit:type_name -> pax.v1.ExitLocation
+	15, // 0: pax.v1.NetworkDiagnosticProvider.at:type_name -> google.protobuf.Timestamp
+	15, // 1: pax.v1.NetworkDiagnosticProbe.at:type_name -> google.protobuf.Timestamp
+	15, // 2: pax.v1.NetworkDiagnosticReport.at:type_name -> google.protobuf.Timestamp
+	16, // 3: pax.v1.NetworkDiagnosticReport.exit:type_name -> pax.v1.ExitLocation
 	2,  // 4: pax.v1.NetworkDiagnosticReport.sources:type_name -> pax.v1.NetworkDiagnosticSource
 	3,  // 5: pax.v1.NetworkDiagnosticReport.facts:type_name -> pax.v1.NetworkDiagnosticFact
 	5,  // 6: pax.v1.NetworkDiagnosticReport.probes:type_name -> pax.v1.NetworkDiagnosticProbe
 	4,  // 7: pax.v1.NetworkDiagnosticReport.providers:type_name -> pax.v1.NetworkDiagnosticProvider
 	1,  // 8: pax.v1.NetworkDiagnosticReport.progress:type_name -> pax.v1.NetworkDiagnosticProgress
-	16, // 9: pax.v1.EnvironmentCheck.at:type_name -> google.protobuf.Timestamp
-	9,  // 10: pax.v1.EnvironmentSample.resolvers:type_name -> pax.v1.EnvironmentResolver
+	15, // 9: pax.v1.EnvironmentCheck.at:type_name -> google.protobuf.Timestamp
+	8,  // 10: pax.v1.EnvironmentSample.resolvers:type_name -> pax.v1.EnvironmentResolver
 	6,  // 11: pax.v1.EnvironmentSample.intelligence:type_name -> pax.v1.NetworkDiagnosticReport
 	7,  // 12: pax.v1.EnvironmentSample.checks:type_name -> pax.v1.EnvironmentCheck
-	10, // 13: pax.v1.EnvironmentDiagnosticReport.mac:type_name -> pax.v1.EnvironmentSample
-	10, // 14: pax.v1.EnvironmentDiagnosticReport.browser:type_name -> pax.v1.EnvironmentSample
-	16, // 15: pax.v1.EnvironmentDiagnosticReport.at:type_name -> google.protobuf.Timestamp
-	16, // 16: pax.v1.ConnectionDiagnosticStep.at:type_name -> google.protobuf.Timestamp
-	16, // 17: pax.v1.TrafficPathDiagnostics.at:type_name -> google.protobuf.Timestamp
-	14, // 18: pax.v1.TrafficPathDiagnostics.findings:type_name -> pax.v1.TrafficPathFinding
-	16, // 19: pax.v1.TrafficPathDiagnostics.last_tun_connection:type_name -> google.protobuf.Timestamp
-	16, // 20: pax.v1.TrafficPathDiagnostics.last_mixed_connection:type_name -> google.protobuf.Timestamp
-	16, // 21: pax.v1.TrafficPathDiagnostics.attempt_at:type_name -> google.protobuf.Timestamp
-	13, // 22: pax.v1.TrafficPathDiagnostics.steps:type_name -> pax.v1.ConnectionDiagnosticStep
-	13, // 23: pax.v1.TrafficPathDiagnostics.attempt_steps:type_name -> pax.v1.ConnectionDiagnosticStep
-	24, // [24:24] is the sub-list for method output_type
-	24, // [24:24] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	9,  // 13: pax.v1.EnvironmentDiagnosticReport.mac:type_name -> pax.v1.EnvironmentSample
+	9,  // 14: pax.v1.EnvironmentDiagnosticReport.browser:type_name -> pax.v1.EnvironmentSample
+	15, // 15: pax.v1.EnvironmentDiagnosticReport.at:type_name -> google.protobuf.Timestamp
+	15, // 16: pax.v1.EnvironmentDiagnosticReport.expires_at:type_name -> google.protobuf.Timestamp
+	15, // 17: pax.v1.ConnectionDiagnosticStep.at:type_name -> google.protobuf.Timestamp
+	15, // 18: pax.v1.TrafficPathDiagnostics.at:type_name -> google.protobuf.Timestamp
+	13, // 19: pax.v1.TrafficPathDiagnostics.findings:type_name -> pax.v1.TrafficPathFinding
+	15, // 20: pax.v1.TrafficPathDiagnostics.last_tun_connection:type_name -> google.protobuf.Timestamp
+	15, // 21: pax.v1.TrafficPathDiagnostics.last_mixed_connection:type_name -> google.protobuf.Timestamp
+	15, // 22: pax.v1.TrafficPathDiagnostics.attempt_at:type_name -> google.protobuf.Timestamp
+	12, // 23: pax.v1.TrafficPathDiagnostics.steps:type_name -> pax.v1.ConnectionDiagnosticStep
+	12, // 24: pax.v1.TrafficPathDiagnostics.attempt_steps:type_name -> pax.v1.ConnectionDiagnosticStep
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_network_diagnostics_proto_init() }
@@ -1937,7 +1900,7 @@ func file_network_diagnostics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_network_diagnostics_proto_rawDesc), len(file_network_diagnostics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

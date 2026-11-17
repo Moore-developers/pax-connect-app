@@ -20,6 +20,8 @@ import (
 )
 
 type proxyIntent struct {
+	ctx       context.Context
+	cancel    context.CancelFunc
 	id, label string
 	enabled   bool
 	serial    uint64
@@ -53,6 +55,7 @@ type proxyOwner struct {
 	finished           chan struct{}
 	initialized        chan struct{}
 	activeCancel       context.CancelFunc
+	activeIntent       atomic.Pointer[string]
 	serial, stopSerial atomic.Uint64
 	shutdownMu         sync.Mutex
 	shutdownObserved   bool
@@ -70,7 +73,10 @@ func (c *Controller) ConfigureOperations(lifetime context.Context, load func() (
 }
 
 func (c *Controller) SetProxyEnabled(ctx context.Context, req *paxv1.SetProxyEnabledRequest) (*paxv1.OperationAck, error) {
-	return c.admitProxy(ctx, req.Enabled)
+	if req.Context != nil {
+		return c.contextRequest(ctx, "proxy.set", req, req.Context, func() (*paxv1.OperationAck, error) { return c.admitProxy(ctx, req.Enabled) })
+	}
+	return c.appRequest(ctx, "proxy.set", req, "", func() (*paxv1.OperationAck, error) { return c.admitProxy(ctx, req.Enabled) })
 }
 
 func (c *Controller) admitProxy(_ context.Context, enabled bool) (*paxv1.OperationAck, error) {
@@ -115,7 +121,12 @@ func (c *Controller) admitProxy(_ context.Context, enabled bool) (*paxv1.Operati
 	if enabled {
 		label = "开启代理"
 	}
-	p.queue <- proxyIntent{id: id, enabled: enabled, serial: sequence, label: label}
+	task, cancel := context.WithCancel(p.lifetime)
+	if p.routeCancels == nil {
+		p.routeCancels = map[string]context.CancelFunc{}
+	}
+	p.routeCancels[id] = cancel
+	p.queue <- proxyIntent{id: id, enabled: enabled, serial: sequence, label: label, ctx: task, cancel: cancel}
 	return &paxv1.OperationAck{OperationId: id}, nil
 }
 
@@ -259,7 +270,11 @@ func (c *Controller) proxyLoop() {
 				close(intent.query.done)
 				continue
 			}
+			p.activeIntent.Store(&intent.id)
 			parent := p.lifetime
+			if intent.ctx != nil {
+				parent = intent.ctx
+			}
 			if intent.routeOp != nil && intent.routeOp.ctx != nil {
 				parent = intent.routeOp.ctx
 			}
@@ -277,7 +292,15 @@ func (c *Controller) proxyLoop() {
 			var params []string
 			switch {
 			case intent.routeOp != nil:
+				var before config.Catalog
+				if c.routes != nil {
+					before = c.routes.catalog.Clone()
+				}
 				code, params = catalogFailure(intent.routeOp.apply(op))
+				if code == "" && c.routes != nil && intent.routeOp.result == nil && intent.label == refreshLabel {
+					intent.routeOp.result = &paxv1.RouteSaveResult{}
+					catalogOutcome(intent.routeOp.result, before, c.routes.catalog, "subscription.refresh")
+				}
 			case intent.tls != nil:
 				code = c.saveTLS(op, intent.tls)
 			default:
@@ -294,6 +317,9 @@ func (c *Controller) proxyLoop() {
 			cancel()
 			p.mu.Lock()
 			p.activeCancel = nil
+			if intent.cancel != nil {
+				intent.cancel()
+			}
 			delete(p.routeCancels, intent.id)
 			if intent.routeOp != nil && intent.routeOp.cancel != nil {
 				intent.routeOp.cancel()
@@ -317,7 +343,17 @@ func (c *Controller) proxyLoop() {
 			if intent.routeOp != nil && code == "" {
 				routeSave = intent.routeOp.result
 			}
-			c.completeOperationOutcome(intent.id, intent.label, code, previousRoute, nextRoute, evidence, routeSave, params...)
+			if intent.tls != nil && code == "" && c.routes != nil {
+				routeSave = &paxv1.RouteSaveResult{RouteId: intent.tls.routeID, CatalogRevision: c.routes.catalog.Revision}
+				if saved, ok := c.routes.catalog.Find(intent.tls.routeID); ok {
+					routeSave.RouteRevision = saved.Revision
+				}
+			}
+			payload := &paxv1.OperationResult{RouteSave: routeSave}
+			if intent.routeOp != nil && intent.routeOp.settingsResult.GetValue() != nil {
+				payload.Settings = intent.routeOp.settingsResult
+			}
+			c.completeOperationPayload(intent.id, intent.label, code, previousRoute, nextRoute, evidence, payload, params...)
 		case <-refresh:
 			refresh = nil
 			c.resumeWakeFollowup()
@@ -395,6 +431,9 @@ func (c *Controller) completeOperationEvidence(id, label, failure, from, to stri
 	c.completeOperationOutcome(id, label, failure, from, to, evidence, nil, params...)
 }
 func (c *Controller) completeOperationOutcome(id, label, failure, from, to string, evidence *config.SystemEvent, routeSave *paxv1.RouteSaveResult, params ...string) {
+	c.completeOperationPayload(id, label, failure, from, to, evidence, &paxv1.OperationResult{RouteSave: routeSave}, params...)
+}
+func (c *Controller) completeOperationPayload(id, label, failure, from, to string, evidence *config.SystemEvent, result *paxv1.OperationResult, params ...string) {
 	if label == "" {
 		label = "代理操作"
 	}
@@ -410,7 +449,8 @@ func (c *Controller) completeOperationOutcome(id, label, failure, from, to strin
 		c.current.PendingOperationId = ""
 	}
 	entry := &paxv1.ProductLog{At: timestamppb.Now(), Level: paxv1.LogLevel_LOG_LEVEL_INFO, Message: label + "完成", OperationId: id, SnapshotVersion: c.snapshotSeq + 1}
-	result := &paxv1.OperationResult{OperationId: id, Ok: failure == "", RouteSave: routeSave}
+	result.OperationId, result.Ok = id, failure == ""
+	c.operationOutcomeLocked(result, label)
 	if failure != "" {
 		entry.Level = paxv1.LogLevel_LOG_LEVEL_ERROR
 		entry.Message = label + "失败：" + failure
@@ -419,7 +459,13 @@ func (c *Controller) completeOperationOutcome(id, label, failure, from, to strin
 	if c.completedOperations == nil {
 		c.completedOperations = map[string]*paxv1.OperationResult{}
 	}
+	if c.proxy != nil {
+		if active := c.proxy.activeIntent.Load(); active != nil && *active == id {
+			c.proxy.activeIntent.Store(nil)
+		}
+	}
 	c.completedOperations[id] = result
+	c.finishTrackedOperationLocked(id, result)
 	if _, retained := c.routeRequestResults[id]; retained {
 		c.routeRequestResults[id] = result
 	}

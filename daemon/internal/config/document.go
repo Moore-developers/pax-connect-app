@@ -87,7 +87,7 @@ func documentValue(d *json.Decoder, depth int) (any, error) {
 }
 func checkDocumentScope(object map[string]any) error {
 	// Only the product-owned single outbound may be supplied; recursive path fields can read host secrets.
-	forbidden := map[string]bool{"detour": true, "bind_interface": true, "inet4_bind_address": true, "inet6_bind_address": true, "routing_mark": true, "reuse_addr": true, "domain_resolver": true, "network_strategy": true, "network_type": true, "fallback_network_type": true, "certificate_path": true, "key_path": true, "certificate": true, "key": true, "client_certificate_path": true, "client_key_path": true, "client_certificate": true, "client_key": true, "plugin": true, "plugin_opts": true}
+	forbidden := map[string]bool{"netns": true, "realm": true, "detour": true, "bind_interface": true, "inet4_bind_address": true, "inet6_bind_address": true, "routing_mark": true, "reuse_addr": true, "domain_resolver": true, "network_strategy": true, "network_type": true, "fallback_network_type": true, "certificate_path": true, "key_path": true, "certificate": true, "key": true, "client_certificate_path": true, "client_key_path": true, "client_certificate": true, "client_key": true, "plugin": true, "plugin_opts": true}
 	var walk func(any) error
 	walk = func(value any) error {
 		switch v := value.(type) {

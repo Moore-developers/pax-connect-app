@@ -157,10 +157,19 @@ func (m *Manager) importCurrent(ctx context.Context, r Mutation) error {
 	if !validProfile(p.Profile, p.Key) || !validInputMultipliers(p.Profile) || len(m.profiles) >= 256 {
 		return Invalid
 	}
+	if old, exists := m.profiles[p.ID]; exists {
+		if sameProfileInput(old.Profile, p.Profile) && old.Key == p.Key {
+			return nil
+		}
+		return Conflict
+	}
 	for _, old := range m.profiles {
 		if old.Name == p.Name {
 			return Invalid
 		}
+	}
+	if e := m.checkWorkspaceSize(ctx, r.ResultLimit, &p.Profile, ""); e != nil {
+		return e
 	}
 	changes := []stateChange{change("profiles", p.ID, p)}
 	apps := map[CLI]application{}
@@ -195,6 +204,9 @@ func (m *Manager) deleteProfile(ctx context.Context, r Mutation) error {
 	}
 	if p.Revision != r.ExpectedRevision {
 		return Conflict
+	}
+	if e := m.checkWorkspaceSize(ctx, r.ResultLimit, nil, p.ID); e != nil {
+		return e
 	}
 	next := m.recovery.clone()
 	for cli, a := range m.recovery.Applied {

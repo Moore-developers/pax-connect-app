@@ -59,36 +59,45 @@ func (c *Controller) SaveNetworkPrivacy(ctx context.Context, q *pb.NetworkPrivac
 	if q == nil {
 		return nil, status.Error(codes.InvalidArgument, "network_privacy_invalid")
 	}
+	if q.Context != nil {
+		result, err := c.trackedSetting(ctx, "settings.privacy", q, q.Context)
+		return result.GetPrivacy(), err
+	}
 	var result *pb.NetworkPrivacy
 	evidence := &config.SystemEvent{Type: "settings.network_privacy", Name: "保存网络保护", Category: config.EventCategory{Key: "settings", Name: "设置与数据", Symbol: "lock.shield"}, Result: "completed"}
 	err := c.routingCommandEvidence(ctx, evidence, func(operation context.Context) error {
-		p := c.privacy
-		if p == nil || p.failure != nil {
-			return status.Error(codes.FailedPrecondition, "network_privacy_unavailable")
-		}
-		if q.Revision != p.value.Revision {
-			return status.Error(codes.Aborted, "network_privacy_conflict")
-		}
-		if p.value.Revision == math.MaxUint64 {
-			return status.Error(codes.FailedPrecondition, "network_privacy_invalid")
-		}
-		v := config.NetworkPrivacy{Revision: p.value.Revision + 1, DNSMode: q.DnsMode, WebRTC: q.Webrtc}
-		if v.Validate() != nil {
-			return status.Error(codes.InvalidArgument, "network_privacy_invalid")
-		}
-		if err := p.store.Save(operation, v); err != nil {
-			loaded, _, loadErr := p.store.Load()
-			if loadErr != nil || loaded != p.value {
-				p.failure = errors.New("network_privacy_unavailable")
-			}
-			return status.Error(codes.Internal, "network_privacy_save_failed")
-		}
-		p.value = v
-		result = privacyProto(v)
-		return nil
+		var err error
+		result, err = c.saveNetworkPrivacy(operation, q)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (c *Controller) saveNetworkPrivacy(operation context.Context, q *pb.NetworkPrivacy) (*pb.NetworkPrivacy, error) {
+	p := c.privacy
+	if p == nil || p.failure != nil {
+		return nil, status.Error(codes.FailedPrecondition, "network_privacy_unavailable")
+	}
+	if q.Revision != p.value.Revision {
+		return nil, status.Error(codes.Aborted, "network_privacy_conflict")
+	}
+	if p.value.Revision == math.MaxUint64 {
+		return nil, status.Error(codes.FailedPrecondition, "network_privacy_invalid")
+	}
+	v := config.NetworkPrivacy{Revision: p.value.Revision + 1, DNSMode: q.DnsMode, WebRTC: q.Webrtc}
+	if v.Validate() != nil {
+		return nil, status.Error(codes.InvalidArgument, "network_privacy_invalid")
+	}
+	if err := p.store.Save(operation, v); err != nil {
+		loaded, _, loadErr := p.store.Load()
+		if loadErr != nil || loaded != p.value {
+			p.failure = errors.New("network_privacy_unavailable")
+		}
+		return nil, status.Error(codes.Internal, "network_privacy_save_failed")
+	}
+	p.value = v
+	return privacyProto(v), nil
 }

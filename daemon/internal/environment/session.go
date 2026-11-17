@@ -27,6 +27,7 @@ type Snapshot struct {
 	At             time.Time
 	Mac, Browser   Sample
 	Complete       bool
+	Cancelled      bool
 }
 
 // Session owns its probes, listener and 45-second lifetime. Call Close on cancel.
@@ -34,6 +35,7 @@ type Session struct {
 	mu                sync.Mutex
 	state             Snapshot
 	cancel            context.CancelFunc
+	done              chan struct{}
 	client            measurement.Client
 	lookup            *measurement.ExitLookup
 	intelligenceTasks map[string]*intelligenceTask
@@ -54,7 +56,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup, provider Evid
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	transport := &http.Transport{Proxy: nil, TLSHandshakeTimeout: 5 * time.Second, ResponseHeaderTimeout: 7 * time.Second}
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	s := &Session{cancel: cancel, client: client, lookup: lookup, provider: provider, origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
+	s := &Session{cancel: cancel, done: make(chan struct{}), client: client, lookup: lookup, provider: provider, origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
 	s.state = Snapshot{ID: randomToken(), BrowserURL: s.origin + s.path, At: time.Now()}
 	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.serve(ctx, w, r) }), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 3 * time.Second, MaxHeaderBytes: 8192}
 	go func() { _ = server.Serve(listener) }()
@@ -69,9 +71,15 @@ func Start(parent context.Context, lookup *measurement.ExitLookup, provider Evid
 				sample.Complete = true
 				if sample.IPv4 == "" && sample.IPv6 == "" {
 					sample.IPError = "sampling_timeout"
+					if s.state.Cancelled {
+						sample.IPError = "operation_cancelled"
+					}
 				}
 				if len(sample.Resolvers) == 0 {
 					sample.DNSError = "sampling_timeout"
+					if s.state.Cancelled {
+						sample.DNSError = "operation_cancelled"
+					}
 				}
 				if sample.RTCState == "" {
 					sample.RTCState = "failed"
@@ -79,6 +87,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup, provider Evid
 			}
 		}
 		s.state.Complete = true
+		close(s.done)
 	}()
 	go func() {
 		sample := macSample(ctx, client, provider)
@@ -112,7 +121,17 @@ func (s *Session) Read() Snapshot {
 }
 
 // Close cancels all requests and closes the loopback listener.
-func (s *Session) Close() { s.cancel() }
+func (s *Session) Close() {
+	s.mu.Lock()
+	if !s.state.Complete {
+		s.state.Cancelled = true
+	}
+	s.mu.Unlock()
+	s.cancel()
+}
+
+// Done closes after the final report has been published and listener closed.
+func (s *Session) Done() <-chan struct{} { return s.done }
 func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Host != strings.TrimPrefix(s.origin, "http://") || !strings.HasPrefix(r.URL.Path, s.path) {
 		http.NotFound(w, r)

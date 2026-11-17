@@ -138,7 +138,7 @@ public struct AIBinding: Equatable, Sendable {
     self.templateRevision = templateRevision
   }
 }
-public struct AIProfilesWorkspace: Sendable {
+public struct AIProfilesWorkspace: Sendable, Equatable {
   public var profiles: [AIProfile] = []
   public var bindings: [AIClient: AIBinding] = [:]
   public init() {}
@@ -154,7 +154,7 @@ public struct AIProfilesWorkspace: Sendable {
     }
   }
 }
-public struct AIProfilePlan: Sendable {
+public struct AIProfilePlan: Sendable, Equatable {
   public let id: String
   public let cli: AIClient
   public let profileID: String

@@ -26,6 +26,9 @@ func (c *Controller) ConfigureCoreSession(session CoreSession) {
 }
 
 func (c *Controller) executeCoreIntent(ctx context.Context, intent proxyIntent, connection *connectionState) (string, []string) {
+	if ctx.Err() != nil {
+		return catalogFailure(ctx.Err())
+	}
 	if intent.enabled {
 		profile := config.RouteConfig{}
 		if c.routes != nil {
@@ -55,6 +58,7 @@ func (c *Controller) executeCoreIntent(ctx context.Context, intent proxyIntent, 
 			c.proxyState(pb.ProtectionStatus_PROTECTION_STATUS_DEGRADED, "stop_failed", nil)
 			return "stop_failed", nil
 		}
+		c.markOperationCommitted(intent.id)
 		c.sampleUsage(ctx, true)
 		connection.running = false
 		connection.cleanupFailed = false
@@ -129,6 +133,7 @@ func (c *Controller) executeCoreIntent(ctx context.Context, intent proxyIntent, 
 		failure, params := catalogFailure(err)
 		return failure, params
 	}
+	c.markOperationCommitted(intent.id)
 	connection.running = true
 	connection.cleanupFailed = false
 	c.activeTLS(profile)

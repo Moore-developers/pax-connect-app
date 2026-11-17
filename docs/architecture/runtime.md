@@ -16,6 +16,8 @@ Pax Connect.app（当前用户，AppKit / Stores / PaxClient）
 
 App 不直连 sing-box 管理接口。代理 OFF 通过 CloseService 交还 TUN 和系统代理，core 保留到 App 退出；App-PID watchdog 负责异常退出。第三方 TUN 仅识别和提示，由用户手动关闭。
 
+`pax-mcp`为客户端独立启动的stdio适配进程，只连已运行用户paxd，不参与App/paxd/core生命期。当前开发入口`daemon/cmd/pax-mcp`，构建后可显式`--app-bundle <绝对路径>`核验签名、daemon/plist指纹与Hello归属，默认`/Applications/PaxConnect.app`；`--socket`是显式开发入口，仍核验同UID peer与用户daemon能力，不能与bundle参数并用。两者均不自动启动或恢复后台。稳定入口由`cmd/pax-mcp-launcher`及共享`mcpinstall`边界提供，App设置显式安装/修复；用户私有bin目录的launcher与`mcp-install.json`均原子替换，启动只刷新已有安装。登记以bundle路径/CDHash/daemon指纹/构建号定位，并重新核验外层及嵌套签名、配套MCP清单；owner实际可执行路径须属于同bundle。launcher固定启动时CDHash，升级后的旧适配进程返回app_mismatch并要求重连。两份MCP二进制由内向外签名，依赖根LICENSE/NOTICE与版本清单随签名App分发。移动、双副本与权限合同见[接入合同](../changes/pax-mcp/client-integration.md)。
+
 
 ### 2.1 core 运行合同
 
@@ -55,4 +57,4 @@ notarytool               → Developer ID分发通道的公证；临时签名候
 - 代理：core授权、Apply/Clear/SelectRoute/SetPaused/Shutdown已接入并打包签名；用户daemon拒绝root运行，移除--app-session/--start-app-session/--probe-debug及旧root启动路径。AppSessionLauncher已删除。root core必要watchdog、身份互斥、配置白名单和自有残留代理清理保持；历史launchd/receipt记录仅供追溯。
 - 本地打包：make app 分配递增构建号，包含 daemon/plist/rulesets 与指纹并由内向外签名。升级后从新 bundle 启动用户子进程，不覆盖持久目录。验收见 [RUN.md](../../tests/paxd-user/RUN.md)，未启动真实 App 的构建不能代替验收。
 
-- 下载候选：`scripts/package-release.sh 0.1.0` 复用Go构建与`build-app.sh`的Release配置，统一营销版本/daemon/core版本，保留递增构建号。由内向外临时签名，最终签名后计算后台与core指纹；不修改安全策略、不上传。成功后正常退出Pax并备份用户数据/偏好至`~/.pax/backup-UTC时间/`，校验SQLite与文件哈希后恢复原运行App；不迁移数据、不把备份放入DMG。输出在`build/releases/`，DMG根目录仅含应用、「应用程序」快捷方式、离线HTML安装帮助与「说明与许可」；箭头背景/固定图标布局由create-release-dmg.py和dmg-background.swift生成，manifest、版本记录及依赖根目录许可收进说明文件夹；校验文件和manifest在旁。校验脚本核对三份代码签名、arm64、运行库、版本与指纹。未提供Developer ID身份，不宣称通过Gatekeeper；安装和发布条件见[说明](../release/INSTALL.zh-CN.md)及[版本记录](../release/RELEASE-NOTES.zh-CN.md)。
+- 下载候选：`scripts/package-release.sh 0.1.0` 复用Go构建与`build-app.sh`的Release配置，统一营销版本/daemon/core版本，保留递增构建号。由内向外临时签名，最终签名后计算后台与core指纹；不修改安全策略、不上传。成功后正常退出Pax并备份用户数据/偏好至`~/.pax/backup-UTC时间/`，校验SQLite与文件哈希后恢复原运行App；不迁移数据、不把备份放入DMG。输出在`build/releases/`，DMG根目录仅含应用、「应用程序」快捷方式、离线HTML安装帮助与「说明与许可」；箭头背景/固定图标布局由create-release-dmg.py和dmg-background.swift生成，manifest、版本记录及依赖根目录许可收进说明文件夹；校验文件和manifest在旁。校验脚本核对App及四个配套入口的代码签名、arm64、运行库、版本与指纹。未提供Developer ID身份，不宣称通过Gatekeeper；安装和发布条件见[说明](../release/INSTALL.zh-CN.md)及[版本记录](../release/RELEASE-NOTES.zh-CN.md)。

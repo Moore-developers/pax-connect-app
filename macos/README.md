@@ -18,7 +18,7 @@
 
 在仓库根目录运行 `make app`。它自动分配高于本地记录及已安装App的构建号，区分同营销版本下的安装包身份；这不保证本机ad-hoc自动更新必然成功。营销版本保持不变；直接在Xcode打安装包时须手动提高General → Build。产物位于 `build/DerivedData/Build/Products/Debug/PaxConnect.app`。
 
-工程设置：macOS 26、arm64、Swift 6、ad-hoc 本地签名，App Sandbox 与 User Script Sandboxing 关闭。Bundle daemon 阶段复制并签名已构建的 daemon；Install LaunchDaemon plist 阶段复制后台服务 plist 到 `Contents/Library/LaunchDaemons/`。直接在 Xcode 构建前需先执行 `make daemon`。
+工程设置：macOS 26、arm64、Swift 6、ad-hoc 本地签名，App Sandbox 与 User Script Sandboxing 关闭。Bundle daemon 阶段复制并签名已构建的 daemon、core、pax-mcp 与 pax-mcp-launcher；MCP配套哈希清单及依赖LICENSE/NOTICE随App封装。Install LaunchDaemon plist 阶段复制后台服务 plist 到 `Contents/Library/LaunchDaemons/`。直接在 Xcode 构建前需先执行 `make daemon`。
 
 ## 调试连接
 
@@ -108,3 +108,5 @@ root core 首次 ON 授权、复用与 TUN 开关已于票50实现，真实验�
 2026-10-19主域名/滚动模式：协议14/core4，域名目录/列表按公共后缀识别主域名归并，子域名原文保留详情；正式概览流量分析最近1小时（60秒刷新），流量页时窗及今日/24小时运行摘要保持。PaxDataTable默认page随外层滚动，仅三主页主列表fixedHeader；其它自然高度显示已加载内容。权威spec末尾与tests/domain-table-mode。
 
 2026-10-20：`./script/build_and_run.sh --session`构建保持默认`dev.moore.PaxConnect`产品身份，沿用本机偏好；demo/外部`--live`仍使用独立Workbench身份。用户要求清旧重建时仅清理核验过的旧App bundle，不清用户配置/观测历史或构建号状态。
+
+正式系统设置提供MCP入口检查/验证及Codex、Claude Code、DSH显式接入；接入时隐式准备用户私有稳定入口。已有正确登记不重复写入，App启动仅刷新已有入口，不改客户端配置或启动常驻MCP。移动App后重新打开即可登记新位置。产品合同见[客户端接入](../docs/changes/pax-mcp/client-access.md)。客户端示例、权限及数据说明见[接入合同](../docs/changes/pax-mcp/client-integration.md)。

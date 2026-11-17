@@ -1,0 +1,5 @@
+# CF操作协议
+
+`routes.cf.operations.v1`提供StartCFValidation、SaveValidatedCFRoute，并为RunCFTask增加OperationContext。CFWorkspaceRequest可省略document_json读取当前已保存的私有草稿，expected_config_revision在owner内复核；MCP只传版本引用，不读取私有Document。CF共享结果模型移入operation.proto以避免服务/结果循环import；原全名和字段编号不变。公共结果追加CFWorkspace、CFValidationResult；Swift沿DaemonNetworkOperation映射，保存回执增加config_revision。任务终态仅冻结工作区摘要，records_omitted/record_count明确行需通过QueryCFWorkspace分页读取，避免1000行挤满终态预算。
+
+验证冻结合并秘密后的完整草稿、CF IP、源线路/组合配置版本、网络epoch及原物理观察generation；原CF owner最多保留100份、每份请求≤128KiB/草稿≤64KiB、5分钟、总内存上界32MiB，daemon重启不恢复。成功凭据是随机ID，draft_digest也是随机关联ID。新验证使该线路旧token失效；失败/取消不能保存。保存在唯一配置队列内检查成功终态、全部版本、过期、网络及token身份后提交冻结Document；不选路、不开代理。完整输入/权限及续查合同见[M7](../changes/pax-mcp/tools-actions.md#m7cf优选)。

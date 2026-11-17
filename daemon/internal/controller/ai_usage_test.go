@@ -77,6 +77,20 @@ func TestAIUsageRPCsShareRealBucketsAndPaginatedLogs(t *testing.T) {
 	if total != 2 {
 		t.Fatalf("duplicate counted: %d", total)
 	}
+	zoned, e := service.QueryAIUsageBuckets(ctx, &pb.AIUsageQuery{FromMs: q.FromMs, ToMs: q.ToMs, Granularity: "day", Timezone: "Asia/Kolkata"})
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, bucket := range zoned.Buckets {
+		zone, _ := time.LoadLocation("Asia/Kolkata")
+		at := time.UnixMilli(bucket.AtMs).In(zone)
+		if at.Hour() != 0 || at.Minute() != 0 {
+			t.Fatalf("day not grouped in requested timezone: %v", at)
+		}
+	}
+	if _, e = service.QueryAIUsageBuckets(ctx, &pb.AIUsageQuery{FromMs: q.FromMs, ToMs: q.ToMs, Granularity: "day", Timezone: "Local"}); status.Code(e) != codes.InvalidArgument {
+		t.Fatalf("invalid IANA zone accepted: %v", e)
+	}
 	revision := buckets.State.Revision
 	q.KnownRevision = &revision
 	unchanged, e := service.QueryAIUsageBuckets(ctx, q)
@@ -92,6 +106,16 @@ func TestAIUsageRPCsShareRealBucketsAndPaginatedLogs(t *testing.T) {
 	}
 	if logs.Requests[0].InputPrice != nil {
 		t.Fatal("invented pricing")
+	}
+
+	bound := &pb.AIUsageLogQuery{FromMs: q.FromMs, ToMs: q.ToMs, ExpectedRevision: &logs.State.Revision, ExpectedGeneration: &logs.State.Generation, Page: 1}
+	if _, e = service.ListAIUsageLogs(ctx, bound); e != nil {
+		t.Fatalf("bound RPC: %v", e)
+	}
+	stale := logs.State.Revision + 1
+	bound.ExpectedRevision = &stale
+	if _, e = service.ListAIUsageLogs(ctx, bound); status.Code(e) != codes.FailedPrecondition || status.Convert(e).Message() != "query_changed" {
+		t.Fatalf("lost query_changed across wire: %v", e)
 	}
 
 	zero := int64(0)

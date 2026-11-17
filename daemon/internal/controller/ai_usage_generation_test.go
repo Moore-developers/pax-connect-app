@@ -28,9 +28,9 @@ func TestAIUsageLogsOrdinaryAppendRetainsOnePageSnapshot(t *testing.T) {
 	state := aiusage.State{Revision: 3, Generation: 1}
 	rows, after, err := readAIUsageLogs(context.Background(), func(context.Context, aiusage.Query) (aiusage.Logs, error) {
 		state.Revision++
-		return aiusage.Logs{All: 7}, nil
+		return aiusage.Logs{All: 7, State: aiusage.State{Revision: 3, Generation: 1}}, nil
 	}, func() aiusage.State { return state }, aiusage.Query{})
-	if err != nil || rows.All != 7 || after.Revision != 4 {
+	if err != nil || rows.All != 7 || after.Revision != 3 {
 		t.Fatalf("ordinary revision must not mix page counters or fail: rows=%+v state=%+v err=%v", rows, after, err)
 	}
 }

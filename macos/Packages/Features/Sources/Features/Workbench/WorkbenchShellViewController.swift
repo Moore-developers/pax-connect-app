@@ -61,7 +61,8 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   public init(
     routes: RoutesStore, connection: ConnectionStore, telemetry: TelemetryStore? = nil,
     aiProfiles: AIProfilesStore? = nil, aiUsage: AIUsageDataStore? = nil,
-    dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil
+    dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil,
+    mcpAccess: MCPAccessActions? = nil
   ) {
     let icons = WorkbenchObjectIcons(telemetry: telemetry)
     onboardingRoutes = routes
@@ -95,7 +96,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     self.logs = logs
     let settings = SettingsWorkbenchViewController(
       measurement: MeasurementSettingsViewController(routes: routes), telemetry: telemetry,
-      privacyRoutes: routes)
+      privacyRoutes: routes, mcpAccess: mcpAccess, connection: connection)
     self.settings = settings
     super.init(nibName: nil, bundle: nil)
     pages.tabStyle = .unspecified

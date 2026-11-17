@@ -33,8 +33,12 @@ func (s *Store) Buckets(ctx context.Context, q Query) ([]Bucket, error) {
 			return nil, ErrUnavailable
 		}
 		if q.Granularity == "day" {
-			t := time.UnixMilli(b.At).In(time.Local)
-			b.At = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
+			location := q.Location
+			if location == nil {
+				location = time.Local
+			}
+			t := time.UnixMilli(b.At).In(location)
+			b.At = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, location).UnixMilli()
 		}
 		k := bucketKey{b.At, b.CLI, b.ProfileID, b.Model, b.ServiceSource}
 		v := grouped[k]
@@ -124,13 +128,14 @@ func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 	if q.ServiceSource != "" && q.ServiceSource != "official_account" && q.ServiceSource != "official_api" && q.ServiceSource != "relay_api" && q.ServiceSource != "unknown" {
 		return out, ErrRange
 	}
-	if q.To <= q.From || q.Page < 0 || len(q.Text) > 256 ||
+	if (q.ExpectedRevision == nil) != (q.ExpectedGeneration == nil) || q.To <= q.From || q.Page < 0 || len(q.Text) > 256 ||
 		(q.MinOfficialCost != nil && *q.MinOfficialCost < 0) ||
 		(q.MaxOfficialCost != nil && *q.MaxOfficialCost < 0) ||
 		(q.MinOfficialCost != nil && q.MaxOfficialCost != nil && *q.MinOfficialCost > *q.MaxOfficialCost) {
 		return out, ErrRange
 	}
 	if s.RebuildRequired() {
+		out.State = s.State()
 		return out, nil
 	}
 	where := "at>=? AND at<?"
@@ -183,6 +188,12 @@ func (s *Store) List(ctx context.Context, q Query) (Logs, error) {
 		return out, ErrUnavailable
 	}
 	defer func() { _ = tx.Rollback() }()
+	if e = tx.QueryRowContext(ctx, "SELECT (SELECT value FROM meta WHERE key='revision'),(SELECT value FROM meta WHERE key='generation')").Scan(&out.State.Revision, &out.State.Generation); e != nil {
+		return out, ErrUnavailable
+	}
+	if q.ExpectedRevision != nil && (*q.ExpectedRevision != out.State.Revision || *q.ExpectedGeneration != out.State.Generation) {
+		return Logs{}, ErrQueryChanged
+	}
 	if e = tx.QueryRowContext(ctx, "SELECT count(*),coalesce(sum(succeeded),0) FROM requests WHERE "+where, args...).Scan(&out.All, &out.Success); e != nil {
 		return out, ErrUnavailable
 	}

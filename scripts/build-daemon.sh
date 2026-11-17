@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 编译 pax-connectd 与 pax-core（arm64）到 build/。
+# 编译 pax-connectd、pax-core 与两个 MCP 入口（arm64）到 build/。
 #
 #   ./scripts/build-daemon.sh
 #   VERSION=1.2.3 ./scripts/build-daemon.sh        # 注入版本号（进启动自检日志）
@@ -36,3 +36,8 @@ echo "--- 编译 pax-core（${VERSION}，tags=${GO_TAGS}）---"
   -tags "${GO_TAGS}" -trimpath \
   -ldflags "-s -w -X main.version=${VERSION}" \
   -o ../build/pax-core ./cmd/pax-core)
+
+# Stdio adapter and independent stable launcher have no sing-box runtime.
+for name in pax-mcp pax-mcp-launcher; do
+  (cd daemon && GOOS=darwin GOARCH=arm64 ../scripts/go.sh build -trimpath -ldflags "-s -w" -o "../build/$name" "./cmd/$name")
+done

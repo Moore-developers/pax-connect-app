@@ -9,6 +9,9 @@ import (
 // ErrUnavailable is a controlled storage/collection failure without source text.
 var ErrUnavailable = errors.New("ai_usage_unavailable")
 
+// ErrQueryChanged invalidates a paginated read after committed usage changes.
+var ErrQueryChanged = errors.New("query_changed")
+
 // ErrRange indicates an unsupported date range or filter.
 var ErrRange = errors.New("ai_usage_range_invalid")
 
@@ -138,6 +141,8 @@ type Bucket struct {
 
 // Query bounds an aggregation or a ten-row log page.
 type Query struct {
+	Location                               *time.Location
+	ExpectedRevision, ExpectedGeneration   *uint64
 	ServiceSource                          string
 	From, To                               int64
 	Granularity, CLI, Profile, Model, Text string
@@ -148,6 +153,7 @@ type Query struct {
 
 // Logs includes result-independent counts and totals after all filters.
 type Logs struct {
+	State                State
 	Requests             []Request
 	All, Success, Failed int64
 	Total                Summary

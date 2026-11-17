@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	paxv1 "pax-connect/daemon/gen/proto/paxv1"
+	"strings"
 	"time"
 )
 
@@ -21,11 +22,25 @@ func (c *Controller) documentRequest(ctx context.Context, method string, req *pa
 	if req.DocumentJson != "" && (req.Protocol != "" || req.Server != "" || req.Port != 0 || req.Transport != "" || req.Security != "" || req.ServerName != "" || req.Uuid != "" || req.Password != "" || req.ReplaceCredentials || req.WsHost != "" || req.WsPath != "" || len(req.Alpn) > 0 || req.Fingerprint != "" || req.RealityPublicKey != "" || req.RealityShortId != "" || req.Flow != "" || req.AlterId != 0 || req.VmessSecurity != "" || req.ObfsPassword != "" || req.TlsSkipSuggested) {
 		return nil, status.Error(codes.InvalidArgument, "route_invalid")
 	}
+	if req.Context != nil {
+		if req.ClientId != "" || req.RequestId != "" {
+			return nil, status.Error(codes.InvalidArgument, "request_invalid")
+		}
+		return c.contextRequest(ctx, method, req, req.Context, admit)
+	}
 	return c.mutationRequest(ctx, method, req, req.ClientId, req.RequestId, admit)
 }
 
 // mutationRequest binds a bounded digest and outcome to the client's request ID.
-func (c *Controller) mutationRequest(_ context.Context, method string, req proto.Message, clientID, requestID string, admit func() (*paxv1.OperationAck, error)) (*paxv1.OperationAck, error) {
+func (c *Controller) mutationRequest(ctx context.Context, method string, req proto.Message, clientID, requestID string, admit func() (*paxv1.OperationAck, error)) (*paxv1.OperationAck, error) {
+	if contextual, ok := req.(interface {
+		GetContext() *paxv1.OperationContext
+	}); ok && contextual.GetContext() != nil {
+		if clientID != "" || requestID != "" {
+			return nil, status.Error(codes.InvalidArgument, "request_invalid")
+		}
+		return c.contextRequest(ctx, method, req, contextual.GetContext(), admit)
+	}
 	if requestID == "" {
 		return admit()
 	}
@@ -45,7 +60,7 @@ func (c *Controller) mutationRequest(_ context.Context, method string, req proto
 	}
 	now := time.Now()
 	for k, v := range c.routeRequests {
-		if now.Sub(v.at) > 10*time.Minute {
+		if !strings.HasPrefix(k, "mcp:") && now.Sub(v.at) > 10*time.Minute {
 			c.forgetRouteRequest(k)
 		}
 	}
@@ -70,12 +85,14 @@ func (c *Controller) mutationRequest(_ context.Context, method string, req proto
 		var oldestKey string
 		var oldest time.Time
 		for k, v := range c.routeRequests {
-			if oldestKey == "" || v.at.Before(oldest) {
+			if !strings.HasPrefix(k, "mcp:") && (oldestKey == "" || v.at.Before(oldest)) {
 				oldestKey = k
 				oldest = v.at
 			}
 		}
-		c.forgetRouteRequest(oldestKey)
+		if oldestKey != "" {
+			c.forgetRouteRequest(oldestKey)
+		}
 	}
 	c.mu.Lock()
 	if c.routeRequestResults == nil {

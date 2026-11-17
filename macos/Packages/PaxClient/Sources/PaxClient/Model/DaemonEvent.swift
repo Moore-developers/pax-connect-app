@@ -199,6 +199,8 @@ public struct OperationResult: Sendable, Equatable {
 
 /// 握手结果：一次连接的开场白。
 public struct DaemonHandshake: Sendable, Equatable {
+  public let daemonInstance: String
+  public let timezone: String
   public let ownerAppPID: UInt32
   public let initialInstall: Bool
   public let capabilities: Set<String>
@@ -210,8 +212,10 @@ public struct DaemonHandshake: Sendable, Equatable {
   public init(
     daemonVersion: String, protocolVersion: UInt32, snapshotSeq: UInt64,
     serviceFingerprint: String = "", capabilities: Set<String> = [], initialInstall: Bool = false,
-    ownerAppPID: UInt32 = 0
+    ownerAppPID: UInt32 = 0, daemonInstance: String = "", timezone: String = ""
   ) {
+    self.daemonInstance = daemonInstance
+    self.timezone = timezone
     self.ownerAppPID = ownerAppPID
     self.initialInstall = initialInstall
     self.capabilities = capabilities

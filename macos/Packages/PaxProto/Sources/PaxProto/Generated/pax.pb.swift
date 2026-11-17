@@ -25,53 +25,6 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-/// 保护状态：只有 PROTECTED 才能显示"已保护"（§19.1、decisions/geo-dns-protection.md）。
-public nonisolated enum Pax_V1_ProtectionStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
-  public typealias RawValue = Int
-  case unspecified // = 0
-  case off // = 1
-  case starting // = 2
-  case protected // = 3
-  case degraded // = 4
-  case UNRECOGNIZED(Int)
-
-  public init() {
-    self = .unspecified
-  }
-
-  public init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .unspecified
-    case 1: self = .off
-    case 2: self = .starting
-    case 3: self = .protected
-    case 4: self = .degraded
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  public var rawValue: Int {
-    switch self {
-    case .unspecified: return 0
-    case .off: return 1
-    case .starting: return 2
-    case .protected: return 3
-    case .degraded: return 4
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static let allCases: [Pax_V1_ProtectionStatus] = [
-    .unspecified,
-    .off,
-    .starting,
-    .protected,
-    .degraded,
-  ]
-
-}
-
 public nonisolated enum Pax_V1_RouteMeasurementPhase: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
@@ -236,6 +189,11 @@ public nonisolated struct Pax_V1_HelloResponse: Sendable {
 
   /// App process owning this user daemon; checked before consuming any snapshot.
   public var ownerAppPid: UInt32 = 0
+
+  public var daemonInstance: String = String()
+
+  /// IANA timezone used by daemon calendar queries.
+  public var timezone: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -738,284 +696,6 @@ public nonisolated struct Pax_V1_NodeProfile: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-/// RouteTestSummary 是一次手动连通性测试的结果：受控目标的实测连接，不是 ICMP 或带宽测速。
-public nonisolated struct Pax_V1_RouteTestSummary: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_storage._at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_uniqueStorage()._at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {_storage._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {_uniqueStorage()._at = nil}
-
-  public var success: Bool {
-    get {_storage._success}
-    set {_uniqueStorage()._success = newValue}
-  }
-
-  /// Legacy single value: stable median when available, otherwise successful first response; v3 clients use cold_ms/stable_ms independently.
-  public var durationMs: UInt32 {
-    get {_storage._durationMs}
-    set {_uniqueStorage()._durationMs = newValue}
-  }
-
-  /// success=false 时的受控失败码。
-  public var error: Pax_V1_ProductError {
-    get {_storage._error ?? Pax_V1_ProductError()}
-    set {_uniqueStorage()._error = newValue}
-  }
-  /// Returns true if `error` has been explicitly set.
-  public var hasError: Bool {_storage._error != nil}
-  /// Clears the value of `error`. Subsequent reads from it will return its default value.
-  public mutating func clearError() {_uniqueStorage()._error = nil}
-
-  /// 测量时的配置 revision；与当前 revision 不同即显示过期。
-  public var testedRevision: UInt64 {
-    get {_storage._testedRevision}
-    set {_uniqueStorage()._testedRevision = newValue}
-  }
-
-  public var testedConfigRevision: UInt64 {
-    get {_storage._testedConfigRevision}
-    set {_uniqueStorage()._testedConfigRevision = newValue}
-  }
-
-  public var exitIp: String {
-    get {_storage._exitIp}
-    set {_uniqueStorage()._exitIp = newValue}
-  }
-
-  public var exitError: Pax_V1_ProductError {
-    get {_storage._exitError ?? Pax_V1_ProductError()}
-    set {_uniqueStorage()._exitError = newValue}
-  }
-  /// Returns true if `exitError` has been explicitly set.
-  public var hasExitError: Bool {_storage._exitError != nil}
-  /// Clears the value of `exitError`. Subsequent reads from it will return its default value.
-  public mutating func clearExitError() {_uniqueStorage()._exitError = nil}
-
-  public var coldMs: UInt32 {
-    get {_storage._coldMs}
-    set {_uniqueStorage()._coldMs = newValue}
-  }
-
-  public var secondMs: UInt32 {
-    get {_storage._secondMs}
-    set {_uniqueStorage()._secondMs = newValue}
-  }
-
-  public var reused: Bool {
-    get {_storage._reused}
-    set {_uniqueStorage()._reused = newValue}
-  }
-
-  public var method: String {
-    get {_storage._method}
-    set {_uniqueStorage()._method = newValue}
-  }
-
-  public var firstError: String {
-    get {_storage._firstError}
-    set {_uniqueStorage()._firstError = newValue}
-  }
-
-  public var secondError: String {
-    get {_storage._secondError}
-    set {_uniqueStorage()._secondError = newValue}
-  }
-
-  /// New method: median of three valid reused-session requests; absent when incomplete.
-  public var stableMs: UInt32 {
-    get {_storage._stableMs}
-    set {_uniqueStorage()._stableMs = newValue}
-  }
-
-  public var stableSamples: UInt32 {
-    get {_storage._stableSamples}
-    set {_uniqueStorage()._stableSamples = newValue}
-  }
-
-  public var stableError: String {
-    get {_storage._stableError}
-    set {_uniqueStorage()._stableError = newValue}
-  }
-
-  /// Controlled target identity: google / gstatic, never a private URL.
-  public var testTarget: String {
-    get {_storage._testTarget}
-    set {_uniqueStorage()._testTarget = newValue}
-  }
-
-  public var exitLocation: Pax_V1_ExitLocation {
-    get {_storage._exitLocation ?? Pax_V1_ExitLocation()}
-    set {_uniqueStorage()._exitLocation = newValue}
-  }
-  /// Returns true if `exitLocation` has been explicitly set.
-  public var hasExitLocation: Bool {_storage._exitLocation != nil}
-  /// Clears the value of `exitLocation`. Subsequent reads from it will return its default value.
-  public mutating func clearExitLocation() {_uniqueStorage()._exitLocation = nil}
-
-  public var lastExitLocation: Pax_V1_ExitLocation {
-    get {_storage._lastExitLocation ?? Pax_V1_ExitLocation()}
-    set {_uniqueStorage()._lastExitLocation = newValue}
-  }
-  /// Returns true if `lastExitLocation` has been explicitly set.
-  public var hasLastExitLocation: Bool {_storage._lastExitLocation != nil}
-  /// Clears the value of `lastExitLocation`. Subsequent reads from it will return its default value.
-  public mutating func clearLastExitLocation() {_uniqueStorage()._lastExitLocation = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
-}
-
-public nonisolated struct Pax_V1_DownloadTestSummary: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {self._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {self._at = nil}
-
-  public var success: Bool = false
-
-  public var bytesPerSecond: Double = 0
-
-  public var error: Pax_V1_ProductError {
-    get {_error ?? Pax_V1_ProductError()}
-    set {_error = newValue}
-  }
-  /// Returns true if `error` has been explicitly set.
-  public var hasError: Bool {self._error != nil}
-  /// Clears the value of `error`. Subsequent reads from it will return its default value.
-  public mutating func clearError() {self._error = nil}
-
-  public var testedConfigRevision: UInt64 = 0
-
-  public var bytes: UInt64 = 0
-
-  public var durationMs: UInt32 = 0
-
-  public var method: String = String()
-
-  public var parallel: UInt32 = 0
-
-  public var setupMs: UInt32 = 0
-
-  public var endReason: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-  fileprivate var _error: Pax_V1_ProductError? = nil
-}
-
-public nonisolated struct Pax_V1_MeasurementPreferences: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var revision: UInt64 {
-    get {_storage._revision}
-    set {_uniqueStorage()._revision = newValue}
-  }
-
-  public var latencyParallel: UInt32 {
-    get {_storage._latencyParallel}
-    set {_uniqueStorage()._latencyParallel = newValue}
-  }
-
-  public var exitParallel: UInt32 {
-    get {_storage._exitParallel}
-    set {_uniqueStorage()._exitParallel = newValue}
-  }
-
-  public var downloadParallel: UInt32 {
-    get {_storage._downloadParallel}
-    set {_uniqueStorage()._downloadParallel = newValue}
-  }
-
-  public var mode: String {
-    get {_storage._mode}
-    set {_uniqueStorage()._mode = newValue}
-  }
-
-  public var recommendedLatency: UInt32 {
-    get {_storage._recommendedLatency}
-    set {_uniqueStorage()._recommendedLatency = newValue}
-  }
-
-  public var recommendedExit: UInt32 {
-    get {_storage._recommendedExit}
-    set {_uniqueStorage()._recommendedExit = newValue}
-  }
-
-  public var recommendedDownload: UInt32 {
-    get {_storage._recommendedDownload}
-    set {_uniqueStorage()._recommendedDownload = newValue}
-  }
-
-  public var recommendationNetwork: String {
-    get {_storage._recommendationNetwork}
-    set {_uniqueStorage()._recommendationNetwork = newValue}
-  }
-
-  public var evaluatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_storage._evaluatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_uniqueStorage()._evaluatedAt = newValue}
-  }
-  /// Returns true if `evaluatedAt` has been explicitly set.
-  public var hasEvaluatedAt: Bool {_storage._evaluatedAt != nil}
-  /// Clears the value of `evaluatedAt`. Subsequent reads from it will return its default value.
-  public mutating func clearEvaluatedAt() {_uniqueStorage()._evaluatedAt = nil}
-
-  public var latencyMode: String {
-    get {_storage._latencyMode}
-    set {_uniqueStorage()._latencyMode = newValue}
-  }
-
-  public var exitMode: String {
-    get {_storage._exitMode}
-    set {_uniqueStorage()._exitMode = newValue}
-  }
-
-  public var downloadMode: String {
-    get {_storage._downloadMode}
-    set {_uniqueStorage()._downloadMode = newValue}
-  }
-
-  /// Read-only; ignored by SaveMeasurementPreferences.
-  public var exitPoolState: Pax_V1_ExitPoolState {
-    get {_storage._exitPoolState ?? Pax_V1_ExitPoolState()}
-    set {_uniqueStorage()._exitPoolState = newValue}
-  }
-  /// Returns true if `exitPoolState` has been explicitly set.
-  public var hasExitPoolState: Bool {_storage._exitPoolState != nil}
-  /// Clears the value of `exitPoolState`. Subsequent reads from it will return its default value.
-  public mutating func clearExitPoolState() {_uniqueStorage()._exitPoolState = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
-}
-
 public nonisolated struct Pax_V1_DownloadQueueState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1033,40 +713,6 @@ public nonisolated struct Pax_V1_DownloadQueueState: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-}
-
-public nonisolated struct Pax_V1_ExitPoolState: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var configuredLimit: UInt32 = 0
-
-  public var inFlight: UInt32 = 0
-
-  public var queued: UInt32 = 0
-
-  /// Subset of queued, not an additional task count.
-  public var retrying: UInt32 = 0
-
-  public var availableProviders: UInt32 = 0
-
-  public var totalProviders: UInt32 = 0
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {self._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {self._at = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
 /// Transient only; never persisted as a completed measurement.
@@ -1125,45 +771,6 @@ public nonisolated struct Pax_V1_PhysicalEgress: Sendable {
   public var ipv6: String = String()
 
   public var phase: String = String()
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {self._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {self._at = nil}
-
-  public var error: Pax_V1_ProductError {
-    get {_error ?? Pax_V1_ProductError()}
-    set {_error = newValue}
-  }
-  /// Returns true if `error` has been explicitly set.
-  public var hasError: Bool {self._error != nil}
-  /// Clears the value of `error`. Subsequent reads from it will return its default value.
-  public mutating func clearError() {self._error = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-  fileprivate var _error: Pax_V1_ProductError? = nil
-}
-
-public nonisolated struct Pax_V1_CFCandidate: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var ip: String = String()
-
-  public var source: String = String()
-
-  public var latencyMs: UInt32 = 0
-
-  public var network: String = String()
 
   public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
@@ -1589,9 +1196,20 @@ public nonisolated struct Pax_V1_SetProxyEnabledRequest: Sendable {
 
   public var enabled: Bool = false
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_SelectRouteRequest: Sendable {
@@ -1603,9 +1221,20 @@ public nonisolated struct Pax_V1_SelectRouteRequest: Sendable {
 
   public var expectedRouteRevision: UInt64 = 0
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_ImportRoutesRequest: Sendable {
@@ -1693,11 +1322,21 @@ public nonisolated struct Pax_V1_RefreshSubscriptionRequest: Sendable {
 
   public var useLastChannel: Bool = false
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _userAgent: String? = nil
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// RestoreSubscriptionRoute 恢复一条被用户隐藏的订阅线路，不隐式选择或连接。
@@ -1716,9 +1355,20 @@ public nonisolated struct Pax_V1_DeleteSubscriptionRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_RestoreSubscriptionRouteRequest: Sendable {
@@ -1730,9 +1380,20 @@ public nonisolated struct Pax_V1_RestoreSubscriptionRouteRequest: Sendable {
 
   public var expectedRevision: UInt64 = 0
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// CancelOperation 取消仍在进行的后台操作（订阅刷新或线路测试）。
@@ -1743,9 +1404,20 @@ public nonisolated struct Pax_V1_CancelOperationRequest: Sendable {
 
   public var operationID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// TestRoute 对一条已保存线路做一次有界实测：无 TUN、不选路、不改选定与当前线路。
@@ -1768,9 +1440,20 @@ public nonisolated struct Pax_V1_TestRouteRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_RouteTestTarget: Sendable {
@@ -1820,9 +1503,20 @@ public nonisolated struct Pax_V1_ConfirmRouteTLSBatchRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_UpdateRouteTLSRequest: Sendable {
@@ -1840,9 +1534,23 @@ public nonisolated struct Pax_V1_UpdateRouteTLSRequest: Sendable {
 
   public var confirmSkip: Bool = false
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  /// MCP binds the visible route revision; legacy expected_revision remains TLS policy revision.
+  public var expectedRouteRevision: UInt64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_ActiveTLS: Sendable {
@@ -1879,9 +1587,20 @@ public nonisolated struct Pax_V1_PreviewRoutesRequest: Sendable {
 
   public var clientID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_RoutesPreview: Sendable {
@@ -1953,9 +1672,20 @@ public nonisolated struct Pax_V1_CancelRoutesPreviewRequest: Sendable {
 
   public var clientID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_ConfirmImportRoutesRequest: Sendable {
@@ -1975,151 +1705,20 @@ public nonisolated struct Pax_V1_ConfirmImportRoutesRequest: Sendable {
 
   public var automatic: Bool = false
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_RouteEditRequest: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var routeID: String {
-    get {_storage._routeID}
-    set {_uniqueStorage()._routeID = newValue}
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
   }
-
-  public var expectedRevision: UInt64 {
-    get {_storage._expectedRevision}
-    set {_uniqueStorage()._expectedRevision = newValue}
-  }
-
-  public var name: String {
-    get {_storage._name}
-    set {_uniqueStorage()._name = newValue}
-  }
-
-  public var `protocol`: String {
-    get {_storage._protocol}
-    set {_uniqueStorage()._protocol = newValue}
-  }
-
-  public var server: String {
-    get {_storage._server}
-    set {_uniqueStorage()._server = newValue}
-  }
-
-  public var port: UInt32 {
-    get {_storage._port}
-    set {_uniqueStorage()._port = newValue}
-  }
-
-  public var transport: String {
-    get {_storage._transport}
-    set {_uniqueStorage()._transport = newValue}
-  }
-
-  public var security: String {
-    get {_storage._security}
-    set {_uniqueStorage()._security = newValue}
-  }
-
-  public var serverName: String {
-    get {_storage._serverName}
-    set {_uniqueStorage()._serverName = newValue}
-  }
-
-  public var uuid: String {
-    get {_storage._uuid}
-    set {_uniqueStorage()._uuid = newValue}
-  }
-
-  public var password: String {
-    get {_storage._password}
-    set {_uniqueStorage()._password = newValue}
-  }
-
-  public var replaceCredentials: Bool {
-    get {_storage._replaceCredentials}
-    set {_uniqueStorage()._replaceCredentials = newValue}
-  }
-
-  public var wsHost: String {
-    get {_storage._wsHost}
-    set {_uniqueStorage()._wsHost = newValue}
-  }
-
-  public var wsPath: String {
-    get {_storage._wsPath}
-    set {_uniqueStorage()._wsPath = newValue}
-  }
-
-  public var alpn: [String] {
-    get {_storage._alpn}
-    set {_uniqueStorage()._alpn = newValue}
-  }
-
-  public var fingerprint: String {
-    get {_storage._fingerprint}
-    set {_uniqueStorage()._fingerprint = newValue}
-  }
-
-  public var realityPublicKey: String {
-    get {_storage._realityPublicKey}
-    set {_uniqueStorage()._realityPublicKey = newValue}
-  }
-
-  public var realityShortID: String {
-    get {_storage._realityShortID}
-    set {_uniqueStorage()._realityShortID = newValue}
-  }
-
-  public var flow: String {
-    get {_storage._flow}
-    set {_uniqueStorage()._flow = newValue}
-  }
-
-  public var alterID: UInt32 {
-    get {_storage._alterID}
-    set {_uniqueStorage()._alterID = newValue}
-  }
-
-  public var vmessSecurity: String {
-    get {_storage._vmessSecurity}
-    set {_uniqueStorage()._vmessSecurity = newValue}
-  }
-
-  public var obfsPassword: String {
-    get {_storage._obfsPassword}
-    set {_uniqueStorage()._obfsPassword = newValue}
-  }
-
-  public var tlsSkipSuggested: Bool {
-    get {_storage._tlsSkipSuggested}
-    set {_uniqueStorage()._tlsSkipSuggested = newValue}
-  }
-
-  public var documentJson: String {
-    get {_storage._documentJson}
-    set {_uniqueStorage()._documentJson = newValue}
-  }
-
-  public var requestID: String {
-    get {_storage._requestID}
-    set {_uniqueStorage()._requestID = newValue}
-  }
-
-  public var clientID: String {
-    get {_storage._clientID}
-    set {_uniqueStorage()._clientID = newValue}
-  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_DeleteRouteRequest: Sendable {
@@ -2131,65 +1730,20 @@ public nonisolated struct Pax_V1_DeleteRouteRequest: Sendable {
 
   public var expectedRevision: UInt64 = 0
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_GetRouteEditorRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var routeID: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_RouteEditor: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var fields: Pax_V1_RouteEditRequest {
-    get {_fields ?? Pax_V1_RouteEditRequest()}
-    set {_fields = newValue}
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
   }
-  /// Returns true if `fields` has been explicitly set.
-  public var hasFields: Bool {self._fields != nil}
-  /// Clears the value of `fields`. Subsequent reads from it will return its default value.
-  public mutating func clearFields() {self._fields = nil}
-
-  public var credentialsSet: Bool = false
-
-  public var documentJson: String = String()
-
-  public var configRevision: UInt64 = 0
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _fields: Pax_V1_RouteEditRequest? = nil
-}
-
-/// Ordered custom groups; subscription groups are derived from sources and cannot be written.
-public nonisolated struct Pax_V1_RouteGroup: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var id: String = String()
-
-  public var name: String = String()
-
-  public var memberIds: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_SaveRouteGroupsRequest: Sendable {
@@ -2205,9 +1759,20 @@ public nonisolated struct Pax_V1_SaveRouteGroupsRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// Local, bounded connection facts; no URL path/query, payload or credentials.
@@ -2284,184 +1849,6 @@ public nonisolated struct Pax_V1_SubscriptionAttempt: Sendable {
   fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
-public nonisolated struct Pax_V1_CFSample: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var value: Double = 0
-
-  public var measuredAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_measuredAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_measuredAt = newValue}
-  }
-  /// Returns true if `measuredAt` has been explicitly set.
-  public var hasMeasuredAt: Bool {self._measuredAt != nil}
-  /// Clears the value of `measuredAt`. Subsequent reads from it will return its default value.
-  public mutating func clearMeasuredAt() {self._measuredAt = nil}
-
-  public var attemptedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_attemptedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_attemptedAt = newValue}
-  }
-  /// Returns true if `attemptedAt` has been explicitly set.
-  public var hasAttemptedAt: Bool {self._attemptedAt != nil}
-  /// Clears the value of `attemptedAt`. Subsequent reads from it will return its default value.
-  public mutating func clearAttemptedAt() {self._attemptedAt = nil}
-
-  public var errorCode: String = String()
-
-  public var successfulRounds: UInt32 = 0
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _measuredAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-  fileprivate var _attemptedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-}
-
-public nonisolated struct Pax_V1_CFIPLocation: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var countryCode: String = String()
-
-  public var country: String = String()
-
-  public var region: String = String()
-
-  public var city: String = String()
-
-  public var source: String = String()
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {self._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {self._at = nil}
-
-  public var errorCode: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-}
-
-public nonisolated struct Pax_V1_CFRecord: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var ip: String {
-    get {_storage._ip}
-    set {_uniqueStorage()._ip = newValue}
-  }
-
-  public var prefix: String {
-    get {_storage._prefix}
-    set {_uniqueStorage()._prefix = newValue}
-  }
-
-  public var network: String {
-    get {_storage._network}
-    set {_uniqueStorage()._network = newValue}
-  }
-
-  public var tcp: Pax_V1_CFSample {
-    get {_storage._tcp ?? Pax_V1_CFSample()}
-    set {_uniqueStorage()._tcp = newValue}
-  }
-  /// Returns true if `tcp` has been explicitly set.
-  public var hasTcp: Bool {_storage._tcp != nil}
-  /// Clears the value of `tcp`. Subsequent reads from it will return its default value.
-  public mutating func clearTcp() {_uniqueStorage()._tcp = nil}
-
-  public var download: Pax_V1_CFSample {
-    get {_storage._download ?? Pax_V1_CFSample()}
-    set {_uniqueStorage()._download = newValue}
-  }
-  /// Returns true if `download` has been explicitly set.
-  public var hasDownload: Bool {_storage._download != nil}
-  /// Clears the value of `download`. Subsequent reads from it will return its default value.
-  public mutating func clearDownload() {_uniqueStorage()._download = nil}
-
-  public var validation: Pax_V1_CFSample {
-    get {_storage._validation ?? Pax_V1_CFSample()}
-    set {_uniqueStorage()._validation = newValue}
-  }
-  /// Returns true if `validation` has been explicitly set.
-  public var hasValidation: Bool {_storage._validation != nil}
-  /// Clears the value of `validation`. Subsequent reads from it will return its default value.
-  public mutating func clearValidation() {_uniqueStorage()._validation = nil}
-
-  public var reachable: Bool {
-    get {_storage._reachable}
-    set {_uniqueStorage()._reachable = newValue}
-  }
-
-  public var proofCurrent: Bool {
-    get {_storage._proofCurrent}
-    set {_uniqueStorage()._proofCurrent = newValue}
-  }
-
-  public var issue: String {
-    get {_storage._issue}
-    set {_uniqueStorage()._issue = newValue}
-  }
-
-  public var validationMatches: Bool {
-    get {_storage._validationMatches}
-    set {_uniqueStorage()._validationMatches = newValue}
-  }
-
-  public var location: Pax_V1_CFIPLocation {
-    get {_storage._location ?? Pax_V1_CFIPLocation()}
-    set {_uniqueStorage()._location = newValue}
-  }
-  /// Returns true if `location` has been explicitly set.
-  public var hasLocation: Bool {_storage._location != nil}
-  /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  public mutating func clearLocation() {_uniqueStorage()._location = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
-}
-
-public nonisolated struct Pax_V1_CFNetwork: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var id: String = String()
-
-  public var count: UInt32 = 0
-
-  public var at: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_at = newValue}
-  }
-  /// Returns true if `at` has been explicitly set.
-  public var hasAt: Bool {self._at != nil}
-  /// Clears the value of `at`. Subsequent reads from it will return its default value.
-  public mutating func clearAt() {self._at = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-}
-
 public nonisolated struct Pax_V1_CFWorkspaceRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2475,60 +1862,11 @@ public nonisolated struct Pax_V1_CFWorkspaceRequest: Sendable {
 
   public var documentJson: String = String()
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_CFWorkspace: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var network: String = String()
-
-  public var records: [Pax_V1_CFRecord] = []
-
-  public var networks: [Pax_V1_CFNetwork] = []
-
-  public var operationID: String = String()
-
-  public var phase: String = String()
-
-  public var completed: UInt32 = 0
-
-  public var total: UInt32 = 0
-
-  public var monitoring: Bool = false
-
-  public var error: Pax_V1_ProductError {
-    get {_error ?? Pax_V1_ProductError()}
-    set {_error = newValue}
-  }
-  /// Returns true if `error` has been explicitly set.
-  public var hasError: Bool {self._error != nil}
-  /// Clears the value of `error`. Subsequent reads from it will return its default value.
-  public mutating func clearError() {self._error = nil}
-
-  public var currentNetwork: String = String()
-
-  public var pendingChecks: UInt32 = 0
-
-  public var oldestCheck: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_oldestCheck ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_oldestCheck = newValue}
-  }
-  /// Returns true if `oldestCheck` has been explicitly set.
-  public var hasOldestCheck: Bool {self._oldestCheck != nil}
-  /// Clears the value of `oldestCheck`. Subsequent reads from it will return its default value.
-  public mutating func clearOldestCheck() {self._oldestCheck = nil}
+  public var expectedConfigRevision: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _error: Pax_V1_ProductError? = nil
-  fileprivate var _oldestCheck: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
 public nonisolated struct Pax_V1_CFTaskRequest: Sendable {
@@ -2542,9 +1880,20 @@ public nonisolated struct Pax_V1_CFTaskRequest: Sendable {
 
   public var ips: [String] = []
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 /// App lifetime sequence; stale sleep/wake events cannot override later intent.
@@ -2556,20 +1905,6 @@ public nonisolated struct Pax_V1_PowerEventRequest: Sendable {
   public var sleeping: Bool = false
 
   public var sequence: UInt64 = 0
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_ChainRoute: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var frontID: String = String()
-
-  public var finalID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2599,9 +1934,20 @@ public nonisolated struct Pax_V1_SaveChainRouteRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_RouteHistoryRequest: Sendable {
@@ -3300,65 +2646,21 @@ public nonisolated struct Pax_V1_ClearLogsRequest: Sendable {
   /// Clears the value of `requestedAt`. Subsequent reads from it will return its default value.
   public mutating func clearRequestedAt() {self._requestedAt = nil}
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _requestedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-}
-
-/// Current mixed-egress proof; never evidence of global TUN/DNS/IPv6 protection.
-public nonisolated struct Pax_V1_CurrentPathCheck: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var checkID: String = String()
-
-  public var triggerOperationID: String = String()
-
-  public var routeID: String = String()
-
-  public var configRevision: UInt64 = 0
-
-  public var coreSession: String = String()
-
-  public var runtimeVersion: UInt64 = 0
-
-  public var networkEpoch: String = String()
-
-  public var state: String = String()
-
-  public var cause: String = String()
-
-  public var startedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_startedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_startedAt = newValue}
-  }
-  /// Returns true if `startedAt` has been explicitly set.
-  public var hasStartedAt: Bool {self._startedAt != nil}
-  /// Clears the value of `startedAt`. Subsequent reads from it will return its default value.
-  public mutating func clearStartedAt() {self._startedAt = nil}
-
-  public var completedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_completedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_completedAt = newValue}
-  }
-  /// Returns true if `completedAt` has been explicitly set.
-  public var hasCompletedAt: Bool {self._completedAt != nil}
-  /// Clears the value of `completedAt`. Subsequent reads from it will return its default value.
-  public mutating func clearCompletedAt() {self._completedAt = nil}
-
-  public var evidenceScope: String = String()
-
-  public var commandOperationIds: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _startedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-  fileprivate var _completedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_CurrentPathRecheckRequest: Sendable {
@@ -3368,9 +2670,20 @@ public nonisolated struct Pax_V1_CurrentPathRecheckRequest: Sendable {
 
   public var requestID: String = String()
 
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
 public nonisolated struct Pax_V1_HistoryDelta: Sendable {
@@ -3948,13 +3261,180 @@ public nonisolated struct Pax_V1_GeoRulesPage: Sendable {
   public init() {}
 }
 
+/// Owner-managed diagnostic jobs survive caller disconnects. Legacy synchronous RPCs remain.
+public nonisolated struct Pax_V1_StartConnectionDiagnosticRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var recheck: Bool = false
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
+public nonisolated struct Pax_V1_StartNetworkDiagnosticRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var mode: String = String()
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
+public nonisolated struct Pax_V1_StartEnvironmentSourcesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var sessionID: String = String()
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
+public nonisolated struct Pax_V1_EnvironmentDiagnosticRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// start, read, cancel, sources
+  public var action: String = String()
+
+  public var sessionID: String = String()
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
+/// A non-secret draft; credentials are merged privately after route/config CAS.
+public nonisolated struct Pax_V1_StartCFValidationRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var routeID: String = String()
+
+  public var expectedRouteRevision: UInt64 = 0
+
+  public var expectedConfigRevision: UInt64 = 0
+
+  public var ip: String = String()
+
+  public var documentJson: String {
+    get {_documentJson ?? String()}
+    set {_documentJson = newValue}
+  }
+  /// Returns true if `documentJson` has been explicitly set.
+  public var hasDocumentJson: Bool {self._documentJson != nil}
+  /// Clears the value of `documentJson`. Subsequent reads from it will return its default value.
+  public mutating func clearDocumentJson() {self._documentJson = nil}
+
+  public var secretUpdates: [Pax_V1_RouteSecretUpdate] = []
+
+  public var chainID: String = String()
+
+  public var chainRevision: UInt64 = 0
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _documentJson: String? = nil
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
+public nonisolated struct Pax_V1_SaveValidatedCFRouteRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var routeID: String = String()
+
+  public var expectedRouteRevision: UInt64 = 0
+
+  public var expectedConfigRevision: UInt64 = 0
+
+  public var validationID: String = String()
+
+  public var context: Pax_V1_OperationContext {
+    get {_context ?? Pax_V1_OperationContext()}
+    set {_context = newValue}
+  }
+  /// Returns true if `context` has been explicitly set.
+  public var hasContext: Bool {self._context != nil}
+  /// Clears the value of `context`. Subsequent reads from it will return its default value.
+  public mutating func clearContext() {self._context = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _context: Pax_V1_OperationContext? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "pax.v1"
-
-nonisolated extension Pax_V1_ProtectionStatus: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PROTECTION_STATUS_UNSPECIFIED\0\u{1}PROTECTION_STATUS_OFF\0\u{1}PROTECTION_STATUS_STARTING\0\u{1}PROTECTION_STATUS_PROTECTED\0\u{1}PROTECTION_STATUS_DEGRADED\0")
-}
 
 nonisolated extension Pax_V1_RouteMeasurementPhase: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ROUTE_MEASUREMENT_PHASE_UNSPECIFIED\0\u{1}ROUTE_MEASUREMENT_PHASE_LATENCY\0\u{1}ROUTE_MEASUREMENT_PHASE_EXIT_QUEUED\0\u{1}ROUTE_MEASUREMENT_PHASE_EXIT_RUNNING\0\u{1}ROUTE_MEASUREMENT_PHASE_EXIT_RETRYING\0")
@@ -4005,7 +3485,7 @@ nonisolated extension Pax_V1_HelloRequest: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pax_V1_HelloResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HelloResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}daemon_version\0\u{3}protocol_version\0\u{3}snapshot_seq\0\u{3}service_fingerprint\0\u{1}capabilities\0\u{3}initial_install\0\u{3}owner_app_pid\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}daemon_version\0\u{3}protocol_version\0\u{3}snapshot_seq\0\u{3}service_fingerprint\0\u{1}capabilities\0\u{3}initial_install\0\u{3}owner_app_pid\0\u{3}daemon_instance\0\u{1}timezone\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4020,6 +3500,8 @@ nonisolated extension Pax_V1_HelloResponse: SwiftProtobuf.Message, SwiftProtobuf
       case 5: try { try decoder.decodeRepeatedStringField(value: &self.capabilities) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.initialInstall) }()
       case 7: try { try decoder.decodeSingularUInt32Field(value: &self.ownerAppPid) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.daemonInstance) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.timezone) }()
       default: break
       }
     }
@@ -4047,6 +3529,12 @@ nonisolated extension Pax_V1_HelloResponse: SwiftProtobuf.Message, SwiftProtobuf
     if self.ownerAppPid != 0 {
       try visitor.visitSingularUInt32Field(value: self.ownerAppPid, fieldNumber: 7)
     }
+    if !self.daemonInstance.isEmpty {
+      try visitor.visitSingularStringField(value: self.daemonInstance, fieldNumber: 8)
+    }
+    if !self.timezone.isEmpty {
+      try visitor.visitSingularStringField(value: self.timezone, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4058,6 +3546,8 @@ nonisolated extension Pax_V1_HelloResponse: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.capabilities != rhs.capabilities {return false}
     if lhs.initialInstall != rhs.initialInstall {return false}
     if lhs.ownerAppPid != rhs.ownerAppPid {return false}
+    if lhs.daemonInstance != rhs.daemonInstance {return false}
+    if lhs.timezone != rhs.timezone {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4814,454 +4304,6 @@ nonisolated extension Pax_V1_NodeProfile: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-nonisolated extension Pax_V1_RouteTestSummary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RouteTestSummary"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}success\0\u{3}duration_ms\0\u{1}error\0\u{3}tested_revision\0\u{3}tested_config_revision\0\u{3}exit_ip\0\u{3}exit_error\0\u{3}cold_ms\0\u{3}second_ms\0\u{1}reused\0\u{1}method\0\u{3}first_error\0\u{3}second_error\0\u{3}stable_ms\0\u{3}stable_samples\0\u{3}stable_error\0\u{3}test_target\0\u{3}exit_location\0\u{3}last_exit_location\0")
-
-  fileprivate class _StorageClass {
-    var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-    var _success: Bool = false
-    var _durationMs: UInt32 = 0
-    var _error: Pax_V1_ProductError? = nil
-    var _testedRevision: UInt64 = 0
-    var _testedConfigRevision: UInt64 = 0
-    var _exitIp: String = String()
-    var _exitError: Pax_V1_ProductError? = nil
-    var _coldMs: UInt32 = 0
-    var _secondMs: UInt32 = 0
-    var _reused: Bool = false
-    var _method: String = String()
-    var _firstError: String = String()
-    var _secondError: String = String()
-    var _stableMs: UInt32 = 0
-    var _stableSamples: UInt32 = 0
-    var _stableError: String = String()
-    var _testTarget: String = String()
-    var _exitLocation: Pax_V1_ExitLocation? = nil
-    var _lastExitLocation: Pax_V1_ExitLocation? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _at = source._at
-      _success = source._success
-      _durationMs = source._durationMs
-      _error = source._error
-      _testedRevision = source._testedRevision
-      _testedConfigRevision = source._testedConfigRevision
-      _exitIp = source._exitIp
-      _exitError = source._exitError
-      _coldMs = source._coldMs
-      _secondMs = source._secondMs
-      _reused = source._reused
-      _method = source._method
-      _firstError = source._firstError
-      _secondError = source._secondError
-      _stableMs = source._stableMs
-      _stableSamples = source._stableSamples
-      _stableError = source._stableError
-      _testTarget = source._testTarget
-      _exitLocation = source._exitLocation
-      _lastExitLocation = source._lastExitLocation
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._at) }()
-        case 2: try { try decoder.decodeSingularBoolField(value: &_storage._success) }()
-        case 3: try { try decoder.decodeSingularUInt32Field(value: &_storage._durationMs) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._error) }()
-        case 5: try { try decoder.decodeSingularUInt64Field(value: &_storage._testedRevision) }()
-        case 6: try { try decoder.decodeSingularUInt64Field(value: &_storage._testedConfigRevision) }()
-        case 7: try { try decoder.decodeSingularStringField(value: &_storage._exitIp) }()
-        case 8: try { try decoder.decodeSingularMessageField(value: &_storage._exitError) }()
-        case 9: try { try decoder.decodeSingularUInt32Field(value: &_storage._coldMs) }()
-        case 10: try { try decoder.decodeSingularUInt32Field(value: &_storage._secondMs) }()
-        case 11: try { try decoder.decodeSingularBoolField(value: &_storage._reused) }()
-        case 12: try { try decoder.decodeSingularStringField(value: &_storage._method) }()
-        case 13: try { try decoder.decodeSingularStringField(value: &_storage._firstError) }()
-        case 14: try { try decoder.decodeSingularStringField(value: &_storage._secondError) }()
-        case 15: try { try decoder.decodeSingularUInt32Field(value: &_storage._stableMs) }()
-        case 16: try { try decoder.decodeSingularUInt32Field(value: &_storage._stableSamples) }()
-        case 17: try { try decoder.decodeSingularStringField(value: &_storage._stableError) }()
-        case 18: try { try decoder.decodeSingularStringField(value: &_storage._testTarget) }()
-        case 19: try { try decoder.decodeSingularMessageField(value: &_storage._exitLocation) }()
-        case 20: try { try decoder.decodeSingularMessageField(value: &_storage._lastExitLocation) }()
-        default: break
-        }
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._at {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      if _storage._success != false {
-        try visitor.visitSingularBoolField(value: _storage._success, fieldNumber: 2)
-      }
-      if _storage._durationMs != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._durationMs, fieldNumber: 3)
-      }
-      try { if let v = _storage._error {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      } }()
-      if _storage._testedRevision != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._testedRevision, fieldNumber: 5)
-      }
-      if _storage._testedConfigRevision != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._testedConfigRevision, fieldNumber: 6)
-      }
-      if !_storage._exitIp.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._exitIp, fieldNumber: 7)
-      }
-      try { if let v = _storage._exitError {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
-      } }()
-      if _storage._coldMs != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._coldMs, fieldNumber: 9)
-      }
-      if _storage._secondMs != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._secondMs, fieldNumber: 10)
-      }
-      if _storage._reused != false {
-        try visitor.visitSingularBoolField(value: _storage._reused, fieldNumber: 11)
-      }
-      if !_storage._method.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._method, fieldNumber: 12)
-      }
-      if !_storage._firstError.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._firstError, fieldNumber: 13)
-      }
-      if !_storage._secondError.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._secondError, fieldNumber: 14)
-      }
-      if _storage._stableMs != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._stableMs, fieldNumber: 15)
-      }
-      if _storage._stableSamples != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._stableSamples, fieldNumber: 16)
-      }
-      if !_storage._stableError.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._stableError, fieldNumber: 17)
-      }
-      if !_storage._testTarget.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._testTarget, fieldNumber: 18)
-      }
-      try { if let v = _storage._exitLocation {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
-      } }()
-      try { if let v = _storage._lastExitLocation {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-      } }()
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_RouteTestSummary, rhs: Pax_V1_RouteTestSummary) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._at != rhs_storage._at {return false}
-        if _storage._success != rhs_storage._success {return false}
-        if _storage._durationMs != rhs_storage._durationMs {return false}
-        if _storage._error != rhs_storage._error {return false}
-        if _storage._testedRevision != rhs_storage._testedRevision {return false}
-        if _storage._testedConfigRevision != rhs_storage._testedConfigRevision {return false}
-        if _storage._exitIp != rhs_storage._exitIp {return false}
-        if _storage._exitError != rhs_storage._exitError {return false}
-        if _storage._coldMs != rhs_storage._coldMs {return false}
-        if _storage._secondMs != rhs_storage._secondMs {return false}
-        if _storage._reused != rhs_storage._reused {return false}
-        if _storage._method != rhs_storage._method {return false}
-        if _storage._firstError != rhs_storage._firstError {return false}
-        if _storage._secondError != rhs_storage._secondError {return false}
-        if _storage._stableMs != rhs_storage._stableMs {return false}
-        if _storage._stableSamples != rhs_storage._stableSamples {return false}
-        if _storage._stableError != rhs_storage._stableError {return false}
-        if _storage._testTarget != rhs_storage._testTarget {return false}
-        if _storage._exitLocation != rhs_storage._exitLocation {return false}
-        if _storage._lastExitLocation != rhs_storage._lastExitLocation {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_DownloadTestSummary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".DownloadTestSummary"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}success\0\u{3}bytes_per_second\0\u{1}error\0\u{3}tested_config_revision\0\u{1}bytes\0\u{3}duration_ms\0\u{1}method\0\u{1}parallel\0\u{3}setup_ms\0\u{3}end_reason\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._at) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.success) }()
-      case 3: try { try decoder.decodeSingularDoubleField(value: &self.bytesPerSecond) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._error) }()
-      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.testedConfigRevision) }()
-      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.bytes) }()
-      case 7: try { try decoder.decodeSingularUInt32Field(value: &self.durationMs) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.method) }()
-      case 9: try { try decoder.decodeSingularUInt32Field(value: &self.parallel) }()
-      case 10: try { try decoder.decodeSingularUInt32Field(value: &self.setupMs) }()
-      case 11: try { try decoder.decodeSingularStringField(value: &self.endReason) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._at {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if self.success != false {
-      try visitor.visitSingularBoolField(value: self.success, fieldNumber: 2)
-    }
-    if self.bytesPerSecond.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.bytesPerSecond, fieldNumber: 3)
-    }
-    try { if let v = self._error {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    } }()
-    if self.testedConfigRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.testedConfigRevision, fieldNumber: 5)
-    }
-    if self.bytes != 0 {
-      try visitor.visitSingularUInt64Field(value: self.bytes, fieldNumber: 6)
-    }
-    if self.durationMs != 0 {
-      try visitor.visitSingularUInt32Field(value: self.durationMs, fieldNumber: 7)
-    }
-    if !self.method.isEmpty {
-      try visitor.visitSingularStringField(value: self.method, fieldNumber: 8)
-    }
-    if self.parallel != 0 {
-      try visitor.visitSingularUInt32Field(value: self.parallel, fieldNumber: 9)
-    }
-    if self.setupMs != 0 {
-      try visitor.visitSingularUInt32Field(value: self.setupMs, fieldNumber: 10)
-    }
-    if !self.endReason.isEmpty {
-      try visitor.visitSingularStringField(value: self.endReason, fieldNumber: 11)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_DownloadTestSummary, rhs: Pax_V1_DownloadTestSummary) -> Bool {
-    if lhs._at != rhs._at {return false}
-    if lhs.success != rhs.success {return false}
-    if lhs.bytesPerSecond != rhs.bytesPerSecond {return false}
-    if lhs._error != rhs._error {return false}
-    if lhs.testedConfigRevision != rhs.testedConfigRevision {return false}
-    if lhs.bytes != rhs.bytes {return false}
-    if lhs.durationMs != rhs.durationMs {return false}
-    if lhs.method != rhs.method {return false}
-    if lhs.parallel != rhs.parallel {return false}
-    if lhs.setupMs != rhs.setupMs {return false}
-    if lhs.endReason != rhs.endReason {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_MeasurementPreferences: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".MeasurementPreferences"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}latency_parallel\0\u{3}exit_parallel\0\u{3}download_parallel\0\u{1}mode\0\u{3}recommended_latency\0\u{3}recommended_exit\0\u{3}recommended_download\0\u{3}recommendation_network\0\u{3}evaluated_at\0\u{3}latency_mode\0\u{3}exit_mode\0\u{3}download_mode\0\u{3}exit_pool_state\0")
-
-  fileprivate class _StorageClass {
-    var _revision: UInt64 = 0
-    var _latencyParallel: UInt32 = 0
-    var _exitParallel: UInt32 = 0
-    var _downloadParallel: UInt32 = 0
-    var _mode: String = String()
-    var _recommendedLatency: UInt32 = 0
-    var _recommendedExit: UInt32 = 0
-    var _recommendedDownload: UInt32 = 0
-    var _recommendationNetwork: String = String()
-    var _evaluatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-    var _latencyMode: String = String()
-    var _exitMode: String = String()
-    var _downloadMode: String = String()
-    var _exitPoolState: Pax_V1_ExitPoolState? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _revision = source._revision
-      _latencyParallel = source._latencyParallel
-      _exitParallel = source._exitParallel
-      _downloadParallel = source._downloadParallel
-      _mode = source._mode
-      _recommendedLatency = source._recommendedLatency
-      _recommendedExit = source._recommendedExit
-      _recommendedDownload = source._recommendedDownload
-      _recommendationNetwork = source._recommendationNetwork
-      _evaluatedAt = source._evaluatedAt
-      _latencyMode = source._latencyMode
-      _exitMode = source._exitMode
-      _downloadMode = source._downloadMode
-      _exitPoolState = source._exitPoolState
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularUInt64Field(value: &_storage._revision) }()
-        case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._latencyParallel) }()
-        case 3: try { try decoder.decodeSingularUInt32Field(value: &_storage._exitParallel) }()
-        case 4: try { try decoder.decodeSingularUInt32Field(value: &_storage._downloadParallel) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._mode) }()
-        case 6: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedLatency) }()
-        case 7: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedExit) }()
-        case 8: try { try decoder.decodeSingularUInt32Field(value: &_storage._recommendedDownload) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._recommendationNetwork) }()
-        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._evaluatedAt) }()
-        case 11: try { try decoder.decodeSingularStringField(value: &_storage._latencyMode) }()
-        case 12: try { try decoder.decodeSingularStringField(value: &_storage._exitMode) }()
-        case 13: try { try decoder.decodeSingularStringField(value: &_storage._downloadMode) }()
-        case 14: try { try decoder.decodeSingularMessageField(value: &_storage._exitPoolState) }()
-        default: break
-        }
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if _storage._revision != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._revision, fieldNumber: 1)
-      }
-      if _storage._latencyParallel != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._latencyParallel, fieldNumber: 2)
-      }
-      if _storage._exitParallel != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._exitParallel, fieldNumber: 3)
-      }
-      if _storage._downloadParallel != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._downloadParallel, fieldNumber: 4)
-      }
-      if !_storage._mode.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._mode, fieldNumber: 5)
-      }
-      if _storage._recommendedLatency != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._recommendedLatency, fieldNumber: 6)
-      }
-      if _storage._recommendedExit != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._recommendedExit, fieldNumber: 7)
-      }
-      if _storage._recommendedDownload != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._recommendedDownload, fieldNumber: 8)
-      }
-      if !_storage._recommendationNetwork.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._recommendationNetwork, fieldNumber: 9)
-      }
-      try { if let v = _storage._evaluatedAt {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-      } }()
-      if !_storage._latencyMode.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._latencyMode, fieldNumber: 11)
-      }
-      if !_storage._exitMode.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._exitMode, fieldNumber: 12)
-      }
-      if !_storage._downloadMode.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._downloadMode, fieldNumber: 13)
-      }
-      try { if let v = _storage._exitPoolState {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-      } }()
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_MeasurementPreferences, rhs: Pax_V1_MeasurementPreferences) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._revision != rhs_storage._revision {return false}
-        if _storage._latencyParallel != rhs_storage._latencyParallel {return false}
-        if _storage._exitParallel != rhs_storage._exitParallel {return false}
-        if _storage._downloadParallel != rhs_storage._downloadParallel {return false}
-        if _storage._mode != rhs_storage._mode {return false}
-        if _storage._recommendedLatency != rhs_storage._recommendedLatency {return false}
-        if _storage._recommendedExit != rhs_storage._recommendedExit {return false}
-        if _storage._recommendedDownload != rhs_storage._recommendedDownload {return false}
-        if _storage._recommendationNetwork != rhs_storage._recommendationNetwork {return false}
-        if _storage._evaluatedAt != rhs_storage._evaluatedAt {return false}
-        if _storage._latencyMode != rhs_storage._latencyMode {return false}
-        if _storage._exitMode != rhs_storage._exitMode {return false}
-        if _storage._downloadMode != rhs_storage._downloadMode {return false}
-        if _storage._exitPoolState != rhs_storage._exitPoolState {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Pax_V1_DownloadQueueState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DownloadQueueState"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}mode\0\u{3}active_route_id\0\u{3}queued_route_ids\0\u{3}operation_ids\0")
@@ -5302,70 +4344,6 @@ nonisolated extension Pax_V1_DownloadQueueState: SwiftProtobuf.Message, SwiftPro
     if lhs.activeRouteID != rhs.activeRouteID {return false}
     if lhs.queuedRouteIds != rhs.queuedRouteIds {return false}
     if lhs.operationIds != rhs.operationIds {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_ExitPoolState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ExitPoolState"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}configured_limit\0\u{3}in_flight\0\u{1}queued\0\u{1}retrying\0\u{3}available_providers\0\u{3}total_providers\0\u{1}at\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.configuredLimit) }()
-      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.inFlight) }()
-      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.queued) }()
-      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.retrying) }()
-      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.availableProviders) }()
-      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.totalProviders) }()
-      case 7: try { try decoder.decodeSingularMessageField(value: &self._at) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.configuredLimit != 0 {
-      try visitor.visitSingularUInt32Field(value: self.configuredLimit, fieldNumber: 1)
-    }
-    if self.inFlight != 0 {
-      try visitor.visitSingularUInt32Field(value: self.inFlight, fieldNumber: 2)
-    }
-    if self.queued != 0 {
-      try visitor.visitSingularUInt32Field(value: self.queued, fieldNumber: 3)
-    }
-    if self.retrying != 0 {
-      try visitor.visitSingularUInt32Field(value: self.retrying, fieldNumber: 4)
-    }
-    if self.availableProviders != 0 {
-      try visitor.visitSingularUInt32Field(value: self.availableProviders, fieldNumber: 5)
-    }
-    if self.totalProviders != 0 {
-      try visitor.visitSingularUInt32Field(value: self.totalProviders, fieldNumber: 6)
-    }
-    try { if let v = self._at {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_ExitPoolState, rhs: Pax_V1_ExitPoolState) -> Bool {
-    if lhs.configuredLimit != rhs.configuredLimit {return false}
-    if lhs.inFlight != rhs.inFlight {return false}
-    if lhs.queued != rhs.queued {return false}
-    if lhs.retrying != rhs.retrying {return false}
-    if lhs.availableProviders != rhs.availableProviders {return false}
-    if lhs.totalProviders != rhs.totalProviders {return false}
-    if lhs._at != rhs._at {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5492,65 +4470,6 @@ nonisolated extension Pax_V1_PhysicalEgress: SwiftProtobuf.Message, SwiftProtobu
     if lhs.ipv4 != rhs.ipv4 {return false}
     if lhs.ipv6 != rhs.ipv6 {return false}
     if lhs.phase != rhs.phase {return false}
-    if lhs._at != rhs._at {return false}
-    if lhs._error != rhs._error {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CFCandidate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFCandidate"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ip\0\u{1}source\0\u{3}latency_ms\0\u{1}network\0\u{1}at\0\u{1}error\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.ip) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.source) }()
-      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.latencyMs) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.network) }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._at) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._error) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.ip.isEmpty {
-      try visitor.visitSingularStringField(value: self.ip, fieldNumber: 1)
-    }
-    if !self.source.isEmpty {
-      try visitor.visitSingularStringField(value: self.source, fieldNumber: 2)
-    }
-    if self.latencyMs != 0 {
-      try visitor.visitSingularUInt32Field(value: self.latencyMs, fieldNumber: 3)
-    }
-    if !self.network.isEmpty {
-      try visitor.visitSingularStringField(value: self.network, fieldNumber: 4)
-    }
-    try { if let v = self._at {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
-    try { if let v = self._error {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFCandidate, rhs: Pax_V1_CFCandidate) -> Bool {
-    if lhs.ip != rhs.ip {return false}
-    if lhs.source != rhs.source {return false}
-    if lhs.latencyMs != rhs.latencyMs {return false}
-    if lhs.network != rhs.network {return false}
     if lhs._at != rhs._at {return false}
     if lhs._error != rhs._error {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -6225,7 +5144,7 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pax_V1_SetProxyEnabledRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetProxyEnabledRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6234,20 +5153,29 @@ nonisolated extension Pax_V1_SetProxyEnabledRequest: SwiftProtobuf.Message, Swif
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.enabled != false {
       try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_SetProxyEnabledRequest, rhs: Pax_V1_SetProxyEnabledRequest) -> Bool {
     if lhs.enabled != rhs.enabled {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6255,7 +5183,7 @@ nonisolated extension Pax_V1_SetProxyEnabledRequest: SwiftProtobuf.Message, Swif
 
 nonisolated extension Pax_V1_SelectRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SelectRouteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6265,24 +5193,33 @@ nonisolated extension Pax_V1_SelectRouteRequest: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRouteRevision) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.routeID.isEmpty {
       try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
     }
     if self.expectedRouteRevision != 0 {
       try visitor.visitSingularUInt64Field(value: self.expectedRouteRevision, fieldNumber: 2)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_SelectRouteRequest, rhs: Pax_V1_SelectRouteRequest) -> Bool {
     if lhs.routeID != rhs.routeID {return false}
     if lhs.expectedRouteRevision != rhs.expectedRouteRevision {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6399,7 +5336,7 @@ nonisolated extension Pax_V1_ImportFailure: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Pax_V1_RefreshSubscriptionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RefreshSubscriptionRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subscription_id\0\u{3}expected_source_revision\0\u{3}route_id\0\u{3}expected_route_revision\0\u{3}expected_config_revision\0\u{3}replacement_url\0\u{3}user_agent\0\u{3}use_last_channel\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subscription_id\0\u{3}expected_source_revision\0\u{3}route_id\0\u{3}expected_route_revision\0\u{3}expected_config_revision\0\u{3}replacement_url\0\u{3}user_agent\0\u{3}use_last_channel\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6415,6 +5352,7 @@ nonisolated extension Pax_V1_RefreshSubscriptionRequest: SwiftProtobuf.Message, 
       case 6: try { try decoder.decodeSingularStringField(value: &self.replacementURL) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self._userAgent) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.useLastChannel) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -6449,6 +5387,9 @@ nonisolated extension Pax_V1_RefreshSubscriptionRequest: SwiftProtobuf.Message, 
     if self.useLastChannel != false {
       try visitor.visitSingularBoolField(value: self.useLastChannel, fieldNumber: 8)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6461,6 +5402,7 @@ nonisolated extension Pax_V1_RefreshSubscriptionRequest: SwiftProtobuf.Message, 
     if lhs.replacementURL != rhs.replacementURL {return false}
     if lhs._userAgent != rhs._userAgent {return false}
     if lhs.useLastChannel != rhs.useLastChannel {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6468,7 +5410,7 @@ nonisolated extension Pax_V1_RefreshSubscriptionRequest: SwiftProtobuf.Message, 
 
 nonisolated extension Pax_V1_DeleteSubscriptionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteSubscriptionRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subscription_id\0\u{3}expected_source_revision\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subscription_id\0\u{3}expected_source_revision\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6481,12 +5423,17 @@ nonisolated extension Pax_V1_DeleteSubscriptionRequest: SwiftProtobuf.Message, S
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedCatalogRevision) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.subscriptionID.isEmpty {
       try visitor.visitSingularStringField(value: self.subscriptionID, fieldNumber: 1)
     }
@@ -6502,6 +5449,9 @@ nonisolated extension Pax_V1_DeleteSubscriptionRequest: SwiftProtobuf.Message, S
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 5)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6511,6 +5461,7 @@ nonisolated extension Pax_V1_DeleteSubscriptionRequest: SwiftProtobuf.Message, S
     if lhs.expectedCatalogRevision != rhs.expectedCatalogRevision {return false}
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6518,7 +5469,7 @@ nonisolated extension Pax_V1_DeleteSubscriptionRequest: SwiftProtobuf.Message, S
 
 nonisolated extension Pax_V1_RestoreSubscriptionRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RestoreSubscriptionRouteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_revision\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_revision\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6528,24 +5479,33 @@ nonisolated extension Pax_V1_RestoreSubscriptionRouteRequest: SwiftProtobuf.Mess
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRevision) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.routeID.isEmpty {
       try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
     }
     if self.expectedRevision != 0 {
       try visitor.visitSingularUInt64Field(value: self.expectedRevision, fieldNumber: 2)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_RestoreSubscriptionRouteRequest, rhs: Pax_V1_RestoreSubscriptionRouteRequest) -> Bool {
     if lhs.routeID != rhs.routeID {return false}
     if lhs.expectedRevision != rhs.expectedRevision {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6553,7 +5513,7 @@ nonisolated extension Pax_V1_RestoreSubscriptionRouteRequest: SwiftProtobuf.Mess
 
 nonisolated extension Pax_V1_CancelOperationRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CancelOperationRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6562,20 +5522,29 @@ nonisolated extension Pax_V1_CancelOperationRequest: SwiftProtobuf.Message, Swif
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.operationID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.operationID.isEmpty {
       try visitor.visitSingularStringField(value: self.operationID, fieldNumber: 1)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_CancelOperationRequest, rhs: Pax_V1_CancelOperationRequest) -> Bool {
     if lhs.operationID != rhs.operationID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6583,7 +5552,7 @@ nonisolated extension Pax_V1_CancelOperationRequest: SwiftProtobuf.Message, Swif
 
 nonisolated extension Pax_V1_TestRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TestRouteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0\u{1}kind\0\u{1}targets\0\u{3}client_id\0\u{3}request_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0\u{1}kind\0\u{1}targets\0\u{3}client_id\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6597,12 +5566,17 @@ nonisolated extension Pax_V1_TestRouteRequest: SwiftProtobuf.Message, SwiftProto
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.targets) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.routeID.isEmpty {
       try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
     }
@@ -6621,6 +5595,9 @@ nonisolated extension Pax_V1_TestRouteRequest: SwiftProtobuf.Message, SwiftProto
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 6)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6631,6 +5608,7 @@ nonisolated extension Pax_V1_TestRouteRequest: SwiftProtobuf.Message, SwiftProto
     if lhs.targets != rhs.targets {return false}
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6728,7 +5706,7 @@ nonisolated extension Pax_V1_RouteTLSPolicy: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pax_V1_ConfirmRouteTLSBatchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConfirmRouteTLSBatchRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}routes\0\u{3}client_id\0\u{3}request_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}routes\0\u{3}client_id\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6739,12 +5717,17 @@ nonisolated extension Pax_V1_ConfirmRouteTLSBatchRequest: SwiftProtobuf.Message,
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.routes) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.routes.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.routes, fieldNumber: 1)
     }
@@ -6754,6 +5737,9 @@ nonisolated extension Pax_V1_ConfirmRouteTLSBatchRequest: SwiftProtobuf.Message,
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 3)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6761,6 +5747,7 @@ nonisolated extension Pax_V1_ConfirmRouteTLSBatchRequest: SwiftProtobuf.Message,
     if lhs.routes != rhs.routes {return false}
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6768,7 +5755,7 @@ nonisolated extension Pax_V1_ConfirmRouteTLSBatchRequest: SwiftProtobuf.Message,
 
 nonisolated extension Pax_V1_UpdateRouteTLSRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateRouteTLSRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}identity_token\0\u{3}expected_revision\0\u{1}mode\0\u{3}confirm_skip\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}identity_token\0\u{3}expected_revision\0\u{1}mode\0\u{3}confirm_skip\0\u{1}context\0\u{3}expected_route_revision\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6781,12 +5768,18 @@ nonisolated extension Pax_V1_UpdateRouteTLSRequest: SwiftProtobuf.Message, Swift
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRevision) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.confirmSkip) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRouteRevision) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.routeID.isEmpty {
       try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
     }
@@ -6802,6 +5795,12 @@ nonisolated extension Pax_V1_UpdateRouteTLSRequest: SwiftProtobuf.Message, Swift
     if self.confirmSkip != false {
       try visitor.visitSingularBoolField(value: self.confirmSkip, fieldNumber: 5)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
+    if self.expectedRouteRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedRouteRevision, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6811,6 +5810,8 @@ nonisolated extension Pax_V1_UpdateRouteTLSRequest: SwiftProtobuf.Message, Swift
     if lhs.expectedRevision != rhs.expectedRevision {return false}
     if lhs.mode != rhs.mode {return false}
     if lhs.confirmSkip != rhs.confirmSkip {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.expectedRouteRevision != rhs.expectedRouteRevision {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6868,7 +5869,7 @@ nonisolated extension Pax_V1_ActiveTLS: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 nonisolated extension Pax_V1_PreviewRoutesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PreviewRoutesRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{3}is_subscription\0\u{3}source_name\0\u{3}client_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{3}is_subscription\0\u{3}source_name\0\u{3}client_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6880,12 +5881,17 @@ nonisolated extension Pax_V1_PreviewRoutesRequest: SwiftProtobuf.Message, SwiftP
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isSubscription) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.sourceName) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.source.isEmpty {
       try visitor.visitSingularStringField(value: self.source, fieldNumber: 1)
     }
@@ -6898,6 +5904,9 @@ nonisolated extension Pax_V1_PreviewRoutesRequest: SwiftProtobuf.Message, SwiftP
     if !self.clientID.isEmpty {
       try visitor.visitSingularStringField(value: self.clientID, fieldNumber: 4)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6906,6 +5915,7 @@ nonisolated extension Pax_V1_PreviewRoutesRequest: SwiftProtobuf.Message, SwiftP
     if lhs.isSubscription != rhs.isSubscription {return false}
     if lhs.sourceName != rhs.sourceName {return false}
     if lhs.clientID != rhs.clientID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -7037,7 +6047,7 @@ nonisolated extension Pax_V1_RoutePreviewItem: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pax_V1_CancelRoutesPreviewRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CancelRoutesPreviewRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{3}client_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{3}client_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -7047,24 +6057,33 @@ nonisolated extension Pax_V1_CancelRoutesPreviewRequest: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.token) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.token.isEmpty {
       try visitor.visitSingularStringField(value: self.token, fieldNumber: 1)
     }
     if !self.clientID.isEmpty {
       try visitor.visitSingularStringField(value: self.clientID, fieldNumber: 2)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_CancelRoutesPreviewRequest, rhs: Pax_V1_CancelRoutesPreviewRequest) -> Bool {
     if lhs.token != rhs.token {return false}
     if lhs.clientID != rhs.clientID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -7072,7 +6091,7 @@ nonisolated extension Pax_V1_CancelRoutesPreviewRequest: SwiftProtobuf.Message, 
 
 nonisolated extension Pax_V1_ConfirmImportRoutesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConfirmImportRoutesRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{3}item_ids\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0\u{1}automatic\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{3}item_ids\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0\u{1}automatic\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -7086,12 +6105,17 @@ nonisolated extension Pax_V1_ConfirmImportRoutesRequest: SwiftProtobuf.Message, 
       case 4: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.automatic) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.token.isEmpty {
       try visitor.visitSingularStringField(value: self.token, fieldNumber: 1)
     }
@@ -7110,6 +6134,9 @@ nonisolated extension Pax_V1_ConfirmImportRoutesRequest: SwiftProtobuf.Message, 
     if self.automatic != false {
       try visitor.visitSingularBoolField(value: self.automatic, fieldNumber: 6)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -7120,247 +6147,7 @@ nonisolated extension Pax_V1_ConfirmImportRoutesRequest: SwiftProtobuf.Message, 
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
     if lhs.automatic != rhs.automatic {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_RouteEditRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RouteEditRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_revision\0\u{1}name\0\u{1}protocol\0\u{1}server\0\u{1}port\0\u{1}transport\0\u{1}security\0\u{3}server_name\0\u{1}uuid\0\u{1}password\0\u{3}replace_credentials\0\u{3}ws_host\0\u{3}ws_path\0\u{1}alpn\0\u{1}fingerprint\0\u{3}reality_public_key\0\u{3}reality_short_id\0\u{1}flow\0\u{3}alter_id\0\u{3}vmess_security\0\u{3}obfs_password\0\u{3}tls_skip_suggested\0\u{3}document_json\0\u{3}request_id\0\u{3}client_id\0")
-
-  fileprivate class _StorageClass {
-    var _routeID: String = String()
-    var _expectedRevision: UInt64 = 0
-    var _name: String = String()
-    var _protocol: String = String()
-    var _server: String = String()
-    var _port: UInt32 = 0
-    var _transport: String = String()
-    var _security: String = String()
-    var _serverName: String = String()
-    var _uuid: String = String()
-    var _password: String = String()
-    var _replaceCredentials: Bool = false
-    var _wsHost: String = String()
-    var _wsPath: String = String()
-    var _alpn: [String] = []
-    var _fingerprint: String = String()
-    var _realityPublicKey: String = String()
-    var _realityShortID: String = String()
-    var _flow: String = String()
-    var _alterID: UInt32 = 0
-    var _vmessSecurity: String = String()
-    var _obfsPassword: String = String()
-    var _tlsSkipSuggested: Bool = false
-    var _documentJson: String = String()
-    var _requestID: String = String()
-    var _clientID: String = String()
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _routeID = source._routeID
-      _expectedRevision = source._expectedRevision
-      _name = source._name
-      _protocol = source._protocol
-      _server = source._server
-      _port = source._port
-      _transport = source._transport
-      _security = source._security
-      _serverName = source._serverName
-      _uuid = source._uuid
-      _password = source._password
-      _replaceCredentials = source._replaceCredentials
-      _wsHost = source._wsHost
-      _wsPath = source._wsPath
-      _alpn = source._alpn
-      _fingerprint = source._fingerprint
-      _realityPublicKey = source._realityPublicKey
-      _realityShortID = source._realityShortID
-      _flow = source._flow
-      _alterID = source._alterID
-      _vmessSecurity = source._vmessSecurity
-      _obfsPassword = source._obfsPassword
-      _tlsSkipSuggested = source._tlsSkipSuggested
-      _documentJson = source._documentJson
-      _requestID = source._requestID
-      _clientID = source._clientID
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._routeID) }()
-        case 2: try { try decoder.decodeSingularUInt64Field(value: &_storage._expectedRevision) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._name) }()
-        case 4: try { try decoder.decodeSingularStringField(value: &_storage._protocol) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._server) }()
-        case 6: try { try decoder.decodeSingularUInt32Field(value: &_storage._port) }()
-        case 7: try { try decoder.decodeSingularStringField(value: &_storage._transport) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._security) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._serverName) }()
-        case 10: try { try decoder.decodeSingularStringField(value: &_storage._uuid) }()
-        case 11: try { try decoder.decodeSingularStringField(value: &_storage._password) }()
-        case 12: try { try decoder.decodeSingularBoolField(value: &_storage._replaceCredentials) }()
-        case 13: try { try decoder.decodeSingularStringField(value: &_storage._wsHost) }()
-        case 14: try { try decoder.decodeSingularStringField(value: &_storage._wsPath) }()
-        case 15: try { try decoder.decodeRepeatedStringField(value: &_storage._alpn) }()
-        case 16: try { try decoder.decodeSingularStringField(value: &_storage._fingerprint) }()
-        case 17: try { try decoder.decodeSingularStringField(value: &_storage._realityPublicKey) }()
-        case 18: try { try decoder.decodeSingularStringField(value: &_storage._realityShortID) }()
-        case 19: try { try decoder.decodeSingularStringField(value: &_storage._flow) }()
-        case 20: try { try decoder.decodeSingularUInt32Field(value: &_storage._alterID) }()
-        case 21: try { try decoder.decodeSingularStringField(value: &_storage._vmessSecurity) }()
-        case 22: try { try decoder.decodeSingularStringField(value: &_storage._obfsPassword) }()
-        case 23: try { try decoder.decodeSingularBoolField(value: &_storage._tlsSkipSuggested) }()
-        case 24: try { try decoder.decodeSingularStringField(value: &_storage._documentJson) }()
-        case 25: try { try decoder.decodeSingularStringField(value: &_storage._requestID) }()
-        case 26: try { try decoder.decodeSingularStringField(value: &_storage._clientID) }()
-        default: break
-        }
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if !_storage._routeID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._routeID, fieldNumber: 1)
-      }
-      if _storage._expectedRevision != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._expectedRevision, fieldNumber: 2)
-      }
-      if !_storage._name.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._name, fieldNumber: 3)
-      }
-      if !_storage._protocol.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._protocol, fieldNumber: 4)
-      }
-      if !_storage._server.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._server, fieldNumber: 5)
-      }
-      if _storage._port != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._port, fieldNumber: 6)
-      }
-      if !_storage._transport.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._transport, fieldNumber: 7)
-      }
-      if !_storage._security.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._security, fieldNumber: 8)
-      }
-      if !_storage._serverName.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._serverName, fieldNumber: 9)
-      }
-      if !_storage._uuid.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._uuid, fieldNumber: 10)
-      }
-      if !_storage._password.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._password, fieldNumber: 11)
-      }
-      if _storage._replaceCredentials != false {
-        try visitor.visitSingularBoolField(value: _storage._replaceCredentials, fieldNumber: 12)
-      }
-      if !_storage._wsHost.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._wsHost, fieldNumber: 13)
-      }
-      if !_storage._wsPath.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._wsPath, fieldNumber: 14)
-      }
-      if !_storage._alpn.isEmpty {
-        try visitor.visitRepeatedStringField(value: _storage._alpn, fieldNumber: 15)
-      }
-      if !_storage._fingerprint.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._fingerprint, fieldNumber: 16)
-      }
-      if !_storage._realityPublicKey.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._realityPublicKey, fieldNumber: 17)
-      }
-      if !_storage._realityShortID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._realityShortID, fieldNumber: 18)
-      }
-      if !_storage._flow.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._flow, fieldNumber: 19)
-      }
-      if _storage._alterID != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._alterID, fieldNumber: 20)
-      }
-      if !_storage._vmessSecurity.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._vmessSecurity, fieldNumber: 21)
-      }
-      if !_storage._obfsPassword.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._obfsPassword, fieldNumber: 22)
-      }
-      if _storage._tlsSkipSuggested != false {
-        try visitor.visitSingularBoolField(value: _storage._tlsSkipSuggested, fieldNumber: 23)
-      }
-      if !_storage._documentJson.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._documentJson, fieldNumber: 24)
-      }
-      if !_storage._requestID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._requestID, fieldNumber: 25)
-      }
-      if !_storage._clientID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._clientID, fieldNumber: 26)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_RouteEditRequest, rhs: Pax_V1_RouteEditRequest) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._routeID != rhs_storage._routeID {return false}
-        if _storage._expectedRevision != rhs_storage._expectedRevision {return false}
-        if _storage._name != rhs_storage._name {return false}
-        if _storage._protocol != rhs_storage._protocol {return false}
-        if _storage._server != rhs_storage._server {return false}
-        if _storage._port != rhs_storage._port {return false}
-        if _storage._transport != rhs_storage._transport {return false}
-        if _storage._security != rhs_storage._security {return false}
-        if _storage._serverName != rhs_storage._serverName {return false}
-        if _storage._uuid != rhs_storage._uuid {return false}
-        if _storage._password != rhs_storage._password {return false}
-        if _storage._replaceCredentials != rhs_storage._replaceCredentials {return false}
-        if _storage._wsHost != rhs_storage._wsHost {return false}
-        if _storage._wsPath != rhs_storage._wsPath {return false}
-        if _storage._alpn != rhs_storage._alpn {return false}
-        if _storage._fingerprint != rhs_storage._fingerprint {return false}
-        if _storage._realityPublicKey != rhs_storage._realityPublicKey {return false}
-        if _storage._realityShortID != rhs_storage._realityShortID {return false}
-        if _storage._flow != rhs_storage._flow {return false}
-        if _storage._alterID != rhs_storage._alterID {return false}
-        if _storage._vmessSecurity != rhs_storage._vmessSecurity {return false}
-        if _storage._obfsPassword != rhs_storage._obfsPassword {return false}
-        if _storage._tlsSkipSuggested != rhs_storage._tlsSkipSuggested {return false}
-        if _storage._documentJson != rhs_storage._documentJson {return false}
-        if _storage._requestID != rhs_storage._requestID {return false}
-        if _storage._clientID != rhs_storage._clientID {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -7368,7 +6155,7 @@ nonisolated extension Pax_V1_RouteEditRequest: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pax_V1_DeleteRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteRouteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_revision\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_revision\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -7378,73 +6165,7 @@ nonisolated extension Pax_V1_DeleteRouteRequest: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRevision) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.routeID.isEmpty {
-      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
-    }
-    if self.expectedRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.expectedRevision, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_DeleteRouteRequest, rhs: Pax_V1_DeleteRouteRequest) -> Bool {
-    if lhs.routeID != rhs.routeID {return false}
-    if lhs.expectedRevision != rhs.expectedRevision {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_GetRouteEditorRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".GetRouteEditorRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.routeID.isEmpty {
-      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_GetRouteEditorRequest, rhs: Pax_V1_GetRouteEditorRequest) -> Bool {
-    if lhs.routeID != rhs.routeID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_RouteEditor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RouteEditor"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}fields\0\u{3}credentials_set\0\u{3}document_json\0\u{3}config_revision\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._fields) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.credentialsSet) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.documentJson) }()
-      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.configRevision) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -7455,66 +6176,22 @@ nonisolated extension Pax_V1_RouteEditor: SwiftProtobuf.Message, SwiftProtobuf._
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._fields {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    if !self.routeID.isEmpty {
+      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
+    }
+    if self.expectedRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedRevision, fieldNumber: 2)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
-    if self.credentialsSet != false {
-      try visitor.visitSingularBoolField(value: self.credentialsSet, fieldNumber: 2)
-    }
-    if !self.documentJson.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentJson, fieldNumber: 3)
-    }
-    if self.configRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.configRevision, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Pax_V1_RouteEditor, rhs: Pax_V1_RouteEditor) -> Bool {
-    if lhs._fields != rhs._fields {return false}
-    if lhs.credentialsSet != rhs.credentialsSet {return false}
-    if lhs.documentJson != rhs.documentJson {return false}
-    if lhs.configRevision != rhs.configRevision {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_RouteGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RouteGroup"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}member_ids\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 3: try { try decoder.decodeRepeatedStringField(value: &self.memberIds) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
-    }
-    if !self.memberIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.memberIds, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_RouteGroup, rhs: Pax_V1_RouteGroup) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.name != rhs.name {return false}
-    if lhs.memberIds != rhs.memberIds {return false}
+  public static func ==(lhs: Pax_V1_DeleteRouteRequest, rhs: Pax_V1_DeleteRouteRequest) -> Bool {
+    if lhs.routeID != rhs.routeID {return false}
+    if lhs.expectedRevision != rhs.expectedRevision {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -7522,7 +6199,7 @@ nonisolated extension Pax_V1_RouteGroup: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pax_V1_SaveRouteGroupsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SaveRouteGroupsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}groups\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}groups\0\u{3}expected_catalog_revision\0\u{3}client_id\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -7534,12 +6211,17 @@ nonisolated extension Pax_V1_SaveRouteGroupsRequest: SwiftProtobuf.Message, Swif
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedCatalogRevision) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.groups.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.groups, fieldNumber: 1)
     }
@@ -7552,6 +6234,9 @@ nonisolated extension Pax_V1_SaveRouteGroupsRequest: SwiftProtobuf.Message, Swif
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 4)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -7560,6 +6245,7 @@ nonisolated extension Pax_V1_SaveRouteGroupsRequest: SwiftProtobuf.Message, Swif
     if lhs.expectedCatalogRevision != rhs.expectedCatalogRevision {return false}
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -7729,311 +6415,9 @@ nonisolated extension Pax_V1_SubscriptionAttempt: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-nonisolated extension Pax_V1_CFSample: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFSample"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0\u{3}measured_at\0\u{3}attempted_at\0\u{3}error_code\0\u{3}successful_rounds\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularDoubleField(value: &self.value) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._measuredAt) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._attemptedAt) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.errorCode) }()
-      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.successfulRounds) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.value.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.value, fieldNumber: 1)
-    }
-    try { if let v = self._measuredAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try { if let v = self._attemptedAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    if !self.errorCode.isEmpty {
-      try visitor.visitSingularStringField(value: self.errorCode, fieldNumber: 4)
-    }
-    if self.successfulRounds != 0 {
-      try visitor.visitSingularUInt32Field(value: self.successfulRounds, fieldNumber: 5)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFSample, rhs: Pax_V1_CFSample) -> Bool {
-    if lhs.value != rhs.value {return false}
-    if lhs._measuredAt != rhs._measuredAt {return false}
-    if lhs._attemptedAt != rhs._attemptedAt {return false}
-    if lhs.errorCode != rhs.errorCode {return false}
-    if lhs.successfulRounds != rhs.successfulRounds {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CFIPLocation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFIPLocation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}country_code\0\u{1}country\0\u{1}region\0\u{1}city\0\u{1}source\0\u{1}at\0\u{3}error_code\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.countryCode) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.country) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.region) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.city) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.source) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._at) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.errorCode) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.countryCode.isEmpty {
-      try visitor.visitSingularStringField(value: self.countryCode, fieldNumber: 1)
-    }
-    if !self.country.isEmpty {
-      try visitor.visitSingularStringField(value: self.country, fieldNumber: 2)
-    }
-    if !self.region.isEmpty {
-      try visitor.visitSingularStringField(value: self.region, fieldNumber: 3)
-    }
-    if !self.city.isEmpty {
-      try visitor.visitSingularStringField(value: self.city, fieldNumber: 4)
-    }
-    if !self.source.isEmpty {
-      try visitor.visitSingularStringField(value: self.source, fieldNumber: 5)
-    }
-    try { if let v = self._at {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    if !self.errorCode.isEmpty {
-      try visitor.visitSingularStringField(value: self.errorCode, fieldNumber: 7)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFIPLocation, rhs: Pax_V1_CFIPLocation) -> Bool {
-    if lhs.countryCode != rhs.countryCode {return false}
-    if lhs.country != rhs.country {return false}
-    if lhs.region != rhs.region {return false}
-    if lhs.city != rhs.city {return false}
-    if lhs.source != rhs.source {return false}
-    if lhs._at != rhs._at {return false}
-    if lhs.errorCode != rhs.errorCode {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CFRecord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFRecord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ip\0\u{1}prefix\0\u{1}network\0\u{1}tcp\0\u{1}download\0\u{1}validation\0\u{1}reachable\0\u{3}proof_current\0\u{1}issue\0\u{3}validation_matches\0\u{1}location\0")
-
-  fileprivate class _StorageClass {
-    var _ip: String = String()
-    var _prefix: String = String()
-    var _network: String = String()
-    var _tcp: Pax_V1_CFSample? = nil
-    var _download: Pax_V1_CFSample? = nil
-    var _validation: Pax_V1_CFSample? = nil
-    var _reachable: Bool = false
-    var _proofCurrent: Bool = false
-    var _issue: String = String()
-    var _validationMatches: Bool = false
-    var _location: Pax_V1_CFIPLocation? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _ip = source._ip
-      _prefix = source._prefix
-      _network = source._network
-      _tcp = source._tcp
-      _download = source._download
-      _validation = source._validation
-      _reachable = source._reachable
-      _proofCurrent = source._proofCurrent
-      _issue = source._issue
-      _validationMatches = source._validationMatches
-      _location = source._location
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._ip) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._prefix) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._network) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._tcp) }()
-        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._download) }()
-        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._validation) }()
-        case 7: try { try decoder.decodeSingularBoolField(value: &_storage._reachable) }()
-        case 8: try { try decoder.decodeSingularBoolField(value: &_storage._proofCurrent) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._issue) }()
-        case 10: try { try decoder.decodeSingularBoolField(value: &_storage._validationMatches) }()
-        case 11: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        default: break
-        }
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._ip.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._ip, fieldNumber: 1)
-      }
-      if !_storage._prefix.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._prefix, fieldNumber: 2)
-      }
-      if !_storage._network.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._network, fieldNumber: 3)
-      }
-      try { if let v = _storage._tcp {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      } }()
-      try { if let v = _storage._download {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      } }()
-      try { if let v = _storage._validation {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      } }()
-      if _storage._reachable != false {
-        try visitor.visitSingularBoolField(value: _storage._reachable, fieldNumber: 7)
-      }
-      if _storage._proofCurrent != false {
-        try visitor.visitSingularBoolField(value: _storage._proofCurrent, fieldNumber: 8)
-      }
-      if !_storage._issue.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._issue, fieldNumber: 9)
-      }
-      if _storage._validationMatches != false {
-        try visitor.visitSingularBoolField(value: _storage._validationMatches, fieldNumber: 10)
-      }
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
-      } }()
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFRecord, rhs: Pax_V1_CFRecord) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._ip != rhs_storage._ip {return false}
-        if _storage._prefix != rhs_storage._prefix {return false}
-        if _storage._network != rhs_storage._network {return false}
-        if _storage._tcp != rhs_storage._tcp {return false}
-        if _storage._download != rhs_storage._download {return false}
-        if _storage._validation != rhs_storage._validation {return false}
-        if _storage._reachable != rhs_storage._reachable {return false}
-        if _storage._proofCurrent != rhs_storage._proofCurrent {return false}
-        if _storage._issue != rhs_storage._issue {return false}
-        if _storage._validationMatches != rhs_storage._validationMatches {return false}
-        if _storage._location != rhs_storage._location {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CFNetwork: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFNetwork"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}count\0\u{1}at\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._at) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if self.count != 0 {
-      try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 2)
-    }
-    try { if let v = self._at {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFNetwork, rhs: Pax_V1_CFNetwork) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.count != rhs.count {return false}
-    if lhs._at != rhs._at {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Pax_V1_CFWorkspaceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CFWorkspaceRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}network\0\u{3}route_id\0\u{3}expected_revision\0\u{3}document_json\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}network\0\u{3}route_id\0\u{3}expected_revision\0\u{3}document_json\0\u{3}expected_config_revision\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8045,6 +6429,7 @@ nonisolated extension Pax_V1_CFWorkspaceRequest: SwiftProtobuf.Message, SwiftPro
       case 2: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRevision) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.documentJson) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.expectedConfigRevision) }()
       default: break
       }
     }
@@ -8063,6 +6448,9 @@ nonisolated extension Pax_V1_CFWorkspaceRequest: SwiftProtobuf.Message, SwiftPro
     if !self.documentJson.isEmpty {
       try visitor.visitSingularStringField(value: self.documentJson, fieldNumber: 4)
     }
+    if self.expectedConfigRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedConfigRevision, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8071,14 +6459,15 @@ nonisolated extension Pax_V1_CFWorkspaceRequest: SwiftProtobuf.Message, SwiftPro
     if lhs.routeID != rhs.routeID {return false}
     if lhs.expectedRevision != rhs.expectedRevision {return false}
     if lhs.documentJson != rhs.documentJson {return false}
+    if lhs.expectedConfigRevision != rhs.expectedConfigRevision {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Pax_V1_CFWorkspace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFWorkspace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}network\0\u{1}records\0\u{1}networks\0\u{3}operation_id\0\u{1}phase\0\u{1}completed\0\u{1}total\0\u{1}monitoring\0\u{1}error\0\u{3}current_network\0\u{3}pending_checks\0\u{3}oldest_check\0")
+nonisolated extension Pax_V1_CFTaskRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CFTaskRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{1}ips\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8086,18 +6475,9 @@ nonisolated extension Pax_V1_CFWorkspace: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.network) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.records) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.networks) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.operationID) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.phase) }()
-      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.completed) }()
-      case 7: try { try decoder.decodeSingularUInt32Field(value: &self.total) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.monitoring) }()
-      case 9: try { try decoder.decodeSingularMessageField(value: &self._error) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.currentNetwork) }()
-      case 11: try { try decoder.decodeSingularUInt32Field(value: &self.pendingChecks) }()
-      case 12: try { try decoder.decodeSingularMessageField(value: &self._oldestCheck) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.action) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.ips) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -8108,93 +6488,22 @@ nonisolated extension Pax_V1_CFWorkspace: SwiftProtobuf.Message, SwiftProtobuf._
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.network.isEmpty {
-      try visitor.visitSingularStringField(value: self.network, fieldNumber: 1)
-    }
-    if !self.records.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.records, fieldNumber: 2)
-    }
-    if !self.networks.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.networks, fieldNumber: 3)
-    }
-    if !self.operationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.operationID, fieldNumber: 4)
-    }
-    if !self.phase.isEmpty {
-      try visitor.visitSingularStringField(value: self.phase, fieldNumber: 5)
-    }
-    if self.completed != 0 {
-      try visitor.visitSingularUInt32Field(value: self.completed, fieldNumber: 6)
-    }
-    if self.total != 0 {
-      try visitor.visitSingularUInt32Field(value: self.total, fieldNumber: 7)
-    }
-    if self.monitoring != false {
-      try visitor.visitSingularBoolField(value: self.monitoring, fieldNumber: 8)
-    }
-    try { if let v = self._error {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-    } }()
-    if !self.currentNetwork.isEmpty {
-      try visitor.visitSingularStringField(value: self.currentNetwork, fieldNumber: 10)
-    }
-    if self.pendingChecks != 0 {
-      try visitor.visitSingularUInt32Field(value: self.pendingChecks, fieldNumber: 11)
-    }
-    try { if let v = self._oldestCheck {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CFWorkspace, rhs: Pax_V1_CFWorkspace) -> Bool {
-    if lhs.network != rhs.network {return false}
-    if lhs.records != rhs.records {return false}
-    if lhs.networks != rhs.networks {return false}
-    if lhs.operationID != rhs.operationID {return false}
-    if lhs.phase != rhs.phase {return false}
-    if lhs.completed != rhs.completed {return false}
-    if lhs.total != rhs.total {return false}
-    if lhs.monitoring != rhs.monitoring {return false}
-    if lhs._error != rhs._error {return false}
-    if lhs.currentNetwork != rhs.currentNetwork {return false}
-    if lhs.pendingChecks != rhs.pendingChecks {return false}
-    if lhs._oldestCheck != rhs._oldestCheck {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CFTaskRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CFTaskRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{1}ips\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.action) }()
-      case 2: try { try decoder.decodeRepeatedStringField(value: &self.ips) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.action.isEmpty {
       try visitor.visitSingularStringField(value: self.action, fieldNumber: 1)
     }
     if !self.ips.isEmpty {
       try visitor.visitRepeatedStringField(value: self.ips, fieldNumber: 2)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_CFTaskRequest, rhs: Pax_V1_CFTaskRequest) -> Bool {
     if lhs.action != rhs.action {return false}
     if lhs.ips != rhs.ips {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -8235,44 +6544,9 @@ nonisolated extension Pax_V1_PowerEventRequest: SwiftProtobuf.Message, SwiftProt
   }
 }
 
-nonisolated extension Pax_V1_ChainRoute: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ChainRoute"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}front_id\0\u{3}final_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.frontID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.finalID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.frontID.isEmpty {
-      try visitor.visitSingularStringField(value: self.frontID, fieldNumber: 1)
-    }
-    if !self.finalID.isEmpty {
-      try visitor.visitSingularStringField(value: self.finalID, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_ChainRoute, rhs: Pax_V1_ChainRoute) -> Bool {
-    if lhs.frontID != rhs.frontID {return false}
-    if lhs.finalID != rhs.finalID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Pax_V1_SaveChainRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SaveChainRouteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}front_id\0\u{3}final_id\0\u{3}expected_revision\0\u{3}front_revision\0\u{3}final_revision\0\u{3}client_id\0\u{3}request_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}front_id\0\u{3}final_id\0\u{3}expected_revision\0\u{3}front_revision\0\u{3}final_revision\0\u{3}client_id\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8289,12 +6563,17 @@ nonisolated extension Pax_V1_SaveChainRouteRequest: SwiftProtobuf.Message, Swift
       case 7: try { try decoder.decodeSingularUInt64Field(value: &self.finalRevision) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 10: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -8322,6 +6601,9 @@ nonisolated extension Pax_V1_SaveChainRouteRequest: SwiftProtobuf.Message, Swift
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 9)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8335,6 +6617,7 @@ nonisolated extension Pax_V1_SaveChainRouteRequest: SwiftProtobuf.Message, Swift
     if lhs.finalRevision != rhs.finalRevision {return false}
     if lhs.clientID != rhs.clientID {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -9549,7 +7832,7 @@ nonisolated extension Pax_V1_LogDetail: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 nonisolated extension Pax_V1_ClearLogsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClearLogsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0\u{3}requested_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}operation_id\0\u{3}requested_at\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9559,6 +7842,7 @@ nonisolated extension Pax_V1_ClearLogsRequest: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.operationID) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._requestedAt) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -9575,20 +7859,24 @@ nonisolated extension Pax_V1_ClearLogsRequest: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._requestedAt {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_ClearLogsRequest, rhs: Pax_V1_ClearLogsRequest) -> Bool {
     if lhs.operationID != rhs.operationID {return false}
     if lhs._requestedAt != rhs._requestedAt {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Pax_V1_CurrentPathCheck: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CurrentPathCheck"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}check_id\0\u{3}trigger_operation_id\0\u{3}route_id\0\u{3}config_revision\0\u{3}core_session\0\u{3}runtime_version\0\u{3}network_epoch\0\u{1}state\0\u{1}cause\0\u{3}started_at\0\u{3}completed_at\0\u{3}evidence_scope\0\u{3}command_operation_ids\0")
+nonisolated extension Pax_V1_CurrentPathRecheckRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CurrentPathRecheckRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}request_id\0\u{1}context\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9596,19 +7884,8 @@ nonisolated extension Pax_V1_CurrentPathCheck: SwiftProtobuf.Message, SwiftProto
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.checkID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.triggerOperationID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
-      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.configRevision) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.coreSession) }()
-      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.runtimeVersion) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.networkEpoch) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.state) }()
-      case 9: try { try decoder.decodeSingularStringField(value: &self.cause) }()
-      case 10: try { try decoder.decodeSingularMessageField(value: &self._startedAt) }()
-      case 11: try { try decoder.decodeSingularMessageField(value: &self._completedAt) }()
-      case 12: try { try decoder.decodeSingularStringField(value: &self.evidenceScope) }()
-      case 13: try { try decoder.decodeRepeatedStringField(value: &self.commandOperationIds) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
       default: break
       }
     }
@@ -9619,92 +7896,18 @@ nonisolated extension Pax_V1_CurrentPathCheck: SwiftProtobuf.Message, SwiftProto
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.checkID.isEmpty {
-      try visitor.visitSingularStringField(value: self.checkID, fieldNumber: 1)
-    }
-    if !self.triggerOperationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.triggerOperationID, fieldNumber: 2)
-    }
-    if !self.routeID.isEmpty {
-      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 3)
-    }
-    if self.configRevision != 0 {
-      try visitor.visitSingularUInt64Field(value: self.configRevision, fieldNumber: 4)
-    }
-    if !self.coreSession.isEmpty {
-      try visitor.visitSingularStringField(value: self.coreSession, fieldNumber: 5)
-    }
-    if self.runtimeVersion != 0 {
-      try visitor.visitSingularUInt64Field(value: self.runtimeVersion, fieldNumber: 6)
-    }
-    if !self.networkEpoch.isEmpty {
-      try visitor.visitSingularStringField(value: self.networkEpoch, fieldNumber: 7)
-    }
-    if !self.state.isEmpty {
-      try visitor.visitSingularStringField(value: self.state, fieldNumber: 8)
-    }
-    if !self.cause.isEmpty {
-      try visitor.visitSingularStringField(value: self.cause, fieldNumber: 9)
-    }
-    try { if let v = self._startedAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    } }()
-    try { if let v = self._completedAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
-    } }()
-    if !self.evidenceScope.isEmpty {
-      try visitor.visitSingularStringField(value: self.evidenceScope, fieldNumber: 12)
-    }
-    if !self.commandOperationIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.commandOperationIds, fieldNumber: 13)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_CurrentPathCheck, rhs: Pax_V1_CurrentPathCheck) -> Bool {
-    if lhs.checkID != rhs.checkID {return false}
-    if lhs.triggerOperationID != rhs.triggerOperationID {return false}
-    if lhs.routeID != rhs.routeID {return false}
-    if lhs.configRevision != rhs.configRevision {return false}
-    if lhs.coreSession != rhs.coreSession {return false}
-    if lhs.runtimeVersion != rhs.runtimeVersion {return false}
-    if lhs.networkEpoch != rhs.networkEpoch {return false}
-    if lhs.state != rhs.state {return false}
-    if lhs.cause != rhs.cause {return false}
-    if lhs._startedAt != rhs._startedAt {return false}
-    if lhs._completedAt != rhs._completedAt {return false}
-    if lhs.evidenceScope != rhs.evidenceScope {return false}
-    if lhs.commandOperationIds != rhs.commandOperationIds {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_CurrentPathRecheckRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CurrentPathRecheckRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}request_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 1)
     }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pax_V1_CurrentPathRecheckRequest, rhs: Pax_V1_CurrentPathRecheckRequest) -> Bool {
     if lhs.requestID != rhs.requestID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -10791,6 +8994,295 @@ nonisolated extension Pax_V1_GeoRulesPage: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs.nextOffset != rhs.nextOffset {return false}
     if lhs.version != rhs.version {return false}
     if lhs.updatedUnix != rhs.updatedUnix {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_StartConnectionDiagnosticRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".StartConnectionDiagnosticRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}recheck\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.recheck) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.recheck != false {
+      try visitor.visitSingularBoolField(value: self.recheck, fieldNumber: 1)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_StartConnectionDiagnosticRequest, rhs: Pax_V1_StartConnectionDiagnosticRequest) -> Bool {
+    if lhs.recheck != rhs.recheck {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_StartNetworkDiagnosticRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".StartNetworkDiagnosticRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}mode\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.mode) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.mode.isEmpty {
+      try visitor.visitSingularStringField(value: self.mode, fieldNumber: 1)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_StartNetworkDiagnosticRequest, rhs: Pax_V1_StartNetworkDiagnosticRequest) -> Bool {
+    if lhs.mode != rhs.mode {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_StartEnvironmentSourcesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".StartEnvironmentSourcesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}session_id\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.sessionID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.sessionID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sessionID, fieldNumber: 1)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_StartEnvironmentSourcesRequest, rhs: Pax_V1_StartEnvironmentSourcesRequest) -> Bool {
+    if lhs.sessionID != rhs.sessionID {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_EnvironmentDiagnosticRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EnvironmentDiagnosticRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{3}session_id\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.action) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.sessionID) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.action.isEmpty {
+      try visitor.visitSingularStringField(value: self.action, fieldNumber: 1)
+    }
+    if !self.sessionID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sessionID, fieldNumber: 2)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_EnvironmentDiagnosticRequest, rhs: Pax_V1_EnvironmentDiagnosticRequest) -> Bool {
+    if lhs.action != rhs.action {return false}
+    if lhs.sessionID != rhs.sessionID {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_StartCFValidationRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".StartCFValidationRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0\u{3}expected_config_revision\0\u{1}ip\0\u{3}document_json\0\u{3}secret_updates\0\u{3}chain_id\0\u{3}chain_revision\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRouteRevision) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedConfigRevision) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.ip) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self._documentJson) }()
+      case 6: try { try decoder.decodeRepeatedMessageField(value: &self.secretUpdates) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.chainID) }()
+      case 8: try { try decoder.decodeSingularUInt64Field(value: &self.chainRevision) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.routeID.isEmpty {
+      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
+    }
+    if self.expectedRouteRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedRouteRevision, fieldNumber: 2)
+    }
+    if self.expectedConfigRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedConfigRevision, fieldNumber: 3)
+    }
+    if !self.ip.isEmpty {
+      try visitor.visitSingularStringField(value: self.ip, fieldNumber: 4)
+    }
+    try { if let v = self._documentJson {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+    } }()
+    if !self.secretUpdates.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.secretUpdates, fieldNumber: 6)
+    }
+    if !self.chainID.isEmpty {
+      try visitor.visitSingularStringField(value: self.chainID, fieldNumber: 7)
+    }
+    if self.chainRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.chainRevision, fieldNumber: 8)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_StartCFValidationRequest, rhs: Pax_V1_StartCFValidationRequest) -> Bool {
+    if lhs.routeID != rhs.routeID {return false}
+    if lhs.expectedRouteRevision != rhs.expectedRouteRevision {return false}
+    if lhs.expectedConfigRevision != rhs.expectedConfigRevision {return false}
+    if lhs.ip != rhs.ip {return false}
+    if lhs._documentJson != rhs._documentJson {return false}
+    if lhs.secretUpdates != rhs.secretUpdates {return false}
+    if lhs.chainID != rhs.chainID {return false}
+    if lhs.chainRevision != rhs.chainRevision {return false}
+    if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_SaveValidatedCFRouteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SaveValidatedCFRouteRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}route_id\0\u{3}expected_route_revision\0\u{3}expected_config_revision\0\u{3}validation_id\0\u{1}context\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.routeID) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedRouteRevision) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.expectedConfigRevision) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.validationID) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._context) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.routeID.isEmpty {
+      try visitor.visitSingularStringField(value: self.routeID, fieldNumber: 1)
+    }
+    if self.expectedRouteRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedRouteRevision, fieldNumber: 2)
+    }
+    if self.expectedConfigRevision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expectedConfigRevision, fieldNumber: 3)
+    }
+    if !self.validationID.isEmpty {
+      try visitor.visitSingularStringField(value: self.validationID, fieldNumber: 4)
+    }
+    try { if let v = self._context {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_SaveValidatedCFRouteRequest, rhs: Pax_V1_SaveValidatedCFRouteRequest) -> Bool {
+    if lhs.routeID != rhs.routeID {return false}
+    if lhs.expectedRouteRevision != rhs.expectedRouteRevision {return false}
+    if lhs.expectedConfigRevision != rhs.expectedConfigRevision {return false}
+    if lhs.validationID != rhs.validationID {return false}
+    if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

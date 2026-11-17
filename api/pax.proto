@@ -5,6 +5,8 @@ package pax.v1;
 import "google/protobuf/timestamp.proto";
 import "traffic.proto";
 import "operation.proto";
+import "operation_context.proto";
+import "route_edit.proto";
 import "privacy.proto";
 import "route_exit.proto";
 import "network_diagnostics.proto";
@@ -21,6 +23,7 @@ option go_package = "pax-connect/daemon/gen/proto/paxv1";
 // 事件流只有一条 Watch。变更命令返回 OperationAck，最终结果经 Watch；
 // 历史、规则等查询返回只读快照，不返回私有内核 profile 或凭据。
 service PaxService {
+  rpc GetOperation(GetOperationRequest) returns (OperationState);
   rpc RecheckCurrentPath(CurrentPathRecheckRequest) returns (OperationAck);
   rpc QueryLogUpdates(LogUpdateRequest) returns (LogUpdatePage);
   rpc QueryRoutingRules(google.protobuf.Empty) returns (RoutingRulesSnapshot);
@@ -52,6 +55,8 @@ service PaxService {
   rpc UpdateRoute(RouteEditRequest) returns (OperationAck);
   rpc DeleteRoute(DeleteRouteRequest) returns (OperationAck);
   rpc GetRouteEditor(GetRouteEditorRequest) returns (RouteEditor);
+  rpc GetRouteEditView(GetRouteEditorRequest) returns (RouteEditView);
+  rpc SaveRouteEdit(SaveRouteEditRequest) returns (OperationAck);
   rpc UpdateRouteTLS(UpdateRouteTLSRequest) returns (OperationAck);
   rpc ConfirmRouteTLSBatch(ConfirmRouteTLSBatchRequest) returns (OperationAck);
   rpc SaveChainRoute(SaveChainRouteRequest) returns (OperationAck);
@@ -80,10 +85,15 @@ service PaxService {
   rpc DiagnoseConnection(ConnectionDiagnosticRequest) returns (TrafficPathDiagnostics);
   rpc DiagnoseNetwork(NetworkDiagnosticRequest) returns (NetworkDiagnosticReport);
   rpc InspectEnvironment(EnvironmentDiagnosticRequest) returns (EnvironmentDiagnosticReport);
+  rpc StartConnectionDiagnostic(StartConnectionDiagnosticRequest) returns (OperationAck);
+  rpc StartNetworkDiagnostic(StartNetworkDiagnosticRequest) returns (OperationAck);
+  rpc StartEnvironmentSources(StartEnvironmentSourcesRequest) returns (OperationAck);
   rpc QueryCFCandidates(google.protobuf.Empty) returns (CFCandidates);
   rpc ValidateCFCandidate(CFValidationRequest) returns (CFCandidate);
   rpc QueryCFWorkspace(CFWorkspaceRequest) returns (CFWorkspace);
   rpc RunCFTask(CFTaskRequest) returns (OperationAck);
+  rpc StartCFValidation(StartCFValidationRequest) returns (OperationAck);
+  rpc SaveValidatedCFRoute(SaveValidatedCFRouteRequest) returns (OperationAck);
 }
 
 // ---------------------------------------------------------------- 握手与快照
@@ -106,6 +116,8 @@ message HelloResponse {
   bool initial_install = 6;
   // App process owning this user daemon; checked before consuming any snapshot.
   uint32 owner_app_pid = 7;
+  string daemon_instance = 8;
+  string timezone = 9; // IANA timezone used by daemon calendar queries.
 }
 
 message GetSnapshotRequest {}
@@ -184,13 +196,6 @@ message WatchEvent {
 // ---------------------------------------------------------------- 跨模块模型
 
 // 保护状态：只有 PROTECTED 才能显示"已保护"（§19.1、decisions/geo-dns-protection.md）。
-enum ProtectionStatus {
-  PROTECTION_STATUS_UNSPECIFIED = 0;
-  PROTECTION_STATUS_OFF = 1;
-  PROTECTION_STATUS_STARTING = 2;
-  PROTECTION_STATUS_PROTECTED = 3;
-  PROTECTION_STATUS_DEGRADED = 4;
-}
 
 message NodeProfile {
   // 客户端生成/daemon 生成的稳定 ID，用于列表 diff 与选中态。
@@ -225,65 +230,7 @@ message NodeProfile {
 }
 
 // RouteTestSummary 是一次手动连通性测试的结果：受控目标的实测连接，不是 ICMP 或带宽测速。
-message RouteTestSummary {
-  google.protobuf.Timestamp at = 1;
-  bool success = 2;
-  // Legacy single value: stable median when available, otherwise successful first response; v3 clients use cold_ms/stable_ms independently.
-  uint32 duration_ms = 3;
-  // success=false 时的受控失败码。
-  ProductError error = 4;
-  // 测量时的配置 revision；与当前 revision 不同即显示过期。
-  uint64 tested_revision = 5;
-  uint64 tested_config_revision = 6;
-  string exit_ip = 7;
-  ProductError exit_error = 8;
-  uint32 cold_ms = 9;
-  uint32 second_ms = 10;
-  bool reused = 11;
-  string method = 12;
-  string first_error = 13;
-  string second_error = 14;
-  // New method: median of three valid reused-session requests; absent when incomplete.
-  uint32 stable_ms = 15;
-  uint32 stable_samples = 16;
-  string stable_error = 17;
-  // Controlled target identity: google / gstatic, never a private URL.
-  string test_target = 18;
-  ExitLocation exit_location = 19;
-  ExitLocation last_exit_location = 20;
-}
 
-message DownloadTestSummary {
- google.protobuf.Timestamp at = 1;
- bool success = 2;
- double bytes_per_second = 3;
- ProductError error = 4;
- uint64 tested_config_revision = 5;
- uint64 bytes = 6;
- uint32 duration_ms = 7;
- string method = 8;
- uint32 parallel = 9;
- uint32 setup_ms = 10;
- string end_reason = 11;
-}
-
-message MeasurementPreferences {
- uint64 revision = 1;
- uint32 latency_parallel = 2;
- uint32 exit_parallel = 3;
- uint32 download_parallel = 4;
- string mode = 5;
- uint32 recommended_latency = 6;
- uint32 recommended_exit = 7;
- uint32 recommended_download = 8;
- string recommendation_network = 9;
- google.protobuf.Timestamp evaluated_at = 10;
- string latency_mode = 11;
- string exit_mode = 12;
- string download_mode = 13;
- // Read-only; ignored by SaveMeasurementPreferences.
- ExitPoolState exit_pool_state = 14;
-}
 
 message DownloadQueueState {
  string mode = 1; // single / batch / exclusive
@@ -291,16 +238,7 @@ message DownloadQueueState {
  repeated string queued_route_ids = 3;
  map<string,string> operation_ids = 4;
 }
-message ExitPoolState {
- uint32 configured_limit = 1;
- uint32 in_flight = 2;
- uint32 queued = 3;
- // Subset of queued, not an additional task count.
- uint32 retrying = 4;
- uint32 available_providers = 5;
- uint32 total_providers = 6;
- google.protobuf.Timestamp at = 7;
-}
+
 enum RouteMeasurementPhase {
  ROUTE_MEASUREMENT_PHASE_UNSPECIFIED = 0;
  ROUTE_MEASUREMENT_PHASE_LATENCY = 1;
@@ -325,14 +263,6 @@ message PhysicalEgress {
  string ipv4 = 2;
  string ipv6 = 3;
  string phase = 4;
- google.protobuf.Timestamp at = 5;
- ProductError error = 6;
-}
-message CFCandidate {
- string ip = 1;
- string source = 2;
- uint32 latency_ms = 3;
- string network = 4;
  google.protobuf.Timestamp at = 5;
  ProductError error = 6;
 }
@@ -428,11 +358,13 @@ enum LogLevel {
 // code 的枚举清单随 ticket 增长维护，MVP 先以字符串承载。
 message SetProxyEnabledRequest {
   bool enabled = 1;
+  OperationContext context = 2;
 }
 
 message SelectRouteRequest {
   string route_id = 1;
   uint64 expected_route_revision = 2;
+  OperationContext context = 3;
 }
 
 message ImportRoutesRequest {
@@ -465,6 +397,7 @@ message RefreshSubscriptionRequest {
   string replacement_url = 6;
   optional string user_agent = 7;
   bool use_last_channel = 8;
+ OperationContext context = 9;
 }
 
 // RestoreSubscriptionRoute 恢复一条被用户隐藏的订阅线路，不隐式选择或连接。
@@ -474,11 +407,13 @@ message DeleteSubscriptionRequest {
  uint64 expected_catalog_revision = 3;
  string client_id = 4;
  string request_id = 5;
+ OperationContext context = 6;
 }
-message RestoreSubscriptionRouteRequest { string route_id = 1; uint64 expected_revision = 2; }
+message RestoreSubscriptionRouteRequest { string route_id = 1; uint64 expected_revision = 2;  OperationContext context = 3;
+}
 
 // CancelOperation 取消仍在进行的后台操作（订阅刷新或线路测试）。
-message CancelOperationRequest { string operation_id = 1; }
+message CancelOperationRequest { string operation_id = 1; OperationContext context = 2; }
 
 // TestRoute 对一条已保存线路做一次有界实测：无 TUN、不选路、不改选定与当前线路。
 message TestRouteRequest {
@@ -490,6 +425,7 @@ message TestRouteRequest {
   repeated RouteTestTarget targets = 4;
  string client_id = 5;
  string request_id = 6;
+ OperationContext context = 7;
 }
 
 message RouteTestTarget {
@@ -511,6 +447,7 @@ message ConfirmRouteTLSBatchRequest {
  repeated UpdateRouteTLSRequest routes = 1;
  string client_id = 2;
  string request_id = 3;
+ OperationContext context = 4;
 }
 message UpdateRouteTLSRequest {
  string route_id = 1;
@@ -518,6 +455,9 @@ message UpdateRouteTLSRequest {
  uint64 expected_revision = 3;
  TLSMode mode = 4;
  bool confirm_skip = 5;
+ OperationContext context = 6;
+ // MCP binds the visible route revision; legacy expected_revision remains TLS policy revision.
+ uint64 expected_route_revision = 7;
 }
 message ActiveTLS {
  string route_id = 1;
@@ -533,6 +473,7 @@ message PreviewRoutesRequest {
   // 用户为订阅来源输入的名称；空则由 daemon 按 hostname 生成。
   string source_name = 3;
   string client_id = 4;
+ OperationContext context = 5;
 }
 message RoutesPreview {
   string token = 1;
@@ -555,35 +496,29 @@ message RoutePreviewItem {
   string display_name = 7;
   string protocol_name = 8;
 }
-message CancelRoutesPreviewRequest { string token = 1; string client_id = 2; }
-message ConfirmImportRoutesRequest { string token = 1; repeated string item_ids = 2; uint64 expected_catalog_revision = 3; string client_id = 4; string request_id = 5; bool automatic = 6; }
-message RouteEditRequest {
- string route_id = 1; uint64 expected_revision = 2;
- string name = 3; string protocol = 4; string server = 5; uint32 port = 6;
- string transport = 7; string security = 8; string server_name = 9;
- string uuid = 10; string password = 11; bool replace_credentials = 12;
- string ws_host = 13; string ws_path = 14; repeated string alpn = 15;
- string fingerprint = 16; string reality_public_key = 17; string reality_short_id = 18;
- string flow = 19; uint32 alter_id = 20; string vmess_security = 21;
- string obfs_password = 22; bool tls_skip_suggested = 23;
- string document_json = 24; string request_id = 25; string client_id = 26;
-
+message CancelRoutesPreviewRequest { string token = 1; string client_id = 2;  OperationContext context = 3;
 }
-message DeleteRouteRequest { string route_id = 1; uint64 expected_revision = 2; }
-message GetRouteEditorRequest { string route_id = 1; }
-message RouteEditor { RouteEditRequest fields = 1; bool credentials_set = 2; string document_json = 3; uint64 config_revision = 4; }
+message ConfirmImportRoutesRequest { string token = 1; repeated string item_ids = 2; uint64 expected_catalog_revision = 3; string client_id = 4; string request_id = 5; bool automatic = 6;  OperationContext context = 7;
+}
+
+message DeleteRouteRequest { string route_id = 1; uint64 expected_revision = 2;  OperationContext context = 3;
+}
+
+
+
+
+
+
+
 
 // Ordered custom groups; subscription groups are derived from sources and cannot be written.
-message RouteGroup {
-  string id = 1;
-  string name = 2;
-  repeated string member_ids = 3;
-}
+
 message SaveRouteGroupsRequest {
   repeated RouteGroup groups = 1;
   uint64 expected_catalog_revision = 2;
   string client_id = 3;
   string request_id = 4;
+ OperationContext context = 5;
 }
 
 // Local, bounded connection facts; no URL path/query, payload or credentials.
@@ -613,70 +548,30 @@ message SubscriptionAttempt {
   uint64 total_ms = 11;
   string error_code = 12;
 }
-message CFSample {
-  double value = 1;
-  google.protobuf.Timestamp measured_at = 2;
-  google.protobuf.Timestamp attempted_at = 3;
-  string error_code = 4;
-  uint32 successful_rounds = 5;
-}
-message CFIPLocation {
- string country_code=1; string country=2; string region=3; string city=4;
- string source=5; google.protobuf.Timestamp at=6; string error_code=7;
-}
-message CFRecord {
-  string ip = 1;
-  string prefix = 2;
-  string network = 3;
-  CFSample tcp = 4;
-  CFSample download = 5;
-  CFSample validation = 6;
-  bool reachable = 7;
-  bool proof_current = 8;
-  string issue = 9;
-  bool validation_matches = 10;
-  CFIPLocation location = 11;
-}
-message CFNetwork {
-  string id = 1;
-  uint32 count = 2;
-  google.protobuf.Timestamp at = 3;
-}
 message CFWorkspaceRequest {
   string network = 1;
   string route_id = 2;
   uint64 expected_revision = 3;
   string document_json = 4;
-}
-message CFWorkspace {
-  string network = 1;
-  repeated CFRecord records = 2;
-  repeated CFNetwork networks = 3;
-  string operation_id = 4;
-  string phase = 5;
-  uint32 completed = 6;
-  uint32 total = 7;
-  bool monitoring = 8;
-  ProductError error = 9;
-  string current_network = 10;
-  uint32 pending_checks = 11;
-  google.protobuf.Timestamp oldest_check = 12;
+  uint64 expected_config_revision = 5;
 }
 message CFTaskRequest {
   // scan / download / check / locate; monitor_start/stop are no longer supported.
   // latency_one / download_one / measure_one require exactly one IP.
   string action = 1;
   repeated string ips = 2;
+  OperationContext context = 3;
 }
 
 // App lifetime sequence; stale sleep/wake events cannot override later intent.
 message PowerEventRequest { bool sleeping = 1; uint64 sequence = 2; }
 
-message ChainRoute { string front_id=1; string final_id=2; }
+
 message SaveChainRouteRequest {
  string id=1; string name=2; string front_id=3; string final_id=4;
  uint64 expected_revision=5; uint64 front_revision=6; uint64 final_revision=7;
  string client_id=8; string request_id=9;
+ OperationContext context = 10;
 }
 
 message RouteHistoryRequest {
@@ -746,17 +641,11 @@ message LogDetail {
 
 
 
-message ClearLogsRequest { string operation_id = 1; google.protobuf.Timestamp requested_at = 2; }
+message ClearLogsRequest { string operation_id = 1; google.protobuf.Timestamp requested_at = 2; OperationContext context = 3; }
 
 // Current mixed-egress proof; never evidence of global TUN/DNS/IPv6 protection.
-message CurrentPathCheck {
- string check_id=1; string trigger_operation_id=2; string route_id=3;
- uint64 config_revision=4; string core_session=5; uint64 runtime_version=6;
- string network_epoch=7; string state=8; string cause=9;
- google.protobuf.Timestamp started_at=10; google.protobuf.Timestamp completed_at=11;
- string evidence_scope=12; repeated string command_operation_ids=13;
-}
-message CurrentPathRecheckRequest { string request_id=1; }
+
+message CurrentPathRecheckRequest { string request_id=1; OperationContext context=2; }
 message HistoryDelta {
  HistoryState history=1; TrafficSnapshot traffic=2;
  repeated ProductLog recent_logs=3; bool replace_recent_logs=4;
@@ -820,3 +709,33 @@ message RoutingMutationRequest {
 
 message GeoRulesQuery {string search=1;uint32 offset=2;uint32 limit=3;}
 message GeoRulesPage {repeated RoutingEntry rules=1;uint32 total=2;uint32 next_offset=3;string version=4;int64 updated_unix=5;}
+
+// Owner-managed diagnostic jobs survive caller disconnects. Legacy synchronous RPCs remain.
+message StartConnectionDiagnosticRequest { bool recheck = 1; OperationContext context = 2; }
+message StartNetworkDiagnosticRequest { string mode = 1; OperationContext context = 2; }
+message StartEnvironmentSourcesRequest { string session_id = 1; OperationContext context = 2; }
+message EnvironmentDiagnosticRequest {
+ string action = 1; // start, read, cancel, sources
+ string session_id = 2;
+ OperationContext context = 3;
+}
+
+// A non-secret draft; credentials are merged privately after route/config CAS.
+message StartCFValidationRequest {
+ string route_id = 1;
+ uint64 expected_route_revision = 2;
+ uint64 expected_config_revision = 3;
+ string ip = 4;
+ optional string document_json = 5;
+ repeated RouteSecretUpdate secret_updates = 6;
+ string chain_id = 7;
+ uint64 chain_revision = 8;
+ OperationContext context = 9;
+}
+message SaveValidatedCFRouteRequest {
+ string route_id = 1;
+ uint64 expected_route_revision = 2;
+ uint64 expected_config_revision = 3;
+ string validation_id = 4;
+ OperationContext context = 5;
+}

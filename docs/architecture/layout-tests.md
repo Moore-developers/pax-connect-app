@@ -13,7 +13,7 @@ pax-connect/
 ├── api/
 │   ├── pax.proto                        # App ↔ 后台产品 gRPC
 │   ├── pax_core.proto                   # paxd ↔ root core 内部 gRPC，仅Go
-│   └── ai_profiles / ai_usage / network_diagnostics / operation / privacy / route_exit / route_usage / traffic .proto   # 按族拆出的产品 gRPC 消息
+│   └── ai_profile_state / ai_profiles / ai_usage / network_diagnostics / operation / operation_context / privacy / route_edit / route_exit / route_usage / traffic .proto   # 按族拆出的产品 gRPC 消息
 ├── patches/{sing-box,sing-tun}/          # 固定版本上游补丁（观测、路由/DNS热更、代理关闭归属、路由保护）及无root回归
 ├── daemon/
 │   ├── go.mod                           # 锁定 sing-box Go module
@@ -21,6 +21,8 @@ pax-connect/
 │   ├── cmd/pax-core/                    # root StartedService + PaxCore
 │   ├── cmd/pax-core-probe/              # 手动root验收客户端，direct-only
 │   ├── cmd/pax-connectd/                # --user 默认装配；旧root/App-session兼容入口
+│   ├── cmd/pax-mcp/                     # stdio入口；八组授权意图，不拉起App或daemon
+│   ├── cmd/pax-mcp-launcher/            # 用户稳定入口与App显式安装/已有登记刷新
 │   ├── cmd/pax-ai-usage-rebuild/        # 重建ai_usage.db（make ai-usage-rebuild）：备份、seed切换记录、同一流水线重扫、对账、替换
 │   │   ├── main.go                     # flags、stores/runtime/IPC装配
 │   │   └── user.go                     # home目录、socket查询、App owner identity/watch
@@ -28,6 +30,7 @@ pax-connect/
 │   ├── internal/processidentity/        # core/用户paxd复用PID、UID、内核启动时间
 │   ├── internal/coreclient/             # paxd 调 root core 的内部 RPC、内核身份与会话（只依赖 config 标准值）
 │   ├── internal/controller/             # 产品状态机、操作队列、保护检查、错误解释
+│   ├── internal/mcpserver/              # MCP schema/RPC映射、脱敏和有界查询续页
 │   ├── internal/config/                 # 生成、校验、版本和回滚
 │   ├── internal/importers/              # 链接/二维码/订阅/outbound → NodeProfile
 │   ├── internal/singbox/                # 配置转换/StartedService/selector、无TUN测量
@@ -89,79 +92,22 @@ AIUsage 已移除质量测试专用 AIQualityController.swift、AIQualityRun.swi
 
 列式日志库：historystore/columns*.go负责事实与有序子表，column_import/upgrade*.go负责v3→v4转换、gap记录与分批空间回收，column_projection*.go负责派生行I/O，column_snapshot*.go负责短读视图/有界旧版本，column_log_query/traffic_query*.go负责SQL筛选与分页；controller/history_column*.go调用生产投影并在现有owner调度升级，history_traffic_columns*.go接流量日志取材。config/log_gap.go统一断档纯规则，Logs.CapacityBytes在升级失败时排除冻结旧表。history_read_tokens.go与history_read_validity.go管理令牌与返回校验；history_connection_flow.go保留归属规则，history_activity_record.go保留展示投影，column_time_ranges.go处理查询时间边界。logs_v3_fixture_test.go仅生成升级夹具，history_projection_{oracle,filters}_test.go保留纯标准值投影对照。tests/log-store-columns/为208，log-store-switch/为209–210证据，不改原型保护区。
 
+MCP客户端接入：internal/mcpclientconfig的clients/document/files负责配置检测、TOML/JSON/YAML字段合并与私有备份/外部变化拒写；cmd/pax-mcp-launcher/clients.go装配只读检查、接入和MCP入口探针。App的MCPInstaller持Process，Features的MCPAccessReport/Actions与MCPAccessSettingsController只做状态和显式意图；不新增协议或存储。合同见changes/pax-mcp/client-access.md。
+
+MCP安装：internal/mcpinstall复用storage的私有原子记录，校验签名bundle/配套清单并定位socket；cmd/pax-mcp-launcher不持业务数据。App target的MCPInstaller把安装动作注入Features设置页，启动仅刷新已有登记。processidentity提供内核owner可执行路径；两MCP产物与依赖LICENSE/NOTICE由bundle-daemon.sh、mcp-notices.py打包，release-materials.py核对。
+
+MCP设置：协议细则见architecture/settings-operations.md；mcpserver/settings.go与settings_schema.go负责六个正式设置工具、权限和独立owner版本；controller/settings_operations.go将原设置/日志owner接入公共请求结果，不加存储或任务框架。privacy.proto保存偏好消息，operation_context.proto解开共享结果依赖；SettingsOperationResult归operation.proto，PaxClient/DaemonSettingsOperation映射。tests/pax-mcp/settings_acceptance.py用隔离HOME、真实daemon/stdio/socket与SQLite回读；settings_fixture_integration_test.go仅生成隔离合成数据，不编入App。
+
+MCP Profile：mcpserver/profiles.go与profiles_schema.go负责七个工具、权限、不含凭据的投影；controller/ai_profile_operations.go拥有跨RPC的目录/短写任务并接公共结果缓存。aiprofile仍唯一读写CLI/凭据与恢复journal；models.go在有界结果模式下于目录提交前检查完整workspace字节数，超限显式失败、不丢已有目录。tests/pax-mcp/profiles_acceptance.py与profile_fixture.py使用隔离HOME、真实stdio/socket及CLI文件回读。PaxClient/ProfileOperationMappingTests.swift覆盖目录失败与保存成功分离、计划与恢复结果。
+
+MCP AI查询：mcpserver/ai_usage.go映射AIUsageService，ai_usage_schema.go与ai_usage_metadata.go定义schema、来源/费用/时区元数据；原reader事务分页水位归aiusage/query.go。tests/pax-mcp/ai_usage_acceptance.py保留隔离CLI采集、真实stdio/socket与正式App只读对账。
+
+MCP网络工具：mcpserver/network.go负责受控RPC映射、依赖与typed结果脱敏；network_schema.go负责权限与schema；tests/pax-mcp/network_acceptance.py及first_permission_acceptance.py保留真实stdio/socket/浏览器与首次权限证据，network_evidence.py仅压缩有界回执。
+
+MCP网络操作：controller/operation_network.go复用现有testOwner/pathDiagnostics异步诊断；operation_measurements.go保留批次逐项终态，不从当前目录反推。PaxClient/DaemonNetworkOperation.swift映射typed结果与可选进度；network_operations_test.go及NetworkOperationMappingTests.swift覆盖断线、取消、并发准入与字段存在性。
+
 ## 18. 测试与验证
 
-列式日志的用户路径、数据集与性能门槛见[测试计划](../changes/pax-connect-network-control-plane/history-log-test-plan.md)。
+适用范围、用例与验收入口见[验证合同](validation.md)。
 
-| 层 | 内容 | 工具 |
-|---|---|---|
-| Go | 导入、规则优先级、配置队列、回滚、统计聚合、socket 鉴权 | `go test` |
-| 协议 | proto 生成一致性、版本握手、`Watch` 断线续传 | Go 集成测试 + Swift 集成测试（连真 daemon） |
-| PaxCore / PaxClient | Store 状态机、事件合并、断线保留快照、重复命令合并 | Swift Testing，假 `DaemonConnection` |
-| UI | 本次行为涉及的关键页面与状态 | 真实窗口截图；离屏 `NSView` 渲染仅作布局自检，不引第三方快照库 |
-| Features / App 交互 | 本次修改的开关、选线路、导入、筛选、窗口与生命周期路径 | 运行产物上的真实操作与关键截图，不设自动测试 |
-| 真实宿主 | TUN、DNS hijack、IPv6、系统代理降级、睡眠唤醒、daemon 被杀后恢复 | `tests/` 脚本 + 手工检查单 |
-
-PaxUI、Features 与 App 的自动测试组及 App 专用测试 manifest 已移除；Swift 自动测试保留 PaxClient / PaxCore，PaxProto 由依赖方编译与契约检查覆盖；Go 与静态检查保留。共享改动的真实验收覆盖受影响调用方；历史文档中的旧测试名、路径和命令只作当时证据，不是当前运行入口。
-
-Web 原型（`ui/prototype`）保留作信息结构参考；原生视觉规范见 ui/design-system.md，不移植旧暖色 token。静态布局可用 AppKit 离屏渲染辅助比对；视觉与交互验收使用真实窗口，玻璃材质必须有真实窗口证据。
-
-列表单行摘要合同：`docs/changes/pax-connect-network-control-plane/traffic-list-summary.md`。
-
-流量详情出口标签：`macos/Packages/Features/Sources/Features/Workbench/WorkbenchTrafficExitTags.swift`；复用PaxTag代理/直连样式。
-
-三视角来源与Geo证据合同：`docs/changes/pax-connect-network-control-plane/traffic-source-categories.md`。
-
-规则包贡献：`daemon/internal/controller/traffic_rule_groups.go`，拆组合同见traffic-list-summary.md。
-
-独立详情快照：controller/history_traffic_detail_read.go；SQLite清理后分页回归见traffic_detail_snapshot_test.go，实窗证据见tests/traffic-detail-snapshot。
-
-明细交互状态：`WorkbenchConnectionListState.swift`；昨日/24h计数合同见traffic-detail-controls.md。
-
-规则归因回归：`geo_rule_attribution_test.go`验证最终profile字段/匹配标签；`geo_rule_observation_test.go`贯穿隔离真实连接观测。
-
-DNS优先级：config/dns_routing_priority_test.go及singbox/dns_priority_observation_test.go；Geo来源合同geo-source-chain.md。
-
-Google资产rulesets/geosite-google.srs；真实重叠路由/DNS验证google_geo_test.go，旧缓存兼容及三源原子更新routing_geo_test.go；规则页走真实页面验收。
-
-页面自动更新：RoutingLibraryModels.swift承载规则包编辑值类型，LogsFilterBar.swift承载日志筛选条。PaxCore的AIUsageRefreshStateTests与PaxClient的AIUsageLogStateMappingTests保留状态隔离及wire状态映射覆盖；页面失效、分页、阅读与原位更新按实际改动走真实验收。隔离实窗证据见tests/incremental-page-updates，controller的history_ui/ai_ui_fixture integration测试提供双历史库与AI样本，不接用户数据或TUN。
-
-RouteWorkbenchActions.swift承载线路菜单、导入与批量测量动作，ViewController保留页面呈现；AI日志版本一致性回归见controller/ai_usage_generation_test.go。
-
-IPv4运行：network/ipv6.go与ipv6_configuration_darwin.go读取/判定物理服务配置，config/address_family.go冻结私有运行策略；network/route_result_test、ipv6_test、controller/ipv4_diagnostics_test、singbox/ipv4_only_test覆盖适用地址族。真实证据见tests/ipv4-only-network。
-
-最近命中实现沿既有config观测/格式化、controller历史聚合与stats分钟统计、PaxClient模型映射、PaxCore/Features列表详情；票114专属验收记录在tests/latest-routing-match。controller/traffic_latest_match.go负责冻结候选、同刻稳定比较与旧JSON未知边界；traffic_latest_metadata_test验证SQLite重启/JSON往返，traffic_latest_match_test验证单行RPC与冻结分页；PaxClient TrafficRoutingMatchMappingTests验证可选presence映射；PaxCore TrafficLatestMatchFormattingTests验证格式；Features列、说明与日志状态走真实页面验收。
-
-阻断详情（票115）：telemetry事实合并保留明确blocked空出口；列式投影关联LastEventID保留原事件证据，查询按固定快照和截止时间使用，controller只纠正明确旧unknown拒绝副本，不回写历史。测试和验收见tests/blocked-traffic。
-
-历史读取令牌合同见history-read-model.md §4；当前文件分工见本节列式日志库，旧票116证据见tests/history-read-model。
-
-Codex身份：`internal/aiusage/parse_codex.go`解析白名单元数据，`codex_evidence.go`索引证据，`write_codex.go`与既有writer同事务去重/晚模型修桶，`rebuild_codex.go`保留退役marker，`codex_owner{,_test}.go`处理子文件身份/旧游标补读与同事务归属校正；合同见[Codex身份](../changes/pax-connect-network-control-plane/codex-usage-identity.md)，隔离验收`tests/codex-usage-identity/`。
-
-手动代理：`api/operation.proto`独立命令结果合同；controller/route_add.go负责新增编排；PaxCore/ProxyRouteDraft.swift负责表单值与单条解析，RoutesStoreProxy.swift提供保存结果；Features/RouteWorkbench的RouteProxyForm/Controller、RouteWorkbenchProxy与RouteDetailConfiguration复用新增/编辑。PaxUI/PaxProxyRouteTheme集中尺寸；tests/manual-proxy-routes保存真实验收。
-
-设置：Features/SettingsWorkbench四控制器，合同P05。
-
-关于页沿Features/About组织，复用系统设置分组卡显示版本与许可摘要；专用尺寸在PaxUI/PaxAboutTheme。
-
-内置广告包：rulesets/adblock-lite.srs 与 manifest/许可 NOTICE；config/routing_adblock.go 定义身份，controller/routing_adblock.go 初始化与域名源边界；Features/RoutingWorkbench 的 RoutingPackagePresentation.swift、RoutingPackageUpdates.swift 分别维护包文案与更新设置。定向测试在 controller/singbox 的 routing_adblock_test.go，真实验收 tests/adblock。
-
-官方账号来源：aiprofile/sources.go与default_api.go维护认证来源事件和默认API局部切换；aiusage/source_migration.go拥有schema12来源维度迁移；PaxClient/Model/AIServiceSource.swift映射来源。归属合同从ai-usage-collection §4进入ai-usage-attribution.md。验收见tests/ai-service-sources。
-
-模型用量三表复用PaxDataTable及PaxPresentation中的PaxText.tableLabel；PaxUI/PaxFilterRow.swift承载筛选行与范围输入排版，业务过滤与校验留在Features/AIUsage。
-
-网络诊断证据：environment/evidence.go持固定目标检查与输入白名单，browser.js为真实浏览器有界采样，retry.go只重试确切IP资料；PaxCore/EnvironmentDiagnosticEvidence.swift投影受控原因与分项读值，NetworkDiagnosticWorkflowTests覆盖全模式/局部更新/旧JSON及导出。
-
-诊断判断投影：PaxCore/NetworkDiagnosticAssessment.swift负责服务/定位/风险摘要，EnvironmentDiagnosticAssessment.swift负责环境对照/出口判断；Features复用单行详情展开。验收见NetworkDiagnosticAssessmentTests与tests/network-diagnostics/assessment-1109.md。
-
-独立诊断资料：measurement/intelligence{,_http,_parse}.go复用ExitLookup调度并保留逐源标准值，environment/intelligence.go合并同会话同IP请求；PaxCore/NetworkDiagnosticEvidence.swift投影来源/备用/风险计数。协议仍在api/network_diagnostics.proto；验收见票157。
-
-诊断实时进度：measurement/diagnostic_progress.go发布实际阶段/计数，controller/network_diagnostic_progress.go拥有最近一轮；PaxCore/NetworkDiagnosticActivity.swift区分当前进度与历史，Features/RouteWorkbench/NetworkDiagnosticProgressView.swift及NetworkDiagnosticProgressRow.swift负责固定页头、三列状态与显示寿命；PaxUI/PaxActivityIndicator.swift供状态区和PaxRouteButton.swift共用转圈，后者从PaxRouteControls.swift按按钮职责独立。App/DiagnosticBrowserOpener.swift拥有默认浏览器后台打开及短时焦点保持。验收见NetworkDiagnosticProgressTests和票160。
-
-会话上限：aiusage/session_limits_*负责只读预设/查询/投影，controller/ai_limits.go映射协议；PaxClient/Model/AISessionLimits与Features/AISessionLimitsMapping隔离协议和展示；AISessionLiveLimitsView复用目录与Store；AISessionLimitsReadout为此页比例条与问号共用原生悬浮面板。tests/ai-session-limits包含socket/SQLite对账和PaxSparkline真实数据栅格化重放；PaxProportionView内迷你图仅按像素保留峰谷，不改原始数据。
-
-模型用量概览时间桶由Features/AIUsage/AIUsageDataProjection投影；PaxUI/PaxStackedChart+Categorical承载可选最少时间格、右轴平滑数列与对齐hover，PaxCharts保留共享状态/事件；Features/AIUsage/AIUsageTrendReadout投影结构化读数，PaxUI/PaxChartStructuredReadout在共享popover复用H1卡。合同见P07c「趋势时间与单位费用」，不改存储与RPC。
-
-CF顶部显式测试回归沿controller/cf_displayed_tests_test.go覆盖旧/空/失败扫描后的延迟、地区、下载与落盘；真实验收见tests/cf-explicit-tests/。
-
-测试截图按tests/SCREENSHOTS.md保留最新功能批次；旧图片从清理前Git提交取回，文字验收结论保留。
+CF的异步验证/冻结保存沿controller/cf_validation_operations.go，MCP四工具沿mcpserver/cf.go与cf_schema.go；不增包或存储。共享CF结果消息归operation.proto，Swift DaemonCFValidation与现有CFWorkspace在PaxClient映射。真实stdio/socket与落盘证据见tests/pax-mcp/1130-results.md。

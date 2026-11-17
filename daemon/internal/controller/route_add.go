@@ -42,7 +42,10 @@ func (c *Controller) addRoute(ctx context.Context, req *paxv1.RouteEditRequest) 
 		if err := c.saveCatalog(ctx, next); err != nil {
 			return err
 		}
-		outcome.RouteId, outcome.Created = id, created
+		outcome.RouteId, outcome.Created, outcome.CatalogRevision = id, created, next.Revision
+		if saved, ok := next.Find(id); ok {
+			outcome.RouteRevision = saved.Revision
+		}
 		return nil
 	}})
 }

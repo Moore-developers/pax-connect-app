@@ -40,6 +40,9 @@ func usageError(e error) error {
 	if errors.Is(e, aiusage.ErrBusy) {
 		return status.Error(codes.Unavailable, "ai_usage_busy")
 	}
+	if errors.Is(e, aiusage.ErrQueryChanged) {
+		return status.Error(codes.FailedPrecondition, "query_changed")
+	}
 	if errors.Is(e, aiusage.ErrRange) {
 		return status.Error(codes.InvalidArgument, "ai_usage_range_invalid")
 	}
@@ -66,11 +69,19 @@ func (s *AIUsageServer) QueryAIUsageBuckets(ctx context.Context, q *pb.AIUsageQu
 	if q.ToMs <= q.FromMs || q.ToMs-q.FromMs > aiusage.MaxQuerySpanMillis || q.Granularity != "hour" && q.Granularity != "day" {
 		return nil, usageError(aiusage.ErrRange)
 	}
+	location := time.Local
+	if q.Timezone != "" {
+		var err error
+		location, err = time.LoadLocation(q.Timezone)
+		if err != nil || q.Timezone == "Local" {
+			return nil, usageError(aiusage.ErrRange)
+		}
+	}
 	state := s.store.State()
 	if q.KnownRevision != nil && *q.KnownRevision == state.Revision {
 		return &pb.AIUsageBuckets{State: usageState(state), NotModified: true}, nil
 	}
-	b, e := s.store.Buckets(ctx, aiusage.Query{From: q.FromMs, To: q.ToMs, Granularity: q.Granularity})
+	b, e := s.store.Buckets(ctx, aiusage.Query{From: q.FromMs, To: q.ToMs, Granularity: q.Granularity, Location: location})
 	out := usageBuckets(b, state)
 	if e == nil {
 		var last map[string]int64
@@ -100,7 +111,7 @@ func (s *AIUsageServer) ListAIUsageLogs(ctx context.Context, q *pb.AIUsageLogQue
 	if q.ToMs <= q.FromMs || q.ToMs-q.FromMs > aiusage.MaxQuerySpanMillis || q.Page > 100000 {
 		return nil, usageError(aiusage.ErrRange)
 	}
-	v, state, e := readAIUsageLogs(ctx, s.store.List, s.store.State, aiusage.Query{From: q.FromMs, To: q.ToMs, CLI: q.Cli, Profile: q.ProfileId, Model: q.ModelId, Text: q.Query, Result: q.Succeeded, Page: int(q.Page), MinOfficialCost: q.MinOfficialCostMicro, MaxOfficialCost: q.MaxOfficialCostMicro, ServiceSource: q.ServiceSource})
+	v, state, e := readAIUsageLogs(ctx, s.store.List, s.store.State, aiusage.Query{From: q.FromMs, To: q.ToMs, CLI: q.Cli, Profile: q.ProfileId, Model: q.ModelId, Text: q.Query, Result: q.Succeeded, Page: int(q.Page), MinOfficialCost: q.MinOfficialCostMicro, MaxOfficialCost: q.MaxOfficialCostMicro, ServiceSource: q.ServiceSource, ExpectedRevision: q.ExpectedRevision, ExpectedGeneration: q.ExpectedGeneration})
 	out := &pb.AIUsageLogs{All: v.All, Success: v.Success, Failed: v.Failed, Totals: usageTotals(v.Total), State: usageState(state)}
 	for _, r := range v.Requests {
 		parts := make([]*pb.AIUsageUnitPrice, 4)
@@ -124,6 +135,8 @@ func readAIUsageLogs(ctx context.Context, list func(context.Context, aiusage.Que
 	if before.Generation != after.Generation {
 		return aiusage.Logs{}, after, aiusage.ErrBusy
 	}
+	// Persisted watermarks come from the page's SQLite transaction, not a later append.
+	after.Revision, after.Generation = rows.State.Revision, rows.State.Generation
 	return rows, after, nil
 }
 

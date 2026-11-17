@@ -1,0 +1,3 @@
+# 设置与日志操作协议
+
+`settings.operations.v1`将SaveNetworkPrivacy、SaveMeasurementPreferences、UpdateSettings、ClearLogs接入OperationContext与GetOperation。前两者保留同步返回，后两者ACK仅代表受理；原App无context的调用保持原合同。设置仍用唯一配置队列，日志仍在原日志writer提交；受理后不随RPC/stdio断开撤销，本地提交不可取消。清理时间与operation_id由daemon生成，context请求不得同时带旧operation_id/requested_at。结果SettingsOperationResult按privacy/measurement/retention/clear冻结实际值、版本与清理代数；存储失败保留failed，CAS冲突带最新revision。日志初始settings revision为0，按原owner原值回读并接受CAS，不伪造总版本。MeasurementPreferences/ExitPoolState移至privacy.proto，OperationContext移至operation_context.proto，消息全名/旧字段号不变；新增字段和typed结果的编号见proto。Go与PaxClient/DaemonSettingsOperation同步。权限、生效与删除范围见[M8](../changes/pax-mcp/tools-ai-settings.md#m8完整正式设置)。

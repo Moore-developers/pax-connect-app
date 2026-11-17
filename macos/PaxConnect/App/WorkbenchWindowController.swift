@@ -19,12 +19,14 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
   convenience init(
     routes: RoutesStore, connection: ConnectionStore, telemetry: TelemetryStore? = nil,
     aiProfiles: AIProfilesStore? = nil, aiUsage: AIUsageDataStore? = nil,
-    dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil
+    dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil,
+    mcpAccess: MCPAccessActions? = nil
   ) {
     self.init(
       shell: WorkbenchShellViewController(
         routes: routes, connection: connection, telemetry: telemetry, aiProfiles: aiProfiles,
-        aiUsage: aiUsage, dashboardSources: dashboardSources, refresh: refresh),
+        aiUsage: aiUsage, dashboardSources: dashboardSources, refresh: refresh,
+        mcpAccess: mcpAccess),
       store: nil)
     liveTelemetry = telemetry
     liveRefresh = refresh

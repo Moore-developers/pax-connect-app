@@ -9,7 +9,7 @@ import PaxProto
 /// 本类只做连接与映射；重连退避、事件聚合（250ms 批次）与断线保留快照由 ConnectionSession 管理。
 public actor DaemonConnection {
   /// 产品协议版本；与 api/pax.proto 的语义一起演进，握手不一致时 UI 提示升级。
-  public static let protocolVersion: UInt32 = 46
+  public static let protocolVersion: UInt32 = 47
   /// 生产环境的 socket 路径（daemon 以 root 运行，目录 root:admin 0750、socket 0660）。
   public static let defaultSocketPath = "/var/run/pax-connect/pax.sock"
 
@@ -54,7 +54,8 @@ public actor DaemonConnection {
         daemonVersion: hello.daemonVersion,
         protocolVersion: hello.protocolVersion, snapshotSeq: hello.snapshotSeq,
         serviceFingerprint: hello.serviceFingerprint, capabilities: Set(hello.capabilities),
-        initialInstall: hello.initialInstall, ownerAppPID: hello.ownerAppPid)
+        initialInstall: hello.initialInstall, ownerAppPID: hello.ownerAppPid,
+        daemonInstance: hello.daemonInstance, timezone: hello.timezone)
       let boundary = SubscriptionBoundary()
       try await withThrowingTaskGroup(of: Void.self) { group in
         group.addTask {

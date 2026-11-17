@@ -20,13 +20,16 @@ extension DaemonConnection {
     } catch let error as RPCError {
       if [
         "ai_usage_range_invalid", "ai_usage_unavailable", "ai_usage_busy", "ai_profile_not_found",
+        "query_changed",
       ].contains(error.message) {
         throw ProductError(code: error.message)
       }
       throw ClientError.classify(error)
     } catch { throw ClientError.classify(error) }
   }
-  public func aiUsageBuckets(from: Date, to: Date, granularity: String, revision: UInt64?)
+  public func aiUsageBuckets(
+    from: Date, to: Date, granularity: String, revision: UInt64?, timezone: String? = nil
+  )
     async throws -> AIUsageBucketPage
   {
     try await usageRPC { service, options in
@@ -36,6 +39,7 @@ extension DaemonConnection {
             $0.fromMs = Int64(from.timeIntervalSince1970 * 1000)
             $0.toMs = Int64(to.timeIntervalSince1970 * 1000)
             $0.granularity = granularity
+            if let timezone { $0.timezone = timezone }
             if let revision { $0.knownRevision = revision }
           }, options: options))
     }
@@ -104,6 +108,8 @@ extension DaemonConnection {
           .with {
             $0.fromMs = Int64(from.timeIntervalSince1970 * 1000)
             $0.toMs = Int64(to.timeIntervalSince1970 * 1000)
+            if let revision = filter.expectedRevision { $0.expectedRevision = revision }
+            if let generation = filter.expectedGeneration { $0.expectedGeneration = generation }
             if let result = filter.result { $0.succeeded = result }
             if let minimum = filter.minOfficialCostMicro { $0.minOfficialCostMicro = minimum }
             if let maximum = filter.maxOfficialCostMicro { $0.maxOfficialCostMicro = maximum }

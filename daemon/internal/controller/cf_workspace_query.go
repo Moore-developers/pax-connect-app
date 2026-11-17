@@ -76,7 +76,18 @@ func (c *Controller) cfQueryProfile(ctx context.Context, r *pb.CFWorkspaceReques
 			failure = errors.New("route_stale")
 			return
 		}
-		profile, failure = config.RouteFromDocument([]byte(r.DocumentJson), record.Config.ID, record.Config.Name)
+		raw := []byte(r.DocumentJson)
+		if len(raw) == 0 {
+			raw = config.DocumentForRoute(record.Config)
+		}
+		if r.ExpectedConfigRevision != 0 {
+			resolved, e := c.resolvedRecord(ctx, record)
+			if e != nil || connectionVersion(resolved, resolved.Config.TLSResolved) != r.ExpectedConfigRevision {
+				failure = errors.New("route_stale")
+				return
+			}
+		}
+		profile, failure = config.RouteFromDocument(raw, record.Config.ID, record.Config.Name)
 		if failure != nil {
 			return
 		}
@@ -154,6 +165,7 @@ func (c *Controller) QueryCFWorkspace(ctx context.Context, r *pb.CFWorkspaceRequ
 			out.OldestCheck = timestamppb.New(v.CheckedAt)
 		}
 	}
+	out.RecordCount = uint32(len(out.Records))
 	sort.Slice(out.Records, func(i, j int) bool { return out.Records[i].Ip < out.Records[j].Ip })
 	return out, nil
 }

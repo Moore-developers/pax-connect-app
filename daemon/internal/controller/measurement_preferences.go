@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"math"
 	paxv1 "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 	"pax-connect/daemon/internal/measurement"
@@ -59,6 +60,13 @@ func (c *Controller) GetMeasurementPreferences(context.Context, *emptypb.Empty) 
 	return value, nil
 }
 func (c *Controller) SaveMeasurementPreferences(ctx context.Context, request *paxv1.MeasurementPreferences) (*paxv1.MeasurementPreferences, error) {
+	if request == nil {
+		return nil, status.Error(codes.InvalidArgument, "measurement_preferences_invalid")
+	}
+	if request.Context != nil {
+		result, err := c.trackedSetting(ctx, "settings.measurement", request, request.Context)
+		return result.GetMeasurement(), err
+	}
 	if c.preferences == nil {
 		return nil, status.Error(codes.Unimplemented, "measurement_preferences_unavailable")
 	}
@@ -75,6 +83,9 @@ func (c *Controller) SaveMeasurementPreferences(ctx context.Context, request *pa
 	}
 	if p.value.Revision != request.Revision {
 		return nil, status.Error(codes.FailedPrecondition, "measurement_preferences_stale")
+	}
+	if p.value.Revision == math.MaxUint64 {
+		return nil, status.Error(codes.FailedPrecondition, "measurement_preferences_invalid")
 	}
 	value := p.value
 	value.Latency = int(request.LatencyParallel)
@@ -93,13 +104,13 @@ func (c *Controller) SaveMeasurementPreferences(ctx context.Context, request *pa
 	if value.DownloadMode == "" {
 		value.DownloadMode = value.Mode
 	}
-	if value.LatencyMode == "default" {
+	if value.LatencyMode != "manual" {
 		value.Latency = p.hardware
 	}
 	if value.ExitMode != "manual" {
 		value.Exit = 8
 	}
-	if value.DownloadMode == "default" {
+	if value.DownloadMode != "manual" {
 		value.Download = 8
 	}
 	value.Revision++

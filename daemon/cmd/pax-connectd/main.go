@@ -284,7 +284,9 @@ func run(socketPath string, logger *slog.Logger, mixed string, ownerPID int) (re
 	if profiles, err := userAIProfiles(directory); err == nil {
 		defer func() { _ = profiles.Close() }()
 		state.ConfigureAIProfiles()
-		paxv1.RegisterAIProfilesServiceServer(server, controller.NewAIProfilesServer(profiles))
+		profileServer := controller.NewAIProfilesServer(profiles, state)
+		defer profileServer.Close()
+		paxv1.RegisterAIProfilesServiceServer(server, profileServer)
 		if usage, e := userAIUsage(ctx, directory, profiles, server); e == nil {
 			state.ConfigureAIUsage(ctx, usage)
 			defer func() {

@@ -45,7 +45,7 @@ func (c *Controller) testExit(ctx context.Context, req *pb.TestRouteRequest) (*p
 	var failure error
 	err := c.query(ctx, func(ctx context.Context) {
 		owner := c.tests
-		if len(targets) == 1 && targets[0] != nil {
+		if req.Context == nil && len(targets) == 1 && targets[0] != nil {
 			if id := c.routes.exiting[targets[0].RouteId]; id != "" {
 				ack = &pb.OperationAck{OperationId: id}
 				return
@@ -106,6 +106,11 @@ func (c *Controller) testExit(ctx context.Context, req *pb.TestRouteRequest) (*p
 		for _, item := range items {
 			c.routes.exiting[item.profile.ID] = id
 		}
+		outcomes := make([]*pb.RouteMeasurementResult, 0, len(items))
+		for _, item := range items {
+			outcomes = append(outcomes, &pb.RouteMeasurementResult{RouteId: item.profile.ID, ConfigRevision: item.revision})
+		}
+		c.beginMeasurementOutcome(id, outcomes)
 		c.publishCatalog(ctx)
 		parallel := measurement.DefaultParallel
 		go c.runExitQueries(task, cancel, owner, lookup, items, id, parallel)
@@ -257,6 +262,14 @@ func (c *Controller) runExitQuery(ctx context.Context, owner *testOwner, lookup 
 		value.ExitLocation = &location
 	}
 	err := c.query(owner.lifetime, func(ctx context.Context) {
+		defer func() {
+			result.Success, result.ErrorCode = code == "", code
+			var failure *pb.ProductError
+			if code != "" {
+				failure = &pb.ProductError{Code: code}
+			}
+			c.recordMeasurementOutcome(owner, id, &pb.RouteMeasurementResult{RouteId: profile.ID, ConfigRevision: item.revision, Success: code == "", Error: failure, Measurement: &pb.RouteMeasurementResult_Exit{Exit: result}})
+		}()
 		if c.routes.exiting[profile.ID] != id {
 			return
 		}

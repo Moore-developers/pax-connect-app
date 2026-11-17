@@ -29,6 +29,15 @@ type modelResult struct {
 
 // RefreshModels performs a bounded read-only provider request outside the configuration owner lock.
 func (m *Manager) RefreshModels(ctx context.Context, id string) (Workspace, error) {
+	return m.refreshModels(ctx, id, 0)
+}
+
+// RefreshModelsBounded rejects an oversized complete workspace before saving the
+// fetched catalogue. The bound includes JSON field overhead, not just model text.
+func (m *Manager) RefreshModelsBounded(ctx context.Context, id string, maxBytes int) (Workspace, error) {
+	return m.refreshModels(ctx, id, maxBytes)
+}
+func (m *Manager) refreshModels(ctx context.Context, id string, maxBytes int) (Workspace, error) {
 	m.mu.Lock()
 	if m.blocked {
 		m.mu.Unlock()
@@ -74,6 +83,9 @@ func (m *Manager) RefreshModels(ctx context.Context, id string) (Workspace, erro
 		}
 	}
 	current.Revision++
+	if e := m.checkWorkspaceSize(ctx, maxBytes, &current.Profile, ""); e != nil {
+		return Workspace{}, e
+	}
 	if e := m.saveProfile(ctx, current); e != nil {
 		return Workspace{}, e
 	}

@@ -143,7 +143,14 @@ func (c *Controller) ConfigureRouteTester(tester RouteTester, parallel int) {
 // TestRoute acknowledges one bounded real-connection test. It never creates a TUN, never
 // changes the selected or current route, and never blocks catalog edits while running.
 func (c *Controller) TestRoute(ctx context.Context, req *paxv1.TestRouteRequest) (*paxv1.OperationAck, error) {
-	return c.mutationRequest(ctx, "test-route", req, req.ClientId, req.RequestId, func() (*paxv1.OperationAck, error) { return c.submitRouteTest(ctx, req) })
+	admit := func() (*paxv1.OperationAck, error) { return c.submitRouteTest(ctx, req) }
+	if req.Context != nil {
+		if req.ClientId != "" || req.RequestId != "" || len(req.Targets) == 0 || len(req.Targets) > 100 {
+			return nil, status.Error(codes.InvalidArgument, "test_batch_invalid")
+		}
+		return c.contextRequest(ctx, "test-route."+req.Kind, req, req.Context, admit)
+	}
+	return c.appRequest(ctx, "test-route."+req.Kind, req, req.RequestId, admit)
 }
 func (c *Controller) submitRouteTest(ctx context.Context, req *paxv1.TestRouteRequest) (*paxv1.OperationAck, error) {
 	if req.Kind == "exit" {
@@ -225,6 +232,7 @@ func (c *Controller) submitRouteTest(ctx context.Context, req *paxv1.TestRouteRe
 		record.Config.MeasurementLatency = latency
 		record.Config.MeasurementExit = exit
 		pending = id
+		c.beginMeasurementOutcome(id, []*paxv1.RouteMeasurementResult{{RouteId: current.Config.ID, ConfigRevision: connectionVersion(current, view)}})
 		c.publishCatalog(ctx)
 		go c.runRouteTest(testCtx, cancel, record, view, id, c.tests, c.tester)
 	}); err != nil {
@@ -372,12 +380,9 @@ func (c *Controller) finishRouteTest(opID, routeID string, result routeTestResul
 	evidence := operationEvidence(testLabel, result.code, "", "")
 	latency := sampleText(result.success, result.duration.String())
 	evidence.Sections = []config.EventSection{{Kind: "metrics", Title: "当次线路测试", Fields: []config.EventField{{Label: "线路", Value: result.routeName}, {Label: "样本时间", Value: result.at.Format(time.RFC3339)}, {Label: "首次耗时", Value: latency}}}}
-	if !c.enqueueCatalogEvidence(opID, testLabel, evidence, func(ctx context.Context) error {
-		if c.tests != nil {
-			c.tests.mu.Lock()
-			delete(c.tests.parents, opID)
-			c.tests.mu.Unlock()
-		}
+	if !c.enqueueCatalogEvidence(opID, testLabel, evidence, func(ctx context.Context) (failure error) {
+		defer func() { c.tests.mu.Lock(); delete(c.tests.parents, opID); c.tests.mu.Unlock() }()
+		defer func() { c.recordLatencyOutcome(c.tests, opID, routeID, result, failure) }()
 		if c.routes.testing[routeID] != opID {
 			if result.code != "" {
 				return &productError{code: result.code, params: result.params}

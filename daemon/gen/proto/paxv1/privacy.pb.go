@@ -99,6 +99,7 @@ type UpdateSettingsRequest struct {
 	ExpectedRevision uint64                 `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	OperationId      string                 `protobuf:"bytes,4,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
 	RequestedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	Context          *OperationContext      `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -168,12 +169,20 @@ func (x *UpdateSettingsRequest) GetRequestedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *UpdateSettingsRequest) GetContext() *OperationContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 // Saved intent; changes apply on next explicit proxy activation.
 type NetworkPrivacy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Revision      uint64                 `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
 	DnsMode       string                 `protobuf:"bytes,2,opt,name=dns_mode,json=dnsMode,proto3" json:"dns_mode,omitempty"`
 	Webrtc        bool                   `protobuf:"varint,3,opt,name=webrtc,proto3" json:"webrtc,omitempty"`
+	Context       *OperationContext      `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -227,6 +236,13 @@ func (x *NetworkPrivacy) GetWebrtc() bool {
 		return x.Webrtc
 	}
 	return false
+}
+
+func (x *NetworkPrivacy) GetContext() *OperationContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 // Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
@@ -291,31 +307,308 @@ func (x *ExternalTUN) GetAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type MeasurementPreferences struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Revision              uint64                 `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
+	LatencyParallel       uint32                 `protobuf:"varint,2,opt,name=latency_parallel,json=latencyParallel,proto3" json:"latency_parallel,omitempty"`
+	ExitParallel          uint32                 `protobuf:"varint,3,opt,name=exit_parallel,json=exitParallel,proto3" json:"exit_parallel,omitempty"`
+	DownloadParallel      uint32                 `protobuf:"varint,4,opt,name=download_parallel,json=downloadParallel,proto3" json:"download_parallel,omitempty"`
+	Mode                  string                 `protobuf:"bytes,5,opt,name=mode,proto3" json:"mode,omitempty"`
+	RecommendedLatency    uint32                 `protobuf:"varint,6,opt,name=recommended_latency,json=recommendedLatency,proto3" json:"recommended_latency,omitempty"`
+	RecommendedExit       uint32                 `protobuf:"varint,7,opt,name=recommended_exit,json=recommendedExit,proto3" json:"recommended_exit,omitempty"`
+	RecommendedDownload   uint32                 `protobuf:"varint,8,opt,name=recommended_download,json=recommendedDownload,proto3" json:"recommended_download,omitempty"`
+	RecommendationNetwork string                 `protobuf:"bytes,9,opt,name=recommendation_network,json=recommendationNetwork,proto3" json:"recommendation_network,omitempty"`
+	EvaluatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
+	LatencyMode           string                 `protobuf:"bytes,11,opt,name=latency_mode,json=latencyMode,proto3" json:"latency_mode,omitempty"`
+	ExitMode              string                 `protobuf:"bytes,12,opt,name=exit_mode,json=exitMode,proto3" json:"exit_mode,omitempty"`
+	DownloadMode          string                 `protobuf:"bytes,13,opt,name=download_mode,json=downloadMode,proto3" json:"download_mode,omitempty"`
+	// Read-only; ignored by SaveMeasurementPreferences.
+	ExitPoolState *ExitPoolState    `protobuf:"bytes,14,opt,name=exit_pool_state,json=exitPoolState,proto3" json:"exit_pool_state,omitempty"`
+	Context       *OperationContext `protobuf:"bytes,15,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MeasurementPreferences) Reset() {
+	*x = MeasurementPreferences{}
+	mi := &file_privacy_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MeasurementPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MeasurementPreferences) ProtoMessage() {}
+
+func (x *MeasurementPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_privacy_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MeasurementPreferences.ProtoReflect.Descriptor instead.
+func (*MeasurementPreferences) Descriptor() ([]byte, []int) {
+	return file_privacy_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *MeasurementPreferences) GetRevision() uint64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetLatencyParallel() uint32 {
+	if x != nil {
+		return x.LatencyParallel
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetExitParallel() uint32 {
+	if x != nil {
+		return x.ExitParallel
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetDownloadParallel() uint32 {
+	if x != nil {
+		return x.DownloadParallel
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *MeasurementPreferences) GetRecommendedLatency() uint32 {
+	if x != nil {
+		return x.RecommendedLatency
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetRecommendedExit() uint32 {
+	if x != nil {
+		return x.RecommendedExit
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetRecommendedDownload() uint32 {
+	if x != nil {
+		return x.RecommendedDownload
+	}
+	return 0
+}
+
+func (x *MeasurementPreferences) GetRecommendationNetwork() string {
+	if x != nil {
+		return x.RecommendationNetwork
+	}
+	return ""
+}
+
+func (x *MeasurementPreferences) GetEvaluatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvaluatedAt
+	}
+	return nil
+}
+
+func (x *MeasurementPreferences) GetLatencyMode() string {
+	if x != nil {
+		return x.LatencyMode
+	}
+	return ""
+}
+
+func (x *MeasurementPreferences) GetExitMode() string {
+	if x != nil {
+		return x.ExitMode
+	}
+	return ""
+}
+
+func (x *MeasurementPreferences) GetDownloadMode() string {
+	if x != nil {
+		return x.DownloadMode
+	}
+	return ""
+}
+
+func (x *MeasurementPreferences) GetExitPoolState() *ExitPoolState {
+	if x != nil {
+		return x.ExitPoolState
+	}
+	return nil
+}
+
+func (x *MeasurementPreferences) GetContext() *OperationContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type ExitPoolState struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ConfiguredLimit uint32                 `protobuf:"varint,1,opt,name=configured_limit,json=configuredLimit,proto3" json:"configured_limit,omitempty"`
+	InFlight        uint32                 `protobuf:"varint,2,opt,name=in_flight,json=inFlight,proto3" json:"in_flight,omitempty"`
+	Queued          uint32                 `protobuf:"varint,3,opt,name=queued,proto3" json:"queued,omitempty"`
+	// Subset of queued, not an additional task count.
+	Retrying           uint32                 `protobuf:"varint,4,opt,name=retrying,proto3" json:"retrying,omitempty"`
+	AvailableProviders uint32                 `protobuf:"varint,5,opt,name=available_providers,json=availableProviders,proto3" json:"available_providers,omitempty"`
+	TotalProviders     uint32                 `protobuf:"varint,6,opt,name=total_providers,json=totalProviders,proto3" json:"total_providers,omitempty"`
+	At                 *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=at,proto3" json:"at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ExitPoolState) Reset() {
+	*x = ExitPoolState{}
+	mi := &file_privacy_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExitPoolState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExitPoolState) ProtoMessage() {}
+
+func (x *ExitPoolState) ProtoReflect() protoreflect.Message {
+	mi := &file_privacy_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExitPoolState.ProtoReflect.Descriptor instead.
+func (*ExitPoolState) Descriptor() ([]byte, []int) {
+	return file_privacy_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ExitPoolState) GetConfiguredLimit() uint32 {
+	if x != nil {
+		return x.ConfiguredLimit
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetInFlight() uint32 {
+	if x != nil {
+		return x.InFlight
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetQueued() uint32 {
+	if x != nil {
+		return x.Queued
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetRetrying() uint32 {
+	if x != nil {
+		return x.Retrying
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetAvailableProviders() uint32 {
+	if x != nil {
+		return x.AvailableProviders
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetTotalProviders() uint32 {
+	if x != nil {
+		return x.TotalProviders
+	}
+	return 0
+}
+
+func (x *ExitPoolState) GetAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
 var File_privacy_proto protoreflect.FileDescriptor
 
 const file_privacy_proto_rawDesc = "" +
 	"\n" +
-	"\rprivacy.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x01\n" +
+	"\rprivacy.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17operation_context.proto\"\xa7\x01\n" +
 	"\bSettings\x12!\n" +
 	"\fauto_connect\x18\x01 \x01(\bR\vautoConnect\x12,\n" +
 	"\x12log_retention_days\x18\x02 \x01(\rR\x10logRetentionDays\x12\x1a\n" +
 	"\brevision\x18\x03 \x01(\x04R\brevision\x12.\n" +
-	"\x13log_retention_hours\x18\x04 \x01(\rR\x11logRetentionHours\"\xf3\x01\n" +
+	"\x13log_retention_hours\x18\x04 \x01(\rR\x11logRetentionHours\"\xa7\x02\n" +
 	"\x15UpdateSettingsRequest\x12,\n" +
 	"\bsettings\x18\x01 \x01(\v2\x10.pax.v1.SettingsR\bsettings\x12\x1d\n" +
 	"\n" +
 	"field_mask\x18\x02 \x03(\tR\tfieldMask\x12+\n" +
 	"\x11expected_revision\x18\x03 \x01(\x04R\x10expectedRevision\x12!\n" +
 	"\foperation_id\x18\x04 \x01(\tR\voperationId\x12=\n" +
-	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\"_\n" +
+	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\x122\n" +
+	"\acontext\x18\x06 \x01(\v2\x18.pax.v1.OperationContextR\acontext\"\x93\x01\n" +
 	"\x0eNetworkPrivacy\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x12\x19\n" +
 	"\bdns_mode\x18\x02 \x01(\tR\adnsMode\x12\x16\n" +
-	"\x06webrtc\x18\x03 \x01(\bR\x06webrtc\"o\n" +
+	"\x06webrtc\x18\x03 \x01(\bR\x06webrtc\x122\n" +
+	"\acontext\x18\x04 \x01(\v2\x18.pax.v1.OperationContextR\acontext\"o\n" +
 	"\vExternalTUN\x12\x1c\n" +
 	"\tinterface\x18\x01 \x01(\tR\tinterface\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12*\n" +
-	"\x02at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02atB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
+	"\x02at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"\xa2\x05\n" +
+	"\x16MeasurementPreferences\x12\x1a\n" +
+	"\brevision\x18\x01 \x01(\x04R\brevision\x12)\n" +
+	"\x10latency_parallel\x18\x02 \x01(\rR\x0flatencyParallel\x12#\n" +
+	"\rexit_parallel\x18\x03 \x01(\rR\fexitParallel\x12+\n" +
+	"\x11download_parallel\x18\x04 \x01(\rR\x10downloadParallel\x12\x12\n" +
+	"\x04mode\x18\x05 \x01(\tR\x04mode\x12/\n" +
+	"\x13recommended_latency\x18\x06 \x01(\rR\x12recommendedLatency\x12)\n" +
+	"\x10recommended_exit\x18\a \x01(\rR\x0frecommendedExit\x121\n" +
+	"\x14recommended_download\x18\b \x01(\rR\x13recommendedDownload\x125\n" +
+	"\x16recommendation_network\x18\t \x01(\tR\x15recommendationNetwork\x12=\n" +
+	"\fevaluated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\x12!\n" +
+	"\flatency_mode\x18\v \x01(\tR\vlatencyMode\x12\x1b\n" +
+	"\texit_mode\x18\f \x01(\tR\bexitMode\x12#\n" +
+	"\rdownload_mode\x18\r \x01(\tR\fdownloadMode\x12=\n" +
+	"\x0fexit_pool_state\x18\x0e \x01(\v2\x15.pax.v1.ExitPoolStateR\rexitPoolState\x122\n" +
+	"\acontext\x18\x0f \x01(\v2\x18.pax.v1.OperationContextR\acontext\"\x91\x02\n" +
+	"\rExitPoolState\x12)\n" +
+	"\x10configured_limit\x18\x01 \x01(\rR\x0fconfiguredLimit\x12\x1b\n" +
+	"\tin_flight\x18\x02 \x01(\rR\binFlight\x12\x16\n" +
+	"\x06queued\x18\x03 \x01(\rR\x06queued\x12\x1a\n" +
+	"\bretrying\x18\x04 \x01(\rR\bretrying\x12/\n" +
+	"\x13available_providers\x18\x05 \x01(\rR\x12availableProviders\x12'\n" +
+	"\x0ftotal_providers\x18\x06 \x01(\rR\x0etotalProviders\x12*\n" +
+	"\x02at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\x02atB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
 
 var (
 	file_privacy_proto_rawDescOnce sync.Once
@@ -329,23 +622,32 @@ func file_privacy_proto_rawDescGZIP() []byte {
 	return file_privacy_proto_rawDescData
 }
 
-var file_privacy_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_privacy_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_privacy_proto_goTypes = []any{
-	(*Settings)(nil),              // 0: pax.v1.Settings
-	(*UpdateSettingsRequest)(nil), // 1: pax.v1.UpdateSettingsRequest
-	(*NetworkPrivacy)(nil),        // 2: pax.v1.NetworkPrivacy
-	(*ExternalTUN)(nil),           // 3: pax.v1.ExternalTUN
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*Settings)(nil),               // 0: pax.v1.Settings
+	(*UpdateSettingsRequest)(nil),  // 1: pax.v1.UpdateSettingsRequest
+	(*NetworkPrivacy)(nil),         // 2: pax.v1.NetworkPrivacy
+	(*ExternalTUN)(nil),            // 3: pax.v1.ExternalTUN
+	(*MeasurementPreferences)(nil), // 4: pax.v1.MeasurementPreferences
+	(*ExitPoolState)(nil),          // 5: pax.v1.ExitPoolState
+	(*timestamppb.Timestamp)(nil),  // 6: google.protobuf.Timestamp
+	(*OperationContext)(nil),       // 7: pax.v1.OperationContext
 }
 var file_privacy_proto_depIdxs = []int32{
 	0, // 0: pax.v1.UpdateSettingsRequest.settings:type_name -> pax.v1.Settings
-	4, // 1: pax.v1.UpdateSettingsRequest.requested_at:type_name -> google.protobuf.Timestamp
-	4, // 2: pax.v1.ExternalTUN.at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6, // 1: pax.v1.UpdateSettingsRequest.requested_at:type_name -> google.protobuf.Timestamp
+	7, // 2: pax.v1.UpdateSettingsRequest.context:type_name -> pax.v1.OperationContext
+	7, // 3: pax.v1.NetworkPrivacy.context:type_name -> pax.v1.OperationContext
+	6, // 4: pax.v1.ExternalTUN.at:type_name -> google.protobuf.Timestamp
+	6, // 5: pax.v1.MeasurementPreferences.evaluated_at:type_name -> google.protobuf.Timestamp
+	5, // 6: pax.v1.MeasurementPreferences.exit_pool_state:type_name -> pax.v1.ExitPoolState
+	7, // 7: pax.v1.MeasurementPreferences.context:type_name -> pax.v1.OperationContext
+	6, // 8: pax.v1.ExitPoolState.at:type_name -> google.protobuf.Timestamp
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_privacy_proto_init() }
@@ -353,13 +655,14 @@ func file_privacy_proto_init() {
 	if File_privacy_proto != nil {
 		return
 	}
+	file_operation_context_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_privacy_proto_rawDesc), len(file_privacy_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

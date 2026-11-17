@@ -1,7 +1,7 @@
 # Pax Connect 构建入口（架构 §17、AGENTS.md「常用命令」）
 #
 #   make gen      生成 proto 两侧代码（Go + Swift）
-#   make daemon   编译 pax-connectd 与 pax-core（arm64）
+#   make daemon   编译 pax-connectd、pax-core 与两个 MCP 入口（arm64）
 #   make app      构建 AppKit App（需要 macos/PaxConnect.xcodeproj，见 macos/README.md）
 #   make lint     lint-size + lint-go + lint-swift 的合集
 #   make lint-size / lint-go / lint-swift   check-size（--changed）/ gofmt+go vet+golangci-lint / swift-format，可单跑

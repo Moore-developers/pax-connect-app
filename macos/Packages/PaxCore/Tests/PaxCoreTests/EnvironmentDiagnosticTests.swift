@@ -165,36 +165,102 @@ import Testing
     #expect(first == EnvironmentDiagnosticPresentation.markdown(store))
     store.cancel()
   }
-  @Test("取消后迟到样本不进入新一轮")
-  func cancelLateSample() async {
+  @Test("取消后迟到的启动响应不能打开浏览器或覆盖新一轮", arguments: [false, true])
+  func cancelLateSample(restart: Bool) async {
     actor Gate {
-      var started = false
-      func request(_ action: String, _ session: String) async throws -> EnvironmentDiagnosticReport
-      {
+      var starts = 0
+      var pending: [Int: CheckedContinuation<EnvironmentDiagnosticReport, Never>] = [:]
+      var events: Set<String> = []
+      var waiters: [String: CheckedContinuation<Void, Never>] = [:]
+
+      func arrive(_ event: String) {
+        events.insert(event)
+        waiters.removeValue(forKey: event)?.resume()
+      }
+      func wait(_ event: String) async {
+        if events.contains(event) { return }
+        await withCheckedContinuation { waiters[event] = $0 }
+      }
+      func request(_ action: String, _ session: String) async -> EnvironmentDiagnosticReport {
         if action == "start" {
-          started = true
-          try? await Task.sleep(for: .milliseconds(80))
+          starts += 1
+          let index = starts
+          // Deliberately ignore task cancellation: the real RPC can deliver a
+          // late reply. Only this test decides when that reply is released.
+          return await withCheckedContinuation {
+            pending[index] = $0
+            arrive("start:\(index)")
+          }
         }
-        return EnvironmentDiagnosticReport(
-          .with {
-            $0.sessionID = "fixture"
-            $0.browserURL = "http://127.0.0.1:1234/token/"
-          })
+        #expect(action == "cancel")
+        arrive("cancel:\(session)")
+        return EnvironmentDiagnosticReport(.init())
+      }
+      func release(_ index: Int) {
+        let continuation = pending.removeValue(forKey: index)
+        #expect(continuation != nil)
+        continuation?.resume(
+          returning: EnvironmentDiagnosticReport(
+            .with {
+              $0.sessionID = "fixture-\(index)"
+              $0.browserURL = "http://127.0.0.1:1234/fixture-\(index)"
+            }))
       }
     }
     let gate = Gate()
+    var opened: [String] = []
     let store = EnvironmentDiagnosticStore(
-      request: { try await gate.request($0, $1) },
-      openBrowser: { _ in
-        Issue.record("cancelled start must not open browser")
-        return true
+      request: { await gate.request($0, $1) },
+      openBrowser: { url in
+        let session = url.lastPathComponent
+        opened.append(session)
+        if session == "fixture-2" {
+          await gate.arrive("browser:2")
+          await gate.wait("release-browser:2")
+        }
+        return false
+      },
+      scanLocation: {
+        LocationExposure(
+          systemEnabled: false, authorizationsReadable: false, browsers: [], apps: [])
       })
     store.start()
-    for _ in 0..<100 where await gate.started == false { await Task.yield() }
+    await gate.wait("start:1")
     store.cancel()
-    try? await Task.sleep(for: .milliseconds(100))
-    #expect(!store.busy)
     #expect(store.report == nil)
+    #expect(store.runState == .stopped)
+
+    if restart {
+      store.start()
+      await gate.wait("start:2")
+      await gate.release(2)
+      await gate.wait("browser:2")
+      #expect(store.report?.sessionID == "fixture-2")
+    }
+    let expectedReport = store.report
+    let expectedLocal = store.local
+    let expectedProgress = store.progressReport
+    let expectedMessage = store.message
+    let expectedState = store.runState
+    let expectedBusy = store.busy
+
+    // Cancellation is synchronous and already returned. Release the old start
+    // only now; wait for its real cleanup path instead of sleeping or yielding.
+    await gate.release(1)
+    await gate.wait("cancel:fixture-1")
+    #expect(opened == (restart ? ["fixture-2"] : []))
+    #expect(store.report == expectedReport)
+    #expect(store.local == expectedLocal)
+    #expect(store.progressReport == expectedProgress)
+    #expect(store.message == expectedMessage)
+    #expect(store.runState == expectedState)
+    #expect(store.busy == expectedBusy)
+
+    if restart {
+      store.cancel()
+      await gate.arrive("release-browser:2")
+      await gate.wait("cancel:fixture-2")
+    }
   }
 
   @Test("扫描进行中取消：不标记完成")

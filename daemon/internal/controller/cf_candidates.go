@@ -18,15 +18,16 @@ import (
 )
 
 type cfOwner struct {
-	workspace *cfWorkspace
-	mu        sync.Mutex
-	cache     map[string]*paxv1.CFCandidate
-	slots     chan struct{}
+	workspace   *cfWorkspace
+	mu          sync.Mutex
+	cache       map[string]*paxv1.CFCandidate
+	slots       chan struct{}
+	validations map[string]*cfValidatedDraft
 }
 
 // ConfigureCFCandidates enables only real candidate validation, never demo probes.
 func (c *Controller) ConfigureCFCandidates() {
-	c.cf = &cfOwner{cache: map[string]*paxv1.CFCandidate{}, slots: make(chan struct{}, 2)}
+	c.cf = &cfOwner{cache: map[string]*paxv1.CFCandidate{}, validations: map[string]*cfValidatedDraft{}, slots: make(chan struct{}, 2)}
 }
 func (c *Controller) QueryCFCandidates(ctx context.Context, _ *emptypb.Empty) (*paxv1.CFCandidates, error) {
 	if c.cf == nil || c.physical == nil {
@@ -61,6 +62,13 @@ func (c *Controller) ValidateCFCandidate(ctx context.Context, request *paxv1.CFV
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "cf_ip_invalid")
 	}
+	c.cf.mu.Lock()
+	for id, draft := range c.cf.validations {
+		if draft.ready && draft.request.RouteId == request.RouteId {
+			delete(c.cf.validations, id)
+		}
+	}
+	c.cf.mu.Unlock()
 	select {
 	case c.cf.slots <- struct{}{}:
 		defer func() { <-c.cf.slots }()

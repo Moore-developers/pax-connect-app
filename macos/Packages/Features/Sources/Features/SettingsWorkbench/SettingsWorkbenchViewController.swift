@@ -8,6 +8,7 @@ final class SettingsWorkbenchViewController: NSViewController {
   private let privacyController: NetworkPrivacySettingsController?
   private let logHistoryController: LogHistorySettingsController?
   private let measurementController: MeasurementSettingsViewController?
+  private let mcpController: MCPAccessSettingsController?
   private let content = NSStackView()
   private var expanded = false
   private lazy var disclosure = PaxRouteButton(
@@ -16,8 +17,12 @@ final class SettingsWorkbenchViewController: NSViewController {
 
   init(
     measurement: MeasurementSettingsViewController? = nil, telemetry: TelemetryStore? = nil,
-    privacyRoutes: RoutesStore? = nil
+    privacyRoutes: RoutesStore? = nil, mcpAccess: MCPAccessActions? = nil,
+    connection: ConnectionStore? = nil
   ) {
+    mcpController = mcpAccess.flatMap { actions in
+      connection.map { MCPAccessSettingsController(actions: actions, connection: $0) }
+    }
     privacyController = privacyRoutes.map(NetworkPrivacySettingsController.init)
     logHistoryController = telemetry.map(LogHistorySettingsController.init)
     measurementController = measurement
@@ -46,6 +51,7 @@ final class SettingsWorkbenchViewController: NSViewController {
     document.addSubview(content)
     if let privacyController { add(privacyController) }
     if let logHistoryController { add(logHistoryController) }
+    if let mcpController { add(mcpController) }
     if let measurementController {
       disclosure.setAccessibilityIdentifier("settings-measurement-disclosure")
       disclosure.setAccessibilityValue("已折叠")

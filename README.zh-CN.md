@@ -76,6 +76,12 @@ Pax Connect 是独立的第三方客户端，不是 sing-box 官方产品。它*
 - 会话分析，区分主会话与子代理。
 - 把配置应用到 Claude Code 的 `settings.json` 和 Codex 的 `config.toml`。
 
+## MCP接入
+
+在Pax「设置 → MCP」检查就绪状态，接入Codex、Claude Code或DeepSeek Harness。新接入默认只读，可选查询与诊断。保留已有权限，不覆盖冲突登记。升级App后，请重启或重新连接AI客户端。
+
+业务工具要求Pax正在运行。MCP不会自动打开App或开启代理。查询所得日志、域名和会话数据可能由AI客户端发送至其服务。入口验证只检查初始化与工具发现，不代表目标客户端已连接。
+
 ## 安装
 
 > **系统要求：** 搭载 **Apple Silicon** 的 Mac，系统为 **macOS 26 或更新**。不支持 Intel Mac。

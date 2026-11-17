@@ -31,14 +31,20 @@ func (c *Controller) DiagnoseNetwork(ctx context.Context, req *pb.NetworkDiagnos
 	if req.Mode != "quick" && req.Mode != "services" && req.Mode != "full" && req.Mode != "sources" {
 		return nil, status.Error(codes.InvalidArgument, "network_diagnostic_mode_invalid")
 	}
-	tester, ok := c.tester.(networkDiagnoser)
-	if !ok || c.tests == nil || c.pathDiagnostics == nil {
+	if c.pathDiagnostics == nil {
 		return nil, status.Error(codes.Unimplemented, "network_diagnostics_unavailable")
 	}
 	if !c.pathDiagnostics.mu.TryLock() {
 		return nil, status.Error(codes.ResourceExhausted, "path_diagnostics_busy")
 	}
 	defer c.pathDiagnostics.mu.Unlock()
+	return c.diagnoseNetwork(ctx, req)
+}
+func (c *Controller) diagnoseNetwork(ctx context.Context, req *pb.NetworkDiagnosticRequest) (*pb.NetworkDiagnosticReport, error) {
+	tester, ok := c.tester.(networkDiagnoser)
+	if !ok || c.tests == nil {
+		return nil, status.Error(codes.Unimplemented, "network_diagnostics_unavailable")
+	}
 	ctx = measurement.WithDiagnosticObserver(ctx, c.pathDiagnostics.beginProgress(req.OperationId))
 	defer c.pathDiagnostics.finishProgress()
 	capture, err := c.captureConnectionDiagnosis(ctx)

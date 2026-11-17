@@ -24,6 +24,8 @@ message AIUsageQuery {
  // Field 5 was visible; page visibility is now reported through PaxService.SetViewVisibility.
  reserved 5;
  reserved "visible";
+ // Optional IANA timezone for day grouping; omitted preserves daemon local days.
+ string timezone=6;
 }
 message AIUsageSummaryQuery {}
 message AIUsageTotals {
@@ -58,6 +60,8 @@ message AIUsageLogQuery {
  // Inclusive bounds on the stored 1x official cost (sum of costs_micro), before totals and pagination.
  optional int64 min_official_cost_micro=9; optional int64 max_official_cost_micro=10;
  string service_source=11;
+ // Optional paired watermarks from the first page; checked in the same read transaction.
+ optional uint64 expected_revision=12; optional uint64 expected_generation=13;
 }
 message AIUsageUnitPrice { optional double value=1; }
 message AIUsageRequest {

@@ -150,6 +150,19 @@ func (c *Controller) captureConnectionDiagnosis(ctx context.Context) (diagnostic
 // DiagnoseConnection defaults to retained evidence. Recheck only reads the OS/core
 // and makes one isolated HTTPS request; it cannot apply a profile or switch TUN.
 func (c *Controller) DiagnoseConnection(ctx context.Context, req *pb.ConnectionDiagnosticRequest) (*pb.TrafficPathDiagnostics, error) {
+	if req.Recheck {
+		p := c.pathDiagnostics
+		if p == nil {
+			return nil, status.Error(codes.Unimplemented, "path_diagnostics_unavailable")
+		}
+		if !p.mu.TryLock() {
+			return nil, status.Error(codes.ResourceExhausted, "path_diagnostics_busy")
+		}
+		defer p.mu.Unlock()
+	}
+	return c.diagnoseConnection(ctx, req)
+}
+func (c *Controller) diagnoseConnection(ctx context.Context, req *pb.ConnectionDiagnosticRequest) (*pb.TrafficPathDiagnostics, error) {
 	p := c.pathDiagnostics
 	if p == nil {
 		return nil, status.Error(codes.Unimplemented, "path_diagnostics_unavailable")
@@ -177,10 +190,6 @@ func (c *Controller) DiagnoseConnection(ctx context.Context, req *pb.ConnectionD
 		}
 		return result, nil
 	}
-	if !p.mu.TryLock() {
-		return nil, status.Error(codes.ResourceExhausted, "path_diagnostics_busy")
-	}
-	defer p.mu.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if c.tests != nil {

@@ -103,11 +103,18 @@ func (c *Controller) mergeCFExplicit(r cf.Record) {
 	c.cf.mu.Unlock()
 }
 func (c *Controller) RunCFTask(ctx context.Context, r *pb.CFTaskRequest) (*pb.OperationAck, error) {
+	admit := func() (*pb.OperationAck, error) { return c.runCFTask(ctx, r) }
+	if r.Context != nil {
+		return c.contextRequest(ctx, "cf.run", r, r.Context, admit)
+	}
+	return c.appRequest(ctx, "cf.run", r, "", admit)
+}
+func (c *Controller) runCFTask(ctx context.Context, r *pb.CFTaskRequest) (*pb.OperationAck, error) {
 	if c.cf == nil || c.physical == nil || c.tests == nil {
 		return nil, status.Error(codes.Unimplemented, "cf_workspace_unavailable")
 	}
 	for _, ip := range r.Ips {
-		if !cf.IsAddress(ip) {
+		if _, ok := cf.NormalizeCandidate(ip); !ok {
 			return nil, status.Error(codes.InvalidArgument, "cf_ip_invalid")
 		}
 	}
@@ -334,7 +341,15 @@ func (c *Controller) runCF(ctx context.Context, cancel context.CancelFunc, id, a
 		c.tests.bandwidth = ""
 	}
 	c.tests.mu.Unlock()
-	c.completeOperation(id, "CF "+action, code)
+	resultCtx, release := context.WithTimeout(c.tests.lifetime, 2*time.Second)
+	workspace, _ := c.QueryCFWorkspace(resultCtx, &pb.CFWorkspaceRequest{})
+	release()
+	if workspace != nil {
+		workspace.RecordCount = uint32(len(workspace.Records))
+		workspace.RecordsOmitted = len(workspace.Records) > 0
+		workspace.Records = nil
+	}
+	c.completeOperationPayload(id, "CF "+action, code, "", "", nil, &pb.OperationResult{CfWorkspace: workspace})
 }
 
 // measureCFSingle keeps admission, path identity and cancellation under one owner.

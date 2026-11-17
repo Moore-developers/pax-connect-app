@@ -60,6 +60,7 @@ func (*AIProfilesQuery) Descriptor() ([]byte, []int) {
 type AIProfileModelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProfileId     string                 `protobuf:"bytes,1,opt,name=profile_id,json=profileId,proto3" json:"profile_id,omitempty"`
+	Context       *OperationContext      `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -101,409 +102,9 @@ func (x *AIProfileModelsRequest) GetProfileId() string {
 	return ""
 }
 
-type AIProviderModel struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Owner         string                 `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	ContextWindow int64                  `protobuf:"varint,4,opt,name=context_window,json=contextWindow,proto3" json:"context_window,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AIProviderModel) Reset() {
-	*x = AIProviderModel{}
-	mi := &file_ai_profiles_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AIProviderModel) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AIProviderModel) ProtoMessage() {}
-
-func (x *AIProviderModel) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[2]
+func (x *AIProfileModelsRequest) GetContext() *OperationContext {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AIProviderModel.ProtoReflect.Descriptor instead.
-func (*AIProviderModel) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *AIProviderModel) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AIProviderModel) GetOwner() string {
-	if x != nil {
-		return x.Owner
-	}
-	return ""
-}
-
-func (x *AIProviderModel) GetDisplayName() string {
-	if x != nil {
-		return x.DisplayName
-	}
-	return ""
-}
-
-func (x *AIProviderModel) GetContextWindow() int64 {
-	if x != nil {
-		return x.ContextWindow
-	}
-	return 0
-}
-
-type AIProfileSummary struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Revision           uint64                 `protobuf:"varint,2,opt,name=revision,proto3" json:"revision,omitempty"`
-	ConnectionRevision uint64                 `protobuf:"varint,3,opt,name=connection_revision,json=connectionRevision,proto3" json:"connection_revision,omitempty"`
-	Name               string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	BaseUrl            string                 `protobuf:"bytes,5,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	Multiplier         float64                `protobuf:"fixed64,6,opt,name=multiplier,proto3" json:"multiplier,omitempty"`
-	ModelIds           []string               `protobuf:"bytes,7,rep,name=model_ids,json=modelIds,proto3" json:"model_ids,omitempty"`
-	HasKey             bool                   `protobuf:"varint,8,opt,name=has_key,json=hasKey,proto3" json:"has_key,omitempty"`
-	// Native snapshots are CLI-specific selectable configurations, not API credentials.
-	Kind           string             `protobuf:"bytes,9,opt,name=kind,proto3" json:"kind,omitempty"`
-	NativeCli      string             `protobuf:"bytes,10,opt,name=native_cli,json=nativeCli,proto3" json:"native_cli,omitempty"`
-	Catalog        []*AIProviderModel `protobuf:"bytes,11,rep,name=catalog,proto3" json:"catalog,omitempty"`
-	ModelsState    string             `protobuf:"bytes,12,opt,name=models_state,json=modelsState,proto3" json:"models_state,omitempty"`
-	ModelsEndpoint string             `protobuf:"bytes,13,opt,name=models_endpoint,json=modelsEndpoint,proto3" json:"models_endpoint,omitempty"`
-	ModelsChecked  int64              `protobuf:"varint,14,opt,name=models_checked,json=modelsChecked,proto3" json:"models_checked,omitempty"`
-	ModelsError    string             `protobuf:"bytes,15,opt,name=models_error,json=modelsError,proto3" json:"models_error,omitempty"`
-	// Per-model multipliers keyed by request model id; a model not listed pays `multiplier`.
-	// Save replaces the whole map. Every value is within 0..100 with at most three decimals,
-	// as is `multiplier`.
-	ModelMultipliers map[string]float64 `protobuf:"bytes,16,rep,name=model_multipliers,json=modelMultipliers,proto3" json:"model_multipliers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *AIProfileSummary) Reset() {
-	*x = AIProfileSummary{}
-	mi := &file_ai_profiles_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AIProfileSummary) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AIProfileSummary) ProtoMessage() {}
-
-func (x *AIProfileSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AIProfileSummary.ProtoReflect.Descriptor instead.
-func (*AIProfileSummary) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *AIProfileSummary) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetRevision() uint64 {
-	if x != nil {
-		return x.Revision
-	}
-	return 0
-}
-
-func (x *AIProfileSummary) GetConnectionRevision() uint64 {
-	if x != nil {
-		return x.ConnectionRevision
-	}
-	return 0
-}
-
-func (x *AIProfileSummary) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetBaseUrl() string {
-	if x != nil {
-		return x.BaseUrl
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetMultiplier() float64 {
-	if x != nil {
-		return x.Multiplier
-	}
-	return 0
-}
-
-func (x *AIProfileSummary) GetModelIds() []string {
-	if x != nil {
-		return x.ModelIds
-	}
-	return nil
-}
-
-func (x *AIProfileSummary) GetHasKey() bool {
-	if x != nil {
-		return x.HasKey
-	}
-	return false
-}
-
-func (x *AIProfileSummary) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetNativeCli() string {
-	if x != nil {
-		return x.NativeCli
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetCatalog() []*AIProviderModel {
-	if x != nil {
-		return x.Catalog
-	}
-	return nil
-}
-
-func (x *AIProfileSummary) GetModelsState() string {
-	if x != nil {
-		return x.ModelsState
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetModelsEndpoint() string {
-	if x != nil {
-		return x.ModelsEndpoint
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetModelsChecked() int64 {
-	if x != nil {
-		return x.ModelsChecked
-	}
-	return 0
-}
-
-func (x *AIProfileSummary) GetModelsError() string {
-	if x != nil {
-		return x.ModelsError
-	}
-	return ""
-}
-
-func (x *AIProfileSummary) GetModelMultipliers() map[string]float64 {
-	if x != nil {
-		return x.ModelMultipliers
-	}
-	return nil
-}
-
-type AIClientBinding struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Cli          string                 `protobuf:"bytes,1,opt,name=cli,proto3" json:"cli,omitempty"`
-	ProfileId    string                 `protobuf:"bytes,2,opt,name=profile_id,json=profileId,proto3" json:"profile_id,omitempty"`
-	State        string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
-	Reason       string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	InspectionId string                 `protobuf:"bytes,5,opt,name=inspection_id,json=inspectionId,proto3" json:"inspection_id,omitempty"`
-	// Deprecated: Marked as deprecated in ai_profiles.proto.
-	TemplateRevision uint64 `protobuf:"varint,6,opt,name=template_revision,json=templateRevision,proto3" json:"template_revision,omitempty"`
-	Endpoint         string `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	TargetPath       string `protobuf:"bytes,8,opt,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
-	RequiresModel    bool   `protobuf:"varint,9,opt,name=requires_model,json=requiresModel,proto3" json:"requires_model,omitempty"`
-	// Configured authentication route; never proof of a valid subscription or live session.
-	ServiceSource string `protobuf:"bytes,10,opt,name=service_source,json=serviceSource,proto3" json:"service_source,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AIClientBinding) Reset() {
-	*x = AIClientBinding{}
-	mi := &file_ai_profiles_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AIClientBinding) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AIClientBinding) ProtoMessage() {}
-
-func (x *AIClientBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AIClientBinding.ProtoReflect.Descriptor instead.
-func (*AIClientBinding) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *AIClientBinding) GetCli() string {
-	if x != nil {
-		return x.Cli
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetProfileId() string {
-	if x != nil {
-		return x.ProfileId
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetState() string {
-	if x != nil {
-		return x.State
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetReason() string {
-	if x != nil {
-		return x.Reason
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetInspectionId() string {
-	if x != nil {
-		return x.InspectionId
-	}
-	return ""
-}
-
-// Deprecated: Marked as deprecated in ai_profiles.proto.
-func (x *AIClientBinding) GetTemplateRevision() uint64 {
-	if x != nil {
-		return x.TemplateRevision
-	}
-	return 0
-}
-
-func (x *AIClientBinding) GetEndpoint() string {
-	if x != nil {
-		return x.Endpoint
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetTargetPath() string {
-	if x != nil {
-		return x.TargetPath
-	}
-	return ""
-}
-
-func (x *AIClientBinding) GetRequiresModel() bool {
-	if x != nil {
-		return x.RequiresModel
-	}
-	return false
-}
-
-func (x *AIClientBinding) GetServiceSource() string {
-	if x != nil {
-		return x.ServiceSource
-	}
-	return ""
-}
-
-type AIProfilesWorkspace struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Profiles      []*AIProfileSummary    `protobuf:"bytes,1,rep,name=profiles,proto3" json:"profiles,omitempty"`
-	Bindings      []*AIClientBinding     `protobuf:"bytes,2,rep,name=bindings,proto3" json:"bindings,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AIProfilesWorkspace) Reset() {
-	*x = AIProfilesWorkspace{}
-	mi := &file_ai_profiles_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AIProfilesWorkspace) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AIProfilesWorkspace) ProtoMessage() {}
-
-func (x *AIProfilesWorkspace) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AIProfilesWorkspace.ProtoReflect.Descriptor instead.
-func (*AIProfilesWorkspace) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *AIProfilesWorkspace) GetProfiles() []*AIProfileSummary {
-	if x != nil {
-		return x.Profiles
-	}
-	return nil
-}
-
-func (x *AIProfilesWorkspace) GetBindings() []*AIClientBinding {
-	if x != nil {
-		return x.Bindings
+		return x.Context
 	}
 	return nil
 }
@@ -521,7 +122,7 @@ type AIProfileSave struct {
 
 func (x *AIProfileSave) Reset() {
 	*x = AIProfileSave{}
-	mi := &file_ai_profiles_proto_msgTypes[6]
+	mi := &file_ai_profiles_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -533,7 +134,7 @@ func (x *AIProfileSave) String() string {
 func (*AIProfileSave) ProtoMessage() {}
 
 func (x *AIProfileSave) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[6]
+	mi := &file_ai_profiles_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -546,7 +147,7 @@ func (x *AIProfileSave) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileSave.ProtoReflect.Descriptor instead.
 func (*AIProfileSave) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{6}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AIProfileSave) GetProfile() *AIProfileSummary {
@@ -587,7 +188,7 @@ type AIProfileDelete struct {
 
 func (x *AIProfileDelete) Reset() {
 	*x = AIProfileDelete{}
-	mi := &file_ai_profiles_proto_msgTypes[7]
+	mi := &file_ai_profiles_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -599,7 +200,7 @@ func (x *AIProfileDelete) String() string {
 func (*AIProfileDelete) ProtoMessage() {}
 
 func (x *AIProfileDelete) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[7]
+	mi := &file_ai_profiles_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -612,7 +213,7 @@ func (x *AIProfileDelete) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileDelete.ProtoReflect.Descriptor instead.
 func (*AIProfileDelete) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{7}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AIProfileDelete) GetProfileId() string {
@@ -635,13 +236,14 @@ type AIProfileImport struct {
 	InspectionId  string                 `protobuf:"bytes,2,opt,name=inspection_id,json=inspectionId,proto3" json:"inspection_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	Multiplier    float64                `protobuf:"fixed64,4,opt,name=multiplier,proto3" json:"multiplier,omitempty"`
+	Id            string                 `protobuf:"bytes,5,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AIProfileImport) Reset() {
 	*x = AIProfileImport{}
-	mi := &file_ai_profiles_proto_msgTypes[8]
+	mi := &file_ai_profiles_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -653,7 +255,7 @@ func (x *AIProfileImport) String() string {
 func (*AIProfileImport) ProtoMessage() {}
 
 func (x *AIProfileImport) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[8]
+	mi := &file_ai_profiles_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -666,7 +268,7 @@ func (x *AIProfileImport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileImport.ProtoReflect.Descriptor instead.
 func (*AIProfileImport) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{8}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AIProfileImport) GetCli() string {
@@ -697,6 +299,13 @@ func (x *AIProfileImport) GetMultiplier() float64 {
 	return 0
 }
 
+func (x *AIProfileImport) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type AIProfileTemplateInitialization struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cli           string                 `protobuf:"bytes,1,opt,name=cli,proto3" json:"cli,omitempty"`
@@ -707,7 +316,7 @@ type AIProfileTemplateInitialization struct {
 
 func (x *AIProfileTemplateInitialization) Reset() {
 	*x = AIProfileTemplateInitialization{}
-	mi := &file_ai_profiles_proto_msgTypes[9]
+	mi := &file_ai_profiles_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +328,7 @@ func (x *AIProfileTemplateInitialization) String() string {
 func (*AIProfileTemplateInitialization) ProtoMessage() {}
 
 func (x *AIProfileTemplateInitialization) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[9]
+	mi := &file_ai_profiles_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +341,7 @@ func (x *AIProfileTemplateInitialization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileTemplateInitialization.ProtoReflect.Descriptor instead.
 func (*AIProfileTemplateInitialization) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{9}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AIProfileTemplateInitialization) GetCli() string {
@@ -752,6 +361,7 @@ func (x *AIProfileTemplateInitialization) GetInspectionId() string {
 type AIProfileMutation struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	OperationId string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	Context     *OperationContext      `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
 	// Types that are valid to be assigned to Action:
 	//
 	//	*AIProfileMutation_Save
@@ -765,7 +375,7 @@ type AIProfileMutation struct {
 
 func (x *AIProfileMutation) Reset() {
 	*x = AIProfileMutation{}
-	mi := &file_ai_profiles_proto_msgTypes[10]
+	mi := &file_ai_profiles_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +387,7 @@ func (x *AIProfileMutation) String() string {
 func (*AIProfileMutation) ProtoMessage() {}
 
 func (x *AIProfileMutation) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[10]
+	mi := &file_ai_profiles_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +400,7 @@ func (x *AIProfileMutation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileMutation.ProtoReflect.Descriptor instead.
 func (*AIProfileMutation) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{10}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AIProfileMutation) GetOperationId() string {
@@ -798,6 +408,13 @@ func (x *AIProfileMutation) GetOperationId() string {
 		return x.OperationId
 	}
 	return ""
+}
+
+func (x *AIProfileMutation) GetContext() *OperationContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 func (x *AIProfileMutation) GetAction() isAIProfileMutation_Action {
@@ -883,15 +500,16 @@ type AIProfilePlanRequest struct {
 	InspectionId     string `protobuf:"bytes,5,opt,name=inspection_id,json=inspectionId,proto3" json:"inspection_id,omitempty"`
 	Restore          bool   `protobuf:"varint,6,opt,name=restore,proto3" json:"restore,omitempty"`
 	// Explicit first API configuration creation; never converts account authentication.
-	Initialize    bool   `protobuf:"varint,7,opt,name=initialize,proto3" json:"initialize,omitempty"`
-	ModelId       string `protobuf:"bytes,8,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Initialize    bool              `protobuf:"varint,7,opt,name=initialize,proto3" json:"initialize,omitempty"`
+	ModelId       string            `protobuf:"bytes,8,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Context       *OperationContext `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AIProfilePlanRequest) Reset() {
 	*x = AIProfilePlanRequest{}
-	mi := &file_ai_profiles_proto_msgTypes[11]
+	mi := &file_ai_profiles_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +521,7 @@ func (x *AIProfilePlanRequest) String() string {
 func (*AIProfilePlanRequest) ProtoMessage() {}
 
 func (x *AIProfilePlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[11]
+	mi := &file_ai_profiles_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -916,7 +534,7 @@ func (x *AIProfilePlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfilePlanRequest.ProtoReflect.Descriptor instead.
 func (*AIProfilePlanRequest) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{11}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AIProfilePlanRequest) GetCli() string {
@@ -976,106 +594,11 @@ func (x *AIProfilePlanRequest) GetModelId() string {
 	return ""
 }
 
-type AIProfilePlan struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Cli       string                 `protobuf:"bytes,2,opt,name=cli,proto3" json:"cli,omitempty"`
-	ProfileId string                 `protobuf:"bytes,3,opt,name=profile_id,json=profileId,proto3" json:"profile_id,omitempty"`
-	BaseUrl   string                 `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	// Deprecated: Marked as deprecated in ai_profiles.proto.
-	ExternalChanged bool   `protobuf:"varint,5,opt,name=external_changed,json=externalChanged,proto3" json:"external_changed,omitempty"`
-	ExpiresUnix     int64  `protobuf:"varint,6,opt,name=expires_unix,json=expiresUnix,proto3" json:"expires_unix,omitempty"`
-	Initializes     bool   `protobuf:"varint,7,opt,name=initializes,proto3" json:"initializes,omitempty"`
-	TargetPath      string `protobuf:"bytes,8,opt,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *AIProfilePlan) Reset() {
-	*x = AIProfilePlan{}
-	mi := &file_ai_profiles_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AIProfilePlan) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AIProfilePlan) ProtoMessage() {}
-
-func (x *AIProfilePlan) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[12]
+func (x *AIProfilePlanRequest) GetContext() *OperationContext {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
+		return x.Context
 	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AIProfilePlan.ProtoReflect.Descriptor instead.
-func (*AIProfilePlan) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *AIProfilePlan) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AIProfilePlan) GetCli() string {
-	if x != nil {
-		return x.Cli
-	}
-	return ""
-}
-
-func (x *AIProfilePlan) GetProfileId() string {
-	if x != nil {
-		return x.ProfileId
-	}
-	return ""
-}
-
-func (x *AIProfilePlan) GetBaseUrl() string {
-	if x != nil {
-		return x.BaseUrl
-	}
-	return ""
-}
-
-// Deprecated: Marked as deprecated in ai_profiles.proto.
-func (x *AIProfilePlan) GetExternalChanged() bool {
-	if x != nil {
-		return x.ExternalChanged
-	}
-	return false
-}
-
-func (x *AIProfilePlan) GetExpiresUnix() int64 {
-	if x != nil {
-		return x.ExpiresUnix
-	}
-	return 0
-}
-
-func (x *AIProfilePlan) GetInitializes() bool {
-	if x != nil {
-		return x.Initializes
-	}
-	return false
-}
-
-func (x *AIProfilePlan) GetTargetPath() string {
-	if x != nil {
-		return x.TargetPath
-	}
-	return ""
+	return nil
 }
 
 type AIProfileApplyRequest struct {
@@ -1083,14 +606,15 @@ type AIProfileApplyRequest struct {
 	PlanId      string                 `protobuf:"bytes,1,opt,name=plan_id,json=planId,proto3" json:"plan_id,omitempty"`
 	OperationId string                 `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
 	// Deprecated: Marked as deprecated in ai_profiles.proto.
-	Choice        string `protobuf:"bytes,3,opt,name=choice,proto3" json:"choice,omitempty"`
+	Choice        string            `protobuf:"bytes,3,opt,name=choice,proto3" json:"choice,omitempty"`
+	Context       *OperationContext `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AIProfileApplyRequest) Reset() {
 	*x = AIProfileApplyRequest{}
-	mi := &file_ai_profiles_proto_msgTypes[13]
+	mi := &file_ai_profiles_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1102,7 +626,7 @@ func (x *AIProfileApplyRequest) String() string {
 func (*AIProfileApplyRequest) ProtoMessage() {}
 
 func (x *AIProfileApplyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_profiles_proto_msgTypes[13]
+	mi := &file_ai_profiles_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1115,7 +639,7 @@ func (x *AIProfileApplyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIProfileApplyRequest.ProtoReflect.Descriptor instead.
 func (*AIProfileApplyRequest) Descriptor() ([]byte, []int) {
-	return file_ai_profiles_proto_rawDescGZIP(), []int{13}
+	return file_ai_profiles_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AIProfileApplyRequest) GetPlanId() string {
@@ -1140,61 +664,23 @@ func (x *AIProfileApplyRequest) GetChoice() string {
 	return ""
 }
 
+func (x *AIProfileApplyRequest) GetContext() *OperationContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 var File_ai_profiles_proto protoreflect.FileDescriptor
 
 const file_ai_profiles_proto_rawDesc = "" +
 	"\n" +
-	"\x11ai_profiles.proto\x12\x06pax.v1\"\x11\n" +
-	"\x0fAIProfilesQuery\"7\n" +
+	"\x11ai_profiles.proto\x12\x06pax.v1\x1a\x17operation_context.proto\x1a\x0foperation.proto\x1a\x16ai_profile_state.proto\"\x11\n" +
+	"\x0fAIProfilesQuery\"k\n" +
 	"\x16AIProfileModelsRequest\x12\x1d\n" +
 	"\n" +
-	"profile_id\x18\x01 \x01(\tR\tprofileId\"\x81\x01\n" +
-	"\x0fAIProviderModel\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05owner\x18\x02 \x01(\tR\x05owner\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12%\n" +
-	"\x0econtext_window\x18\x04 \x01(\x03R\rcontextWindow\"\x92\x05\n" +
-	"\x10AIProfileSummary\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\x04R\brevision\x12/\n" +
-	"\x13connection_revision\x18\x03 \x01(\x04R\x12connectionRevision\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x19\n" +
-	"\bbase_url\x18\x05 \x01(\tR\abaseUrl\x12\x1e\n" +
-	"\n" +
-	"multiplier\x18\x06 \x01(\x01R\n" +
-	"multiplier\x12\x1b\n" +
-	"\tmodel_ids\x18\a \x03(\tR\bmodelIds\x12\x17\n" +
-	"\ahas_key\x18\b \x01(\bR\x06hasKey\x12\x12\n" +
-	"\x04kind\x18\t \x01(\tR\x04kind\x12\x1d\n" +
-	"\n" +
-	"native_cli\x18\n" +
-	" \x01(\tR\tnativeCli\x121\n" +
-	"\acatalog\x18\v \x03(\v2\x17.pax.v1.AIProviderModelR\acatalog\x12!\n" +
-	"\fmodels_state\x18\f \x01(\tR\vmodelsState\x12'\n" +
-	"\x0fmodels_endpoint\x18\r \x01(\tR\x0emodelsEndpoint\x12%\n" +
-	"\x0emodels_checked\x18\x0e \x01(\x03R\rmodelsChecked\x12!\n" +
-	"\fmodels_error\x18\x0f \x01(\tR\vmodelsError\x12[\n" +
-	"\x11model_multipliers\x18\x10 \x03(\v2..pax.v1.AIProfileSummary.ModelMultipliersEntryR\x10modelMultipliers\x1aC\n" +
-	"\x15ModelMultipliersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd1\x02\n" +
-	"\x0fAIClientBinding\x12\x10\n" +
-	"\x03cli\x18\x01 \x01(\tR\x03cli\x12\x1d\n" +
-	"\n" +
-	"profile_id\x18\x02 \x01(\tR\tprofileId\x12\x14\n" +
-	"\x05state\x18\x03 \x01(\tR\x05state\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\x12#\n" +
-	"\rinspection_id\x18\x05 \x01(\tR\finspectionId\x12/\n" +
-	"\x11template_revision\x18\x06 \x01(\x04B\x02\x18\x01R\x10templateRevision\x12\x1a\n" +
-	"\bendpoint\x18\a \x01(\tR\bendpoint\x12\x1f\n" +
-	"\vtarget_path\x18\b \x01(\tR\n" +
-	"targetPath\x12%\n" +
-	"\x0erequires_model\x18\t \x01(\bR\rrequiresModel\x12%\n" +
-	"\x0eservice_source\x18\n" +
-	" \x01(\tR\rserviceSource\"\x80\x01\n" +
-	"\x13AIProfilesWorkspace\x124\n" +
-	"\bprofiles\x18\x01 \x03(\v2\x18.pax.v1.AIProfileSummaryR\bprofiles\x123\n" +
-	"\bbindings\x18\x02 \x03(\v2\x17.pax.v1.AIClientBindingR\bbindings\"\xaa\x01\n" +
+	"profile_id\x18\x01 \x01(\tR\tprofileId\x122\n" +
+	"\acontext\x18\x02 \x01(\v2\x18.pax.v1.OperationContextR\acontext\"\xaa\x01\n" +
 	"\rAIProfileSave\x122\n" +
 	"\aprofile\x18\x01 \x01(\v2\x18.pax.v1.AIProfileSummaryR\aprofile\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\x04R\x10expectedRevision\x12\x1f\n" +
@@ -1204,24 +690,26 @@ const file_ai_profiles_proto_rawDesc = "" +
 	"\x0fAIProfileDelete\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12+\n" +
-	"\x11expected_revision\x18\x02 \x01(\x04R\x10expectedRevision\"|\n" +
+	"\x11expected_revision\x18\x02 \x01(\x04R\x10expectedRevision\"\x8c\x01\n" +
 	"\x0fAIProfileImport\x12\x10\n" +
 	"\x03cli\x18\x01 \x01(\tR\x03cli\x12#\n" +
 	"\rinspection_id\x18\x02 \x01(\tR\finspectionId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"multiplier\x18\x04 \x01(\x01R\n" +
-	"multiplier\"X\n" +
+	"multiplier\x12\x0e\n" +
+	"\x02id\x18\x05 \x01(\tR\x02id\"X\n" +
 	"\x1fAIProfileTemplateInitialization\x12\x10\n" +
 	"\x03cli\x18\x01 \x01(\tR\x03cli\x12#\n" +
-	"\rinspection_id\x18\x02 \x01(\tR\finspectionId\"\xc2\x02\n" +
+	"\rinspection_id\x18\x02 \x01(\tR\finspectionId\"\xf6\x02\n" +
 	"\x11AIProfileMutation\x12!\n" +
-	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12+\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\x122\n" +
+	"\acontext\x18\x06 \x01(\v2\x18.pax.v1.OperationContextR\acontext\x12+\n" +
 	"\x04save\x18\x02 \x01(\v2\x15.pax.v1.AIProfileSaveH\x00R\x04save\x121\n" +
 	"\x06delete\x18\x03 \x01(\v2\x17.pax.v1.AIProfileDeleteH\x00R\x06delete\x12@\n" +
 	"\x0eimport_profile\x18\x04 \x01(\v2\x17.pax.v1.AIProfileImportH\x00R\rimportProfile\x12^\n" +
 	"\x13initialize_template\x18\x05 \x01(\v2'.pax.v1.AIProfileTemplateInitializationB\x02\x18\x01H\x00R\x12initializeTemplateB\b\n" +
-	"\x06action\"\x8e\x02\n" +
+	"\x06action\"\xc2\x02\n" +
 	"\x14AIProfilePlanRequest\x12\x10\n" +
 	"\x03cli\x18\x01 \x01(\tR\x03cli\x12\x1d\n" +
 	"\n" +
@@ -1233,27 +721,19 @@ const file_ai_profiles_proto_rawDesc = "" +
 	"\n" +
 	"initialize\x18\a \x01(\bR\n" +
 	"initialize\x12\x19\n" +
-	"\bmodel_id\x18\b \x01(\tR\amodelId\"\x80\x02\n" +
-	"\rAIProfilePlan\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
-	"\x03cli\x18\x02 \x01(\tR\x03cli\x12\x1d\n" +
-	"\n" +
-	"profile_id\x18\x03 \x01(\tR\tprofileId\x12\x19\n" +
-	"\bbase_url\x18\x04 \x01(\tR\abaseUrl\x12-\n" +
-	"\x10external_changed\x18\x05 \x01(\bB\x02\x18\x01R\x0fexternalChanged\x12!\n" +
-	"\fexpires_unix\x18\x06 \x01(\x03R\vexpiresUnix\x12 \n" +
-	"\vinitializes\x18\a \x01(\bR\vinitializes\x12\x1f\n" +
-	"\vtarget_path\x18\b \x01(\tR\n" +
-	"targetPath\"o\n" +
+	"\bmodel_id\x18\b \x01(\tR\amodelId\x122\n" +
+	"\acontext\x18\t \x01(\v2\x18.pax.v1.OperationContextR\acontext\"\xa3\x01\n" +
 	"\x15AIProfileApplyRequest\x12\x17\n" +
 	"\aplan_id\x18\x01 \x01(\tR\x06planId\x12!\n" +
 	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12\x1a\n" +
-	"\x06choice\x18\x03 \x01(\tB\x02\x18\x01R\x06choice2\x97\x03\n" +
+	"\x06choice\x18\x03 \x01(\tB\x02\x18\x01R\x06choice\x122\n" +
+	"\acontext\x18\x04 \x01(\v2\x18.pax.v1.OperationContextR\acontext2\xe5\x03\n" +
 	"\x11AIProfilesService\x12G\n" +
 	"\x0fQueryAIProfiles\x12\x17.pax.v1.AIProfilesQuery\x1a\x1b.pax.v1.AIProfilesWorkspace\x12I\n" +
 	"\x0fMutateAIProfile\x12\x19.pax.v1.AIProfileMutation\x1a\x1b.pax.v1.AIProfilesWorkspace\x12I\n" +
 	"\x12PlanAIProfileApply\x12\x1c.pax.v1.AIProfilePlanRequest\x1a\x15.pax.v1.AIProfilePlan\x12U\n" +
 	"\x16RefreshAIProfileModels\x12\x1e.pax.v1.AIProfileModelsRequest\x1a\x1b.pax.v1.AIProfilesWorkspace\x12L\n" +
+	"\x14StartAIProfileModels\x12\x1e.pax.v1.AIProfileModelsRequest\x1a\x14.pax.v1.OperationAck\x12L\n" +
 	"\x0eApplyAIProfile\x12\x1d.pax.v1.AIProfileApplyRequest\x1a\x1b.pax.v1.AIProfilesWorkspaceB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
 
 var (
@@ -1268,46 +748,47 @@ func file_ai_profiles_proto_rawDescGZIP() []byte {
 	return file_ai_profiles_proto_rawDescData
 }
 
-var file_ai_profiles_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_ai_profiles_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_ai_profiles_proto_goTypes = []any{
 	(*AIProfilesQuery)(nil),                 // 0: pax.v1.AIProfilesQuery
 	(*AIProfileModelsRequest)(nil),          // 1: pax.v1.AIProfileModelsRequest
-	(*AIProviderModel)(nil),                 // 2: pax.v1.AIProviderModel
-	(*AIProfileSummary)(nil),                // 3: pax.v1.AIProfileSummary
-	(*AIClientBinding)(nil),                 // 4: pax.v1.AIClientBinding
-	(*AIProfilesWorkspace)(nil),             // 5: pax.v1.AIProfilesWorkspace
-	(*AIProfileSave)(nil),                   // 6: pax.v1.AIProfileSave
-	(*AIProfileDelete)(nil),                 // 7: pax.v1.AIProfileDelete
-	(*AIProfileImport)(nil),                 // 8: pax.v1.AIProfileImport
-	(*AIProfileTemplateInitialization)(nil), // 9: pax.v1.AIProfileTemplateInitialization
-	(*AIProfileMutation)(nil),               // 10: pax.v1.AIProfileMutation
-	(*AIProfilePlanRequest)(nil),            // 11: pax.v1.AIProfilePlanRequest
+	(*AIProfileSave)(nil),                   // 2: pax.v1.AIProfileSave
+	(*AIProfileDelete)(nil),                 // 3: pax.v1.AIProfileDelete
+	(*AIProfileImport)(nil),                 // 4: pax.v1.AIProfileImport
+	(*AIProfileTemplateInitialization)(nil), // 5: pax.v1.AIProfileTemplateInitialization
+	(*AIProfileMutation)(nil),               // 6: pax.v1.AIProfileMutation
+	(*AIProfilePlanRequest)(nil),            // 7: pax.v1.AIProfilePlanRequest
+	(*AIProfileApplyRequest)(nil),           // 8: pax.v1.AIProfileApplyRequest
+	(*OperationContext)(nil),                // 9: pax.v1.OperationContext
+	(*AIProfileSummary)(nil),                // 10: pax.v1.AIProfileSummary
+	(*AIProfilesWorkspace)(nil),             // 11: pax.v1.AIProfilesWorkspace
 	(*AIProfilePlan)(nil),                   // 12: pax.v1.AIProfilePlan
-	(*AIProfileApplyRequest)(nil),           // 13: pax.v1.AIProfileApplyRequest
-	nil,                                     // 14: pax.v1.AIProfileSummary.ModelMultipliersEntry
+	(*OperationAck)(nil),                    // 13: pax.v1.OperationAck
 }
 var file_ai_profiles_proto_depIdxs = []int32{
-	2,  // 0: pax.v1.AIProfileSummary.catalog:type_name -> pax.v1.AIProviderModel
-	14, // 1: pax.v1.AIProfileSummary.model_multipliers:type_name -> pax.v1.AIProfileSummary.ModelMultipliersEntry
-	3,  // 2: pax.v1.AIProfilesWorkspace.profiles:type_name -> pax.v1.AIProfileSummary
-	4,  // 3: pax.v1.AIProfilesWorkspace.bindings:type_name -> pax.v1.AIClientBinding
-	3,  // 4: pax.v1.AIProfileSave.profile:type_name -> pax.v1.AIProfileSummary
-	6,  // 5: pax.v1.AIProfileMutation.save:type_name -> pax.v1.AIProfileSave
-	7,  // 6: pax.v1.AIProfileMutation.delete:type_name -> pax.v1.AIProfileDelete
-	8,  // 7: pax.v1.AIProfileMutation.import_profile:type_name -> pax.v1.AIProfileImport
-	9,  // 8: pax.v1.AIProfileMutation.initialize_template:type_name -> pax.v1.AIProfileTemplateInitialization
+	9,  // 0: pax.v1.AIProfileModelsRequest.context:type_name -> pax.v1.OperationContext
+	10, // 1: pax.v1.AIProfileSave.profile:type_name -> pax.v1.AIProfileSummary
+	9,  // 2: pax.v1.AIProfileMutation.context:type_name -> pax.v1.OperationContext
+	2,  // 3: pax.v1.AIProfileMutation.save:type_name -> pax.v1.AIProfileSave
+	3,  // 4: pax.v1.AIProfileMutation.delete:type_name -> pax.v1.AIProfileDelete
+	4,  // 5: pax.v1.AIProfileMutation.import_profile:type_name -> pax.v1.AIProfileImport
+	5,  // 6: pax.v1.AIProfileMutation.initialize_template:type_name -> pax.v1.AIProfileTemplateInitialization
+	9,  // 7: pax.v1.AIProfilePlanRequest.context:type_name -> pax.v1.OperationContext
+	9,  // 8: pax.v1.AIProfileApplyRequest.context:type_name -> pax.v1.OperationContext
 	0,  // 9: pax.v1.AIProfilesService.QueryAIProfiles:input_type -> pax.v1.AIProfilesQuery
-	10, // 10: pax.v1.AIProfilesService.MutateAIProfile:input_type -> pax.v1.AIProfileMutation
-	11, // 11: pax.v1.AIProfilesService.PlanAIProfileApply:input_type -> pax.v1.AIProfilePlanRequest
+	6,  // 10: pax.v1.AIProfilesService.MutateAIProfile:input_type -> pax.v1.AIProfileMutation
+	7,  // 11: pax.v1.AIProfilesService.PlanAIProfileApply:input_type -> pax.v1.AIProfilePlanRequest
 	1,  // 12: pax.v1.AIProfilesService.RefreshAIProfileModels:input_type -> pax.v1.AIProfileModelsRequest
-	13, // 13: pax.v1.AIProfilesService.ApplyAIProfile:input_type -> pax.v1.AIProfileApplyRequest
-	5,  // 14: pax.v1.AIProfilesService.QueryAIProfiles:output_type -> pax.v1.AIProfilesWorkspace
-	5,  // 15: pax.v1.AIProfilesService.MutateAIProfile:output_type -> pax.v1.AIProfilesWorkspace
-	12, // 16: pax.v1.AIProfilesService.PlanAIProfileApply:output_type -> pax.v1.AIProfilePlan
-	5,  // 17: pax.v1.AIProfilesService.RefreshAIProfileModels:output_type -> pax.v1.AIProfilesWorkspace
-	5,  // 18: pax.v1.AIProfilesService.ApplyAIProfile:output_type -> pax.v1.AIProfilesWorkspace
-	14, // [14:19] is the sub-list for method output_type
-	9,  // [9:14] is the sub-list for method input_type
+	1,  // 13: pax.v1.AIProfilesService.StartAIProfileModels:input_type -> pax.v1.AIProfileModelsRequest
+	8,  // 14: pax.v1.AIProfilesService.ApplyAIProfile:input_type -> pax.v1.AIProfileApplyRequest
+	11, // 15: pax.v1.AIProfilesService.QueryAIProfiles:output_type -> pax.v1.AIProfilesWorkspace
+	11, // 16: pax.v1.AIProfilesService.MutateAIProfile:output_type -> pax.v1.AIProfilesWorkspace
+	12, // 17: pax.v1.AIProfilesService.PlanAIProfileApply:output_type -> pax.v1.AIProfilePlan
+	11, // 18: pax.v1.AIProfilesService.RefreshAIProfileModels:output_type -> pax.v1.AIProfilesWorkspace
+	13, // 19: pax.v1.AIProfilesService.StartAIProfileModels:output_type -> pax.v1.OperationAck
+	11, // 20: pax.v1.AIProfilesService.ApplyAIProfile:output_type -> pax.v1.AIProfilesWorkspace
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1318,7 +799,10 @@ func file_ai_profiles_proto_init() {
 	if File_ai_profiles_proto != nil {
 		return
 	}
-	file_ai_profiles_proto_msgTypes[10].OneofWrappers = []any{
+	file_operation_context_proto_init()
+	file_operation_proto_init()
+	file_ai_profile_state_proto_init()
+	file_ai_profiles_proto_msgTypes[6].OneofWrappers = []any{
 		(*AIProfileMutation_Save)(nil),
 		(*AIProfileMutation_Delete)(nil),
 		(*AIProfileMutation_ImportProfile)(nil),
@@ -1330,7 +814,7 @@ func file_ai_profiles_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ai_profiles_proto_rawDesc), len(file_ai_profiles_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

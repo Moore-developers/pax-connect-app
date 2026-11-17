@@ -26,7 +26,8 @@ func (c *Controller) ConfirmRouteTLSBatch(ctx context.Context, request *paxv1.Co
 		return nil, status.Error(codes.FailedPrecondition, "tls_batch_unavailable")
 	}
 	return c.mutationRequest(ctx, "confirm-tls-batch", req, req.ClientId, req.RequestId, func() (*paxv1.OperationAck, error) {
-		return c.admitRouteOperation(ctx, &routeOperation{label: "证书设置", evidence: operationEvidence("证书设置", "", "", ""), apply: func(ctx context.Context) error {
+		outcome := &paxv1.RouteSaveResult{}
+		return c.admitRouteOperation(ctx, &routeOperation{result: outcome, label: "证书设置", evidence: operationEvidence("证书设置", "", "", ""), apply: func(ctx context.Context) error {
 			changes := make([]config.TLSBatchChange, 0, len(req.Routes))
 			automatic := make([]automaticRouteTest, 0, len(req.Routes))
 			seen := map[string]bool{}
@@ -43,17 +44,28 @@ func (c *Controller) ConfirmRouteTLSBatch(ctx context.Context, request *paxv1.Co
 				if err != nil {
 					return err
 				}
+				revision := item.ExpectedRevision
+				if item.ExpectedRouteRevision != 0 {
+					if record.Revision != item.ExpectedRouteRevision {
+						return errors.New("route_stale")
+					}
+					revision = view.Revision
+				}
 				measured, ok := c.routes.testResults[item.RouteId]
-				if !ok || measured.code != "tls_certificate_invalid" || measured.configRevision != connectionVersion(record, view) || view.IdentityToken != item.IdentityToken || view.Revision != item.ExpectedRevision {
+				if !ok || measured.code != "tls_certificate_invalid" || measured.configRevision != connectionVersion(record, view) || view.IdentityToken != item.IdentityToken || view.Revision != revision {
 					return config.ErrTLSStale
 				}
-				changes = append(changes, config.TLSBatchChange{Profile: record.Config, Token: item.IdentityToken, Revision: item.ExpectedRevision})
+				changes = append(changes, config.TLSBatchChange{Profile: record.Config, Token: item.IdentityToken, Revision: revision})
 				automatic = append(automatic, automaticRouteTest{id: item.RouteId, revision: record.Revision})
 			}
 			if err := repository.ConfirmBatch(ctx, changes); err != nil {
 				return err
 			}
 			c.publishCatalog(ctx)
+			outcome.CatalogRevision = c.routes.catalog.Revision
+			for _, item := range req.Routes {
+				outcome.ChangedRouteIds = append(outcome.ChangedRouteIds, item.RouteId)
+			}
 			c.enqueueAutomaticTests(automatic)
 			return nil
 		}})

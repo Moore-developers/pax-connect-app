@@ -26,7 +26,7 @@ def digest(*paths):
 def gather_notices(destination):
     modules = run('./../scripts/go.sh', 'list', '-deps', '-tags', TAGS,
                   '-f', '{{if .Module}}{{.Module.Dir}}{{end}}',
-                  './cmd/pax-connectd', './cmd/pax-core', cwd=ROOT / 'daemon')
+                  './cmd/pax-connectd', './cmd/pax-core', './cmd/pax-mcp', './cmd/pax-mcp-launcher', cwd=ROOT / 'daemon')
     dirs = {Path(line) for line in modules.splitlines() if line}
     dirs.discard(ROOT / 'daemon')
     checkouts = ROOT / 'build/DerivedData/SourcePackages/checkouts'
@@ -61,7 +61,7 @@ def main():
         raise SystemExit('wrong bundle identity')
     if info['LSMinimumSystemVersion'] != '26.0':
         raise SystemExit('unexpected minimum system')
-    for binary in ('PaxConnect', 'pax-connectd', 'pax-core'):
+    for binary in ('PaxConnect', 'pax-connectd', 'pax-core', 'pax-mcp', 'pax-mcp-launcher'):
         executable = contents / 'MacOS' / binary
         run('codesign', '--verify', '--strict', '--verbose=2', str(executable))
         if run('lipo', '-archs', str(executable)) != 'arm64':
@@ -79,6 +79,10 @@ def main():
         'core-fingerprint.txt': digest(contents / 'MacOS/pax-core'),
         'daemon-fingerprint.txt': digest(contents / 'MacOS/pax-connectd', plist),
     }
+    mcp_hashes = json.loads((resources / 'mcp-fingerprints.json').read_text())
+    for name in ('pax-mcp', 'pax-mcp-launcher'):
+        if mcp_hashes.get(name) != digest(contents / 'MacOS' / name):
+            raise SystemExit(f'MCP fingerprint mismatch: {name}')
     for name, expected in checks.items():
         if (resources / name).read_text().strip() != expected:
             raise SystemExit(f'fingerprint mismatch: {name}')
@@ -86,7 +90,7 @@ def main():
     daemon_version = run(str(contents / 'MacOS/pax-connectd'), '--version')
     if daemon_version != version:
         raise SystemExit(f'daemon version mismatch: {daemon_version}')
-    for name in ('pax-connectd', 'pax-core'):
+    for name in ('pax-connectd', 'pax-core', 'pax-mcp', 'pax-mcp-launcher'):
         (output / f'{name}-buildinfo.txt').write_text(
             run('go', 'version', '-m', str(contents / 'MacOS' / name)) + '\n')
     kernels = [run(str(contents / 'MacOS' / name), '--kernel-version')
@@ -103,7 +107,7 @@ def main():
         'daemonVersion': daemon_version,
         'kernelVersion': (resources / 'kernel-version.txt').read_text().strip(),
         'signing': 'ad-hoc', 'notarized': False, 'releaseStatus': 'beta',
-        'fingerprints': checks, 'dependenciesWithoutRootNotices': missing,
+        'fingerprints': {**checks, **mcp_hashes}, 'dependenciesWithoutRootNotices': missing,
         'knownLimitations': ['clean-machine downloaded installation and network acceptance not verified',
                              'GeoLite redistribution terms review remains open; existing data retained by publisher decision'],
     }

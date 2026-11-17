@@ -21,6 +21,19 @@ public enum Pax_V1_PaxService: Sendable {
     public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService")
     /// Namespace for method metadata.
     public enum Method: Sendable {
+        /// Namespace for "GetOperation" metadata.
+        public enum GetOperation: Sendable {
+            /// Request type for "GetOperation".
+            public typealias Input = Pax_V1_GetOperationRequest
+            /// Response type for "GetOperation".
+            public typealias Output = Pax_V1_OperationState
+            /// Descriptor for "GetOperation".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "GetOperation",
+                type: .unary
+            )
+        }
         /// Namespace for "RecheckCurrentPath" metadata.
         public enum RecheckCurrentPath: Sendable {
             /// Request type for "RecheckCurrentPath".
@@ -343,6 +356,32 @@ public enum Pax_V1_PaxService: Sendable {
             public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
                 method: "GetRouteEditor",
+                type: .unary
+            )
+        }
+        /// Namespace for "GetRouteEditView" metadata.
+        public enum GetRouteEditView: Sendable {
+            /// Request type for "GetRouteEditView".
+            public typealias Input = Pax_V1_GetRouteEditorRequest
+            /// Response type for "GetRouteEditView".
+            public typealias Output = Pax_V1_RouteEditView
+            /// Descriptor for "GetRouteEditView".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "GetRouteEditView",
+                type: .unary
+            )
+        }
+        /// Namespace for "SaveRouteEdit" metadata.
+        public enum SaveRouteEdit: Sendable {
+            /// Request type for "SaveRouteEdit".
+            public typealias Input = Pax_V1_SaveRouteEditRequest
+            /// Response type for "SaveRouteEdit".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "SaveRouteEdit".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "SaveRouteEdit",
                 type: .unary
             )
         }
@@ -697,6 +736,45 @@ public enum Pax_V1_PaxService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "StartConnectionDiagnostic" metadata.
+        public enum StartConnectionDiagnostic: Sendable {
+            /// Request type for "StartConnectionDiagnostic".
+            public typealias Input = Pax_V1_StartConnectionDiagnosticRequest
+            /// Response type for "StartConnectionDiagnostic".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "StartConnectionDiagnostic".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "StartConnectionDiagnostic",
+                type: .unary
+            )
+        }
+        /// Namespace for "StartNetworkDiagnostic" metadata.
+        public enum StartNetworkDiagnostic: Sendable {
+            /// Request type for "StartNetworkDiagnostic".
+            public typealias Input = Pax_V1_StartNetworkDiagnosticRequest
+            /// Response type for "StartNetworkDiagnostic".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "StartNetworkDiagnostic".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "StartNetworkDiagnostic",
+                type: .unary
+            )
+        }
+        /// Namespace for "StartEnvironmentSources" metadata.
+        public enum StartEnvironmentSources: Sendable {
+            /// Request type for "StartEnvironmentSources".
+            public typealias Input = Pax_V1_StartEnvironmentSourcesRequest
+            /// Response type for "StartEnvironmentSources".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "StartEnvironmentSources".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "StartEnvironmentSources",
+                type: .unary
+            )
+        }
         /// Namespace for "QueryCFCandidates" metadata.
         public enum QueryCFCandidates: Sendable {
             /// Request type for "QueryCFCandidates".
@@ -749,8 +827,35 @@ public enum Pax_V1_PaxService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "StartCFValidation" metadata.
+        public enum StartCFValidation: Sendable {
+            /// Request type for "StartCFValidation".
+            public typealias Input = Pax_V1_StartCFValidationRequest
+            /// Response type for "StartCFValidation".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "StartCFValidation".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "StartCFValidation",
+                type: .unary
+            )
+        }
+        /// Namespace for "SaveValidatedCFRoute" metadata.
+        public enum SaveValidatedCFRoute: Sendable {
+            /// Request type for "SaveValidatedCFRoute".
+            public typealias Input = Pax_V1_SaveValidatedCFRouteRequest
+            /// Response type for "SaveValidatedCFRoute".
+            public typealias Output = Pax_V1_OperationAck
+            /// Descriptor for "SaveValidatedCFRoute".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "SaveValidatedCFRoute",
+                type: .unary
+            )
+        }
         /// Descriptors for all methods in the "pax.v1.PaxService" service.
         public static let descriptors: [GRPCCore.MethodDescriptor] = [
+            GetOperation.descriptor,
             RecheckCurrentPath.descriptor,
             QueryLogUpdates.descriptor,
             QueryRoutingRules.descriptor,
@@ -776,6 +881,8 @@ public enum Pax_V1_PaxService: Sendable {
             UpdateRoute.descriptor,
             DeleteRoute.descriptor,
             GetRouteEditor.descriptor,
+            GetRouteEditView.descriptor,
+            SaveRouteEdit.descriptor,
             UpdateRouteTLS.descriptor,
             ConfirmRouteTLSBatch.descriptor,
             SaveChainRoute.descriptor,
@@ -803,10 +910,15 @@ public enum Pax_V1_PaxService: Sendable {
             DiagnoseConnection.descriptor,
             DiagnoseNetwork.descriptor,
             InspectEnvironment.descriptor,
+            StartConnectionDiagnostic.descriptor,
+            StartNetworkDiagnostic.descriptor,
+            StartEnvironmentSources.descriptor,
             QueryCFCandidates.descriptor,
             ValidateCFCandidate.descriptor,
             QueryCFWorkspace.descriptor,
-            RunCFTask.descriptor
+            RunCFTask.descriptor,
+            StartCFValidation.descriptor,
+            SaveValidatedCFRoute.descriptor
         ]
     }
 }
@@ -835,6 +947,25 @@ extension Pax_V1_PaxService {
     /// > 事件流只有一条 Watch。变更命令返回 OperationAck，最终结果经 Watch；
     /// > 历史、规则等查询返回只读快照，不返回私有内核 profile 或凭据。
     public protocol ClientProtocol: Sendable {
+        /// Call the "GetOperation" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_GetOperationRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_GetOperationRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func getOperation<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_GetOperationRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_GetOperationRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationState>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationState>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
         /// Call the "RecheckCurrentPath" method.
         ///
         /// - Parameters:
@@ -1325,6 +1456,44 @@ extension Pax_V1_PaxService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RouteEditor>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RouteEditor>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "GetRouteEditView" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_GetRouteEditorRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_GetRouteEditorRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_RouteEditView` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func getRouteEditView<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_GetRouteEditorRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_GetRouteEditorRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RouteEditView>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RouteEditView>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "SaveRouteEdit" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_SaveRouteEditRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_SaveRouteEditRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func saveRouteEdit<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_SaveRouteEditRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_SaveRouteEditRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "UpdateRouteTLS" method.
@@ -1844,6 +2013,63 @@ extension Pax_V1_PaxService {
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_EnvironmentDiagnosticReport>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
+        /// Call the "StartConnectionDiagnostic" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartConnectionDiagnosticRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartConnectionDiagnosticRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func startConnectionDiagnostic<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartConnectionDiagnosticRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartConnectionDiagnosticRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "StartNetworkDiagnostic" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartNetworkDiagnosticRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartNetworkDiagnosticRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func startNetworkDiagnostic<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartNetworkDiagnosticRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartNetworkDiagnosticRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "StartEnvironmentSources" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartEnvironmentSourcesRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartEnvironmentSourcesRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func startEnvironmentSources<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartEnvironmentSourcesRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartEnvironmentSourcesRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
         /// Call the "QueryCFCandidates" method.
         ///
         /// - Parameters:
@@ -1919,6 +2145,44 @@ extension Pax_V1_PaxService {
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
         ) async throws -> Result where Result: Sendable
+
+        /// Call the "StartCFValidation" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartCFValidationRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartCFValidationRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func startCFValidation<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartCFValidationRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartCFValidationRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "SaveValidatedCFRoute" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_SaveValidatedCFRouteRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_SaveValidatedCFRouteRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func saveValidatedCFRoute<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_SaveValidatedCFRouteRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_SaveValidatedCFRouteRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
     }
 
     /// Generated client for the "pax.v1.PaxService" service.
@@ -1944,6 +2208,36 @@ extension Pax_V1_PaxService {
         ///   - client: A `GRPCCore.GRPCClient` providing a communication channel to the service.
         public init(wrapping client: GRPCCore.GRPCClient<Transport>) {
             self.client = client
+        }
+
+        /// Call the "GetOperation" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_GetOperationRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_GetOperationRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func getOperation<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_GetOperationRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_GetOperationRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationState>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationState>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.GetOperation.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
         }
 
         /// Call the "RecheckCurrentPath" method.
@@ -2704,6 +2998,66 @@ extension Pax_V1_PaxService {
             try await self.client.unary(
                 request: request,
                 descriptor: Pax_V1_PaxService.Method.GetRouteEditor.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "GetRouteEditView" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_GetRouteEditorRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_GetRouteEditorRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_RouteEditView` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func getRouteEditView<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_GetRouteEditorRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_GetRouteEditorRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RouteEditView>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RouteEditView>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.GetRouteEditView.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "SaveRouteEdit" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_SaveRouteEditRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_SaveRouteEditRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func saveRouteEdit<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_SaveRouteEditRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_SaveRouteEditRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.SaveRouteEdit.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -3525,6 +3879,96 @@ extension Pax_V1_PaxService {
             )
         }
 
+        /// Call the "StartConnectionDiagnostic" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartConnectionDiagnosticRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartConnectionDiagnosticRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func startConnectionDiagnostic<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartConnectionDiagnosticRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartConnectionDiagnosticRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.StartConnectionDiagnostic.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "StartNetworkDiagnostic" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartNetworkDiagnosticRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartNetworkDiagnosticRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func startNetworkDiagnostic<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartNetworkDiagnosticRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartNetworkDiagnosticRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.StartNetworkDiagnostic.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "StartEnvironmentSources" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartEnvironmentSourcesRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartEnvironmentSourcesRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func startEnvironmentSources<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartEnvironmentSourcesRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartEnvironmentSourcesRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.StartEnvironmentSources.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "QueryCFCandidates" method.
         ///
         /// - Parameters:
@@ -3644,12 +4088,97 @@ extension Pax_V1_PaxService {
                 onResponse: handleResponse
             )
         }
+
+        /// Call the "StartCFValidation" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_StartCFValidationRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_StartCFValidationRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func startCFValidation<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_StartCFValidationRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_StartCFValidationRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.StartCFValidation.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "SaveValidatedCFRoute" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_SaveValidatedCFRouteRequest` message.
+        ///   - serializer: A serializer for `Pax_V1_SaveValidatedCFRouteRequest` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_OperationAck` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func saveValidatedCFRoute<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_SaveValidatedCFRouteRequest>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_SaveValidatedCFRouteRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_OperationAck>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.SaveValidatedCFRoute.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
     }
 }
 
 // Helpers providing default arguments to 'ClientProtocol' methods.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Pax_V1_PaxService.ClientProtocol {
+    /// Call the "GetOperation" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_GetOperationRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getOperation<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_GetOperationRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.getOperation(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_GetOperationRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationState>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "RecheckCurrentPath" method.
     ///
     /// - Parameters:
@@ -4285,6 +4814,56 @@ extension Pax_V1_PaxService.ClientProtocol {
             request: request,
             serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_GetRouteEditorRequest>(),
             deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_RouteEditor>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "GetRouteEditView" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_GetRouteEditorRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getRouteEditView<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_GetRouteEditorRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RouteEditView>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.getRouteEditView(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_GetRouteEditorRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_RouteEditView>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveRouteEdit" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_SaveRouteEditRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveRouteEdit<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_SaveRouteEditRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.saveRouteEdit(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_SaveRouteEditRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
             options: options,
             onResponse: handleResponse
         )
@@ -4969,6 +5548,81 @@ extension Pax_V1_PaxService.ClientProtocol {
         )
     }
 
+    /// Call the "StartConnectionDiagnostic" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_StartConnectionDiagnosticRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startConnectionDiagnostic<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_StartConnectionDiagnosticRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.startConnectionDiagnostic(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_StartConnectionDiagnosticRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartNetworkDiagnostic" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_StartNetworkDiagnosticRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startNetworkDiagnostic<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_StartNetworkDiagnosticRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.startNetworkDiagnostic(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_StartNetworkDiagnosticRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartEnvironmentSources" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_StartEnvironmentSourcesRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startEnvironmentSources<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_StartEnvironmentSourcesRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.startEnvironmentSources(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_StartEnvironmentSourcesRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "QueryCFCandidates" method.
     ///
     /// - Parameters:
@@ -5068,11 +5722,90 @@ extension Pax_V1_PaxService.ClientProtocol {
             onResponse: handleResponse
         )
     }
+
+    /// Call the "StartCFValidation" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_StartCFValidationRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startCFValidation<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_StartCFValidationRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.startCFValidation(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_StartCFValidationRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveValidatedCFRoute" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_SaveValidatedCFRouteRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveValidatedCFRoute<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_SaveValidatedCFRouteRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.saveValidatedCFRoute(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_SaveValidatedCFRouteRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_OperationAck>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
 }
 
 // Helpers providing sugared APIs for 'ClientProtocol' methods.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Pax_V1_PaxService.ClientProtocol {
+    /// Call the "GetOperation" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getOperation<Result>(
+        _ message: Pax_V1_GetOperationRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_GetOperationRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.getOperation(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "RecheckCurrentPath" method.
     ///
     /// - Parameters:
@@ -5807,6 +6540,64 @@ extension Pax_V1_PaxService.ClientProtocol {
             metadata: metadata
         )
         return try await self.getRouteEditor(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "GetRouteEditView" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getRouteEditView<Result>(
+        _ message: Pax_V1_GetRouteEditorRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RouteEditView>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_GetRouteEditorRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.getRouteEditView(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveRouteEdit" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveRouteEdit<Result>(
+        _ message: Pax_V1_SaveRouteEditRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_SaveRouteEditRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.saveRouteEdit(
             request: request,
             options: options,
             onResponse: handleResponse
@@ -6600,6 +7391,93 @@ extension Pax_V1_PaxService.ClientProtocol {
         )
     }
 
+    /// Call the "StartConnectionDiagnostic" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startConnectionDiagnostic<Result>(
+        _ message: Pax_V1_StartConnectionDiagnosticRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_StartConnectionDiagnosticRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.startConnectionDiagnostic(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartNetworkDiagnostic" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startNetworkDiagnostic<Result>(
+        _ message: Pax_V1_StartNetworkDiagnosticRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_StartNetworkDiagnosticRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.startNetworkDiagnostic(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartEnvironmentSources" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startEnvironmentSources<Result>(
+        _ message: Pax_V1_StartEnvironmentSourcesRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_StartEnvironmentSourcesRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.startEnvironmentSources(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "QueryCFCandidates" method.
     ///
     /// - Parameters:
@@ -6710,6 +7588,64 @@ extension Pax_V1_PaxService.ClientProtocol {
             metadata: metadata
         )
         return try await self.runCFTask(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "StartCFValidation" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func startCFValidation<Result>(
+        _ message: Pax_V1_StartCFValidationRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_StartCFValidationRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.startCFValidation(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveValidatedCFRoute" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveValidatedCFRoute<Result>(
+        _ message: Pax_V1_SaveValidatedCFRouteRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_OperationAck>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_SaveValidatedCFRouteRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.saveValidatedCFRoute(
             request: request,
             options: options,
             onResponse: handleResponse

@@ -23,6 +23,7 @@ const (
 	AIProfilesService_MutateAIProfile_FullMethodName        = "/pax.v1.AIProfilesService/MutateAIProfile"
 	AIProfilesService_PlanAIProfileApply_FullMethodName     = "/pax.v1.AIProfilesService/PlanAIProfileApply"
 	AIProfilesService_RefreshAIProfileModels_FullMethodName = "/pax.v1.AIProfilesService/RefreshAIProfileModels"
+	AIProfilesService_StartAIProfileModels_FullMethodName   = "/pax.v1.AIProfilesService/StartAIProfileModels"
 	AIProfilesService_ApplyAIProfile_FullMethodName         = "/pax.v1.AIProfilesService/ApplyAIProfile"
 )
 
@@ -36,6 +37,7 @@ type AIProfilesServiceClient interface {
 	MutateAIProfile(ctx context.Context, in *AIProfileMutation, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
 	PlanAIProfileApply(ctx context.Context, in *AIProfilePlanRequest, opts ...grpc.CallOption) (*AIProfilePlan, error)
 	RefreshAIProfileModels(ctx context.Context, in *AIProfileModelsRequest, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
+	StartAIProfileModels(ctx context.Context, in *AIProfileModelsRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	ApplyAIProfile(ctx context.Context, in *AIProfileApplyRequest, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
 }
 
@@ -87,6 +89,16 @@ func (c *aIProfilesServiceClient) RefreshAIProfileModels(ctx context.Context, in
 	return out, nil
 }
 
+func (c *aIProfilesServiceClient) StartAIProfileModels(ctx context.Context, in *AIProfileModelsRequest, opts ...grpc.CallOption) (*OperationAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperationAck)
+	err := c.cc.Invoke(ctx, AIProfilesService_StartAIProfileModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aIProfilesServiceClient) ApplyAIProfile(ctx context.Context, in *AIProfileApplyRequest, opts ...grpc.CallOption) (*AIProfilesWorkspace, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AIProfilesWorkspace)
@@ -107,6 +119,7 @@ type AIProfilesServiceServer interface {
 	MutateAIProfile(context.Context, *AIProfileMutation) (*AIProfilesWorkspace, error)
 	PlanAIProfileApply(context.Context, *AIProfilePlanRequest) (*AIProfilePlan, error)
 	RefreshAIProfileModels(context.Context, *AIProfileModelsRequest) (*AIProfilesWorkspace, error)
+	StartAIProfileModels(context.Context, *AIProfileModelsRequest) (*OperationAck, error)
 	ApplyAIProfile(context.Context, *AIProfileApplyRequest) (*AIProfilesWorkspace, error)
 	mustEmbedUnimplementedAIProfilesServiceServer()
 }
@@ -129,6 +142,9 @@ func (UnimplementedAIProfilesServiceServer) PlanAIProfileApply(context.Context, 
 }
 func (UnimplementedAIProfilesServiceServer) RefreshAIProfileModels(context.Context, *AIProfileModelsRequest) (*AIProfilesWorkspace, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshAIProfileModels not implemented")
+}
+func (UnimplementedAIProfilesServiceServer) StartAIProfileModels(context.Context, *AIProfileModelsRequest) (*OperationAck, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartAIProfileModels not implemented")
 }
 func (UnimplementedAIProfilesServiceServer) ApplyAIProfile(context.Context, *AIProfileApplyRequest) (*AIProfilesWorkspace, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyAIProfile not implemented")
@@ -226,6 +242,24 @@ func _AIProfilesService_RefreshAIProfileModels_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIProfilesService_StartAIProfileModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AIProfileModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIProfilesServiceServer).StartAIProfileModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIProfilesService_StartAIProfileModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIProfilesServiceServer).StartAIProfileModels(ctx, req.(*AIProfileModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AIProfilesService_ApplyAIProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AIProfileApplyRequest)
 	if err := dec(in); err != nil {
@@ -266,6 +300,10 @@ var AIProfilesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefreshAIProfileModels",
 			Handler:    _AIProfilesService_RefreshAIProfileModels_Handler,
+		},
+		{
+			MethodName: "StartAIProfileModels",
+			Handler:    _AIProfilesService_StartAIProfileModels_Handler,
 		},
 		{
 			MethodName: "ApplyAIProfile",
