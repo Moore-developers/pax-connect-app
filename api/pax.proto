@@ -28,6 +28,7 @@ service PaxService {
   rpc QueryLogUpdates(LogUpdateRequest) returns (LogUpdatePage);
   rpc QueryRoutingRules(google.protobuf.Empty) returns (RoutingRulesSnapshot);
   rpc QueryRoutingLibrary(google.protobuf.Empty) returns (RoutingLibrarySnapshot);
+  rpc QueryRoutingProcesses(google.protobuf.Empty) returns (RoutingProcessCandidates);
   rpc QueryGeoRules(GeoRulesQuery) returns (GeoRulesPage);
   rpc MutateRoutingLibrary(RoutingMutationRequest) returns (RoutingLibrarySnapshot);
   rpc QueryObjectIcon(ObjectIconRequest) returns (ObjectIconResult);
@@ -689,6 +690,7 @@ message RoutingRule { string id=1; uint32 order=2; string match=3; string action
 message RoutingRulesSnapshot {string state=1; repeated RoutingRule rules=2; google.protobuf.Timestamp at=3;}
 
 // Rule management is local and available with proxy OFF. Commands return the committed snapshot.
+// For method "process", target is the exact absolute executable path.
 message RoutingEntry { string id=1; string method=2; string target=3; string destination=4; bool enabled=5; }
 // kind: priority, local, subscription, geo, adblock (fixed built-in, block only).
 message RoutingPackage {
@@ -697,6 +699,13 @@ message RoutingPackage {
  bool automatic=10; string update_message=11;int64 updated_unix=12;
 }
 message RoutingApplication {string id=1;string name=2;repeated string domains=3;}
+message RoutingProcessCandidates {
+ repeated string paths=1; // Distinct executable paths, in the same order as processes.
+ bool limited=2;
+ repeated RoutingCandidateTraffic applications=3; // Installed application IDs with traffic.
+ repeated RoutingCandidateTraffic processes=4; // Exact executable paths with traffic.
+}
+message RoutingCandidateTraffic {string id=1;uint64 bytes=2;}
 message RoutingLibrarySnapshot {
  uint64 revision=1;repeated RoutingPackage packages=2;repeated RoutingApplication applications=3;
  repeated NodeProfile routes=4;string state=5;string message=6;

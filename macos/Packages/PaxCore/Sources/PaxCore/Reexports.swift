@@ -116,6 +116,8 @@ public typealias TrafficLatencySample = PaxClient.TrafficLatencySample
 public typealias TrafficResponsePoint = PaxClient.TrafficResponsePoint
 
 public typealias GeoRulesPage = PaxClient.GeoRulesPage
+public typealias RoutingProcessCandidates = PaxClient.RoutingProcessCandidates
+public typealias RoutingCandidateTraffic = PaxClient.RoutingCandidateTraffic
 
 public typealias LogCriteria = PaxClient.LogCriteria
 public typealias LogOptions = PaxClient.LogOptions

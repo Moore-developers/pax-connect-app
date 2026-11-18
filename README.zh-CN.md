@@ -29,7 +29,7 @@
 
 Pax Connect 是基于 [sing-box](https://github.com/SagerNet/sing-box) 的 macOS 代理客户端，面向每天用 Claude Code 和 Codex 写代码的开发者，把三件事放进同一个 App：
 
-- **走代理。** 用 TUN（或系统代理）接管系统流量，终端里的 `claude`、`codex` 不用再设置 `HTTPS_PROXY`。规则可按 `.app` 应用、域名或 IP 匹配，去向可选代理、直连或拦截。
+- **走代理。** 用 TUN（或系统代理）接管系统流量，终端里的 `claude`、`codex` 不用再设置 `HTTPS_PROXY`。规则可按应用、进程的可执行文件路径、域名或 IP 匹配，去向可选代理、直连或拦截。
 - **管理 API 配置。** 保存多套 API 服务地址，选中后应用到 Claude Code（`settings.json`）和 Codex（`config.toml`）。保存和应用是两个独立步骤。
 - **统计用量与费用。** 读取本机 Claude Code、Codex、DeepSeek Harness 的日志，按日期、模型、会话汇总 Token、缓存与估算费用。费用是按 API 价格折算的估算值，不是账单。
 
@@ -57,7 +57,7 @@ Pax Connect 是独立的第三方客户端，不是 sing-box 官方产品。它*
 **网络**
 
 - TUN 接管或系统代理；切换线路时保留 TUN。
-- 规则可按 `.app` 应用、域名、IP 匹配，去向为代理、直连或拦截。内置局域网/私有地址、Google、中国域名与中国 IP 规则包。
+- 规则可按 `.app` 应用、进程的可执行文件路径、域名或 IP 匹配，去向为代理、直连或拦截。应用和进程候选按近期传输量排序。内置局域网/私有地址、Google、中国域名与中国 IP 规则包。
 - 可选的广告拦截规则包（按域名拦截，**默认关闭**）。
 - 流量与连接日志：按应用显示实际线路和命中规则。
 - 若其他 VPN/TUN 工具占用了网络，Pax 会识别并提示你手动关闭，不会替你停止其他工具。

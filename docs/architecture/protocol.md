@@ -4,12 +4,14 @@
 
 MCP公共查询：`HelloResponse.daemon_instance`（字段8）为本次daemon进程随机身份，`timezone`（字段9）为其日历查询使用的时区。`operations.query.v1`提供`GetOperation`，按operation_id或client_id/request_id回读受控状态；实例变化、过期、未找到均是unknown，不能推断失败或重发。`OperationContext`绑定预期实例、稳定客户端和带时间戳UUID请求身份；SetProxyEnabled、SelectRoute、TestRoute、RecheckCurrentPath、CancelOperation、异步诊断/环境启动及M2导入确认、线路保存/删除/TLS/分组/组合、订阅刷新/删除/恢复已接入。旧App不传context仍走既有路径，Watch不重放旧结果。保留/权限合同见[MCP工具](../changes/pax-mcp/tool-contracts.md)§3。
 
-context操作在受理前预留256项有界结果名额，活跃和10分钟内终态不淘汰，满则拒绝；相同请求同内容返回原operation_id，异内容request_conflict，旧时间戳不重新执行。结果variant包含RouteSaveResult、ProxyOperationResult、RouteMeasurementsResult、CurrentPathCheck及线路/网络/环境诊断报告；在原owner提交处冻结，保留选定/运行线路区别及批次逐项失败。OperationProgress的completed/total有presence，未知不造0。单结果≤1MiB、总预算32MiB在入队前预留，超预算拒绝新任务。为避免循环import，ProtectionStatus、RouteTestSummary、DownloadTestSummary、CurrentPathCheck移入operation.proto，EnvironmentDiagnosticRequest移入pax.proto；类型全名及原字段编号不变，不传任意业务JSON。Go协议版本唯一值在ipc.ProtocolVersion，controller转发，与Swift同步。
+context操作在受理前预留256项有界结果名额，活跃和10分钟内终态不淘汰，满则拒绝；相同请求同内容返回原operation_id，异内容request_conflict，旧时间戳不重新执行。结果variant包含RouteSaveResult、ProxyOperationResult、RouteMeasurementsResult、CurrentPathCheck及线路/网络/环境诊断报告；在原owner提交处冻结，保留选定/运行线路区别及批次逐项失败。OperationProgress的completed/total有presence，未知不造0。单结果≤1MiB、总预算32MiB在入队前预留，超预算拒绝新任务。为避免循环import，ProtectionStatus、RouteTestSummary、DownloadTestSummary、CurrentPathCheck移入operation.proto，EnvironmentDiagnosticRequest移入pax.proto；类型全名及原字段编号不变，不传任意业务JSON。
 
 
 `ai.profiles.operations.v1`将Profile mutation、Plan、Apply及StartAIProfileModels接入公共OperationContext/GetOperation。导入增加客户端生成的稳定UUID；旧App缺省ID仍由owner生成。目录刷新在AIProfilesServer拥有的有界任务中运行，stdio/RPC断开不撤销受理工作，关闭时取消目录读取并排空本地事务；只目录读取可取消。save/import先冻结保存回执，再独立发现模型，不能把目录失败说成未保存。公共结果追加AIProfileOperationResult（workspace/plan/保存或删除ID/应用outcome），引用的不含凭据的Profile状态消息位于ai_profile_state.proto；原消息全名及字段号不变。Go标准Workspace/Plan与Swift AIProfilesWorkspace/AIProfilePlan、DaemonAIProfileOperation同步；没有第二份配置写入或结果数据库。完整权限、DSH拒写与计划合同见[M6](../changes/pax-mcp/tools-ai-settings.md#m6profile与客户端配置)。
 
 `routes.edit_view.v1`：GetRouteEditView在daemon移除凭据，仅返回非秘密单outbound与JSON Pointer存在性；组合返回成员引用。SaveRouteEdit在单写队列内先CAS、同协议合并凭据/显式SecretUpdates，再typed校验并提交。非秘密JSON是整体替换；订阅覆盖沿既有DocumentOverride保存。UpdateRouteTLS.expected_route_revision供MCP绑定可见线路版本，原expected_revision仍是App使用的TLS策略版本；两者在owner内校验。预览context绑定实例、客户端和有界TTL内请求摘要，确认沿公共OperationContext。完整行为见[M2合同](../changes/pax-mcp/tools-routes.md)。
+
+`QueryRoutingProcesses`附应用和进程的字节排行。
 
 设置：[协议](settings-operations.md)。
 
@@ -71,7 +73,7 @@ AI日志可选`min_official_cost_micro`/`max_official_cost_micro`及能力`ai.us
 
 **演进规则**（所有族通用）：
 
-- 产品协议版本以 `controller.ProtocolVersion` 与 Swift `PaxClient.protocolVersion` 为准（须一致），内部 core 版本以 `api/pax_core.proto` 的握手校验为准；文档不再记版本号。字段编号、RPC 签名唯一见 `api/*.proto`，只加字段 / RPC，不改编号；删除字段或 payload 须 reserved 其编号与名称。
+- 产品协议版本以 Go `ipc.ProtocolVersion` 与 Swift `DaemonConnection.protocolVersion` 为准（须一致），内部 core 版本以 `api/pax_core.proto` 的握手校验为准；文档不再记版本号。字段编号、RPC 签名唯一见 `api/*.proto`，只加字段 / RPC，不改编号；删除字段或 payload 须 reserved 其编号与名称。
 - 能力门控：`Hello.capabilities` 只通告已装配的能力，缺失即 App 禁用对应动作；旧后台不伪称支持新能力。
 - 命令只返回 `OperationAck`，终态走 `Watch` 的 `OperationResult`；会改目录 / 偏好 / 来源的请求带 `expected_*revision` 做 CAS，`client_id` + `request_id` 保证重试幂等（有界保留终态），冲突返回 `catalog_stale` 等稳定产品码并附当前 revision。
 - 长读取走 `Query*` 分页并绑定读令牌，不进 `Watch` 全量推送；产品错误一律 `ProductError{code, message_params}`，不透传内核原文、凭据或完整 URL。

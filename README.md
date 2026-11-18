@@ -29,7 +29,7 @@ Route traffic, switch API profiles, and see token usage and cost, all in one nat
 
 Pax Connect is a [sing-box](https://github.com/SagerNet/sing-box) based proxy client for macOS, designed for developers who code with Claude Code and Codex every day. It brings three jobs into one app:
 
-- **Route through a proxy.** Take over system traffic with TUN (or the system proxy), so terminal tools such as `claude` and `codex` need no `HTTPS_PROXY` setup. Rules match by `.app` application, domain, or IP and send traffic to a route, direct, or block.
+- **Route through a proxy.** Take over system traffic with TUN (or the system proxy), so terminal tools such as `claude` and `codex` need no `HTTPS_PROXY` setup. Rules match by application, executable path, domain, or IP and send traffic to a route, direct, or block.
 - **Manage API profiles.** Save several API service addresses and apply one to Claude Code (`settings.json`) and Codex (`config.toml`). Saving and applying are separate steps.
 - **Track usage and cost.** Read local Claude Code, Codex and DeepSeek Harness logs and total tokens, cache and estimated cost by date, model and session. Cost is an API-equivalent estimate, not a bill.
 
@@ -57,7 +57,7 @@ Pax Connect is an independent client, not an official sing-box product. It ships
 **Network**
 
 - TUN takeover or system proxy; switch routes without dropping TUN.
-- Rules by `.app` application, domain, or IP, with destination proxy, direct, or block. Built-in packages for private networks, Google, and China domains and IPs.
+- Rules by `.app` application, executable path, domain, or IP, with destination proxy, direct, or block. The application and process pickers rank candidates by recent transfer volume. Built-in packages cover private networks, Google, and China domains and IPs.
 - An optional ad-blocking rule package (domain based, **off by default**).
 - Traffic and connection logs: actual route and matched rule per application.
 - If another VPN/TUN tool holds the network, Pax detects it and asks you to turn it off. It never stops other tools for you.

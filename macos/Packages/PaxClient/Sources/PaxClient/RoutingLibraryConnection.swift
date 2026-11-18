@@ -22,6 +22,15 @@ extension DaemonConnection {
         try await service.queryRoutingLibrary(.init(), options: configured))
     }
   }
+  public func routingProcesses() async throws -> RoutingProcessCandidates {
+    try await historyRPC { service, options in
+      let value = try await service.queryRoutingProcesses(.init(), options: options)
+      return RoutingProcessCandidates(
+        applications: value.applications.map { .init(id: $0.id, bytes: $0.bytes) },
+        processes: value.processes.map { .init(id: $0.id, bytes: $0.bytes) },
+        limited: value.limited)
+    }
+  }
   public func mutateRoutingLibrary(_ command: RoutingMutation) async throws
     -> RoutingLibrarySnapshot
   {

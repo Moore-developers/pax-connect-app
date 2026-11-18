@@ -6771,6 +6771,7 @@ func (x *RoutingRulesSnapshot) GetAt() *timestamppb.Timestamp {
 }
 
 // Rule management is local and available with proxy OFF. Commands return the committed snapshot.
+// For method "process", target is the exact absolute executable path.
 type RoutingEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -7040,6 +7041,126 @@ func (x *RoutingApplication) GetDomains() []string {
 	return nil
 }
 
+type RoutingProcessCandidates struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Paths         []string                   `protobuf:"bytes,1,rep,name=paths,proto3" json:"paths,omitempty"` // Distinct executable paths, in the same order as processes.
+	Limited       bool                       `protobuf:"varint,2,opt,name=limited,proto3" json:"limited,omitempty"`
+	Applications  []*RoutingCandidateTraffic `protobuf:"bytes,3,rep,name=applications,proto3" json:"applications,omitempty"` // Installed application IDs with traffic.
+	Processes     []*RoutingCandidateTraffic `protobuf:"bytes,4,rep,name=processes,proto3" json:"processes,omitempty"`       // Exact executable paths with traffic.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RoutingProcessCandidates) Reset() {
+	*x = RoutingProcessCandidates{}
+	mi := &file_pax_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoutingProcessCandidates) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoutingProcessCandidates) ProtoMessage() {}
+
+func (x *RoutingProcessCandidates) ProtoReflect() protoreflect.Message {
+	mi := &file_pax_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoutingProcessCandidates.ProtoReflect.Descriptor instead.
+func (*RoutingProcessCandidates) Descriptor() ([]byte, []int) {
+	return file_pax_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *RoutingProcessCandidates) GetPaths() []string {
+	if x != nil {
+		return x.Paths
+	}
+	return nil
+}
+
+func (x *RoutingProcessCandidates) GetLimited() bool {
+	if x != nil {
+		return x.Limited
+	}
+	return false
+}
+
+func (x *RoutingProcessCandidates) GetApplications() []*RoutingCandidateTraffic {
+	if x != nil {
+		return x.Applications
+	}
+	return nil
+}
+
+func (x *RoutingProcessCandidates) GetProcesses() []*RoutingCandidateTraffic {
+	if x != nil {
+		return x.Processes
+	}
+	return nil
+}
+
+type RoutingCandidateTraffic struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Bytes         uint64                 `protobuf:"varint,2,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RoutingCandidateTraffic) Reset() {
+	*x = RoutingCandidateTraffic{}
+	mi := &file_pax_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoutingCandidateTraffic) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoutingCandidateTraffic) ProtoMessage() {}
+
+func (x *RoutingCandidateTraffic) ProtoReflect() protoreflect.Message {
+	mi := &file_pax_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoutingCandidateTraffic.ProtoReflect.Descriptor instead.
+func (*RoutingCandidateTraffic) Descriptor() ([]byte, []int) {
+	return file_pax_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *RoutingCandidateTraffic) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RoutingCandidateTraffic) GetBytes() uint64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
 type RoutingLibrarySnapshot struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Revision      uint64                 `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
@@ -7054,7 +7175,7 @@ type RoutingLibrarySnapshot struct {
 
 func (x *RoutingLibrarySnapshot) Reset() {
 	*x = RoutingLibrarySnapshot{}
-	mi := &file_pax_proto_msgTypes[75]
+	mi := &file_pax_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7066,7 +7187,7 @@ func (x *RoutingLibrarySnapshot) String() string {
 func (*RoutingLibrarySnapshot) ProtoMessage() {}
 
 func (x *RoutingLibrarySnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[75]
+	mi := &file_pax_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7079,7 +7200,7 @@ func (x *RoutingLibrarySnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoutingLibrarySnapshot.ProtoReflect.Descriptor instead.
 func (*RoutingLibrarySnapshot) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{75}
+	return file_pax_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *RoutingLibrarySnapshot) GetRevision() uint64 {
@@ -7142,7 +7263,7 @@ type RoutingMutationRequest struct {
 
 func (x *RoutingMutationRequest) Reset() {
 	*x = RoutingMutationRequest{}
-	mi := &file_pax_proto_msgTypes[76]
+	mi := &file_pax_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7154,7 +7275,7 @@ func (x *RoutingMutationRequest) String() string {
 func (*RoutingMutationRequest) ProtoMessage() {}
 
 func (x *RoutingMutationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[76]
+	mi := &file_pax_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7167,7 +7288,7 @@ func (x *RoutingMutationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoutingMutationRequest.ProtoReflect.Descriptor instead.
 func (*RoutingMutationRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{76}
+	return file_pax_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *RoutingMutationRequest) GetExpectedRevision() uint64 {
@@ -7251,7 +7372,7 @@ type GeoRulesQuery struct {
 
 func (x *GeoRulesQuery) Reset() {
 	*x = GeoRulesQuery{}
-	mi := &file_pax_proto_msgTypes[77]
+	mi := &file_pax_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7263,7 +7384,7 @@ func (x *GeoRulesQuery) String() string {
 func (*GeoRulesQuery) ProtoMessage() {}
 
 func (x *GeoRulesQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[77]
+	mi := &file_pax_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7276,7 +7397,7 @@ func (x *GeoRulesQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeoRulesQuery.ProtoReflect.Descriptor instead.
 func (*GeoRulesQuery) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{77}
+	return file_pax_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *GeoRulesQuery) GetSearch() string {
@@ -7313,7 +7434,7 @@ type GeoRulesPage struct {
 
 func (x *GeoRulesPage) Reset() {
 	*x = GeoRulesPage{}
-	mi := &file_pax_proto_msgTypes[78]
+	mi := &file_pax_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7325,7 +7446,7 @@ func (x *GeoRulesPage) String() string {
 func (*GeoRulesPage) ProtoMessage() {}
 
 func (x *GeoRulesPage) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[78]
+	mi := &file_pax_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7338,7 +7459,7 @@ func (x *GeoRulesPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeoRulesPage.ProtoReflect.Descriptor instead.
 func (*GeoRulesPage) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{78}
+	return file_pax_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *GeoRulesPage) GetRules() []*RoutingEntry {
@@ -7387,7 +7508,7 @@ type StartConnectionDiagnosticRequest struct {
 
 func (x *StartConnectionDiagnosticRequest) Reset() {
 	*x = StartConnectionDiagnosticRequest{}
-	mi := &file_pax_proto_msgTypes[79]
+	mi := &file_pax_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7399,7 +7520,7 @@ func (x *StartConnectionDiagnosticRequest) String() string {
 func (*StartConnectionDiagnosticRequest) ProtoMessage() {}
 
 func (x *StartConnectionDiagnosticRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[79]
+	mi := &file_pax_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7412,7 +7533,7 @@ func (x *StartConnectionDiagnosticRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartConnectionDiagnosticRequest.ProtoReflect.Descriptor instead.
 func (*StartConnectionDiagnosticRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{79}
+	return file_pax_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *StartConnectionDiagnosticRequest) GetRecheck() bool {
@@ -7439,7 +7560,7 @@ type StartNetworkDiagnosticRequest struct {
 
 func (x *StartNetworkDiagnosticRequest) Reset() {
 	*x = StartNetworkDiagnosticRequest{}
-	mi := &file_pax_proto_msgTypes[80]
+	mi := &file_pax_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7451,7 +7572,7 @@ func (x *StartNetworkDiagnosticRequest) String() string {
 func (*StartNetworkDiagnosticRequest) ProtoMessage() {}
 
 func (x *StartNetworkDiagnosticRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[80]
+	mi := &file_pax_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7464,7 +7585,7 @@ func (x *StartNetworkDiagnosticRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartNetworkDiagnosticRequest.ProtoReflect.Descriptor instead.
 func (*StartNetworkDiagnosticRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{80}
+	return file_pax_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *StartNetworkDiagnosticRequest) GetMode() string {
@@ -7491,7 +7612,7 @@ type StartEnvironmentSourcesRequest struct {
 
 func (x *StartEnvironmentSourcesRequest) Reset() {
 	*x = StartEnvironmentSourcesRequest{}
-	mi := &file_pax_proto_msgTypes[81]
+	mi := &file_pax_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7503,7 +7624,7 @@ func (x *StartEnvironmentSourcesRequest) String() string {
 func (*StartEnvironmentSourcesRequest) ProtoMessage() {}
 
 func (x *StartEnvironmentSourcesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[81]
+	mi := &file_pax_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7516,7 +7637,7 @@ func (x *StartEnvironmentSourcesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartEnvironmentSourcesRequest.ProtoReflect.Descriptor instead.
 func (*StartEnvironmentSourcesRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{81}
+	return file_pax_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *StartEnvironmentSourcesRequest) GetSessionId() string {
@@ -7544,7 +7665,7 @@ type EnvironmentDiagnosticRequest struct {
 
 func (x *EnvironmentDiagnosticRequest) Reset() {
 	*x = EnvironmentDiagnosticRequest{}
-	mi := &file_pax_proto_msgTypes[82]
+	mi := &file_pax_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7556,7 +7677,7 @@ func (x *EnvironmentDiagnosticRequest) String() string {
 func (*EnvironmentDiagnosticRequest) ProtoMessage() {}
 
 func (x *EnvironmentDiagnosticRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[82]
+	mi := &file_pax_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7569,7 +7690,7 @@ func (x *EnvironmentDiagnosticRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentDiagnosticRequest.ProtoReflect.Descriptor instead.
 func (*EnvironmentDiagnosticRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{82}
+	return file_pax_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *EnvironmentDiagnosticRequest) GetAction() string {
@@ -7611,7 +7732,7 @@ type StartCFValidationRequest struct {
 
 func (x *StartCFValidationRequest) Reset() {
 	*x = StartCFValidationRequest{}
-	mi := &file_pax_proto_msgTypes[83]
+	mi := &file_pax_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7623,7 +7744,7 @@ func (x *StartCFValidationRequest) String() string {
 func (*StartCFValidationRequest) ProtoMessage() {}
 
 func (x *StartCFValidationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[83]
+	mi := &file_pax_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7636,7 +7757,7 @@ func (x *StartCFValidationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartCFValidationRequest.ProtoReflect.Descriptor instead.
 func (*StartCFValidationRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{83}
+	return file_pax_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *StartCFValidationRequest) GetRouteId() string {
@@ -7715,7 +7836,7 @@ type SaveValidatedCFRouteRequest struct {
 
 func (x *SaveValidatedCFRouteRequest) Reset() {
 	*x = SaveValidatedCFRouteRequest{}
-	mi := &file_pax_proto_msgTypes[84]
+	mi := &file_pax_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7727,7 +7848,7 @@ func (x *SaveValidatedCFRouteRequest) String() string {
 func (*SaveValidatedCFRouteRequest) ProtoMessage() {}
 
 func (x *SaveValidatedCFRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pax_proto_msgTypes[84]
+	mi := &file_pax_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7740,7 +7861,7 @@ func (x *SaveValidatedCFRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveValidatedCFRouteRequest.ProtoReflect.Descriptor instead.
 func (*SaveValidatedCFRouteRequest) Descriptor() ([]byte, []int) {
-	return file_pax_proto_rawDescGZIP(), []int{84}
+	return file_pax_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *SaveValidatedCFRouteRequest) GetRouteId() string {
@@ -8453,7 +8574,15 @@ const file_pax_proto_rawDesc = "" +
 	"\x12RoutingApplication\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\adomains\x18\x03 \x03(\tR\adomains\"\x85\x02\n" +
+	"\adomains\x18\x03 \x03(\tR\adomains\"\xce\x01\n" +
+	"\x18RoutingProcessCandidates\x12\x14\n" +
+	"\x05paths\x18\x01 \x03(\tR\x05paths\x12\x18\n" +
+	"\alimited\x18\x02 \x01(\bR\alimited\x12C\n" +
+	"\fapplications\x18\x03 \x03(\v2\x1f.pax.v1.RoutingCandidateTrafficR\fapplications\x12=\n" +
+	"\tprocesses\x18\x04 \x03(\v2\x1f.pax.v1.RoutingCandidateTrafficR\tprocesses\"?\n" +
+	"\x17RoutingCandidateTraffic\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05bytes\x18\x02 \x01(\x04R\x05bytes\"\x85\x02\n" +
 	"\x16RoutingLibrarySnapshot\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x122\n" +
 	"\bpackages\x18\x02 \x03(\v2\x16.pax.v1.RoutingPackageR\bpackages\x12>\n" +
@@ -8531,14 +8660,15 @@ const file_pax_proto_rawDesc = "" +
 	"\aTLSMode\x12\x18\n" +
 	"\x14TLS_MODE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fTLS_MODE_STRICT\x10\x01\x12\x18\n" +
-	"\x14TLS_MODE_SKIP_VERIFY\x10\x022\xcc$\n" +
+	"\x14TLS_MODE_SKIP_VERIFY\x10\x022\x9f%\n" +
 	"\n" +
 	"PaxService\x12C\n" +
 	"\fGetOperation\x12\x1b.pax.v1.GetOperationRequest\x1a\x16.pax.v1.OperationState\x12M\n" +
 	"\x12RecheckCurrentPath\x12!.pax.v1.CurrentPathRecheckRequest\x1a\x14.pax.v1.OperationAck\x12B\n" +
 	"\x0fQueryLogUpdates\x12\x18.pax.v1.LogUpdateRequest\x1a\x15.pax.v1.LogUpdatePage\x12I\n" +
 	"\x11QueryRoutingRules\x12\x16.google.protobuf.Empty\x1a\x1c.pax.v1.RoutingRulesSnapshot\x12M\n" +
-	"\x13QueryRoutingLibrary\x12\x16.google.protobuf.Empty\x1a\x1e.pax.v1.RoutingLibrarySnapshot\x12<\n" +
+	"\x13QueryRoutingLibrary\x12\x16.google.protobuf.Empty\x1a\x1e.pax.v1.RoutingLibrarySnapshot\x12Q\n" +
+	"\x15QueryRoutingProcesses\x12\x16.google.protobuf.Empty\x1a .pax.v1.RoutingProcessCandidates\x12<\n" +
 	"\rQueryGeoRules\x12\x15.pax.v1.GeoRulesQuery\x1a\x14.pax.v1.GeoRulesPage\x12V\n" +
 	"\x14MutateRoutingLibrary\x12\x1e.pax.v1.RoutingMutationRequest\x1a\x1e.pax.v1.RoutingLibrarySnapshot\x12F\n" +
 	"\x0fQueryObjectIcon\x12\x19.pax.v1.ObjectIconRequest\x1a\x18.pax.v1.ObjectIconResult\x12.\n" +
@@ -8612,7 +8742,7 @@ func file_pax_proto_rawDescGZIP() []byte {
 }
 
 var file_pax_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_pax_proto_msgTypes = make([]protoimpl.MessageInfo, 88)
+var file_pax_proto_msgTypes = make([]protoimpl.MessageInfo, 90)
 var file_pax_proto_goTypes = []any{
 	(RouteMeasurementPhase)(0),               // 0: pax.v1.RouteMeasurementPhase
 	(LogLevel)(0),                            // 1: pax.v1.LogLevel
@@ -8692,344 +8822,350 @@ var file_pax_proto_goTypes = []any{
 	(*RoutingEntry)(nil),                     // 75: pax.v1.RoutingEntry
 	(*RoutingPackage)(nil),                   // 76: pax.v1.RoutingPackage
 	(*RoutingApplication)(nil),               // 77: pax.v1.RoutingApplication
-	(*RoutingLibrarySnapshot)(nil),           // 78: pax.v1.RoutingLibrarySnapshot
-	(*RoutingMutationRequest)(nil),           // 79: pax.v1.RoutingMutationRequest
-	(*GeoRulesQuery)(nil),                    // 80: pax.v1.GeoRulesQuery
-	(*GeoRulesPage)(nil),                     // 81: pax.v1.GeoRulesPage
-	(*StartConnectionDiagnosticRequest)(nil), // 82: pax.v1.StartConnectionDiagnosticRequest
-	(*StartNetworkDiagnosticRequest)(nil),    // 83: pax.v1.StartNetworkDiagnosticRequest
-	(*StartEnvironmentSourcesRequest)(nil),   // 84: pax.v1.StartEnvironmentSourcesRequest
-	(*EnvironmentDiagnosticRequest)(nil),     // 85: pax.v1.EnvironmentDiagnosticRequest
-	(*StartCFValidationRequest)(nil),         // 86: pax.v1.StartCFValidationRequest
-	(*SaveValidatedCFRouteRequest)(nil),      // 87: pax.v1.SaveValidatedCFRouteRequest
-	nil,                                      // 88: pax.v1.Snapshot.TestOperationIdsEntry
-	nil,                                      // 89: pax.v1.Snapshot.ExitOperationIdsEntry
-	nil,                                      // 90: pax.v1.DownloadQueueState.OperationIdsEntry
-	(ProtectionStatus)(0),                    // 91: pax.v1.ProtectionStatus
-	(*Settings)(nil),                         // 92: pax.v1.Settings
-	(*ProductError)(nil),                     // 93: pax.v1.ProductError
-	(*RouteGroup)(nil),                       // 94: pax.v1.RouteGroup
-	(*ExitPoolState)(nil),                    // 95: pax.v1.ExitPoolState
-	(*HistoryState)(nil),                     // 96: pax.v1.HistoryState
-	(*CurrentPathCheck)(nil),                 // 97: pax.v1.CurrentPathCheck
-	(*AIUsageState)(nil),                     // 98: pax.v1.AIUsageState
-	(*ExternalTUN)(nil),                      // 99: pax.v1.ExternalTUN
-	(*OperationResult)(nil),                  // 100: pax.v1.OperationResult
-	(*RouteTestSummary)(nil),                 // 101: pax.v1.RouteTestSummary
-	(*DownloadTestSummary)(nil),              // 102: pax.v1.DownloadTestSummary
-	(*ChainRoute)(nil),                       // 103: pax.v1.ChainRoute
-	(*RouteExitSummary)(nil),                 // 104: pax.v1.RouteExitSummary
-	(*timestamppb.Timestamp)(nil),            // 105: google.protobuf.Timestamp
-	(*CFCandidate)(nil),                      // 106: pax.v1.CFCandidate
-	(*FlowRecord)(nil),                       // 107: pax.v1.FlowRecord
-	(*OperationContext)(nil),                 // 108: pax.v1.OperationContext
-	(*ExitLocation)(nil),                     // 109: pax.v1.ExitLocation
-	(*RouteUsageBucket)(nil),                 // 110: pax.v1.RouteUsageBucket
-	(*RouteSecretUpdate)(nil),                // 111: pax.v1.RouteSecretUpdate
-	(*GetOperationRequest)(nil),              // 112: pax.v1.GetOperationRequest
-	(*emptypb.Empty)(nil),                    // 113: google.protobuf.Empty
-	(*TrafficQuery)(nil),                     // 114: pax.v1.TrafficQuery
-	(*TrafficDetailRequest)(nil),             // 115: pax.v1.TrafficDetailRequest
-	(*RouteEditRequest)(nil),                 // 116: pax.v1.RouteEditRequest
-	(*GetRouteEditorRequest)(nil),            // 117: pax.v1.GetRouteEditorRequest
-	(*SaveRouteEditRequest)(nil),             // 118: pax.v1.SaveRouteEditRequest
-	(*UpdateSettingsRequest)(nil),            // 119: pax.v1.UpdateSettingsRequest
-	(*NetworkPrivacy)(nil),                   // 120: pax.v1.NetworkPrivacy
-	(*MeasurementPreferences)(nil),           // 121: pax.v1.MeasurementPreferences
-	(*ConnectionDiagnosticRequest)(nil),      // 122: pax.v1.ConnectionDiagnosticRequest
-	(*NetworkDiagnosticRequest)(nil),         // 123: pax.v1.NetworkDiagnosticRequest
-	(*OperationState)(nil),                   // 124: pax.v1.OperationState
-	(*OperationAck)(nil),                     // 125: pax.v1.OperationAck
-	(*TrafficPage)(nil),                      // 126: pax.v1.TrafficPage
-	(*TrafficDetail)(nil),                    // 127: pax.v1.TrafficDetail
-	(*RouteEditor)(nil),                      // 128: pax.v1.RouteEditor
-	(*RouteEditView)(nil),                    // 129: pax.v1.RouteEditView
-	(*TrafficPathDiagnostics)(nil),           // 130: pax.v1.TrafficPathDiagnostics
-	(*NetworkDiagnosticReport)(nil),          // 131: pax.v1.NetworkDiagnosticReport
-	(*EnvironmentDiagnosticReport)(nil),      // 132: pax.v1.EnvironmentDiagnosticReport
-	(*CFWorkspace)(nil),                      // 133: pax.v1.CFWorkspace
+	(*RoutingProcessCandidates)(nil),         // 78: pax.v1.RoutingProcessCandidates
+	(*RoutingCandidateTraffic)(nil),          // 79: pax.v1.RoutingCandidateTraffic
+	(*RoutingLibrarySnapshot)(nil),           // 80: pax.v1.RoutingLibrarySnapshot
+	(*RoutingMutationRequest)(nil),           // 81: pax.v1.RoutingMutationRequest
+	(*GeoRulesQuery)(nil),                    // 82: pax.v1.GeoRulesQuery
+	(*GeoRulesPage)(nil),                     // 83: pax.v1.GeoRulesPage
+	(*StartConnectionDiagnosticRequest)(nil), // 84: pax.v1.StartConnectionDiagnosticRequest
+	(*StartNetworkDiagnosticRequest)(nil),    // 85: pax.v1.StartNetworkDiagnosticRequest
+	(*StartEnvironmentSourcesRequest)(nil),   // 86: pax.v1.StartEnvironmentSourcesRequest
+	(*EnvironmentDiagnosticRequest)(nil),     // 87: pax.v1.EnvironmentDiagnosticRequest
+	(*StartCFValidationRequest)(nil),         // 88: pax.v1.StartCFValidationRequest
+	(*SaveValidatedCFRouteRequest)(nil),      // 89: pax.v1.SaveValidatedCFRouteRequest
+	nil,                                      // 90: pax.v1.Snapshot.TestOperationIdsEntry
+	nil,                                      // 91: pax.v1.Snapshot.ExitOperationIdsEntry
+	nil,                                      // 92: pax.v1.DownloadQueueState.OperationIdsEntry
+	(ProtectionStatus)(0),                    // 93: pax.v1.ProtectionStatus
+	(*Settings)(nil),                         // 94: pax.v1.Settings
+	(*ProductError)(nil),                     // 95: pax.v1.ProductError
+	(*RouteGroup)(nil),                       // 96: pax.v1.RouteGroup
+	(*ExitPoolState)(nil),                    // 97: pax.v1.ExitPoolState
+	(*HistoryState)(nil),                     // 98: pax.v1.HistoryState
+	(*CurrentPathCheck)(nil),                 // 99: pax.v1.CurrentPathCheck
+	(*AIUsageState)(nil),                     // 100: pax.v1.AIUsageState
+	(*ExternalTUN)(nil),                      // 101: pax.v1.ExternalTUN
+	(*OperationResult)(nil),                  // 102: pax.v1.OperationResult
+	(*RouteTestSummary)(nil),                 // 103: pax.v1.RouteTestSummary
+	(*DownloadTestSummary)(nil),              // 104: pax.v1.DownloadTestSummary
+	(*ChainRoute)(nil),                       // 105: pax.v1.ChainRoute
+	(*RouteExitSummary)(nil),                 // 106: pax.v1.RouteExitSummary
+	(*timestamppb.Timestamp)(nil),            // 107: google.protobuf.Timestamp
+	(*CFCandidate)(nil),                      // 108: pax.v1.CFCandidate
+	(*FlowRecord)(nil),                       // 109: pax.v1.FlowRecord
+	(*OperationContext)(nil),                 // 110: pax.v1.OperationContext
+	(*ExitLocation)(nil),                     // 111: pax.v1.ExitLocation
+	(*RouteUsageBucket)(nil),                 // 112: pax.v1.RouteUsageBucket
+	(*RouteSecretUpdate)(nil),                // 113: pax.v1.RouteSecretUpdate
+	(*GetOperationRequest)(nil),              // 114: pax.v1.GetOperationRequest
+	(*emptypb.Empty)(nil),                    // 115: google.protobuf.Empty
+	(*TrafficQuery)(nil),                     // 116: pax.v1.TrafficQuery
+	(*TrafficDetailRequest)(nil),             // 117: pax.v1.TrafficDetailRequest
+	(*RouteEditRequest)(nil),                 // 118: pax.v1.RouteEditRequest
+	(*GetRouteEditorRequest)(nil),            // 119: pax.v1.GetRouteEditorRequest
+	(*SaveRouteEditRequest)(nil),             // 120: pax.v1.SaveRouteEditRequest
+	(*UpdateSettingsRequest)(nil),            // 121: pax.v1.UpdateSettingsRequest
+	(*NetworkPrivacy)(nil),                   // 122: pax.v1.NetworkPrivacy
+	(*MeasurementPreferences)(nil),           // 123: pax.v1.MeasurementPreferences
+	(*ConnectionDiagnosticRequest)(nil),      // 124: pax.v1.ConnectionDiagnosticRequest
+	(*NetworkDiagnosticRequest)(nil),         // 125: pax.v1.NetworkDiagnosticRequest
+	(*OperationState)(nil),                   // 126: pax.v1.OperationState
+	(*OperationAck)(nil),                     // 127: pax.v1.OperationAck
+	(*TrafficPage)(nil),                      // 128: pax.v1.TrafficPage
+	(*TrafficDetail)(nil),                    // 129: pax.v1.TrafficDetail
+	(*RouteEditor)(nil),                      // 130: pax.v1.RouteEditor
+	(*RouteEditView)(nil),                    // 131: pax.v1.RouteEditView
+	(*TrafficPathDiagnostics)(nil),           // 132: pax.v1.TrafficPathDiagnostics
+	(*NetworkDiagnosticReport)(nil),          // 133: pax.v1.NetworkDiagnosticReport
+	(*EnvironmentDiagnosticReport)(nil),      // 134: pax.v1.EnvironmentDiagnosticReport
+	(*CFWorkspace)(nil),                      // 135: pax.v1.CFWorkspace
 }
 var file_pax_proto_depIdxs = []int32{
-	91,  // 0: pax.v1.Snapshot.status:type_name -> pax.v1.ProtectionStatus
+	93,  // 0: pax.v1.Snapshot.status:type_name -> pax.v1.ProtectionStatus
 	10,  // 1: pax.v1.Snapshot.routes:type_name -> pax.v1.NodeProfile
 	10,  // 2: pax.v1.Snapshot.current_route:type_name -> pax.v1.NodeProfile
 	18,  // 3: pax.v1.Snapshot.today_traffic:type_name -> pax.v1.TrafficSnapshot
-	92,  // 4: pax.v1.Snapshot.settings:type_name -> pax.v1.Settings
+	94,  // 4: pax.v1.Snapshot.settings:type_name -> pax.v1.Settings
 	19,  // 5: pax.v1.Snapshot.recent_logs:type_name -> pax.v1.ProductLog
-	93,  // 6: pax.v1.Snapshot.degraded_reason:type_name -> pax.v1.ProductError
+	95,  // 6: pax.v1.Snapshot.degraded_reason:type_name -> pax.v1.ProductError
 	34,  // 7: pax.v1.Snapshot.active_tls:type_name -> pax.v1.ActiveTLS
-	93,  // 8: pax.v1.Snapshot.degraded_reasons:type_name -> pax.v1.ProductError
+	95,  // 8: pax.v1.Snapshot.degraded_reasons:type_name -> pax.v1.ProductError
 	16,  // 9: pax.v1.Snapshot.subscriptions:type_name -> pax.v1.SubscriptionSummary
-	94,  // 10: pax.v1.Snapshot.route_groups:type_name -> pax.v1.RouteGroup
-	93,  // 11: pax.v1.Snapshot.measurement_error:type_name -> pax.v1.ProductError
+	96,  // 10: pax.v1.Snapshot.route_groups:type_name -> pax.v1.RouteGroup
+	95,  // 11: pax.v1.Snapshot.measurement_error:type_name -> pax.v1.ProductError
 	13,  // 12: pax.v1.Snapshot.physical_egress:type_name -> pax.v1.PhysicalEgress
 	12,  // 13: pax.v1.Snapshot.route_measurement_progress:type_name -> pax.v1.RouteMeasurementProgress
-	95,  // 14: pax.v1.Snapshot.exit_pool_state:type_name -> pax.v1.ExitPoolState
-	88,  // 15: pax.v1.Snapshot.test_operation_ids:type_name -> pax.v1.Snapshot.TestOperationIdsEntry
+	97,  // 14: pax.v1.Snapshot.exit_pool_state:type_name -> pax.v1.ExitPoolState
+	90,  // 15: pax.v1.Snapshot.test_operation_ids:type_name -> pax.v1.Snapshot.TestOperationIdsEntry
 	11,  // 16: pax.v1.Snapshot.download_queue:type_name -> pax.v1.DownloadQueueState
-	96,  // 17: pax.v1.Snapshot.history:type_name -> pax.v1.HistoryState
-	97,  // 18: pax.v1.Snapshot.current_path_check:type_name -> pax.v1.CurrentPathCheck
-	89,  // 19: pax.v1.Snapshot.exit_operation_ids:type_name -> pax.v1.Snapshot.ExitOperationIdsEntry
-	98,  // 20: pax.v1.Snapshot.ai_usage:type_name -> pax.v1.AIUsageState
-	99,  // 21: pax.v1.Snapshot.external_tun:type_name -> pax.v1.ExternalTUN
+	98,  // 17: pax.v1.Snapshot.history:type_name -> pax.v1.HistoryState
+	99,  // 18: pax.v1.Snapshot.current_path_check:type_name -> pax.v1.CurrentPathCheck
+	91,  // 19: pax.v1.Snapshot.exit_operation_ids:type_name -> pax.v1.Snapshot.ExitOperationIdsEntry
+	100, // 20: pax.v1.Snapshot.ai_usage:type_name -> pax.v1.AIUsageState
+	101, // 21: pax.v1.Snapshot.external_tun:type_name -> pax.v1.ExternalTUN
 	6,   // 22: pax.v1.WatchEvent.snapshot:type_name -> pax.v1.Snapshot
-	100, // 23: pax.v1.WatchEvent.operation:type_name -> pax.v1.OperationResult
+	102, // 23: pax.v1.WatchEvent.operation:type_name -> pax.v1.OperationResult
 	66,  // 24: pax.v1.WatchEvent.history_delta:type_name -> pax.v1.HistoryDelta
-	97,  // 25: pax.v1.WatchEvent.current_path_check:type_name -> pax.v1.CurrentPathCheck
-	98,  // 26: pax.v1.WatchEvent.ai_usage:type_name -> pax.v1.AIUsageState
+	99,  // 25: pax.v1.WatchEvent.current_path_check:type_name -> pax.v1.CurrentPathCheck
+	100, // 26: pax.v1.WatchEvent.ai_usage:type_name -> pax.v1.AIUsageState
 	31,  // 27: pax.v1.NodeProfile.tls_policy:type_name -> pax.v1.RouteTLSPolicy
-	101, // 28: pax.v1.NodeProfile.test_summary:type_name -> pax.v1.RouteTestSummary
-	102, // 29: pax.v1.NodeProfile.download_summary:type_name -> pax.v1.DownloadTestSummary
-	103, // 30: pax.v1.NodeProfile.chain:type_name -> pax.v1.ChainRoute
-	104, // 31: pax.v1.NodeProfile.exit_summary:type_name -> pax.v1.RouteExitSummary
-	90,  // 32: pax.v1.DownloadQueueState.operation_ids:type_name -> pax.v1.DownloadQueueState.OperationIdsEntry
+	103, // 28: pax.v1.NodeProfile.test_summary:type_name -> pax.v1.RouteTestSummary
+	104, // 29: pax.v1.NodeProfile.download_summary:type_name -> pax.v1.DownloadTestSummary
+	105, // 30: pax.v1.NodeProfile.chain:type_name -> pax.v1.ChainRoute
+	106, // 31: pax.v1.NodeProfile.exit_summary:type_name -> pax.v1.RouteExitSummary
+	92,  // 32: pax.v1.DownloadQueueState.operation_ids:type_name -> pax.v1.DownloadQueueState.OperationIdsEntry
 	0,   // 33: pax.v1.RouteMeasurementProgress.phase:type_name -> pax.v1.RouteMeasurementPhase
-	101, // 34: pax.v1.RouteMeasurementProgress.latency_result:type_name -> pax.v1.RouteTestSummary
-	105, // 35: pax.v1.RouteMeasurementProgress.updated_at:type_name -> google.protobuf.Timestamp
-	105, // 36: pax.v1.PhysicalEgress.at:type_name -> google.protobuf.Timestamp
-	93,  // 37: pax.v1.PhysicalEgress.error:type_name -> pax.v1.ProductError
-	106, // 38: pax.v1.CFCandidates.items:type_name -> pax.v1.CFCandidate
-	93,  // 39: pax.v1.SubscriptionSummary.last_error:type_name -> pax.v1.ProductError
+	103, // 34: pax.v1.RouteMeasurementProgress.latency_result:type_name -> pax.v1.RouteTestSummary
+	107, // 35: pax.v1.RouteMeasurementProgress.updated_at:type_name -> google.protobuf.Timestamp
+	107, // 36: pax.v1.PhysicalEgress.at:type_name -> google.protobuf.Timestamp
+	95,  // 37: pax.v1.PhysicalEgress.error:type_name -> pax.v1.ProductError
+	108, // 38: pax.v1.CFCandidates.items:type_name -> pax.v1.CFCandidate
+	95,  // 39: pax.v1.SubscriptionSummary.last_error:type_name -> pax.v1.ProductError
 	17,  // 40: pax.v1.SubscriptionSummary.last_refresh:type_name -> pax.v1.RefreshReport
 	43,  // 41: pax.v1.SubscriptionSummary.last_attempt:type_name -> pax.v1.SubscriptionAttempt
-	105, // 42: pax.v1.TrafficSnapshot.as_of:type_name -> google.protobuf.Timestamp
-	105, // 43: pax.v1.ProductLog.at:type_name -> google.protobuf.Timestamp
+	107, // 42: pax.v1.TrafficSnapshot.as_of:type_name -> google.protobuf.Timestamp
+	107, // 43: pax.v1.ProductLog.at:type_name -> google.protobuf.Timestamp
 	1,   // 44: pax.v1.ProductLog.level:type_name -> pax.v1.LogLevel
 	42,  // 45: pax.v1.ProductLog.connection:type_name -> pax.v1.ConnectionEvent
-	107, // 46: pax.v1.ProductLog.flow:type_name -> pax.v1.FlowRecord
-	105, // 47: pax.v1.ProductLog.first_at:type_name -> google.protobuf.Timestamp
-	105, // 48: pax.v1.ProductLog.last_at:type_name -> google.protobuf.Timestamp
+	109, // 46: pax.v1.ProductLog.flow:type_name -> pax.v1.FlowRecord
+	107, // 47: pax.v1.ProductLog.first_at:type_name -> google.protobuf.Timestamp
+	107, // 48: pax.v1.ProductLog.last_at:type_name -> google.protobuf.Timestamp
 	55,  // 49: pax.v1.ProductLog.system_event:type_name -> pax.v1.SystemEvent
-	108, // 50: pax.v1.SetProxyEnabledRequest.context:type_name -> pax.v1.OperationContext
-	108, // 51: pax.v1.SelectRouteRequest.context:type_name -> pax.v1.OperationContext
+	110, // 50: pax.v1.SetProxyEnabledRequest.context:type_name -> pax.v1.OperationContext
+	110, // 51: pax.v1.SelectRouteRequest.context:type_name -> pax.v1.OperationContext
 	10,  // 52: pax.v1.ImportResult.imported:type_name -> pax.v1.NodeProfile
 	24,  // 53: pax.v1.ImportResult.failures:type_name -> pax.v1.ImportFailure
-	93,  // 54: pax.v1.ImportFailure.error:type_name -> pax.v1.ProductError
-	108, // 55: pax.v1.RefreshSubscriptionRequest.context:type_name -> pax.v1.OperationContext
-	108, // 56: pax.v1.DeleteSubscriptionRequest.context:type_name -> pax.v1.OperationContext
-	108, // 57: pax.v1.RestoreSubscriptionRouteRequest.context:type_name -> pax.v1.OperationContext
-	108, // 58: pax.v1.CancelOperationRequest.context:type_name -> pax.v1.OperationContext
+	95,  // 54: pax.v1.ImportFailure.error:type_name -> pax.v1.ProductError
+	110, // 55: pax.v1.RefreshSubscriptionRequest.context:type_name -> pax.v1.OperationContext
+	110, // 56: pax.v1.DeleteSubscriptionRequest.context:type_name -> pax.v1.OperationContext
+	110, // 57: pax.v1.RestoreSubscriptionRouteRequest.context:type_name -> pax.v1.OperationContext
+	110, // 58: pax.v1.CancelOperationRequest.context:type_name -> pax.v1.OperationContext
 	30,  // 59: pax.v1.TestRouteRequest.targets:type_name -> pax.v1.RouteTestTarget
-	108, // 60: pax.v1.TestRouteRequest.context:type_name -> pax.v1.OperationContext
+	110, // 60: pax.v1.TestRouteRequest.context:type_name -> pax.v1.OperationContext
 	2,   // 61: pax.v1.RouteTLSPolicy.mode:type_name -> pax.v1.TLSMode
 	33,  // 62: pax.v1.ConfirmRouteTLSBatchRequest.routes:type_name -> pax.v1.UpdateRouteTLSRequest
-	108, // 63: pax.v1.ConfirmRouteTLSBatchRequest.context:type_name -> pax.v1.OperationContext
+	110, // 63: pax.v1.ConfirmRouteTLSBatchRequest.context:type_name -> pax.v1.OperationContext
 	2,   // 64: pax.v1.UpdateRouteTLSRequest.mode:type_name -> pax.v1.TLSMode
-	108, // 65: pax.v1.UpdateRouteTLSRequest.context:type_name -> pax.v1.OperationContext
+	110, // 65: pax.v1.UpdateRouteTLSRequest.context:type_name -> pax.v1.OperationContext
 	2,   // 66: pax.v1.ActiveTLS.mode:type_name -> pax.v1.TLSMode
-	108, // 67: pax.v1.PreviewRoutesRequest.context:type_name -> pax.v1.OperationContext
+	110, // 67: pax.v1.PreviewRoutesRequest.context:type_name -> pax.v1.OperationContext
 	37,  // 68: pax.v1.RoutesPreview.items:type_name -> pax.v1.RoutePreviewItem
 	10,  // 69: pax.v1.RoutePreviewItem.route:type_name -> pax.v1.NodeProfile
-	108, // 70: pax.v1.CancelRoutesPreviewRequest.context:type_name -> pax.v1.OperationContext
-	108, // 71: pax.v1.ConfirmImportRoutesRequest.context:type_name -> pax.v1.OperationContext
-	108, // 72: pax.v1.DeleteRouteRequest.context:type_name -> pax.v1.OperationContext
-	94,  // 73: pax.v1.SaveRouteGroupsRequest.groups:type_name -> pax.v1.RouteGroup
-	108, // 74: pax.v1.SaveRouteGroupsRequest.context:type_name -> pax.v1.OperationContext
-	105, // 75: pax.v1.SubscriptionAttempt.at:type_name -> google.protobuf.Timestamp
-	108, // 76: pax.v1.CFTaskRequest.context:type_name -> pax.v1.OperationContext
-	108, // 77: pax.v1.SaveChainRouteRequest.context:type_name -> pax.v1.OperationContext
-	105, // 78: pax.v1.RouteHistoryRequest.from:type_name -> google.protobuf.Timestamp
-	105, // 79: pax.v1.RouteHistoryRequest.until:type_name -> google.protobuf.Timestamp
-	105, // 80: pax.v1.RouteHistorySample.at:type_name -> google.protobuf.Timestamp
-	93,  // 81: pax.v1.RouteHistorySample.error:type_name -> pax.v1.ProductError
-	109, // 82: pax.v1.RouteHistorySample.exit_location:type_name -> pax.v1.ExitLocation
+	110, // 70: pax.v1.CancelRoutesPreviewRequest.context:type_name -> pax.v1.OperationContext
+	110, // 71: pax.v1.ConfirmImportRoutesRequest.context:type_name -> pax.v1.OperationContext
+	110, // 72: pax.v1.DeleteRouteRequest.context:type_name -> pax.v1.OperationContext
+	96,  // 73: pax.v1.SaveRouteGroupsRequest.groups:type_name -> pax.v1.RouteGroup
+	110, // 74: pax.v1.SaveRouteGroupsRequest.context:type_name -> pax.v1.OperationContext
+	107, // 75: pax.v1.SubscriptionAttempt.at:type_name -> google.protobuf.Timestamp
+	110, // 76: pax.v1.CFTaskRequest.context:type_name -> pax.v1.OperationContext
+	110, // 77: pax.v1.SaveChainRouteRequest.context:type_name -> pax.v1.OperationContext
+	107, // 78: pax.v1.RouteHistoryRequest.from:type_name -> google.protobuf.Timestamp
+	107, // 79: pax.v1.RouteHistoryRequest.until:type_name -> google.protobuf.Timestamp
+	107, // 80: pax.v1.RouteHistorySample.at:type_name -> google.protobuf.Timestamp
+	95,  // 81: pax.v1.RouteHistorySample.error:type_name -> pax.v1.ProductError
+	111, // 82: pax.v1.RouteHistorySample.exit_location:type_name -> pax.v1.ExitLocation
 	49,  // 83: pax.v1.RouteHistoryResponse.items:type_name -> pax.v1.RouteHistorySample
-	110, // 84: pax.v1.RouteUsageResponse.items:type_name -> pax.v1.RouteUsageBucket
-	105, // 85: pax.v1.RouteUsageResponse.from:type_name -> google.protobuf.Timestamp
-	105, // 86: pax.v1.RouteUsageResponse.until:type_name -> google.protobuf.Timestamp
-	105, // 87: pax.v1.RouteUsageResponse.coverage_start:type_name -> google.protobuf.Timestamp
-	105, // 88: pax.v1.RouteUsageResponse.sampled_at:type_name -> google.protobuf.Timestamp
-	93,  // 89: pax.v1.RouteUsageResponse.error:type_name -> pax.v1.ProductError
+	112, // 84: pax.v1.RouteUsageResponse.items:type_name -> pax.v1.RouteUsageBucket
+	107, // 85: pax.v1.RouteUsageResponse.from:type_name -> google.protobuf.Timestamp
+	107, // 86: pax.v1.RouteUsageResponse.until:type_name -> google.protobuf.Timestamp
+	107, // 87: pax.v1.RouteUsageResponse.coverage_start:type_name -> google.protobuf.Timestamp
+	107, // 88: pax.v1.RouteUsageResponse.sampled_at:type_name -> google.protobuf.Timestamp
+	95,  // 89: pax.v1.RouteUsageResponse.error:type_name -> pax.v1.ProductError
 	53,  // 90: pax.v1.EventSection.fields:type_name -> pax.v1.EventField
 	52,  // 91: pax.v1.SystemEvent.category:type_name -> pax.v1.EventCategory
-	105, // 92: pax.v1.SystemEvent.started_at:type_name -> google.protobuf.Timestamp
+	107, // 92: pax.v1.SystemEvent.started_at:type_name -> google.protobuf.Timestamp
 	54,  // 93: pax.v1.SystemEvent.sections:type_name -> pax.v1.EventSection
-	105, // 94: pax.v1.LogQuery.from:type_name -> google.protobuf.Timestamp
-	105, // 95: pax.v1.LogQuery.until:type_name -> google.protobuf.Timestamp
+	107, // 94: pax.v1.LogQuery.from:type_name -> google.protobuf.Timestamp
+	107, // 95: pax.v1.LogQuery.until:type_name -> google.protobuf.Timestamp
 	57,  // 96: pax.v1.LogQuery.criteria:type_name -> pax.v1.LogCriteria
 	19,  // 97: pax.v1.LogPage.items:type_name -> pax.v1.ProductLog
-	96,  // 98: pax.v1.LogPage.history:type_name -> pax.v1.HistoryState
+	98,  // 98: pax.v1.LogPage.history:type_name -> pax.v1.HistoryState
 	70,  // 99: pax.v1.LogPage.records:type_name -> pax.v1.LogRecord
-	105, // 100: pax.v1.LogPage.as_of:type_name -> google.protobuf.Timestamp
+	107, // 100: pax.v1.LogPage.as_of:type_name -> google.protobuf.Timestamp
 	58,  // 101: pax.v1.LogPage.options:type_name -> pax.v1.LogOptions
 	60,  // 102: pax.v1.LogObjectPage.items:type_name -> pax.v1.LogObject
-	96,  // 103: pax.v1.LogObjectPage.history:type_name -> pax.v1.HistoryState
+	98,  // 103: pax.v1.LogObjectPage.history:type_name -> pax.v1.HistoryState
 	60,  // 104: pax.v1.LogObjectPage.selected_object:type_name -> pax.v1.LogObject
 	56,  // 105: pax.v1.LogDetailRequest.query:type_name -> pax.v1.LogQuery
 	19,  // 106: pax.v1.LogDetail.event:type_name -> pax.v1.ProductLog
-	107, // 107: pax.v1.LogDetail.flow:type_name -> pax.v1.FlowRecord
+	109, // 107: pax.v1.LogDetail.flow:type_name -> pax.v1.FlowRecord
 	19,  // 108: pax.v1.LogDetail.timeline:type_name -> pax.v1.ProductLog
 	70,  // 109: pax.v1.LogDetail.record:type_name -> pax.v1.LogRecord
-	105, // 110: pax.v1.ClearLogsRequest.requested_at:type_name -> google.protobuf.Timestamp
-	108, // 111: pax.v1.ClearLogsRequest.context:type_name -> pax.v1.OperationContext
-	108, // 112: pax.v1.CurrentPathRecheckRequest.context:type_name -> pax.v1.OperationContext
-	96,  // 113: pax.v1.HistoryDelta.history:type_name -> pax.v1.HistoryState
+	107, // 110: pax.v1.ClearLogsRequest.requested_at:type_name -> google.protobuf.Timestamp
+	110, // 111: pax.v1.ClearLogsRequest.context:type_name -> pax.v1.OperationContext
+	110, // 112: pax.v1.CurrentPathRecheckRequest.context:type_name -> pax.v1.OperationContext
+	98,  // 113: pax.v1.HistoryDelta.history:type_name -> pax.v1.HistoryState
 	18,  // 114: pax.v1.HistoryDelta.traffic:type_name -> pax.v1.TrafficSnapshot
 	19,  // 115: pax.v1.HistoryDelta.recent_logs:type_name -> pax.v1.ProductLog
 	56,  // 116: pax.v1.LogUpdateRequest.filter:type_name -> pax.v1.LogQuery
 	19,  // 117: pax.v1.LogUpdatePage.items:type_name -> pax.v1.ProductLog
-	96,  // 118: pax.v1.LogUpdatePage.history:type_name -> pax.v1.HistoryState
-	105, // 119: pax.v1.LogUpdatePage.as_of:type_name -> google.protobuf.Timestamp
-	105, // 120: pax.v1.ConnectionMetrics.bytes_from:type_name -> google.protobuf.Timestamp
-	105, // 121: pax.v1.ConnectionMetrics.as_of:type_name -> google.protobuf.Timestamp
+	98,  // 118: pax.v1.LogUpdatePage.history:type_name -> pax.v1.HistoryState
+	107, // 119: pax.v1.LogUpdatePage.as_of:type_name -> google.protobuf.Timestamp
+	107, // 120: pax.v1.ConnectionMetrics.bytes_from:type_name -> google.protobuf.Timestamp
+	107, // 121: pax.v1.ConnectionMetrics.as_of:type_name -> google.protobuf.Timestamp
 	1,   // 122: pax.v1.LogRecord.level:type_name -> pax.v1.LogLevel
-	107, // 123: pax.v1.LogRecord.flow:type_name -> pax.v1.FlowRecord
+	109, // 123: pax.v1.LogRecord.flow:type_name -> pax.v1.FlowRecord
 	69,  // 124: pax.v1.LogRecord.metrics:type_name -> pax.v1.ConnectionMetrics
-	105, // 125: pax.v1.LogRecord.first_at:type_name -> google.protobuf.Timestamp
-	105, // 126: pax.v1.LogRecord.last_at:type_name -> google.protobuf.Timestamp
-	105, // 127: pax.v1.LogRecord.as_of:type_name -> google.protobuf.Timestamp
+	107, // 125: pax.v1.LogRecord.first_at:type_name -> google.protobuf.Timestamp
+	107, // 126: pax.v1.LogRecord.last_at:type_name -> google.protobuf.Timestamp
+	107, // 127: pax.v1.LogRecord.as_of:type_name -> google.protobuf.Timestamp
 	55,  // 128: pax.v1.LogRecord.system_event:type_name -> pax.v1.SystemEvent
-	105, // 129: pax.v1.ObjectIconResult.expires_at:type_name -> google.protobuf.Timestamp
+	107, // 129: pax.v1.ObjectIconResult.expires_at:type_name -> google.protobuf.Timestamp
 	73,  // 130: pax.v1.RoutingRulesSnapshot.rules:type_name -> pax.v1.RoutingRule
-	105, // 131: pax.v1.RoutingRulesSnapshot.at:type_name -> google.protobuf.Timestamp
+	107, // 131: pax.v1.RoutingRulesSnapshot.at:type_name -> google.protobuf.Timestamp
 	75,  // 132: pax.v1.RoutingPackage.rules:type_name -> pax.v1.RoutingEntry
-	76,  // 133: pax.v1.RoutingLibrarySnapshot.packages:type_name -> pax.v1.RoutingPackage
-	77,  // 134: pax.v1.RoutingLibrarySnapshot.applications:type_name -> pax.v1.RoutingApplication
-	10,  // 135: pax.v1.RoutingLibrarySnapshot.routes:type_name -> pax.v1.NodeProfile
-	76,  // 136: pax.v1.RoutingMutationRequest.package:type_name -> pax.v1.RoutingPackage
-	75,  // 137: pax.v1.RoutingMutationRequest.rule:type_name -> pax.v1.RoutingEntry
-	75,  // 138: pax.v1.RoutingMutationRequest.rules:type_name -> pax.v1.RoutingEntry
-	75,  // 139: pax.v1.GeoRulesPage.rules:type_name -> pax.v1.RoutingEntry
-	108, // 140: pax.v1.StartConnectionDiagnosticRequest.context:type_name -> pax.v1.OperationContext
-	108, // 141: pax.v1.StartNetworkDiagnosticRequest.context:type_name -> pax.v1.OperationContext
-	108, // 142: pax.v1.StartEnvironmentSourcesRequest.context:type_name -> pax.v1.OperationContext
-	108, // 143: pax.v1.EnvironmentDiagnosticRequest.context:type_name -> pax.v1.OperationContext
-	111, // 144: pax.v1.StartCFValidationRequest.secret_updates:type_name -> pax.v1.RouteSecretUpdate
-	108, // 145: pax.v1.StartCFValidationRequest.context:type_name -> pax.v1.OperationContext
-	108, // 146: pax.v1.SaveValidatedCFRouteRequest.context:type_name -> pax.v1.OperationContext
-	112, // 147: pax.v1.PaxService.GetOperation:input_type -> pax.v1.GetOperationRequest
-	65,  // 148: pax.v1.PaxService.RecheckCurrentPath:input_type -> pax.v1.CurrentPathRecheckRequest
-	67,  // 149: pax.v1.PaxService.QueryLogUpdates:input_type -> pax.v1.LogUpdateRequest
-	113, // 150: pax.v1.PaxService.QueryRoutingRules:input_type -> google.protobuf.Empty
-	113, // 151: pax.v1.PaxService.QueryRoutingLibrary:input_type -> google.protobuf.Empty
-	80,  // 152: pax.v1.PaxService.QueryGeoRules:input_type -> pax.v1.GeoRulesQuery
-	79,  // 153: pax.v1.PaxService.MutateRoutingLibrary:input_type -> pax.v1.RoutingMutationRequest
-	71,  // 154: pax.v1.PaxService.QueryObjectIcon:input_type -> pax.v1.ObjectIconRequest
-	56,  // 155: pax.v1.PaxService.QueryLogs:input_type -> pax.v1.LogQuery
-	56,  // 156: pax.v1.PaxService.QueryLogObjects:input_type -> pax.v1.LogQuery
-	62,  // 157: pax.v1.PaxService.GetLogDetail:input_type -> pax.v1.LogDetailRequest
-	114, // 158: pax.v1.PaxService.QueryTraffic:input_type -> pax.v1.TrafficQuery
-	115, // 159: pax.v1.PaxService.QueryTrafficDetail:input_type -> pax.v1.TrafficDetailRequest
-	64,  // 160: pax.v1.PaxService.ClearLogs:input_type -> pax.v1.ClearLogsRequest
-	113, // 161: pax.v1.PaxService.ShutdownAppSession:input_type -> google.protobuf.Empty
-	3,   // 162: pax.v1.PaxService.Hello:input_type -> pax.v1.HelloRequest
-	5,   // 163: pax.v1.PaxService.GetSnapshot:input_type -> pax.v1.GetSnapshotRequest
-	8,   // 164: pax.v1.PaxService.Watch:input_type -> pax.v1.WatchRequest
-	7,   // 165: pax.v1.PaxService.SetViewVisibility:input_type -> pax.v1.ViewVisibility
-	35,  // 166: pax.v1.PaxService.PreviewRoutes:input_type -> pax.v1.PreviewRoutesRequest
-	38,  // 167: pax.v1.PaxService.CancelRoutesPreview:input_type -> pax.v1.CancelRoutesPreviewRequest
-	39,  // 168: pax.v1.PaxService.ConfirmImportRoutes:input_type -> pax.v1.ConfirmImportRoutesRequest
-	116, // 169: pax.v1.PaxService.AddRoute:input_type -> pax.v1.RouteEditRequest
-	116, // 170: pax.v1.PaxService.UpdateRoute:input_type -> pax.v1.RouteEditRequest
-	40,  // 171: pax.v1.PaxService.DeleteRoute:input_type -> pax.v1.DeleteRouteRequest
-	117, // 172: pax.v1.PaxService.GetRouteEditor:input_type -> pax.v1.GetRouteEditorRequest
-	117, // 173: pax.v1.PaxService.GetRouteEditView:input_type -> pax.v1.GetRouteEditorRequest
-	118, // 174: pax.v1.PaxService.SaveRouteEdit:input_type -> pax.v1.SaveRouteEditRequest
-	33,  // 175: pax.v1.PaxService.UpdateRouteTLS:input_type -> pax.v1.UpdateRouteTLSRequest
-	32,  // 176: pax.v1.PaxService.ConfirmRouteTLSBatch:input_type -> pax.v1.ConfirmRouteTLSBatchRequest
-	47,  // 177: pax.v1.PaxService.SaveChainRoute:input_type -> pax.v1.SaveChainRouteRequest
-	48,  // 178: pax.v1.PaxService.QueryRouteHistory:input_type -> pax.v1.RouteHistoryRequest
-	48,  // 179: pax.v1.PaxService.QueryRouteUsage:input_type -> pax.v1.RouteHistoryRequest
-	46,  // 180: pax.v1.PaxService.NotifyPowerEvent:input_type -> pax.v1.PowerEventRequest
-	20,  // 181: pax.v1.PaxService.SetProxyEnabled:input_type -> pax.v1.SetProxyEnabledRequest
-	113, // 182: pax.v1.PaxService.ReconnectProxy:input_type -> google.protobuf.Empty
-	21,  // 183: pax.v1.PaxService.SelectRoute:input_type -> pax.v1.SelectRouteRequest
-	22,  // 184: pax.v1.PaxService.ImportRoutes:input_type -> pax.v1.ImportRoutesRequest
-	26,  // 185: pax.v1.PaxService.DeleteSubscription:input_type -> pax.v1.DeleteSubscriptionRequest
-	25,  // 186: pax.v1.PaxService.RefreshSubscription:input_type -> pax.v1.RefreshSubscriptionRequest
-	27,  // 187: pax.v1.PaxService.RestoreSubscriptionRoute:input_type -> pax.v1.RestoreSubscriptionRouteRequest
-	28,  // 188: pax.v1.PaxService.CancelOperation:input_type -> pax.v1.CancelOperationRequest
-	29,  // 189: pax.v1.PaxService.TestRoute:input_type -> pax.v1.TestRouteRequest
-	41,  // 190: pax.v1.PaxService.SaveRouteGroups:input_type -> pax.v1.SaveRouteGroupsRequest
-	119, // 191: pax.v1.PaxService.UpdateSettings:input_type -> pax.v1.UpdateSettingsRequest
-	113, // 192: pax.v1.PaxService.GetNetworkPrivacy:input_type -> google.protobuf.Empty
-	120, // 193: pax.v1.PaxService.SaveNetworkPrivacy:input_type -> pax.v1.NetworkPrivacy
-	113, // 194: pax.v1.PaxService.GetMeasurementPreferences:input_type -> google.protobuf.Empty
-	121, // 195: pax.v1.PaxService.SaveMeasurementPreferences:input_type -> pax.v1.MeasurementPreferences
-	29,  // 196: pax.v1.PaxService.EvaluateMeasurementPreferences:input_type -> pax.v1.TestRouteRequest
-	113, // 197: pax.v1.PaxService.GetPhysicalEgress:input_type -> google.protobuf.Empty
-	113, // 198: pax.v1.PaxService.GetTrafficPathDiagnostics:input_type -> google.protobuf.Empty
-	122, // 199: pax.v1.PaxService.DiagnoseConnection:input_type -> pax.v1.ConnectionDiagnosticRequest
-	123, // 200: pax.v1.PaxService.DiagnoseNetwork:input_type -> pax.v1.NetworkDiagnosticRequest
-	85,  // 201: pax.v1.PaxService.InspectEnvironment:input_type -> pax.v1.EnvironmentDiagnosticRequest
-	82,  // 202: pax.v1.PaxService.StartConnectionDiagnostic:input_type -> pax.v1.StartConnectionDiagnosticRequest
-	83,  // 203: pax.v1.PaxService.StartNetworkDiagnostic:input_type -> pax.v1.StartNetworkDiagnosticRequest
-	84,  // 204: pax.v1.PaxService.StartEnvironmentSources:input_type -> pax.v1.StartEnvironmentSourcesRequest
-	113, // 205: pax.v1.PaxService.QueryCFCandidates:input_type -> google.protobuf.Empty
-	15,  // 206: pax.v1.PaxService.ValidateCFCandidate:input_type -> pax.v1.CFValidationRequest
-	44,  // 207: pax.v1.PaxService.QueryCFWorkspace:input_type -> pax.v1.CFWorkspaceRequest
-	45,  // 208: pax.v1.PaxService.RunCFTask:input_type -> pax.v1.CFTaskRequest
-	86,  // 209: pax.v1.PaxService.StartCFValidation:input_type -> pax.v1.StartCFValidationRequest
-	87,  // 210: pax.v1.PaxService.SaveValidatedCFRoute:input_type -> pax.v1.SaveValidatedCFRouteRequest
-	124, // 211: pax.v1.PaxService.GetOperation:output_type -> pax.v1.OperationState
-	125, // 212: pax.v1.PaxService.RecheckCurrentPath:output_type -> pax.v1.OperationAck
-	68,  // 213: pax.v1.PaxService.QueryLogUpdates:output_type -> pax.v1.LogUpdatePage
-	74,  // 214: pax.v1.PaxService.QueryRoutingRules:output_type -> pax.v1.RoutingRulesSnapshot
-	78,  // 215: pax.v1.PaxService.QueryRoutingLibrary:output_type -> pax.v1.RoutingLibrarySnapshot
-	81,  // 216: pax.v1.PaxService.QueryGeoRules:output_type -> pax.v1.GeoRulesPage
-	78,  // 217: pax.v1.PaxService.MutateRoutingLibrary:output_type -> pax.v1.RoutingLibrarySnapshot
-	72,  // 218: pax.v1.PaxService.QueryObjectIcon:output_type -> pax.v1.ObjectIconResult
-	59,  // 219: pax.v1.PaxService.QueryLogs:output_type -> pax.v1.LogPage
-	61,  // 220: pax.v1.PaxService.QueryLogObjects:output_type -> pax.v1.LogObjectPage
-	63,  // 221: pax.v1.PaxService.GetLogDetail:output_type -> pax.v1.LogDetail
-	126, // 222: pax.v1.PaxService.QueryTraffic:output_type -> pax.v1.TrafficPage
-	127, // 223: pax.v1.PaxService.QueryTrafficDetail:output_type -> pax.v1.TrafficDetail
-	125, // 224: pax.v1.PaxService.ClearLogs:output_type -> pax.v1.OperationAck
-	113, // 225: pax.v1.PaxService.ShutdownAppSession:output_type -> google.protobuf.Empty
-	4,   // 226: pax.v1.PaxService.Hello:output_type -> pax.v1.HelloResponse
-	6,   // 227: pax.v1.PaxService.GetSnapshot:output_type -> pax.v1.Snapshot
-	9,   // 228: pax.v1.PaxService.Watch:output_type -> pax.v1.WatchEvent
-	113, // 229: pax.v1.PaxService.SetViewVisibility:output_type -> google.protobuf.Empty
-	36,  // 230: pax.v1.PaxService.PreviewRoutes:output_type -> pax.v1.RoutesPreview
-	113, // 231: pax.v1.PaxService.CancelRoutesPreview:output_type -> google.protobuf.Empty
-	125, // 232: pax.v1.PaxService.ConfirmImportRoutes:output_type -> pax.v1.OperationAck
-	125, // 233: pax.v1.PaxService.AddRoute:output_type -> pax.v1.OperationAck
-	125, // 234: pax.v1.PaxService.UpdateRoute:output_type -> pax.v1.OperationAck
-	125, // 235: pax.v1.PaxService.DeleteRoute:output_type -> pax.v1.OperationAck
-	128, // 236: pax.v1.PaxService.GetRouteEditor:output_type -> pax.v1.RouteEditor
-	129, // 237: pax.v1.PaxService.GetRouteEditView:output_type -> pax.v1.RouteEditView
-	125, // 238: pax.v1.PaxService.SaveRouteEdit:output_type -> pax.v1.OperationAck
-	125, // 239: pax.v1.PaxService.UpdateRouteTLS:output_type -> pax.v1.OperationAck
-	125, // 240: pax.v1.PaxService.ConfirmRouteTLSBatch:output_type -> pax.v1.OperationAck
-	125, // 241: pax.v1.PaxService.SaveChainRoute:output_type -> pax.v1.OperationAck
-	50,  // 242: pax.v1.PaxService.QueryRouteHistory:output_type -> pax.v1.RouteHistoryResponse
-	51,  // 243: pax.v1.PaxService.QueryRouteUsage:output_type -> pax.v1.RouteUsageResponse
-	113, // 244: pax.v1.PaxService.NotifyPowerEvent:output_type -> google.protobuf.Empty
-	125, // 245: pax.v1.PaxService.SetProxyEnabled:output_type -> pax.v1.OperationAck
-	125, // 246: pax.v1.PaxService.ReconnectProxy:output_type -> pax.v1.OperationAck
-	125, // 247: pax.v1.PaxService.SelectRoute:output_type -> pax.v1.OperationAck
-	23,  // 248: pax.v1.PaxService.ImportRoutes:output_type -> pax.v1.ImportResult
-	125, // 249: pax.v1.PaxService.DeleteSubscription:output_type -> pax.v1.OperationAck
-	125, // 250: pax.v1.PaxService.RefreshSubscription:output_type -> pax.v1.OperationAck
-	125, // 251: pax.v1.PaxService.RestoreSubscriptionRoute:output_type -> pax.v1.OperationAck
-	125, // 252: pax.v1.PaxService.CancelOperation:output_type -> pax.v1.OperationAck
-	125, // 253: pax.v1.PaxService.TestRoute:output_type -> pax.v1.OperationAck
-	125, // 254: pax.v1.PaxService.SaveRouteGroups:output_type -> pax.v1.OperationAck
-	125, // 255: pax.v1.PaxService.UpdateSettings:output_type -> pax.v1.OperationAck
-	120, // 256: pax.v1.PaxService.GetNetworkPrivacy:output_type -> pax.v1.NetworkPrivacy
-	120, // 257: pax.v1.PaxService.SaveNetworkPrivacy:output_type -> pax.v1.NetworkPrivacy
-	121, // 258: pax.v1.PaxService.GetMeasurementPreferences:output_type -> pax.v1.MeasurementPreferences
-	121, // 259: pax.v1.PaxService.SaveMeasurementPreferences:output_type -> pax.v1.MeasurementPreferences
-	125, // 260: pax.v1.PaxService.EvaluateMeasurementPreferences:output_type -> pax.v1.OperationAck
-	13,  // 261: pax.v1.PaxService.GetPhysicalEgress:output_type -> pax.v1.PhysicalEgress
-	130, // 262: pax.v1.PaxService.GetTrafficPathDiagnostics:output_type -> pax.v1.TrafficPathDiagnostics
-	130, // 263: pax.v1.PaxService.DiagnoseConnection:output_type -> pax.v1.TrafficPathDiagnostics
-	131, // 264: pax.v1.PaxService.DiagnoseNetwork:output_type -> pax.v1.NetworkDiagnosticReport
-	132, // 265: pax.v1.PaxService.InspectEnvironment:output_type -> pax.v1.EnvironmentDiagnosticReport
-	125, // 266: pax.v1.PaxService.StartConnectionDiagnostic:output_type -> pax.v1.OperationAck
-	125, // 267: pax.v1.PaxService.StartNetworkDiagnostic:output_type -> pax.v1.OperationAck
-	125, // 268: pax.v1.PaxService.StartEnvironmentSources:output_type -> pax.v1.OperationAck
-	14,  // 269: pax.v1.PaxService.QueryCFCandidates:output_type -> pax.v1.CFCandidates
-	106, // 270: pax.v1.PaxService.ValidateCFCandidate:output_type -> pax.v1.CFCandidate
-	133, // 271: pax.v1.PaxService.QueryCFWorkspace:output_type -> pax.v1.CFWorkspace
-	125, // 272: pax.v1.PaxService.RunCFTask:output_type -> pax.v1.OperationAck
-	125, // 273: pax.v1.PaxService.StartCFValidation:output_type -> pax.v1.OperationAck
-	125, // 274: pax.v1.PaxService.SaveValidatedCFRoute:output_type -> pax.v1.OperationAck
-	211, // [211:275] is the sub-list for method output_type
-	147, // [147:211] is the sub-list for method input_type
-	147, // [147:147] is the sub-list for extension type_name
-	147, // [147:147] is the sub-list for extension extendee
-	0,   // [0:147] is the sub-list for field type_name
+	79,  // 133: pax.v1.RoutingProcessCandidates.applications:type_name -> pax.v1.RoutingCandidateTraffic
+	79,  // 134: pax.v1.RoutingProcessCandidates.processes:type_name -> pax.v1.RoutingCandidateTraffic
+	76,  // 135: pax.v1.RoutingLibrarySnapshot.packages:type_name -> pax.v1.RoutingPackage
+	77,  // 136: pax.v1.RoutingLibrarySnapshot.applications:type_name -> pax.v1.RoutingApplication
+	10,  // 137: pax.v1.RoutingLibrarySnapshot.routes:type_name -> pax.v1.NodeProfile
+	76,  // 138: pax.v1.RoutingMutationRequest.package:type_name -> pax.v1.RoutingPackage
+	75,  // 139: pax.v1.RoutingMutationRequest.rule:type_name -> pax.v1.RoutingEntry
+	75,  // 140: pax.v1.RoutingMutationRequest.rules:type_name -> pax.v1.RoutingEntry
+	75,  // 141: pax.v1.GeoRulesPage.rules:type_name -> pax.v1.RoutingEntry
+	110, // 142: pax.v1.StartConnectionDiagnosticRequest.context:type_name -> pax.v1.OperationContext
+	110, // 143: pax.v1.StartNetworkDiagnosticRequest.context:type_name -> pax.v1.OperationContext
+	110, // 144: pax.v1.StartEnvironmentSourcesRequest.context:type_name -> pax.v1.OperationContext
+	110, // 145: pax.v1.EnvironmentDiagnosticRequest.context:type_name -> pax.v1.OperationContext
+	113, // 146: pax.v1.StartCFValidationRequest.secret_updates:type_name -> pax.v1.RouteSecretUpdate
+	110, // 147: pax.v1.StartCFValidationRequest.context:type_name -> pax.v1.OperationContext
+	110, // 148: pax.v1.SaveValidatedCFRouteRequest.context:type_name -> pax.v1.OperationContext
+	114, // 149: pax.v1.PaxService.GetOperation:input_type -> pax.v1.GetOperationRequest
+	65,  // 150: pax.v1.PaxService.RecheckCurrentPath:input_type -> pax.v1.CurrentPathRecheckRequest
+	67,  // 151: pax.v1.PaxService.QueryLogUpdates:input_type -> pax.v1.LogUpdateRequest
+	115, // 152: pax.v1.PaxService.QueryRoutingRules:input_type -> google.protobuf.Empty
+	115, // 153: pax.v1.PaxService.QueryRoutingLibrary:input_type -> google.protobuf.Empty
+	115, // 154: pax.v1.PaxService.QueryRoutingProcesses:input_type -> google.protobuf.Empty
+	82,  // 155: pax.v1.PaxService.QueryGeoRules:input_type -> pax.v1.GeoRulesQuery
+	81,  // 156: pax.v1.PaxService.MutateRoutingLibrary:input_type -> pax.v1.RoutingMutationRequest
+	71,  // 157: pax.v1.PaxService.QueryObjectIcon:input_type -> pax.v1.ObjectIconRequest
+	56,  // 158: pax.v1.PaxService.QueryLogs:input_type -> pax.v1.LogQuery
+	56,  // 159: pax.v1.PaxService.QueryLogObjects:input_type -> pax.v1.LogQuery
+	62,  // 160: pax.v1.PaxService.GetLogDetail:input_type -> pax.v1.LogDetailRequest
+	116, // 161: pax.v1.PaxService.QueryTraffic:input_type -> pax.v1.TrafficQuery
+	117, // 162: pax.v1.PaxService.QueryTrafficDetail:input_type -> pax.v1.TrafficDetailRequest
+	64,  // 163: pax.v1.PaxService.ClearLogs:input_type -> pax.v1.ClearLogsRequest
+	115, // 164: pax.v1.PaxService.ShutdownAppSession:input_type -> google.protobuf.Empty
+	3,   // 165: pax.v1.PaxService.Hello:input_type -> pax.v1.HelloRequest
+	5,   // 166: pax.v1.PaxService.GetSnapshot:input_type -> pax.v1.GetSnapshotRequest
+	8,   // 167: pax.v1.PaxService.Watch:input_type -> pax.v1.WatchRequest
+	7,   // 168: pax.v1.PaxService.SetViewVisibility:input_type -> pax.v1.ViewVisibility
+	35,  // 169: pax.v1.PaxService.PreviewRoutes:input_type -> pax.v1.PreviewRoutesRequest
+	38,  // 170: pax.v1.PaxService.CancelRoutesPreview:input_type -> pax.v1.CancelRoutesPreviewRequest
+	39,  // 171: pax.v1.PaxService.ConfirmImportRoutes:input_type -> pax.v1.ConfirmImportRoutesRequest
+	118, // 172: pax.v1.PaxService.AddRoute:input_type -> pax.v1.RouteEditRequest
+	118, // 173: pax.v1.PaxService.UpdateRoute:input_type -> pax.v1.RouteEditRequest
+	40,  // 174: pax.v1.PaxService.DeleteRoute:input_type -> pax.v1.DeleteRouteRequest
+	119, // 175: pax.v1.PaxService.GetRouteEditor:input_type -> pax.v1.GetRouteEditorRequest
+	119, // 176: pax.v1.PaxService.GetRouteEditView:input_type -> pax.v1.GetRouteEditorRequest
+	120, // 177: pax.v1.PaxService.SaveRouteEdit:input_type -> pax.v1.SaveRouteEditRequest
+	33,  // 178: pax.v1.PaxService.UpdateRouteTLS:input_type -> pax.v1.UpdateRouteTLSRequest
+	32,  // 179: pax.v1.PaxService.ConfirmRouteTLSBatch:input_type -> pax.v1.ConfirmRouteTLSBatchRequest
+	47,  // 180: pax.v1.PaxService.SaveChainRoute:input_type -> pax.v1.SaveChainRouteRequest
+	48,  // 181: pax.v1.PaxService.QueryRouteHistory:input_type -> pax.v1.RouteHistoryRequest
+	48,  // 182: pax.v1.PaxService.QueryRouteUsage:input_type -> pax.v1.RouteHistoryRequest
+	46,  // 183: pax.v1.PaxService.NotifyPowerEvent:input_type -> pax.v1.PowerEventRequest
+	20,  // 184: pax.v1.PaxService.SetProxyEnabled:input_type -> pax.v1.SetProxyEnabledRequest
+	115, // 185: pax.v1.PaxService.ReconnectProxy:input_type -> google.protobuf.Empty
+	21,  // 186: pax.v1.PaxService.SelectRoute:input_type -> pax.v1.SelectRouteRequest
+	22,  // 187: pax.v1.PaxService.ImportRoutes:input_type -> pax.v1.ImportRoutesRequest
+	26,  // 188: pax.v1.PaxService.DeleteSubscription:input_type -> pax.v1.DeleteSubscriptionRequest
+	25,  // 189: pax.v1.PaxService.RefreshSubscription:input_type -> pax.v1.RefreshSubscriptionRequest
+	27,  // 190: pax.v1.PaxService.RestoreSubscriptionRoute:input_type -> pax.v1.RestoreSubscriptionRouteRequest
+	28,  // 191: pax.v1.PaxService.CancelOperation:input_type -> pax.v1.CancelOperationRequest
+	29,  // 192: pax.v1.PaxService.TestRoute:input_type -> pax.v1.TestRouteRequest
+	41,  // 193: pax.v1.PaxService.SaveRouteGroups:input_type -> pax.v1.SaveRouteGroupsRequest
+	121, // 194: pax.v1.PaxService.UpdateSettings:input_type -> pax.v1.UpdateSettingsRequest
+	115, // 195: pax.v1.PaxService.GetNetworkPrivacy:input_type -> google.protobuf.Empty
+	122, // 196: pax.v1.PaxService.SaveNetworkPrivacy:input_type -> pax.v1.NetworkPrivacy
+	115, // 197: pax.v1.PaxService.GetMeasurementPreferences:input_type -> google.protobuf.Empty
+	123, // 198: pax.v1.PaxService.SaveMeasurementPreferences:input_type -> pax.v1.MeasurementPreferences
+	29,  // 199: pax.v1.PaxService.EvaluateMeasurementPreferences:input_type -> pax.v1.TestRouteRequest
+	115, // 200: pax.v1.PaxService.GetPhysicalEgress:input_type -> google.protobuf.Empty
+	115, // 201: pax.v1.PaxService.GetTrafficPathDiagnostics:input_type -> google.protobuf.Empty
+	124, // 202: pax.v1.PaxService.DiagnoseConnection:input_type -> pax.v1.ConnectionDiagnosticRequest
+	125, // 203: pax.v1.PaxService.DiagnoseNetwork:input_type -> pax.v1.NetworkDiagnosticRequest
+	87,  // 204: pax.v1.PaxService.InspectEnvironment:input_type -> pax.v1.EnvironmentDiagnosticRequest
+	84,  // 205: pax.v1.PaxService.StartConnectionDiagnostic:input_type -> pax.v1.StartConnectionDiagnosticRequest
+	85,  // 206: pax.v1.PaxService.StartNetworkDiagnostic:input_type -> pax.v1.StartNetworkDiagnosticRequest
+	86,  // 207: pax.v1.PaxService.StartEnvironmentSources:input_type -> pax.v1.StartEnvironmentSourcesRequest
+	115, // 208: pax.v1.PaxService.QueryCFCandidates:input_type -> google.protobuf.Empty
+	15,  // 209: pax.v1.PaxService.ValidateCFCandidate:input_type -> pax.v1.CFValidationRequest
+	44,  // 210: pax.v1.PaxService.QueryCFWorkspace:input_type -> pax.v1.CFWorkspaceRequest
+	45,  // 211: pax.v1.PaxService.RunCFTask:input_type -> pax.v1.CFTaskRequest
+	88,  // 212: pax.v1.PaxService.StartCFValidation:input_type -> pax.v1.StartCFValidationRequest
+	89,  // 213: pax.v1.PaxService.SaveValidatedCFRoute:input_type -> pax.v1.SaveValidatedCFRouteRequest
+	126, // 214: pax.v1.PaxService.GetOperation:output_type -> pax.v1.OperationState
+	127, // 215: pax.v1.PaxService.RecheckCurrentPath:output_type -> pax.v1.OperationAck
+	68,  // 216: pax.v1.PaxService.QueryLogUpdates:output_type -> pax.v1.LogUpdatePage
+	74,  // 217: pax.v1.PaxService.QueryRoutingRules:output_type -> pax.v1.RoutingRulesSnapshot
+	80,  // 218: pax.v1.PaxService.QueryRoutingLibrary:output_type -> pax.v1.RoutingLibrarySnapshot
+	78,  // 219: pax.v1.PaxService.QueryRoutingProcesses:output_type -> pax.v1.RoutingProcessCandidates
+	83,  // 220: pax.v1.PaxService.QueryGeoRules:output_type -> pax.v1.GeoRulesPage
+	80,  // 221: pax.v1.PaxService.MutateRoutingLibrary:output_type -> pax.v1.RoutingLibrarySnapshot
+	72,  // 222: pax.v1.PaxService.QueryObjectIcon:output_type -> pax.v1.ObjectIconResult
+	59,  // 223: pax.v1.PaxService.QueryLogs:output_type -> pax.v1.LogPage
+	61,  // 224: pax.v1.PaxService.QueryLogObjects:output_type -> pax.v1.LogObjectPage
+	63,  // 225: pax.v1.PaxService.GetLogDetail:output_type -> pax.v1.LogDetail
+	128, // 226: pax.v1.PaxService.QueryTraffic:output_type -> pax.v1.TrafficPage
+	129, // 227: pax.v1.PaxService.QueryTrafficDetail:output_type -> pax.v1.TrafficDetail
+	127, // 228: pax.v1.PaxService.ClearLogs:output_type -> pax.v1.OperationAck
+	115, // 229: pax.v1.PaxService.ShutdownAppSession:output_type -> google.protobuf.Empty
+	4,   // 230: pax.v1.PaxService.Hello:output_type -> pax.v1.HelloResponse
+	6,   // 231: pax.v1.PaxService.GetSnapshot:output_type -> pax.v1.Snapshot
+	9,   // 232: pax.v1.PaxService.Watch:output_type -> pax.v1.WatchEvent
+	115, // 233: pax.v1.PaxService.SetViewVisibility:output_type -> google.protobuf.Empty
+	36,  // 234: pax.v1.PaxService.PreviewRoutes:output_type -> pax.v1.RoutesPreview
+	115, // 235: pax.v1.PaxService.CancelRoutesPreview:output_type -> google.protobuf.Empty
+	127, // 236: pax.v1.PaxService.ConfirmImportRoutes:output_type -> pax.v1.OperationAck
+	127, // 237: pax.v1.PaxService.AddRoute:output_type -> pax.v1.OperationAck
+	127, // 238: pax.v1.PaxService.UpdateRoute:output_type -> pax.v1.OperationAck
+	127, // 239: pax.v1.PaxService.DeleteRoute:output_type -> pax.v1.OperationAck
+	130, // 240: pax.v1.PaxService.GetRouteEditor:output_type -> pax.v1.RouteEditor
+	131, // 241: pax.v1.PaxService.GetRouteEditView:output_type -> pax.v1.RouteEditView
+	127, // 242: pax.v1.PaxService.SaveRouteEdit:output_type -> pax.v1.OperationAck
+	127, // 243: pax.v1.PaxService.UpdateRouteTLS:output_type -> pax.v1.OperationAck
+	127, // 244: pax.v1.PaxService.ConfirmRouteTLSBatch:output_type -> pax.v1.OperationAck
+	127, // 245: pax.v1.PaxService.SaveChainRoute:output_type -> pax.v1.OperationAck
+	50,  // 246: pax.v1.PaxService.QueryRouteHistory:output_type -> pax.v1.RouteHistoryResponse
+	51,  // 247: pax.v1.PaxService.QueryRouteUsage:output_type -> pax.v1.RouteUsageResponse
+	115, // 248: pax.v1.PaxService.NotifyPowerEvent:output_type -> google.protobuf.Empty
+	127, // 249: pax.v1.PaxService.SetProxyEnabled:output_type -> pax.v1.OperationAck
+	127, // 250: pax.v1.PaxService.ReconnectProxy:output_type -> pax.v1.OperationAck
+	127, // 251: pax.v1.PaxService.SelectRoute:output_type -> pax.v1.OperationAck
+	23,  // 252: pax.v1.PaxService.ImportRoutes:output_type -> pax.v1.ImportResult
+	127, // 253: pax.v1.PaxService.DeleteSubscription:output_type -> pax.v1.OperationAck
+	127, // 254: pax.v1.PaxService.RefreshSubscription:output_type -> pax.v1.OperationAck
+	127, // 255: pax.v1.PaxService.RestoreSubscriptionRoute:output_type -> pax.v1.OperationAck
+	127, // 256: pax.v1.PaxService.CancelOperation:output_type -> pax.v1.OperationAck
+	127, // 257: pax.v1.PaxService.TestRoute:output_type -> pax.v1.OperationAck
+	127, // 258: pax.v1.PaxService.SaveRouteGroups:output_type -> pax.v1.OperationAck
+	127, // 259: pax.v1.PaxService.UpdateSettings:output_type -> pax.v1.OperationAck
+	122, // 260: pax.v1.PaxService.GetNetworkPrivacy:output_type -> pax.v1.NetworkPrivacy
+	122, // 261: pax.v1.PaxService.SaveNetworkPrivacy:output_type -> pax.v1.NetworkPrivacy
+	123, // 262: pax.v1.PaxService.GetMeasurementPreferences:output_type -> pax.v1.MeasurementPreferences
+	123, // 263: pax.v1.PaxService.SaveMeasurementPreferences:output_type -> pax.v1.MeasurementPreferences
+	127, // 264: pax.v1.PaxService.EvaluateMeasurementPreferences:output_type -> pax.v1.OperationAck
+	13,  // 265: pax.v1.PaxService.GetPhysicalEgress:output_type -> pax.v1.PhysicalEgress
+	132, // 266: pax.v1.PaxService.GetTrafficPathDiagnostics:output_type -> pax.v1.TrafficPathDiagnostics
+	132, // 267: pax.v1.PaxService.DiagnoseConnection:output_type -> pax.v1.TrafficPathDiagnostics
+	133, // 268: pax.v1.PaxService.DiagnoseNetwork:output_type -> pax.v1.NetworkDiagnosticReport
+	134, // 269: pax.v1.PaxService.InspectEnvironment:output_type -> pax.v1.EnvironmentDiagnosticReport
+	127, // 270: pax.v1.PaxService.StartConnectionDiagnostic:output_type -> pax.v1.OperationAck
+	127, // 271: pax.v1.PaxService.StartNetworkDiagnostic:output_type -> pax.v1.OperationAck
+	127, // 272: pax.v1.PaxService.StartEnvironmentSources:output_type -> pax.v1.OperationAck
+	14,  // 273: pax.v1.PaxService.QueryCFCandidates:output_type -> pax.v1.CFCandidates
+	108, // 274: pax.v1.PaxService.ValidateCFCandidate:output_type -> pax.v1.CFCandidate
+	135, // 275: pax.v1.PaxService.QueryCFWorkspace:output_type -> pax.v1.CFWorkspace
+	127, // 276: pax.v1.PaxService.RunCFTask:output_type -> pax.v1.OperationAck
+	127, // 277: pax.v1.PaxService.StartCFValidation:output_type -> pax.v1.OperationAck
+	127, // 278: pax.v1.PaxService.SaveValidatedCFRoute:output_type -> pax.v1.OperationAck
+	214, // [214:279] is the sub-list for method output_type
+	149, // [149:214] is the sub-list for method input_type
+	149, // [149:149] is the sub-list for extension type_name
+	149, // [149:149] is the sub-list for extension extendee
+	0,   // [0:149] is the sub-list for field type_name
 }
 
 func init() { file_pax_proto_init() }
@@ -9054,14 +9190,14 @@ func file_pax_proto_init() {
 		(*WatchEvent_AiUsage)(nil),
 	}
 	file_pax_proto_msgTypes[22].OneofWrappers = []any{}
-	file_pax_proto_msgTypes[83].OneofWrappers = []any{}
+	file_pax_proto_msgTypes[85].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pax_proto_rawDesc), len(file_pax_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   88,
+			NumMessages:   90,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

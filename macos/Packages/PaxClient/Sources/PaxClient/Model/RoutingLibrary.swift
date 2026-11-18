@@ -125,6 +125,31 @@ public struct RoutingMutation: Sendable {
   }
 }
 
+public struct RoutingCandidateTraffic: Sendable, Equatable {
+  public let id: String
+  public let bytes: UInt64
+
+  public init(id: String, bytes: UInt64) {
+    self.id = id
+    self.bytes = bytes
+  }
+}
+
+public struct RoutingProcessCandidates: Sendable, Equatable {
+  public let applications: [RoutingCandidateTraffic]
+  public let processes: [RoutingCandidateTraffic]
+  public let limited: Bool
+
+  public init(
+    applications: [RoutingCandidateTraffic], processes: [RoutingCandidateTraffic],
+    limited: Bool = false
+  ) {
+    self.applications = applications
+    self.processes = processes
+    self.limited = limited
+  }
+}
+
 public struct GeoRulesPage: Sendable, Equatable {
   public var rules: [RoutingEntry] = []
   public var total: UInt32 = 0

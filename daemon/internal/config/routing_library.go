@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/netip"
 	"net/url"
+	"path/filepath"
 	"pax-connect/daemon/internal/storage"
 	"regexp"
 	"slices"
@@ -167,6 +168,12 @@ var routingDomain = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 func NormalizeRoutingTarget(method, target string) (string, error) {
 	value := strings.TrimSpace(target)
 	switch method {
+	case "process":
+		// Preserve the recorded path verbatim, including significant whitespace.
+		if filepath.IsAbs(target) && !strings.HasSuffix(target, "/") && len(target) <= 4096 &&
+			utf8.ValidString(target) && !strings.ContainsAny(target, "\x00\r\n") {
+			return target, nil
+		}
 	case "application":
 		if value != "" && len(value) <= 4096 && !strings.ContainsAny(value, "\x00\r\n") {
 			return value, nil

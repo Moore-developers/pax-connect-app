@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const priceVersion = "2026-11-09-standard-global"
+const priceVersion = "2026-11-17-standard-global"
 
 // syntheticModel marks records Claude Code writes itself; they never reach a provider.
 const syntheticModel = "<synthetic>"
@@ -16,6 +16,8 @@ const syntheticModel = "<synthetic>"
 type tariff struct{ input, read, short, long, output float64 }
 
 var tariffs = map[string]tariff{
+	"gpt-6.2-sol":      {2, .1, 2.5, 5, 10},
+	"gpt-6.2-astra":    {8, .4, 10, 20, 40},
 	"claude-fable-5-2": {8, .2, 10, 16, 40},
 	"gpt-6-astra":      {10, 1, 12.5, 25, 50}, "gpt-6.1-sol": {2, .1, 2.5, 5, 10}, "gpt-6.1-terra": {1, .05, 1.25, 2.5, 5},
 	"claude-opus-5-5": {4, .2, 5, 8, 20}, "claude-sonnet-5-5": {2, .1, 2.5, 4, 10}, "claude-sonnet-5": {2, .2, 2.5, 4, 10}, "claude-haiku-5-5": {.1, .01, .125, .2, .5},

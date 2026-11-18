@@ -49,7 +49,7 @@ func TestFable52PricesTheFullContextAndBothCacheWriteTiers(t *testing.T) {
 	if r.Costs != [4]int64{2400000, 80000, 2720000, 400000} || r.Cost != 1456000 || r.Details.Billed != [4]int64{624000, 20800, 707200, 104000} {
 		t.Fatalf("Fable component billing: %+v", r)
 	}
-	if r.InputPrice == nil || *r.InputPrice != 8 || r.OutputPrice == nil || *r.OutputPrice != 40 || r.Details.Prices[1] == nil || *r.Details.Prices[1] != .2 || r.Details.CacheWritePrices[0] == nil || *r.Details.CacheWritePrices[0] != 10 || r.Details.CacheWritePrices[1] == nil || *r.Details.CacheWritePrices[1] != 16 || r.Details.PriceVersion != "2026-11-09-standard-global" {
+	if r.InputPrice == nil || *r.InputPrice != 8 || r.OutputPrice == nil || *r.OutputPrice != 40 || r.Details.Prices[1] == nil || *r.Details.Prices[1] != .2 || r.Details.CacheWritePrices[0] == nil || *r.Details.CacheWritePrices[0] != 10 || r.Details.CacheWritePrices[1] == nil || *r.Details.CacheWritePrices[1] != 16 || r.Details.PriceVersion != priceVersion {
 		t.Fatalf("Fable prices for readers: %+v", r)
 	}
 }

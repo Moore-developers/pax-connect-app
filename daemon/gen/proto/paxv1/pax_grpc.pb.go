@@ -25,6 +25,7 @@ const (
 	PaxService_QueryLogUpdates_FullMethodName                = "/pax.v1.PaxService/QueryLogUpdates"
 	PaxService_QueryRoutingRules_FullMethodName              = "/pax.v1.PaxService/QueryRoutingRules"
 	PaxService_QueryRoutingLibrary_FullMethodName            = "/pax.v1.PaxService/QueryRoutingLibrary"
+	PaxService_QueryRoutingProcesses_FullMethodName          = "/pax.v1.PaxService/QueryRoutingProcesses"
 	PaxService_QueryGeoRules_FullMethodName                  = "/pax.v1.PaxService/QueryGeoRules"
 	PaxService_MutateRoutingLibrary_FullMethodName           = "/pax.v1.PaxService/MutateRoutingLibrary"
 	PaxService_QueryObjectIcon_FullMethodName                = "/pax.v1.PaxService/QueryObjectIcon"
@@ -102,6 +103,7 @@ type PaxServiceClient interface {
 	QueryLogUpdates(ctx context.Context, in *LogUpdateRequest, opts ...grpc.CallOption) (*LogUpdatePage, error)
 	QueryRoutingRules(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RoutingRulesSnapshot, error)
 	QueryRoutingLibrary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RoutingLibrarySnapshot, error)
+	QueryRoutingProcesses(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RoutingProcessCandidates, error)
 	QueryGeoRules(ctx context.Context, in *GeoRulesQuery, opts ...grpc.CallOption) (*GeoRulesPage, error)
 	MutateRoutingLibrary(ctx context.Context, in *RoutingMutationRequest, opts ...grpc.CallOption) (*RoutingLibrarySnapshot, error)
 	QueryObjectIcon(ctx context.Context, in *ObjectIconRequest, opts ...grpc.CallOption) (*ObjectIconResult, error)
@@ -221,6 +223,16 @@ func (c *paxServiceClient) QueryRoutingLibrary(ctx context.Context, in *emptypb.
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RoutingLibrarySnapshot)
 	err := c.cc.Invoke(ctx, PaxService_QueryRoutingLibrary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) QueryRoutingProcesses(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RoutingProcessCandidates, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RoutingProcessCandidates)
+	err := c.cc.Invoke(ctx, PaxService_QueryRoutingProcesses_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -842,6 +854,7 @@ type PaxServiceServer interface {
 	QueryLogUpdates(context.Context, *LogUpdateRequest) (*LogUpdatePage, error)
 	QueryRoutingRules(context.Context, *emptypb.Empty) (*RoutingRulesSnapshot, error)
 	QueryRoutingLibrary(context.Context, *emptypb.Empty) (*RoutingLibrarySnapshot, error)
+	QueryRoutingProcesses(context.Context, *emptypb.Empty) (*RoutingProcessCandidates, error)
 	QueryGeoRules(context.Context, *GeoRulesQuery) (*GeoRulesPage, error)
 	MutateRoutingLibrary(context.Context, *RoutingMutationRequest) (*RoutingLibrarySnapshot, error)
 	QueryObjectIcon(context.Context, *ObjectIconRequest) (*ObjectIconResult, error)
@@ -931,6 +944,9 @@ func (UnimplementedPaxServiceServer) QueryRoutingRules(context.Context, *emptypb
 }
 func (UnimplementedPaxServiceServer) QueryRoutingLibrary(context.Context, *emptypb.Empty) (*RoutingLibrarySnapshot, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryRoutingLibrary not implemented")
+}
+func (UnimplementedPaxServiceServer) QueryRoutingProcesses(context.Context, *emptypb.Empty) (*RoutingProcessCandidates, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryRoutingProcesses not implemented")
 }
 func (UnimplementedPaxServiceServer) QueryGeoRules(context.Context, *GeoRulesQuery) (*GeoRulesPage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryGeoRules not implemented")
@@ -1216,6 +1232,24 @@ func _PaxService_QueryRoutingLibrary_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PaxServiceServer).QueryRoutingLibrary(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_QueryRoutingProcesses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).QueryRoutingProcesses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_QueryRoutingProcesses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).QueryRoutingProcesses(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2301,6 +2335,10 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryRoutingLibrary",
 			Handler:    _PaxService_QueryRoutingLibrary_Handler,
+		},
+		{
+			MethodName: "QueryRoutingProcesses",
+			Handler:    _PaxService_QueryRoutingProcesses_Handler,
 		},
 		{
 			MethodName: "QueryGeoRules",

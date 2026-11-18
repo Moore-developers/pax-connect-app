@@ -53,6 +53,7 @@ public final class TelemetryStore {
   private let trafficDetailQuery: @Sendable (TrafficDetailQuery) async throws -> TrafficDetail
   private let geoQuery: @Sendable (String, UInt32) async throws -> GeoRulesPage
   private let libraryQuery: @Sendable () async throws -> RoutingLibrarySnapshot
+  private let processQuery: @Sendable () async throws -> RoutingProcessCandidates
   private let libraryMutation: @Sendable (RoutingMutation) async throws -> RoutingLibrarySnapshot
   private let rulesQuery: @Sendable () async throws -> RoutingRulesSnapshot
   private let iconQuery: @Sendable (String, Bool, UInt64) async throws -> ObjectIconResult
@@ -64,6 +65,9 @@ public final class TelemetryStore {
       throw ClientError.unavailable
     },
     routingLibrary: @escaping @Sendable () async throws -> RoutingLibrarySnapshot = {
+      throw ClientError.unavailable
+    },
+    routingProcesses: @escaping @Sendable () async throws -> RoutingProcessCandidates = {
       throw ClientError.unavailable
     },
     mutateRoutingLibrary:
@@ -106,6 +110,7 @@ public final class TelemetryStore {
   ) {
     geoQuery = geoRules
     libraryQuery = routingLibrary
+    processQuery = routingProcesses
     libraryMutation = mutateRoutingLibrary
     rulesQuery = routingRules
     iconQuery = icon
@@ -366,6 +371,17 @@ extension TelemetryStore {
   public func routingLibrary() async throws -> RoutingLibrarySnapshot {
     guard routingLibraryAvailable else { throw ClientError.unavailable }
     return try await libraryQuery()
+  }
+  public func routingProcesses() async throws -> RoutingProcessCandidates {
+    guard routingLibraryAvailable else { throw ClientError.unavailable }
+    let session = sessionGeneration
+    let invalidation = invalidationGeneration
+    let value = try await processQuery()
+    try Task.checkCancellation()
+    guard connected, session == sessionGeneration, invalidation == invalidationGeneration else {
+      throw CancellationError()
+    }
+    return value
   }
   public func mutateRoutingLibrary(_ command: RoutingMutation) async throws
     -> RoutingLibrarySnapshot

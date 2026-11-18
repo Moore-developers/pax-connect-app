@@ -10,6 +10,7 @@ extension RoutingWorkbenchStore {
   }
   enum Method: String, CaseIterable {
     case application = "应用"
+    case process = "进程"
     case domain = "精确域名"
     case domainSuffix = "域名及子域"
     case ip = "单 IP"
@@ -74,4 +75,9 @@ extension RoutingWorkbenchStore {
     init(_ message: String) { self.message = message }
   }
 
+}
+
+extension RoutingWorkbenchStore.Connection {
+  /// Demo facts use short names. Their synthetic paths stay within the rule preview.
+  var ruleProcessPath: String { process.hasPrefix("/") ? process : "/demo/" + process }
 }

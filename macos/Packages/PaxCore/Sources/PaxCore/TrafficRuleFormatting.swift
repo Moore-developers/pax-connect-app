@@ -143,6 +143,7 @@ public enum TrafficRuleFormatting {
       case "domain_suffix": return "域名及子域 " + target
       case "ip", "cidr": return "IP / 网段 " + target
       case "application": return "应用身份 " + target
+      case "process": return "进程路径 " + target
       default: return target
       }
     }
@@ -167,6 +168,9 @@ public enum TrafficRuleFormatting {
     }
     if rule.hasPrefix("application=") {
       return "应用身份 " + String(rule.dropFirst("application=".count))
+    }
+    if rule.hasPrefix("process=") {
+      return "进程路径 " + String(rule.dropFirst("process=".count))
     }
     var result = rule
     for (key, title) in [

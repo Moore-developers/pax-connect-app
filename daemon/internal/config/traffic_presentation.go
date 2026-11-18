@@ -69,6 +69,9 @@ func ReadableRule(rule string) string {
 	if strings.HasPrefix(rule, "application=") {
 		return "应用身份 " + strings.TrimPrefix(rule, "application=")
 	}
+	if strings.HasPrefix(rule, "process=") {
+		return "进程路径 " + strings.TrimPrefix(rule, "process=")
+	}
 	for _, pair := range []struct{ key, title string }{{"domain_suffix=", "域名及子域 "}, {"domain=", "域名 "}, {"ip_cidr=", "IP / 网段 "}, {"process_path_regex=", "应用路径匹配 "}, {"process_path=", "应用路径 "}, {"process_name=", "进程 "}} {
 		if strings.Contains(rule, pair.key) {
 			return strings.ReplaceAll(rule, pair.key, pair.title)
@@ -107,6 +110,9 @@ func FlowLatency(f FlowFact) (uint64, bool) {
 }
 func TrafficTrigger(f FlowFact) string {
 	e, known := RecordedRoutingEvidence(f.Rule)
+	if known && e.Method == "process" {
+		return ReadableRule(e.Method + "=" + e.Target)
+	}
 	if (strings.Contains(f.Rule, "process_") || strings.HasPrefix(f.Rule, "application=") || known && e.Method == "application") && FlowApplicationName(f) != "" {
 		return "应用：" + FlowApplicationName(f)
 	}

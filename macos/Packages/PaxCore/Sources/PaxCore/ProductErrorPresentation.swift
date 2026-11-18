@@ -39,6 +39,7 @@ public enum ProductErrorPresentation {
     case "routing_revision_conflict": "规则已在后台改变，请切回规则页读取最新配置后重试"
     case "routing_route_unavailable": "指定线路不存在、尚未确认 TLS 或未载入当前内核；保留原规则，请先检查线路"
     case "routing_application_unavailable": "应用已移动、删除或身份不可确认，请重新选择应用"
+    case "routing_processes_unavailable": "暂时无法读取近期有流量的应用和进程"
     case "routing_source_invalid": "来源不是支持的 sing-box 规则集，或包含不支持的条件；保留原规则"
     case "routing_update_unavailable", "routing_update_failed": "当前内核未确认规则更新，已尝试恢复原规则；请检查代理状态后重试"
     case "routing_recovery_required": "规则保存或恢复无法确认，已暂停编辑；请重启 App 后检查配置"

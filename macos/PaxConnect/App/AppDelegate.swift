@@ -66,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     return TelemetryStore(
       geoRules: { try await c.geoRules(search: $0, offset: $1) },
       routingLibrary: { try await c.routingLibrary() },
+      routingProcesses: { try await c.routingProcesses() },
       mutateRoutingLibrary: { try await c.mutateRoutingLibrary($0) },
       routingRules: { try await c.routingRules() },
       icon: { try await c.objectIcon(host: $0, fetch: $1, generation: $2) },

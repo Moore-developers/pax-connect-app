@@ -168,6 +168,8 @@ func routingMatch(r RoutingEntry, apps []RoutingApplication) (map[string]any, er
 		m["domain_suffix"] = []string{r.Target}
 	case "ip", "cidr":
 		m["ip_cidr"] = []string{r.Target}
+	case "process":
+		m["process_path"] = []string{r.Target}
 	case "application":
 		found := false
 		for _, app := range apps {

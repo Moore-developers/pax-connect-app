@@ -33,6 +33,7 @@ final class RoutingWorkbenchStore {
       switch method {
       case .application:
         return "应用：" + (match.hasPrefix("应用 ") ? String(match.dropFirst(3)) : parts[1])
+      case .process: return "进程：" + parts[1]
       case .domain: return "域名：" + parts[1]
       case .domainSuffix: return "域名及子域：" + parts[1]
       case .ip: return "IP：" + parts[1]
@@ -46,6 +47,7 @@ final class RoutingWorkbenchStore {
       let method = signature?.split(separator: "|", maxSplits: 1).first.map(String.init)
       switch method.flatMap(Method.init(rawValue:)) {
       case .application: return "应用规则"
+      case .process: return "进程规则"
       case .domain, .domainSuffix: return "域名规则"
       case .ip, .cidr: return "IP 规则"
       case .builtin, .source: return title
@@ -594,6 +596,9 @@ extension RoutingWorkbenchStore {
     case .application:
       guard applications.contains(where: { $0.id == text }) else { throw EditError("请选择可确认身份的应用。") }
       return text
+    case .process:
+      guard !target.isEmpty else { throw EditError("请选择记录到可执行路径的进程。") }
+      return target
     case .domain, .domainSuffix:
       let value =
         text.lowercased().hasSuffix(".") ? String(text.lowercased().dropLast()) : text.lowercased()
@@ -646,9 +651,12 @@ extension RoutingWorkbenchStore {
     return Array(Set(connections.filter { $0.applicationID == applicationID }.compactMap(\.domain)))
       .sorted()
   }
-  func matches(_ rule: Rule, applicationID: String?, domain: String?, ip: String) -> Bool {
+  func matches(
+    _ rule: Rule, applicationID: String?, domain: String?, ip: String, process: String?
+  ) -> Bool {
     switch rule.method {
     case .application: return applicationID == rule.target
+    case .process: return process == rule.target
     case .domain: return domain?.lowercased() == rule.target
     case .domainSuffix:
       return domain?.lowercased() == rule.target
@@ -669,14 +677,16 @@ extension RoutingWorkbenchStore {
     }
   }
   func preview(applicationID: String?, domain: String?, ip: String) -> Preview {
-    decision(in: packages, applicationID: applicationID, domain: domain, ip: ip)
+    decision(in: packages, applicationID: applicationID, domain: domain, ip: ip, process: nil)
   }
   private func decision(
-    in packages: [RulePackage], applicationID: String?, domain: String?, ip: String
+    in packages: [RulePackage], applicationID: String?, domain: String?, ip: String,
+    process: String?
   ) -> Preview {
     if let pack = packages.first, pack.kind == .priority,
       let rule = pack.rules.first(where: {
-        $0.enabled && matches($0, applicationID: applicationID, domain: domain, ip: ip)
+        $0.enabled
+          && matches($0, applicationID: applicationID, domain: domain, ip: ip, process: process)
       }), rule.destination != .followDefault
     {
       return .init(
@@ -684,7 +694,8 @@ extension RoutingWorkbenchStore {
     }
     for pack in packages where pack.kind != .priority && pack.enabled {
       if let rule = pack.rules.first(where: {
-        $0.enabled && matches($0, applicationID: applicationID, domain: domain, ip: ip)
+        $0.enabled
+          && matches($0, applicationID: applicationID, domain: domain, ip: ip, process: process)
       }) {
         return .init(
           destination: pack.destination, sourceID: pack.id, ruleID: rule.id, reason: pack.name)
@@ -718,30 +729,31 @@ extension RoutingWorkbenchStore {
       affected.contains { rule in
         matches(
           rule, applicationID: connection.applicationID, domain: connection.domain,
-          ip: connection.ip)
+          ip: connection.ip, process: connection.ruleProcessPath)
       }
         || original.map {
           matches(
             $0, applicationID: connection.applicationID, domain: connection.domain,
-            ip: connection.ip)
+            ip: connection.ip, process: connection.ruleProcessPath)
         } == true
     }
     let exited = targets.filter { connection in
       original.map {
         matches(
-          $0, applicationID: connection.applicationID, domain: connection.domain, ip: connection.ip)
+          $0, applicationID: connection.applicationID, domain: connection.domain,
+          ip: connection.ip, process: connection.ruleProcessPath)
       } == true
         && !affected.contains {
           matches(
             $0, applicationID: connection.applicationID, domain: connection.domain,
-            ip: connection.ip)
+            ip: connection.ip, process: connection.ruleProcessPath)
         }
     }.count
     let sources = Set(
       targets.map { connection in
         let result = decision(
           in: proposed, applicationID: connection.applicationID, domain: connection.domain,
-          ip: connection.ip)
+          ip: connection.ip, process: connection.ruleProcessPath)
         return result.reason + " → " + destinationName(result.destination)
       }
     ).sorted()

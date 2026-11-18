@@ -86,6 +86,19 @@ public enum Pax_V1_PaxService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "QueryRoutingProcesses" metadata.
+        public enum QueryRoutingProcesses: Sendable {
+            /// Request type for "QueryRoutingProcesses".
+            public typealias Input = SwiftProtobuf.Google_Protobuf_Empty
+            /// Response type for "QueryRoutingProcesses".
+            public typealias Output = Pax_V1_RoutingProcessCandidates
+            /// Descriptor for "QueryRoutingProcesses".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "QueryRoutingProcesses",
+                type: .unary
+            )
+        }
         /// Namespace for "QueryGeoRules" metadata.
         public enum QueryGeoRules: Sendable {
             /// Request type for "QueryGeoRules".
@@ -860,6 +873,7 @@ public enum Pax_V1_PaxService: Sendable {
             QueryLogUpdates.descriptor,
             QueryRoutingRules.descriptor,
             QueryRoutingLibrary.descriptor,
+            QueryRoutingProcesses.descriptor,
             QueryGeoRules.descriptor,
             MutateRoutingLibrary.descriptor,
             QueryObjectIcon.descriptor,
@@ -1040,6 +1054,25 @@ extension Pax_V1_PaxService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RoutingLibrarySnapshot>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RoutingLibrarySnapshot>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "QueryRoutingProcesses" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+        ///   - serializer: A serializer for `SwiftProtobuf.Google_Protobuf_Empty` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_RoutingProcessCandidates` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func queryRoutingProcesses<Result>(
+            request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+            serializer: some GRPCCore.MessageSerializer<SwiftProtobuf.Google_Protobuf_Empty>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RoutingProcessCandidates>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RoutingProcessCandidates>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "QueryGeoRules" method.
@@ -2353,6 +2386,36 @@ extension Pax_V1_PaxService {
             try await self.client.unary(
                 request: request,
                 descriptor: Pax_V1_PaxService.Method.QueryRoutingLibrary.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "QueryRoutingProcesses" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+        ///   - serializer: A serializer for `SwiftProtobuf.Google_Protobuf_Empty` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_RoutingProcessCandidates` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func queryRoutingProcesses<Result>(
+            request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+            serializer: some GRPCCore.MessageSerializer<SwiftProtobuf.Google_Protobuf_Empty>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_RoutingProcessCandidates>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RoutingProcessCandidates>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.QueryRoutingProcesses.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -4279,6 +4342,31 @@ extension Pax_V1_PaxService.ClientProtocol {
         )
     }
 
+    /// Call the "QueryRoutingProcesses" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func queryRoutingProcesses<Result>(
+        request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RoutingProcessCandidates>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.queryRoutingProcesses(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<SwiftProtobuf.Google_Protobuf_Empty>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_RoutingProcessCandidates>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "QueryGeoRules" method.
     ///
     /// - Parameters:
@@ -5916,6 +6004,35 @@ extension Pax_V1_PaxService.ClientProtocol {
             metadata: metadata
         )
         return try await self.queryRoutingLibrary(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "QueryRoutingProcesses" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func queryRoutingProcesses<Result>(
+        _ message: SwiftProtobuf.Google_Protobuf_Empty,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_RoutingProcessCandidates>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.queryRoutingProcesses(
             request: request,
             options: options,
             onResponse: handleResponse

@@ -9,6 +9,27 @@ extension RoutingWorkbenchStore {
     libraryTask?.cancel()
     libraryTask = nil
   }
+  func routingCandidates() async throws -> RoutingProcessCandidates {
+    if let telemetry { return try await telemetry.routingProcesses() }
+    let appIDs = Set(applications.map(\.id))
+    var applications: [String: UInt64] = [:]
+    var processes: [String: UInt64] = [:]
+    for connection in connections {
+      let bytes = connection.transfers.reduce(UInt64(0)) { $0 + $1.upload + $1.download }
+      guard bytes > 0 else { continue }
+      processes[connection.ruleProcessPath, default: 0] += bytes
+      if let id = connection.applicationID, appIDs.contains(id) {
+        applications[id, default: 0] += bytes
+      }
+    }
+    func ranked(_ values: [String: UInt64]) -> [RoutingCandidateTraffic] {
+      values.sorted { a, b in
+        a.value == b.value ? a.key < b.key : a.value > b.value
+      }.map { .init(id: $0.key, bytes: $0.value) }
+    }
+    return RoutingProcessCandidates(
+      applications: ranked(applications), processes: ranked(processes))
+  }
   func reloadLibrary() {
     guard let telemetry, !libraryBusy else { return }
     libraryTask?.cancel()
@@ -168,6 +189,7 @@ extension RoutingWorkbenchStore {
   private static func ruleMethod(_ code: String) -> Method? {
     switch code {
     case "application": .application
+    case "process": .process
     case "domain": .domain
     case "domain_suffix": .domainSuffix
     case "ip": .ip
@@ -180,6 +202,7 @@ extension RoutingWorkbenchStore {
   private static func methodCode(_ method: Method) -> String {
     switch method {
     case .application: "application"
+    case .process: "process"
     case .domain: "domain"
     case .domainSuffix: "domain_suffix"
     case .ip: "ip"
