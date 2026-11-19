@@ -2381,6 +2381,16 @@ public nonisolated struct Pax_V1_LogQuery: @unchecked Sendable {
     set {_uniqueStorage()._scope = newValue}
   }
 
+  public var applicationWorkbenchPage: Bool {
+    get {_storage._applicationWorkbenchPage}
+    set {_uniqueStorage()._applicationWorkbenchPage = newValue}
+  }
+
+  public var recoveryOffset: UInt32 {
+    get {_storage._recoveryOffset}
+    set {_uniqueStorage()._recoveryOffset = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -7255,7 +7265,7 @@ nonisolated extension Pax_V1_SystemEvent: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogQuery"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dimension\0\u{3}object_id\0\u{1}search\0\u{1}level\0\u{3}route_id\0\u{1}from\0\u{1}until\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{1}view\0\u{3}problem_id\0\u{3}connection_key\0\u{3}include_dns\0\u{1}quick\0\u{1}criteria\0\u{1}scope\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dimension\0\u{3}object_id\0\u{1}search\0\u{1}level\0\u{3}route_id\0\u{1}from\0\u{1}until\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{1}view\0\u{3}problem_id\0\u{3}connection_key\0\u{3}include_dns\0\u{1}quick\0\u{1}criteria\0\u{1}scope\0\u{3}application_workbench_page\0\u{3}recovery_offset\0")
 
   fileprivate class _StorageClass {
     var _dimension: String = String()
@@ -7275,6 +7285,8 @@ nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._Mes
     var _quick: String = String()
     var _criteria: Pax_V1_LogCriteria? = nil
     var _scope: String = String()
+    var _applicationWorkbenchPage: Bool = false
+    var _recoveryOffset: UInt32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -7302,6 +7314,8 @@ nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._Mes
       _quick = source._quick
       _criteria = source._criteria
       _scope = source._scope
+      _applicationWorkbenchPage = source._applicationWorkbenchPage
+      _recoveryOffset = source._recoveryOffset
     }
   }
 
@@ -7337,6 +7351,8 @@ nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._Mes
         case 15: try { try decoder.decodeSingularStringField(value: &_storage._quick) }()
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._criteria) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._scope) }()
+        case 18: try { try decoder.decodeSingularBoolField(value: &_storage._applicationWorkbenchPage) }()
+        case 19: try { try decoder.decodeSingularUInt32Field(value: &_storage._recoveryOffset) }()
         default: break
         }
       }
@@ -7400,6 +7416,12 @@ nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._Mes
       if !_storage._scope.isEmpty {
         try visitor.visitSingularStringField(value: _storage._scope, fieldNumber: 17)
       }
+      if _storage._applicationWorkbenchPage != false {
+        try visitor.visitSingularBoolField(value: _storage._applicationWorkbenchPage, fieldNumber: 18)
+      }
+      if _storage._recoveryOffset != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._recoveryOffset, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -7426,6 +7448,8 @@ nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._Mes
         if _storage._quick != rhs_storage._quick {return false}
         if _storage._criteria != rhs_storage._criteria {return false}
         if _storage._scope != rhs_storage._scope {return false}
+        if _storage._applicationWorkbenchPage != rhs_storage._applicationWorkbenchPage {return false}
+        if _storage._recoveryOffset != rhs_storage._recoveryOffset {return false}
         return true
       }
       if !storagesAreEqual {return false}

@@ -55,6 +55,8 @@ public struct LogFilter: Sendable, Equatable, Hashable {
   public var readToken: String = ""
   public var cursor: String = ""
   public var limit: UInt32 = 100
+  public var applicationWorkbenchPage = false
+  public var recoveryOffset: UInt32 = 0
   public init() {}
 }
 

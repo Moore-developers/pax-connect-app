@@ -150,6 +150,12 @@ func RouteFromDocument(raw []byte, id, name string) (RouteConfig, error) {
 		p.AlterID = int(v)
 	}
 	tls := objectField(object, "tls")
+	transport := objectField(object, "transport")
+	if p.ProtocolName == "vless" && stringField(transport, "type") == "grpc" {
+		if err := normalizeVLESSGRPC(object, transport, tls); err != nil {
+			return p, err
+		}
+	}
 	if boolField(tls, "enabled") {
 		p.Security = "tls"
 		p.ServerName = stringField(tls, "server_name")
@@ -171,7 +177,6 @@ func RouteFromDocument(raw []byte, id, name string) (RouteConfig, error) {
 			p.RealityShortID = stringField(reality, "short_id")
 		}
 	}
-	transport := objectField(object, "transport")
 	if transport != nil {
 		p.Transport = stringField(transport, "type")
 		p.WSPath = stringField(transport, "path")
@@ -274,6 +279,9 @@ func DocumentForRoute(p RouteConfig) json.RawMessage {
 	}
 	if p.Transport == "ws" {
 		object["transport"] = map[string]any{"type": "ws", "path": p.WSPath, "headers": map[string]string{"Host": p.WSHost}}
+	}
+	if p.Transport == "grpc" {
+		object["transport"] = map[string]any{"type": "grpc", "service_name": ""}
 	}
 	raw, _ := json.Marshal(object)
 	return raw

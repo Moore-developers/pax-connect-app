@@ -19,6 +19,7 @@ type ColumnLogWindow struct {
 	Apps                    []config.RoutingApplication
 	Classify                func(string, string) (config.RoutingApplication, bool)
 	DirectoryFilter         *ColumnLogFilter
+	ApplicationPage         bool
 }
 
 // Query timestamps can span protobuf's year 1..9999 even though observed logs
@@ -186,8 +187,10 @@ CREATE TEMP VIEW log_answers AS SELECT a.* FROM snap_col_answers a WHERE NOT EXI
 			}
 		}
 	}
-	if err = s.catalog(ctx); err != nil {
-		return nil, err
+	if !w.ApplicationPage {
+		if err = s.catalog(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
 }

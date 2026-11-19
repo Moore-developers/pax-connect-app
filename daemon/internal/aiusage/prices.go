@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
-const priceVersion = "2026-11-17-standard-global"
+const (
+	priceVersion          = "2026-11-17-standard-global"
+	ultrafastPriceVersion = "2026-11-19-ultrafast-global"
+)
+
+// The GPT-6.2 Ultrafast promotion ends at midnight March 1, 2027 Pacific time.
+var gpt62UltrafastListPriceAt = time.Date(2027, time.March, 1, 8, 0, 0, 0, time.UTC).UnixMilli()
 
 // syntheticModel marks records Claude Code writes itself; they never reach a provider.
 const syntheticModel = "<synthetic>"
@@ -22,6 +28,28 @@ var tariffs = map[string]tariff{
 	"gpt-6-astra":      {10, 1, 12.5, 25, 50}, "gpt-6.1-sol": {2, .1, 2.5, 5, 10}, "gpt-6.1-terra": {1, .05, 1.25, 2.5, 5},
 	"claude-opus-5-5": {4, .2, 5, 8, 20}, "claude-sonnet-5-5": {2, .1, 2.5, 4, 10}, "claude-sonnet-5": {2, .2, 2.5, 4, 10}, "claude-haiku-5-5": {.1, .01, .125, .2, .5},
 	"claude-sonnet-4-5-20250929": {3, .3, 3.75, 6, 15}, "claude-haiku-4-5-20251001": {1, .1, 1.25, 2, 5}, "claude-opus-4-1-20250805": {15, 1.5, 18.75, 30, 75},
+}
+
+// modelTariff returns the official short-context tariff and its version.
+// An empty version means pricing is unavailable for this model ID.
+func modelTariff(model string, at int64) (tariff, string) {
+	if v, ok := tariffs[model]; ok {
+		return v, priceVersion
+	}
+	factor := 6.0
+	switch model {
+	case "deepseek-flash", "deepseek-v4.1-flash":
+		return deepseekTariff(at), priceVersion
+	case "gpt-6-astra-ultrafast", "gpt-6.1-sol-ultrafast":
+	case "gpt-6.2-astra-ultrafast", "gpt-6.2-sol-ultrafast":
+		if at < gpt62UltrafastListPriceAt {
+			factor = 3
+		}
+	default:
+		return tariff{}, ""
+	}
+	base := tariffs[strings.TrimSuffix(model, "-ultrafast")]
+	return tariff{base.input * factor, base.read * factor, base.short * factor, base.long * factor, base.output * factor}, ultrafastPriceVersion
 }
 
 // attribute gives the request the Profile in effect at its own time, then prices it.
@@ -68,13 +96,11 @@ func (r *Request) price() {
 	if r.Model == syntheticModel {
 		return
 	}
-	v, ok := tariffs[r.Model]
-	if r.Model == "deepseek-flash" || r.Model == "deepseek-v4.1-flash" { // same model, two names in DSH logs
-		v, ok = deepseekTariff(r.At), true
-	}
-	if !ok {
+	v, version := modelTariff(r.Model, r.At)
+	if version == "" {
 		return
 	}
+	r.Details.PriceVersion = version
 	if strings.HasPrefix(r.Model, "gpt-") && r.Input > 272000 {
 		v.input *= 2
 		v.read *= 2

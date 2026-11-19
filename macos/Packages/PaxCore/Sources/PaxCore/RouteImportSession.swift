@@ -69,7 +69,7 @@ public final class RouteImportSession {
     let old = preview
     preview = nil
     selected = []
-    message = trimmed.isEmpty ? "" : "正在读取链接…"
+    message = trimmed.isEmpty ? "" : "正在识别导入内容…"
     phase = trimmed.isEmpty ? .idle : .reading
     recognition = Task { [weak self] in
       if let old { await self?.discard(old.token) }
@@ -99,8 +99,8 @@ public final class RouteImportSession {
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       let subscription = trimmed.hasPrefix("https://") && !trimmed.contains("\n")
       phase = subscription ? .downloading : .reading
-      message = subscription ? "正在下载订阅…" : "正在读取链接…"
-      let result = try await fetch(trimmed, subscription, name)
+      message = subscription ? "正在下载订阅…" : "正在识别导入内容…"
+      let result = try await fetch(subscription ? trimmed : text, subscription, name)
       guard current == generation && !Task.isCancelled else {
         await discard(result.token)
         return

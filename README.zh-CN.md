@@ -64,11 +64,11 @@ Pax Connect 是独立的第三方客户端，不是 sing-box 官方产品。它*
 
 **线路**
 
-支持导入分享链接和 Base64 订阅，涵盖以下协议（见 [`daemon/internal/importers`](daemon/internal/importers)）：
+支持从分享链接、Base64 订阅、Clash/Mihomo YAML 和 sing-box JSON 导入线路。YAML 和 JSON 导入会从配置中提取受支持的线路。支持的协议见 [`daemon/internal/importers`](daemon/internal/importers)：
 
-`VLESS`（含 Reality、Vision 流控、ws、httpupgrade）· `VMess` · `Trojan` · `Hysteria2`（salamander 混淆）· `AnyTLS` · `Shadowsocks`
+`VLESS`（含 REALITY、Vision 流控、WebSocket、HTTPUpgrade，以及 TLS 或 REALITY 下的单服务 gRPC）· `VMess` · `Trojan` · `Hysteria2`（salamander 混淆）· `AnyTLS` · `Shadowsocks`
 
-不支持导入：Clash YAML、sing-box JSON、基于 XHTTP 的 VLESS。链接里不支持的参数会被明确拒绝，而不是悄悄丢弃。
+基于 XHTTP 或多路模式 gRPC 的 VLESS 等不支持的线路会显示导入失败原因。
 
 **AI 工具**
 

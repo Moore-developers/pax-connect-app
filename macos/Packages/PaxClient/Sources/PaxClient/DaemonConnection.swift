@@ -237,7 +237,8 @@ public actor DaemonConnection {
       }
     } catch let error as RPCError {
       let known: Set<String> = [
-        "subscription_format_unsupported", "invalid_base64", "empty_import", "import_too_large",
+        "subscription_format_unsupported", "subscription_provider_unsupported", "invalid_base64",
+        "empty_import", "import_too_large",
         "preview_limit", "catalog_invalid",
         "fetch_forbidden", "fetch_dns_failed", "fetch_tls_failed", "fetch_timeout",
         "fetch_http_failed",

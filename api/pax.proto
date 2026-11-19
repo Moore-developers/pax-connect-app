@@ -609,6 +609,8 @@ message LogQuery {
  string view = 11; string problem_id = 12; string connection_key = 13;
  bool include_dns = 14;
  string quick=15; LogCriteria criteria=16; string scope=17;
+ bool application_workbench_page = 18;
+ uint32 recovery_offset = 19;
 }
 message LogCriteria {
  repeated string kinds=1; repeated string levels=2; string application=3; string domain=4; string domain_mode=5;

@@ -41,6 +41,11 @@ func TestColumnLogWindowDifferential(t *testing.T) {
 		filters = append(filters, &pb.LogQuery{IncludeDns: true, Criteria: criteria})
 	}
 	filters = append(filters, &pb.LogQuery{IncludeDns: true, Criteria: &pb.LogCriteria{MinLatencyMs: math.MaxUint64}})
+	filters = append(filters,
+		&pb.LogQuery{Dimension: "application", Scope: "access", ObjectId: "app"},
+		&pb.LogQuery{Dimension: "application", Scope: "access", ObjectId: "app", Level: "warning", IncludeDns: true},
+		&pb.LogQuery{Dimension: "application", Scope: "access", ObjectId: "missing"},
+	)
 	var comparisons, pages int
 	for _, view := range []string{"", "activity", "access", "problems", "operations"} {
 		for wi, w := range []historystore.ColumnLogWindow{{From: base.Add(-time.Second), Until: base.Add(10 * time.Second)}, {From: base.Add(1500 * time.Millisecond), Until: base.Add(10 * time.Second)}, {From: base.Add(-time.Second), Until: base.Add(1500 * time.Millisecond)}, {From: base.Add(-time.Second), Until: base.Add(10 * time.Second), Route: "r"}, {From: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), Until: time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)}} {

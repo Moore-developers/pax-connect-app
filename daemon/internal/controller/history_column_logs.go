@@ -14,7 +14,12 @@ import (
 	"pax-connect/daemon/internal/historystore"
 )
 
-type columnLogReadState struct{ window historystore.ColumnLogWindow }
+type columnLogReadState struct {
+	window historystore.ColumnLogWindow
+	// Read and written under the column snapshot's read lock.
+	workbenchSignature string
+	workbenchTotal     uint64
+}
 type columnSelectionStream struct {
 	selection *historystore.ColumnLogSelection
 }
@@ -41,15 +46,16 @@ func columnLogFilter(q *pb.LogQuery) historystore.ColumnLogFilter {
 }
 
 func (r *historyRead) withColumnLogs(ctx context.Context, filter *pb.LogQuery, fn func(*historystore.ColumnLogSelection) error) error {
-	return r.withColumnLogsMode(ctx, filter, nil, fn)
+	return r.withColumnLogsMode(ctx, filter, nil, false, fn)
 }
 
-func (r *historyRead) withColumnLogsMode(ctx context.Context, filter *pb.LogQuery, directory *historystore.ColumnLogFilter, fn func(*historystore.ColumnLogSelection) error) error {
+func (r *historyRead) withColumnLogsMode(ctx context.Context, filter *pb.LogQuery, directory *historystore.ColumnLogFilter, applicationPage bool, fn func(*historystore.ColumnLogSelection) error) error {
 	if r.columnSnapshot == nil || r.columnLogRead == nil {
 		return errors.New("history_unavailable")
 	}
 	w := r.columnLogRead.window
 	w.DirectoryFilter = directory
+	w.ApplicationPage = applicationPage
 	w.Classify = func(id, path string) (config.RoutingApplication, bool) { return userApplicationMatch(id, path, w.Apps) }
 	view := filter.View
 	w.View = view
@@ -129,17 +135,9 @@ func (c *Controller) queryColumnLogPage(ctx context.Context, q *pb.LogQuery) (*p
 	case "":
 		sig = querySignature([]string{q.Dimension, q.ObjectId, q.Level})
 	}
-	err = r.withColumnLogs(ctx, q, func(s *historystore.ColumnLogSelection) error {
-		total, er := s.Count(ctx, f)
-		if er != nil {
-			return er
-		}
-		out.Total = total
-		start, end, er := historyBoundPage(q.Cursor, int(total), int(q.Limit), cap, sig)
-		if er != nil {
-			return er
-		}
-		keys, er := s.KeysPage(ctx, f, start, end-start)
+	workbench := applicationWorkbenchPage(q)
+	err = r.withColumnLogsMode(ctx, q, nil, workbench, func(s *historystore.ColumnLogSelection) error {
+		keys, er := logPageKeys(ctx, r.columnLogRead, s, q, f, cap, sig, out)
 		if er != nil {
 			return er
 		}
@@ -176,13 +174,14 @@ func (c *Controller) queryColumnLogPage(ctx context.Context, q *pb.LogQuery) (*p
 				out.Items = append(out.Items, columnGroupProduct(g, e))
 			}
 		}
-		out.NextCursor = historyBoundNext(end, int(total), sig)
 		if q.View == "activity" {
-			apps, routes, rules, er := s.Options(ctx)
-			if er != nil {
-				return er
+			if !workbench {
+				apps, routes, rules, er := s.Options(ctx)
+				if er != nil {
+					return er
+				}
+				out.Options = &pb.LogOptions{Applications: apps, Routes: routes, RulePackages: rules}
 			}
-			out.Options = &pb.LogOptions{Applications: apps, Routes: routes, RulePackages: rules}
 			out.AsOf = timestamppb.New(r.until)
 		}
 		return nil
@@ -227,7 +226,7 @@ func (c *Controller) queryColumnLogObjects(ctx context.Context, q *pb.LogQuery) 
 	if q.View == "activity" {
 		sig = querySignature([]any{"typed_count_desc_v3", q.Dimension, q.Search, q.ConnectionKey, q.IncludeDns, q.Quick, q.Criteria, q.Level, q.Scope})
 	}
-	err = r.withColumnLogsMode(ctx, q, &f, func(s *historystore.ColumnLogSelection) error {
+	err = r.withColumnLogsMode(ctx, q, &f, false, func(s *historystore.ColumnLogSelection) error {
 		start, end, er := historyBoundPage(q.Cursor, math.MaxInt-100, int(q.Limit), 100, sig)
 		if er != nil {
 			return er

@@ -1,7 +1,6 @@
-// Package importers 把各种来源（分享链接、订阅、二维码、单个 outbound）统一解析成 NodeProfile。
+// Package importers 把分享链接、Clash 内联节点和 sing-box 出站统一解析为私有线路。
 //
-// 负责什么：ParseLink / ParseSubscription 等纯函数——string/bytes 进出，无 I/O、无网络，
-// 因此可以穷举测试（code-standards.md §二 的纯度要求）。
+// 负责什么：ParseLink / ParseSubscription 读取文本正文，校验输入形态，逐项构造线路文档。
 // 不负责什么：不落盘（config）、不校验节点可用性（network/telemetry）。
 // 谁依赖它：controller（导入命令）。
 //

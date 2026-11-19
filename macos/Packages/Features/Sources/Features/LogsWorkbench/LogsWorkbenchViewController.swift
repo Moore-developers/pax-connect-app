@@ -31,6 +31,7 @@ final class LogsWorkbenchViewController: NSViewController {
   private var renderedRecords: [LogRecord] = []
   private var renderedEmptyMessage = ""
   private var renderedSelection = ""
+  private var renderedPendingObject: String?
   var pageVisible = false
   let pageRefresh: PaxRefresh?
   var entryPending = false
@@ -83,7 +84,8 @@ final class LogsWorkbenchViewController: NSViewController {
       metrics: .init(
         rowHeight: PaxTheme.Logs.directoryRow, headerHeight: 0, rounded: false,
         rowSeparators: false, selectionInset: PaxTheme.Table.selectionInset,
-        background: PaxTheme.Logs.directoryFill))
+        background: PaxTheme.Logs.directoryFill),
+      selection: store.telemetry == nil ? .single : .browse)
     events = PaxDataTable(
       columns: [
         .init("时间", width: PaxTheme.Logs.timeColumn, growth: 0, symbol: "clock", sortable: false),
@@ -358,6 +360,9 @@ final class LogsWorkbenchViewController: NSViewController {
     directory.cellUpdater = { [weak self] existing, id, column in
       guard let self, self.store.telemetry != nil else { return false }
       if column == 1 {
+        if id == self.store.requestedObject && id != self.store.selectedObject {
+          return !(existing is NSTextField)
+        }
         guard let label = existing as? NSTextField,
           let object = self.store.objects.first(where: { $0.id == id })
         else { return false }
@@ -372,12 +377,11 @@ final class LogsWorkbenchViewController: NSViewController {
           ?? NSView()
       }
     }
-    directory.onSelect = { [weak self] id in
-      if let id {
-        self?.closeInspector()
-        self?.store.perform(.object(id))
-      }
+    let chooseObject: (String) -> Void = { [weak self] id in
+      self?.store.perform(.object(id))
     }
+    directory.onSelect = { id in if let id { chooseObject(id) } }
+    if store.telemetry != nil { directory.onRowClick = chooseObject }
     for table in [events, systemEvents] {
       table.onScrollPosition = { [weak self] atTop in
         guard let self else { return }
@@ -452,14 +456,19 @@ final class LogsWorkbenchViewController: NSViewController {
     search.setAccessibilityLabel(search.placeholderString)
     if search.currentEditor() == nil { search.stringValue = store.query }
     moreObjectsButton.isHidden = store.telemetry == nil || store.objectCursor.isEmpty
-    if dimensionChanged || renderedObjects != store.objects
-      || renderedSelection != store.selectedObject
+    let objectChanged = renderedSelection != store.selectedObject
+    let pendingObject = store.requestedObject == store.selectedObject ? nil : store.requestedObject
+    if dimensionChanged || renderedObjects != store.objects || objectChanged
+      || renderedPendingObject != pendingObject
     {
       let previous = Dictionary(uniqueKeysWithValues: renderedObjects.map { ($0.id, $0) })
       var changed = Set(
         store.objects.filter { dimensionChanged || previous[$0.id] != $0 }.map(\.id))
-      if renderedSelection != store.selectedObject {
+      if objectChanged {
         changed.formUnion([renderedSelection, store.selectedObject])
+      }
+      if renderedPendingObject != pendingObject {
+        changed.formUnion([renderedPendingObject, pendingObject].compactMap { $0 })
       }
       directory.apply(
         rows: store.objects.enumerated().flatMap { index, object -> [PaxDataTable.Row] in
@@ -470,6 +479,7 @@ final class LogsWorkbenchViewController: NSViewController {
         reusingVisibleCells: true)
       renderedObjects = store.objects
       renderedSelection = store.selectedObject
+      renderedPendingObject = pendingObject
       if !store.privacyInvalid, let origin = revokedDirectoryOrigin {
         directoryScroll.layoutSubtreeIfNeeded()
         directoryScroll.contentView.scroll(to: origin)
@@ -485,24 +495,32 @@ final class LogsWorkbenchViewController: NSViewController {
       : store.backendAvailable
         ? "v2rayN / sing-box · 演示数据（\(store.events.count) 条）" : "日志数据尚未接入后台"
     countLabel.stringValue =
-      store.telemetry != nil && (store.privacyInvalid || !store.initialized)
-      ? "正在读取目录"
-      : store.query.isEmpty
-        ? (store.telemetry == nil ? "" : "已加载 ")
-          + "\(max(0, store.objects.count - 1)) 个\(store.dimension.title)"
-        : "\(max(0, store.objects.count - 1)) 个匹配对象"
+      store.directoryIsSyncing
+      ? "正在同步统计"
+      : store.telemetry != nil && (store.privacyInvalid || !store.initialized)
+        ? "正在读取目录"
+        : store.query.isEmpty
+          ? (store.telemetry == nil ? "" : "已加载 ")
+            + "\(max(0, store.objects.count - 1)) 个\(store.dimension.title)"
+          : "\(max(0, store.objects.count - 1)) 个匹配对象"
     if store.telemetry != nil {
       let records = store.visibleRecords
       let emptyMessage = initialLogMessage
-      if dimensionChanged || renderedRecords != records
+      if dimensionChanged || objectChanged || renderedRecords != records
         || (records.isEmpty && renderedEmptyMessage != emptyMessage)
       {
         let old = Dictionary(uniqueKeysWithValues: renderedRecords.map { ($0.id, $0) })
         let changed = Set(records.filter { dimensionChanged || old[$0.id] != $0 }.map(\.id))
         activeTable.apply(
           rows: records.map { .init(id: $0.id, values: []) }, emptyMessage: emptyMessage,
-          selectedID: store.selectedEvent, reloading: changed, reusingVisibleCells: true)
-        if store.followsLatestPage, store.atTop { activeTable.scrollToTop() }
+          selectedID: objectChanged ? "" : store.selectedEvent, reloading: changed,
+          reusingVisibleCells: true)
+        if objectChanged {
+          closeInspector()
+          activeTable.scrollToTop()
+        } else if store.followsLatestPage, store.atTop {
+          activeTable.scrollToTop()
+        }
         renderedRecords = records
         renderedEmptyMessage = emptyMessage
       }
@@ -516,7 +534,7 @@ final class LogsWorkbenchViewController: NSViewController {
   func focusSearch() { view.window?.makeFirstResponder(search) }
   @objc private func searchChanged() { store.perform(.search(search.stringValue)) }
   func showEvent(_ id: String) {
-    guard !store.isLoading, let telemetry = store.telemetry,
+    guard store.requestedObject == nil, !store.isLoading, let telemetry = store.telemetry,
       presentedViewControllers?.isEmpty != false
     else {
       return

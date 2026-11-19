@@ -12,7 +12,7 @@ var coreAllowedFields = map[string]string{
 
 	"UDPOverTCPOptions":            "Enabled Version",
 	"DNSRecordOptions":             "RR",
-	"AnyTLSOutboundOptions":        "DialerOptions ServerOptions OutboundTLSOptionsContainer Password IdleSessionCheckInterval IdleSessionTimeout MinIdleSession",
+	"AnyTLSOutboundOptions":        "DialerOptions ServerOptions OutboundTLSOptionsContainer Password Network IdleSessionCheckInterval IdleSessionTimeout MinIdleSession",
 	"BrutalOptions":                "Enabled UpMbps DownMbps",
 	"CacheFileOptions":             "Enabled Path CacheID StoreFakeIP StoreRDRC RDRCTimeout StoreDNS",
 	"DNSClientOptions":             "Strategy Timeout DisableCache DisableExpire IndependentCache CacheCapacity Optimistic ClientSubnet",

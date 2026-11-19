@@ -27,15 +27,16 @@ import PaxUI
   }
   required init?(coder: NSCoder) { fatalError("代码构建") }
   func update(_ row: TrafficRow?, unavailable: String? = nil) {
+    let text: String
     if let row {
-      value.stringValue =
+      text =
         "查询 \(row.connections) 次 · 失败 \(row.failedCount) 次 · 最近解析耗时 "
         + TrafficFormatting.milliseconds(TrafficFormatting.latestLatency(row))
-      open.isEnabled = true
     } else {
-      value.stringValue = unavailable ?? "当前时间与搜索范围未记录DNS查询"
-      open.isEnabled = false
+      text = unavailable ?? "当前时间与搜索范围未记录DNS查询"
     }
+    if value.stringValue != text { value.stringValue = text }
+    if open.isEnabled != (row != nil) { open.isEnabled = row != nil }
   }
   @objc private func show() { onOpen?() }
 }

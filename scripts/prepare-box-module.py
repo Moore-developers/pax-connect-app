@@ -64,6 +64,13 @@ with (output / 'prepare.lock').open('w') as lock:
             sys.exit('sing-box DNS source checksum mismatch: ' + relative)
         (destination / relative).write_bytes(original.read_bytes())
     subprocess.run(['patch', '-s', '-p1', '-i', str(root / 'patches/sing-box/dns-update.patch')], cwd=destination, check=True)
+    outbound_hashes = json.loads((root / 'patches/sing-box/outbound-network-source-hashes.json').read_text())
+    for relative, expected in outbound_hashes.items():
+        original = source / relative
+        if hashlib.sha256(original.read_bytes()).hexdigest() != expected:
+            sys.exit('sing-box outbound network source checksum mismatch: ' + relative)
+        (destination / relative).write_bytes(original.read_bytes())
+    subprocess.run(['patch', '-s', '-p1', '-i', str(root / 'patches/sing-box/outbound-network.patch')], cwd=destination, check=True)
     for dns_source in (root / 'patches/sing-box/dns').glob('*.go'):
         relative = dns_source.name if dns_source.name.startswith('box_') else 'dns/' + dns_source.name
         (destination / relative).write_bytes(dns_source.read_bytes())

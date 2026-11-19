@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"pax-connect/daemon/internal/config"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 type ParsedItem struct {
@@ -17,33 +19,46 @@ type ParsedItem struct {
 }
 type ParsedBatch struct{ Items []ParsedItem }
 
-// ParseSubscription decodes a bounded collection and always reuses ParseLink per item.
+const maxSubscriptionItems = 1000
+
+var (
+	errImportTooLarge = errors.New("import_too_large")
+	errImportEmpty    = errors.New("empty_import")
+	errImportFormat   = errors.New("subscription_format_unsupported")
+	errRemoteProvider = errors.New("subscription_provider_unsupported")
+)
+
+// ParseSubscription decodes inline Clash proxies, sing-box outbounds or a share-link list.
 func ParseSubscription(body []byte) (ParsedBatch, error) {
 	if len(body) > 2*1024*1024 {
-		return ParsedBatch{}, errors.New("import_too_large")
+		return ParsedBatch{}, errImportTooLarge
 	}
-	text := strings.TrimSpace(strings.TrimPrefix(string(body), "\ufeff"))
-	if structuredSubscription(text) {
-		return ParsedBatch{}, errors.New("subscription_format_unsupported")
+	text := strings.TrimPrefix(string(body), "\ufeff")
+	if format := subscriptionFormat(text); format != "" {
+		return parseStructured(text, format)
 	}
 	if !strings.Contains(text, "://") {
 		decoded, err := decodeBase64(text)
 		if err != nil {
 			return ParsedBatch{}, err
 		}
-		text = strings.TrimSpace(string(decoded))
-		if structuredSubscription(text) {
-			return ParsedBatch{}, errors.New("subscription_format_unsupported")
+		text = strings.TrimPrefix(string(decoded), "\ufeff")
+		if format := subscriptionFormat(text); format != "" {
+			return parseStructured(text, format)
 		}
 	}
+	return parseLinks(text)
+}
+
+func parseLinks(text string) (ParsedBatch, error) {
 	var batch ParsedBatch
 	for index, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if len(batch.Items) >= 1000 {
-			return ParsedBatch{}, errors.New("import_too_large")
+		if len(batch.Items) >= maxSubscriptionItems {
+			return ParsedBatch{}, errImportTooLarge
 		}
 		p, err := ParseLink(line)
 		name, protocol := linkDisplay(line)
@@ -56,32 +71,59 @@ func ParseSubscription(body []byte) (ParsedBatch, error) {
 		batch.Items = append(batch.Items, item)
 	}
 	if len(batch.Items) == 0 {
-		return batch, errors.New("empty_import")
+		return batch, errImportEmpty
 	}
 	return batch, nil
 }
 
-// Whole configuration documents are not share-link batches. Detect their shape
-// before line parsing, including configs containing HTTP URLs in unrelated fields.
-func structuredSubscription(text string) bool {
-	if strings.HasPrefix(text, "{") || strings.HasPrefix(text, "[") || strings.HasPrefix(text, "<") {
-		return true
-	}
-	for _, line := range strings.Split(text, "\n") {
+// Detect mappings before looking for links. Ignored configuration fields may contain URLs.
+func subscriptionFormat(text string) string {
+	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || line == "---" || strings.HasPrefix(line, "#") {
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.Contains(line, "://") {
-			return false
+		switch line[0] {
+		case '<', '[':
+			return "unsupported"
+		case '{':
+			if json.Valid([]byte(text)) {
+				return "json"
+			}
+			return "yaml"
 		}
 		colon := strings.IndexByte(line, ':')
-		if colon >= 0 && (colon == len(line)-1 || line[colon+1] == ' ' || line[colon+1] == '\t') {
-			return true
+		if strings.HasPrefix(line, "---") || strings.HasPrefix(line, "%YAML") ||
+			colon >= 0 && (colon == len(line)-1 || line[colon+1] == ' ' || line[colon+1] == '\t') {
+			return "yaml"
 		}
-		return false
+		break
 	}
-	return false
+	return ""
+}
+
+func parseStructured(text, format string) (ParsedBatch, error) {
+	if !utf8.ValidString(text) {
+		return ParsedBatch{}, errImportFormat
+	}
+	switch format {
+	case "json":
+		return parseSingboxSubscription(text)
+	case "yaml":
+		return parseClashSubscription(text)
+	default:
+		return ParsedBatch{}, errImportFormat
+	}
+}
+
+func itemDisplay(name, protocol string) (string, string) {
+	if len(name) > 128 || strings.ContainsFunc(name, unicode.IsControl) {
+		name = ""
+	}
+	if len(protocol) > 24 || strings.ContainsFunc(protocol, unicode.IsControl) {
+		protocol = ""
+	}
+	return name, protocol
 }
 
 // Error rows expose only a bounded display name and protocol, never auth/server/query.
@@ -103,11 +145,5 @@ func linkDisplay(raw string) (string, string) {
 			}
 		}
 	}
-	if len(name) > 128 {
-		name = ""
-	}
-	if len(protocol) > 24 {
-		protocol = ""
-	}
-	return name, protocol
+	return itemDisplay(name, protocol)
 }

@@ -274,11 +274,6 @@ func (s *Server) query(ctx context.Context, b *backend, p *queryPage) (map[strin
 		if len(source) > 2<<20 {
 			return nil, "", "", errors.New("import_too_large")
 		}
-		for _, line := range strings.Split(source, "\n") {
-			if len(line) > 32<<10 && !boolArg(args, "is_subscription") {
-				return nil, "", "", errors.New("import_too_large")
-			}
-		}
 		out, e := b.rpc.PreviewRoutes(ctx, &pb.PreviewRoutesRequest{Source: source, IsSubscription: boolArg(args, "is_subscription"), SourceName: stringArg(args, "source_name", ""), Context: identity})
 		if e != nil {
 			return nil, "", "", e

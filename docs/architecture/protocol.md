@@ -79,7 +79,7 @@ AI日志可选`min_official_cost_micro`/`max_official_cost_micro`及能力`ai.us
 - 长读取走 `Query*` 分页并绑定读令牌，不进 `Watch` 全量推送；产品错误一律 `ProductError{code, message_params}`，不透传内核原文、凭据或完整 URL。
 - 跨端模型（proto / Go `config` 标准值 / Swift `PaxClient`）同一提交更新；上游 sing-box 类型不越过 `internal/singbox`。
 
-**RPC族与消息入口**：见[服务索引](rpc-services.md)，字段编号仍以api/*.proto为准。
+RPC族、能力及字段见[服务索引](rpc-services.md)。
 
 ### 4.2 推送与版本号规则
 

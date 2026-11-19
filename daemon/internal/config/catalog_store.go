@@ -70,7 +70,7 @@ func (c Catalog) validate() error {
 	seen := map[string]bool{}
 	for _, r := range c.Routes {
 		if r.Chain != nil {
-			if r.Config.ID == "" || seen[r.Config.ID] || r.Revision == 0 || c.ValidateChain(r.Chain.FrontID, r.Chain.FinalID) != nil || !validChainName(r.Config.Name) {
+			if r.Config.ID == "" || seen[r.Config.ID] || r.Revision == 0 || c.validateChainReferences(r.Chain.FrontID, r.Chain.FinalID) != nil || !validChainName(r.Config.Name) {
 				return ErrCatalogDocument
 			}
 			seen[r.Config.ID] = true

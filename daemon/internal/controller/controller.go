@@ -159,6 +159,7 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 	}
 	if c.history != nil {
 		capabilities = append(capabilities, "history.logs.v1", "history.traffic.v1", "history.retention.v1", "history.refresh.v2", "history.views.v1", "history.summary.v1")
+		capabilities = append(capabilities, "history.application_workbench_page.v1")
 	}
 	if c.data != nil {
 		capabilities = append(capabilities, "routes.history", "routes.usage")

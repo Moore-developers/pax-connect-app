@@ -473,7 +473,10 @@ func (c *Controller) PreviewRoutes(ctx context.Context, req *paxv1.PreviewRoutes
 		body = fetched
 		source = sourceFor(req.Source, req.SourceName)
 	}
-	batch, err := importers.ParseSubscription(body)
+	batch, err := parseRouteBatch(ctx, body)
+	if ctx.Err() != nil {
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
 	if err != nil && len(batch.Items) == 0 {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -560,12 +563,6 @@ func (c *Controller) createPreview(ctx context.Context, batch importers.ParsedBa
 		row := &paxv1.RoutePreviewItem{DisplayName: item.Name, ProtocolName: item.Protocol, ItemId: id, Line: uint32(item.Line), ErrorCode: item.Error}
 		if item.Route != nil {
 			route := *item.Route
-			if err := singbox.ValidateRouteDocument(ctx, config.DocumentForRoute(route)); err != nil {
-				row.ErrorCode, _ = catalogFailure(err)
-				entry.complete = false
-				result.Items = append(result.Items, row)
-				continue
-			}
 			duplicate, hidden, err := scratch.Register(route, sourceIDOf(source), seen)
 			switch {
 			case err != nil:
@@ -797,14 +794,15 @@ func (c *Controller) updateRoute(ctx context.Context, req *paxv1.RouteEditReques
 			if err != nil {
 				return err
 			}
-			if err = singbox.ValidateRouteDocument(ctx, p.Document); err != nil {
-				return err
-			}
-		}
-		if req.DocumentJson == "" {
+		} else {
 			var err error
 			p, err = config.PreserveDocumentEdit(old.Config, p)
 			if err != nil {
+				return err
+			}
+		}
+		if req.DocumentJson != "" || p.Transport == "grpc" {
+			if err := singbox.ValidateRouteDocument(ctx, p.Document); err != nil {
 				return err
 			}
 		}

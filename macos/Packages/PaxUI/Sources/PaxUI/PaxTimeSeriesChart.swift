@@ -160,6 +160,12 @@ public final class PaxTimeSeriesChart: NSView {
     if redraw { onSelect?(chosen) }
   }
 
+  /// A neighboring readout can resize a compact plot while its tooltip remains open.
+  func repositionVisibleTooltip() {
+    guard tooltipCoordinator?.isShowing(from: self) == true else { return }
+    refreshPresentation(redraw: false)
+  }
+
   /// Sample charts show timestamp and milliseconds at either density; compact time charts
   /// keep their existing value-only readout.
   func tooltipText(for hit: PaxTimeSeriesLayout.Hit) -> String {

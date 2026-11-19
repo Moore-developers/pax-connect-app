@@ -23,6 +23,9 @@ func (c *Controller) addRoute(ctx context.Context, req *paxv1.RouteEditRequest) 
 			return errors.New("route_invalid")
 		}
 		p := routeFromEdit(req)
+		if p.Transport == "grpc" && req.DocumentJson == "" {
+			return config.ErrRouteDocument
+		}
 		if req.DocumentJson != "" {
 			var err error
 			p, err = config.RouteFromDocument([]byte(req.DocumentJson), "", req.Name)

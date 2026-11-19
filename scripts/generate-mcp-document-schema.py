@@ -21,8 +21,13 @@ def generate(source, destination):
     definitions = document['$defs']
     definitions['Outbound']['oneOf'] = [item for item in definitions['Outbound']['oneOf']
         if item.get('properties', {}).get('type', {}).get('const') in SUPPORTED]
-    definitions['V2RayTransport']['oneOf'] = [item for item in definitions['V2RayTransport']['oneOf']
-        if item['properties']['type'].get('const') in {'ws', 'httpupgrade'}]
+    transports = {item['properties']['type']['const']: item
+                  for item in definitions['V2RayTransport']['oneOf']}
+    definitions['V2RayTransport']['oneOf'] = [transports[key] for key in ('ws', 'httpupgrade')]
+    grpc_transport = transports['grpc']
+    grpc_transport['properties'] = {key: grpc_transport['properties'][key]
+                                    for key in ('type', 'service_name')}
+    definitions['VLESSGRPCTransport'] = grpc_transport
     header_value = {'anyOf': [{'type': 'string', 'maxLength': 65536},
         {'type': 'array', 'items': {'type': 'string', 'maxLength': 65536}, 'maxItems': 1000}]}
     definitions['HTTPHeader'] = {'type': 'object', 'additionalProperties': False,
@@ -52,8 +57,30 @@ def generate(source, destination):
         props['server']['maxLength'] = 253
         props['server_port']['minimum'] = 1
         variant['required'] = ['type', 'server', 'server_port']
-        if props['type']['const'] == 'socks':
+        protocol = props['type']['const']
+        if protocol == 'socks':
             props['version'] = {'type': 'string', 'enum': ['5']}
+        if protocol == 'vless':
+            grpc = {'$ref': '#/$defs/VLESSGRPCTransport'}
+            props['transport'] = {'oneOf': [props['transport'], grpc]}
+            variant['if'] = {'required': ['transport'], 'properties': {'transport': grpc}}
+            variant['then'] = {
+                'required': ['tls'],
+                'properties': {
+                    'flow': {'const': ''},
+                    'tls': {
+                        'required': ['enabled'],
+                        'properties': {
+                            'enabled': {'const': True},
+                            'alpn': {'anyOf': [
+                                {'const': 'h2'},
+                                {'type': 'array', 'maxItems': 0},
+                                {'type': 'array', 'contains': {'const': 'h2'}},
+                            ]},
+                        },
+                    },
+                },
+            }
     # Keep only referenced definitions. Reject external refs at generation time.
     needed = set()
 

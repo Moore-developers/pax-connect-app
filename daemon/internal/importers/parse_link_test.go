@@ -39,10 +39,10 @@ func TestBatchPartialErrorsAndVMessBase64(t *testing.T) {
 	}
 }
 
-func TestStructuredSubscriptionIsOneFormatError(t *testing.T) {
+func TestUnrecognizedSubscriptionIsOneFormatError(t *testing.T) {
 	for _, body := range []string{
-		"proxies:\n  - name: Fixture\n    type: trojan\n    server: example.test\n    help: https://example.test/help",
-		`{"outbounds":[{"type":"trojan","server":"example.test"}],"help":"https://example.test/help"}`,
+		"rules:\n  - MATCH,DIRECT\nhelp: https://example.test/help",
+		`{"dns":{"servers":[]},"help":"https://example.test/help"}`,
 		"<!DOCTYPE html>\n<html><a href=\"https://example.test\">login</a></html>",
 	} {
 		for _, input := range []string{body, base64.StdEncoding.EncodeToString([]byte(body))} {
@@ -78,5 +78,10 @@ func TestAnyTLSImportPreservesTLSAndPassword(t *testing.T) {
 	}
 	if _, err := ParseLink("anytls://fixture@example.test:443?type=ws"); err == nil {
 		t.Fatal("AnyTLS was converted to WS")
+	}
+	for _, raw := range []string{"udp=2", "udp=", "udp=1&udp=0"} {
+		if _, err := ParseLink("anytls://fixture@example.test?" + raw); err == nil {
+			t.Fatal("accepted invalid UDP setting", raw)
+		}
 	}
 }

@@ -349,12 +349,10 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     for row in changed.intersection(IndexSet(integersIn: visible.location..<NSMaxRange(visible))) {
       var updated = true
       for column in columns.indices {
-        guard let cell = table.view(atColumn: column, row: row, makeIfNecessary: false),
-          let content = cell.subviews.first,
-          cellUpdater(content, rows[row].id, column)
-        else {
+        if !updateMaterializedCell(
+          row: row, nativeColumn: column, column: column, using: cellUpdater)
+        {
           updated = false
-          continue
         }
       }
       if updated { reload.remove(row) }
@@ -380,25 +378,6 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     }
   }
 
-  /// Opt-in stable content host used by history/analysis cellUpdater consumers.
-  public static func reusableContent(_ content: NSView, reuseKey: AnyHashable? = nil) -> NSView {
-    PaxTableContentHost(content, reuseKey: reuseKey)
-  }
-  /// Preserve an unchanged value-only cell even when the row identity changes.
-  public static func updateContent(
-    _ existing: NSView, reusing key: AnyHashable, makeContent: () -> NSView
-  ) -> Bool {
-    guard let host = existing as? PaxTableContentHost else { return false }
-    guard host.reuseKey != key else { return true }
-    host.replace(makeContent())
-    host.reuseKey = key
-    return true
-  }
-  public static func updateContent(_ existing: NSView, content: NSView) -> Bool {
-    guard let host = existing as? PaxTableContentHost else { return false }
-    host.replace(content)
-    return true
-  }
   public func setColumnTitle(_ title: String, at index: Int, symbol: String? = nil) {
     guard table.tableColumns.indices.contains(index) else { return }
     let cell = table.tableColumns[index].headerCell
@@ -739,32 +718,4 @@ private final class PaxDataRowView: NSTableRowView {
 }
 private final class PaxReusableTableCell: NSTableCellView {
   var contentConstraints: [NSLayoutConstraint] = []
-}
-
-private final class PaxTableContentHost: NSView {
-  var reuseKey: AnyHashable?
-  init(_ content: NSView, reuseKey: AnyHashable? = nil) {
-    self.reuseKey = reuseKey
-    super.init(frame: .zero)
-    replace(content)
-    self.reuseKey = reuseKey
-  }
-  @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  override var intrinsicContentSize: NSSize {
-    subviews.first?.intrinsicContentSize
-      ?? NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
-  }
-  func replace(_ content: NSView) {
-    reuseKey = nil
-    for child in subviews { child.removeFromSuperview() }
-    addSubview(content)
-    content.translatesAutoresizingMaskIntoConstraints = false
-    NSLayoutConstraint.activate([
-      content.leadingAnchor.constraint(equalTo: leadingAnchor),
-      content.trailingAnchor.constraint(equalTo: trailingAnchor),
-      content.topAnchor.constraint(equalTo: topAnchor),
-      content.bottomAnchor.constraint(equalTo: bottomAnchor),
-    ])
-    invalidateIntrinsicContentSize()
-  }
 }

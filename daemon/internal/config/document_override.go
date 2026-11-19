@@ -144,6 +144,9 @@ func (r *RouteRecord) setEffective(p RouteConfig) error {
 
 // PreserveDocumentEdit overlays legacy typed edits without dropping fields outside that old projection.
 func PreserveDocumentEdit(old, edited RouteConfig) (RouteConfig, error) {
+	if edited.Transport == "grpc" && (edited.WSHost != "" || edited.WSPath != "") {
+		return edited, ErrDocumentField
+	}
 	original := old
 	original.Document = nil
 	changed := edited

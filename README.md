@@ -64,11 +64,11 @@ Pax Connect is an independent client, not an official sing-box product. It ships
 
 **Routes**
 
-Importing supports share links and Base64 subscriptions for these protocols (see [`daemon/internal/importers`](daemon/internal/importers)):
+Import routes from share links, Base64 subscriptions, Clash/Mihomo YAML, or sing-box JSON. YAML and JSON imports extract supported routes from the configuration. Supported protocols include (see [`daemon/internal/importers`](daemon/internal/importers)):
 
-`VLESS` (incl. Reality, Vision flow, ws, httpupgrade) · `VMess` · `Trojan` · `Hysteria2` (salamander obfuscation) · `AnyTLS` · `Shadowsocks`
+`VLESS` (including REALITY, Vision flow, WebSocket, HTTPUpgrade, and single-service gRPC with TLS or REALITY) · `VMess` · `Trojan` · `Hysteria2` (salamander obfuscation) · `AnyTLS` · `Shadowsocks`
 
-Not importable: Clash YAML, sing-box JSON, VLESS over XHTTP. Unsupported options in a link are rejected rather than silently dropped.
+Unsupported routes, including VLESS over XHTTP and multi-mode gRPC, show an import error.
 
 **AI tools**
 

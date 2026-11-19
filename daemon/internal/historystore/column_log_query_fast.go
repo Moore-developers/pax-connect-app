@@ -8,7 +8,8 @@ import (
 // basicActivity handles the actual unadvanced UI selection with only its SQL
 // filter columns. Full row fields are fetched after current-page keys are fixed.
 func (s *ColumnLogSelection) basicActivity(f ColumnLogFilter) bool {
-	return s.Window.View == "activity" && (f.ObjectID == "" || f.ObjectID == "all") && f.ConnectionKey == "" && f.ProblemID == "" && (f.Quick == "" || f.Quick == "all") && len(f.Kinds) == 0 && len(f.Levels) == 0 && len(f.Transports) == 0 && len(f.Directions) == 0 && f.Application == "" && f.Domain == "" && f.TargetIP == "" && f.Route == "" && f.RulePackage == "" && f.DNSAnswerIP == "" && f.Port == 0 && f.MinLatency == 0
+	objectSupported := f.ObjectID == "" || f.ObjectID == "all" || s.Window.ApplicationPage
+	return s.Window.View == "activity" && objectSupported && f.ConnectionKey == "" && f.ProblemID == "" && (f.Quick == "" || f.Quick == "all") && len(f.Kinds) == 0 && len(f.Levels) == 0 && len(f.Transports) == 0 && len(f.Directions) == 0 && f.Application == "" && f.Domain == "" && f.TargetIP == "" && f.Route == "" && f.RulePackage == "" && f.DNSAnswerIP == "" && f.Port == 0 && f.MinLatency == 0
 }
 
 // basicDomainObjectSource serves the ordinary access directory from the
@@ -42,7 +43,15 @@ func (s *ColumnLogSelection) basicActivitySQL(f ColumnLogFilter) (string, string
 	if f.Scope == "access" {
 		clauses = append(clauses, "g.flow_present=1")
 		if f.Dimension == "application" {
-			clauses = append(clauses, "EXISTS(SELECT 1 FROM log_identity_matches m WHERE m.id=g.identity_id)")
+			if f.ObjectID == "" || f.ObjectID == "all" {
+				clauses = append(clauses, "EXISTS(SELECT 1 FROM log_identity_matches m WHERE m.id=g.identity_id)")
+			} else {
+				// Keep the same installed-app match, including path-owned helper processes.
+				clauses = append(clauses, `g.identity_id IN(
+SELECT i.id FROM log_identities i
+WHERE (i.application_id,i.process) IN(SELECT app_id,process FROM log_app_matches WHERE id=?))`)
+				args = append(args, f.ObjectID)
+			}
 		}
 	}
 	if f.Scope == "system" || f.Dimension == "system" {
@@ -69,16 +78,36 @@ func (s *ColumnLogSelection) basicActivityCount(ctx context.Context, f ColumnLog
 	return n, err
 }
 func (s *ColumnLogSelection) basicActivityPage(ctx context.Context, f ColumnLogFilter, offset, limit int) ([]string, error) {
+	keys, err := s.ActivityPage(ctx, f, nil, offset, limit)
+	out := make([]string, 0, len(keys))
+	for _, key := range keys {
+		out = append(out, key.Key)
+	}
+	return out, err
+}
+
+// ActivityPageKey identifies a row in the snapshot's descending sort order.
+type ActivityPageKey struct {
+	LastNS int64
+	Key    string
+}
+
+// ActivityPage supports an index seek after an existing row, including ties.
+func (s *ColumnLogSelection) ActivityPage(ctx context.Context, f ColumnLogFilter, after *ActivityPageKey, offset, limit int) ([]ActivityPageKey, error) {
 	source, where, args := s.basicActivitySQL(f)
-	rows, err := s.q.QueryContext(ctx, "WITH page AS MATERIALIZED(SELECT g.group_key,g.last_ns FROM "+source+" WHERE "+where+" ORDER BY g.last_ns DESC,g.group_key DESC LIMIT ? OFFSET ?) SELECT group_key FROM page ORDER BY last_ns DESC,group_key DESC", append(args, limit, offset)...)
+	if after != nil {
+		where += " AND (g.last_ns,g.group_key)<(?,?)"
+		args = append(args, after.LastNS, after.Key)
+	}
+	rows, err := s.q.QueryContext(ctx, "SELECT g.group_key,g.last_ns FROM "+source+" WHERE "+where+" ORDER BY g.last_ns DESC,g.group_key DESC LIMIT ? OFFSET ?", append(args, limit, offset)...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var out []string
+	var out []ActivityPageKey
 	for rows.Next() {
-		var key string
-		if err = rows.Scan(&key); err != nil {
+		var key ActivityPageKey
+		if err = rows.Scan(&key.Key, &key.LastNS); err != nil {
 			return nil, err
 		}
 		out = append(out, key)

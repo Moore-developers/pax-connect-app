@@ -52,6 +52,9 @@ func (c *Controller) resolveRecordPolicy(ctx context.Context, r config.RouteReco
 	if !ok || !other || a.Chain != nil || b.Chain != nil {
 		return r, errors.New("chain_invalid")
 	}
+	if err := config.ValidateChainTransport(a.Config, b.Config); err != nil {
+		return r, err
+	}
 	front, err := c.resolveRecordPolicy(ctx, a, policy)
 	if err != nil {
 		return r, err

@@ -14,14 +14,16 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
   private let loading = PaxLoadingStateView()
   init(store: RouteWorkbenchStore) {
     session = store.makeImportSession()
-    super.init(title: "导入线路", subtitle: "分享链接或 HTTPS 订阅地址", symbol: "square.and.arrow.down")
+    super.init(
+      title: "导入线路", subtitle: "分享链接、HTTPS 订阅地址、Clash YAML 或 sing-box JSON",
+      symbol: "square.and.arrow.down")
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
     input.isRichText = false
     input.font = PaxTheme.Typography.label()
-    input.setAccessibilityLabel("分享链接或订阅地址")
+    input.setAccessibilityLabel("待导入的链接、订阅地址或配置正文")
     input.setAccessibilityIdentifier("import-input")
     input.isAutomaticQuoteSubstitutionEnabled = false
     input.isAutomaticDashSubstitutionEnabled = false
@@ -93,8 +95,13 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
       }
       for item in session.preview?.items ?? [] {
         guard !item.errorCode.isEmpty else { continue }
-        let title =
-          "第\(item.line)行 · \(item.displayName.isEmpty ? "未命名" : item.displayName) · \(item.protocolName.uppercased()) · \(ProductErrorPresentation.message(ProductError(code:item.errorCode)))"
+        let details: [String?] = [
+          item.line > 0 ? "第 \(item.line) 行" : nil,
+          item.displayName.isEmpty ? nil : item.displayName,
+          item.protocolName.isEmpty ? nil : item.protocolName.uppercased(),
+          ProductErrorPresentation.message(ProductError(code: item.errorCode)),
+        ]
+        let title = details.compactMap { $0 }.joined(separator: " · ")
         let result = NSTextField(wrappingLabelWithString: title)
         result.font = PaxTheme.Typography.label()
         result.textColor = PaxTheme.Color.error

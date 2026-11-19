@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -24,16 +25,43 @@ func validChainName(name string) bool {
 	return true
 }
 
-// ValidateChain rejects nested, hidden, identical and unsupported transport pairs.
-func (c Catalog) ValidateChain(front, final string) error {
+// validateChainReferences keeps saved combinations readable if a member's
+// transport capabilities later change through an edit or a source refresh.
+func (c Catalog) validateChainReferences(front, final string) error {
 	a, ok := c.Find(front)
 	b, other := c.Find(final)
 	if !ok || !other || front == final || a.Chain != nil || b.Chain != nil || a.Hidden || b.Hidden {
 		return errors.New("chain_invalid")
 	}
-	// Only protocols with a proven UDP-capable front may carry QUIC final hops.
-	if b.Config.Transport == "quic" && a.Config.ProtocolName != "shadowsocks" && a.Config.ProtocolName != "hysteria2" {
-		return errors.New("chain_udp_required")
+	return nil
+}
+
+// ValidateChainTransport checks whether the current front can carry the final
+// route's QUIC transport. A restricted node can still carry a TCP final hop.
+func ValidateChainTransport(front, final RouteConfig) error {
+	if final.Transport != "quic" {
+		return nil
+	}
+	udpRequired := errors.New("chain_udp_required")
+	if front.ProtocolName != "shadowsocks" && front.ProtocolName != "hysteria2" {
+		return udpRequired
+	}
+	if len(front.Document) == 0 {
+		return nil
+	}
+	document, err := ParseDocument(front.Document)
+	if err != nil {
+		return err
+	}
+	switch network := document["network"].(type) {
+	case string:
+		if network == "tcp" {
+			return udpRequired
+		}
+	case []any:
+		if len(network) > 0 && !slices.Contains(network, "udp") {
+			return udpRequired
+		}
 	}
 	return nil
 }
@@ -44,11 +72,14 @@ func (c *Catalog) SaveChain(id, name, front, final string, revision, frontRevisi
 	if !validChainName(name) {
 		return RouteRecord{}, errors.New("chain_name_invalid")
 	}
-	if err := c.ValidateChain(front, final); err != nil {
+	if err := c.validateChainReferences(front, final); err != nil {
 		return RouteRecord{}, err
 	}
 	a, _ := c.Find(front)
 	b, _ := c.Find(final)
+	if err := ValidateChainTransport(a.Config, b.Config); err != nil {
+		return RouteRecord{}, err
+	}
 	if a.Revision != frontRevision || b.Revision != finalRevision {
 		return RouteRecord{}, errors.New("route_stale")
 	}

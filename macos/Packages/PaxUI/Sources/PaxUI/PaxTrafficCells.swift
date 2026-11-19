@@ -98,15 +98,35 @@ import AppKit
     let value = PaxTransferView(
       uploadText: uploadText, downloadText: downloadText, upload: upload,
       download: download, tooltip: tooltip)
-    value.toolTip = note
-    value.setAccessibilityHelp(note)
     let cell = TrafficCell(views: [value]) { bounds in
       let height = min(bounds.height, PaxTheme.Dashboard.transferContentHeight)
       value.frame = NSRect(
         x: 0, y: (bounds.height - height) / 2, width: bounds.width, height: height)
     }
-    cell.toolTip = note
+    setTransferNote(note, in: cell, view: value)
     return cell
+  }
+
+  /// Update the labels and bar in a cell created by `transfer`.
+  public static func updateTransfer(
+    _ cell: NSView, uploadText: String, downloadText: String, upload: Double, download: Double,
+    tooltip: PaxChartTooltipCoordinator?, note: String?
+  ) -> Bool {
+    guard cell is TrafficCell, let view = cell.subviews.first as? PaxTransferView else {
+      return false
+    }
+    view.update(
+      uploadText: uploadText, downloadText: downloadText, upload: upload, download: download,
+      tooltip: tooltip)
+    setTransferNote(note, in: cell, view: view)
+    return true
+  }
+
+  private static func setTransferNote(_ note: String?, in cell: NSView, view: PaxTransferView) {
+    guard cell.toolTip != note else { return }
+    cell.toolTip = note
+    view.toolTip = note
+    view.setAccessibilityHelp(note)
   }
 }
 

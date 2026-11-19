@@ -406,7 +406,18 @@ func (c *Controller) runRefresh(ctx context.Context, cancel context.CancelFunc, 
 		c.submitRefreshAttempt(id, source, nil, false, code, attempt, request, agent)
 		return
 	}
-	batch, decodeError := importers.ParseSubscription(body)
+	batch, decodeError := parseRouteBatch(ctx, body)
+	if errors.Is(ctx.Err(), context.Canceled) {
+		c.completeOperation(id, refreshLabel, "operation_cancelled")
+		return
+	}
+	attempt.Phase = "parse"
+	attempt.TotalMS = uint64(time.Since(attempt.At).Milliseconds())
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		attempt.Error = "fetch_timeout"
+		c.submitRefreshAttempt(id, source, nil, false, attempt.Error, attempt, request, agent)
+		return
+	}
 	nodes, failed := collectNodes(batch)
 	failure := ""
 	switch {
@@ -420,7 +431,6 @@ func (c *Controller) runRefresh(ctx context.Context, cancel context.CancelFunc, 
 	if request.ReplacementUrl != "" && !complete {
 		failure = "subscription_replacement_incomplete"
 	}
-	attempt.Phase = "parse"
 	attempt.Error = failure
 	if failure == "" {
 		attempt.Phase = "complete"

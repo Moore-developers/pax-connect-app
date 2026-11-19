@@ -10,12 +10,16 @@ final class LogsWorkbenchStore {
   var pageLoading = false
   var pageIndex = 0
   var requestedPageIndex: Int?
+  var requestedObject: String?
   var followsLatestPage: Bool { (requestedPageIndex ?? pageIndex) == 0 && !reading }
   var pageCursors = [""]
   var reading = false
   var atTop = true
-  var canPreviousPage: Bool { pageIndex > 0 && !privacyInvalid && !pageLoading && !isLoading }
-  var canNextPage: Bool { !eventCursor.isEmpty && !privacyInvalid && !pageLoading && !isLoading }
+  var canPreviousPage: Bool { pageIndex > 0 && canChangePage }
+  var canNextPage: Bool { !eventCursor.isEmpty && canChangePage }
+  private var canChangePage: Bool {
+    !privacyInvalid && requestedObject == nil && !pageLoading && !isLoading
+  }
   var pageTitle: String {
     if privacyInvalid { return liveMessage.isEmpty ? "记录已失效，正在重新读取" : "记录读取失败" }
     if telemetry != nil && !initialized { return liveMessage.isEmpty ? "正在读取记录" : "记录读取失败" }
@@ -23,7 +27,7 @@ final class LogsWorkbenchStore {
   }
   func changePage(_ delta: Int) {
     let target = pageIndex + delta
-    guard !privacyInvalid, !pageLoading, target >= 0, delta < 0 || canNextPage else { return }
+    guard canChangePage, target >= 0, delta < 0 || canNextPage else { return }
     requestedPageIndex = target
     reading = target > 0
     let cursor: String
@@ -45,12 +49,16 @@ final class LogsWorkbenchStore {
       guard let self else { return }
       defer { if request == self.requestGeneration { self.pageLoading = false } }
       await self.reload(
-        eventsOnly: true, pageCursor: cursor, pageTarget: target, pageRequest: request)
+        eventsOnly: true, pageCursor: cursor, pageTarget: target, request: request,
+        recoverPage: self.usesApplicationPages && target > 0 && cursor.isEmpty)
     }
   }
   var recordTotal: UInt64 = 0
   var hasViewUpdates = false
   var usesViews: Bool { telemetry?.logViewsAvailable == true }
+  var usesApplicationPages: Bool {
+    dimension == .application && usesViews && telemetry?.applicationWorkbenchPageAvailable == true
+  }
   var unit: String { "条记录" }
   enum Dimension: Int, CaseIterable {
     case domain, application, ip, system
@@ -92,23 +100,18 @@ final class LogsWorkbenchStore {
     var symbol: String = ""
   }
   @ObservationIgnored var queryTask: Task<Void, Never>?
-  var seenInvalidation: UInt64 = 0
-  var seenHistory: HistoryState?
+  // The bounds of the committed snapshot survive changes to the next query.
+  var seenSnapshot: (history: HistoryState, from: Date?, session: UInt64)?
   var resetDirectoryOrder = true
   var directoryOrder: [String] = []
   var initialized = false
-  var seenSession: UInt64 = 0
   var revokedIdentity: String?
   var invalidationRecovery = false
   var rangeEnd: Date? = nil
   var privacyInvalid: Bool {
-    telemetry.map { telemetry in
-      (seenHistory.map { previous in
-        telemetry.logsInvalidated(since: previous, from: rangeStart)
-      }
-        ?? (seenInvalidation != telemetry.invalidationGeneration))
-        || (telemetry.connected && initialized && seenSession != telemetry.sessionGeneration)
-    } ?? false
+    guard let telemetry, let seenSnapshot else { return false }
+    return telemetry.logsInvalidated(since: seenSnapshot.history, from: seenSnapshot.from)
+      || (telemetry.connected && seenSnapshot.session != telemetry.sessionGeneration)
   }
   var telemetry: TelemetryStore?
   var liveRecords: [LogRecord] = []
@@ -121,6 +124,10 @@ final class LogsWorkbenchStore {
   var directoryToken = ""
   var directoryStart: Date? = nil
   var directoryEnd: Date? = nil
+  var directoryHistory: HistoryState?
+  var directoryIsSyncing: Bool {
+    usesApplicationPages && !readToken.isEmpty && directoryToken != readToken
+  }
   var requestGeneration: UInt64 = 0
   var liveMessage = ""
   var rangeIndex = 0
@@ -164,6 +171,11 @@ final class LogsWorkbenchStore {
       if privacyInvalid {
         return []
       }
+      if directoryIsSyncing, let telemetry, let directoryHistory,
+        telemetry.logsInvalidated(since: directoryHistory, from: directoryStart)
+      {
+        return []
+      }
       return [
         .init(id: "all", title: allTitle, count: Int(liveTotal))
       ] + liveObjects
@@ -200,7 +212,7 @@ final class LogsWorkbenchStore {
   }
   var message: String {
     if privacyInvalid { return liveMessage.isEmpty ? "记录已失效，正在重新读取" : liveMessage }
-    if isLoading && !initialized { return "正在读取日志" }
+    if telemetry != nil && !initialized && liveMessage.isEmpty { return "正在读取日志" }
     if let telemetry { return liveMessage.isEmpty ? telemetry.qualityMessage : liveMessage }
 
     return switch scene {
@@ -224,29 +236,9 @@ final class LogsWorkbenchStore {
     return events.isEmpty ? "暂无日志" : "没有符合条件的事件"
   }
   func perform(_ intent: Intent) {
-    defer {
-      if telemetry != nil {
-        switch intent {
-        case .search: scheduleReload(directoryOnly: true, delay: true)
-        case .object, .level:
-          rangeStart = nil
-          rangeEnd = nil
-          readToken = ""
-          scheduleReload(fresh: true)
-        case .dimension:
-          rangeStart = nil
-          rangeEnd = nil
-          readToken = ""
-          scheduleReload(fresh: true)
-        case .select: break
-        case .scene: break
-        }
-      }
-    }
     switch intent {
     case .dimension(let value):
       resetDirectoryOrder = true
-      seenHistory = nil
       directoryMemory[dimension] = (query, selectedObject)
       dimension = value
       liveRecords = []
@@ -261,17 +253,19 @@ final class LogsWorkbenchStore {
       query = directoryMemory[value]?.query ?? ""
       selectedObject = directoryMemory[value]?.object ?? "all"
       selectedEvent = nil
+      initialized = false
     case .search(let value):
       resetDirectoryOrder = true
       query = value
     case .object(let value):
       guard objects.contains(where: { $0.id == value }) else { return }
-      selectedObject = value
-      liveRecords = []
-      recordTotal = 0
-      initialized = false
-      reading = false
-      selectedEvent = nil
+      if telemetry == nil {
+        commitObjectSelection(value)
+      } else if value != (requestedObject ?? selectedObject) {
+        liveMessage = ""
+        scheduleReload(objectTarget: value)
+      }
+      return
     case .level(let value):
       level = value
       liveRecords = []
@@ -287,6 +281,24 @@ final class LogsWorkbenchStore {
       selectedObject = "all"
       selectedEvent = nil
     }
+    guard telemetry != nil else { return }
+    switch intent {
+    case .search:
+      scheduleReload(directoryOnly: true, delay: true)
+    case .level, .dimension:
+      liveMessage = ""
+      resetRange()
+    case .object, .select, .scene:
+      break
+    }
+  }
+
+  func commitObjectSelection(_ value: String) {
+    selectedObject = value
+    selectedEvent = nil
+    pageIndex = 0
+    pageCursors = [""]
+    reading = false
   }
 }
 

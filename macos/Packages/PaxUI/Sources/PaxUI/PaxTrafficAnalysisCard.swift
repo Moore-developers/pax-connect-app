@@ -41,6 +41,21 @@ public struct PaxTrafficAnalysisRow: Equatable {
 
 /// 上传、下载各一条渐变段；上方数值同基线，比例由调用方的值决定。
 public final class PaxTransferView: NSView {
+  private struct Proportion: Equatable {
+    let uploadFraction: Double
+    let uploadIsZero: Bool
+    let downloadIsZero: Bool
+
+    init(upload: Double, download: Double) {
+      let upload = max(0, upload)
+      let download = max(0, download)
+      let total = upload + download
+      uploadFraction = total > 0 ? upload / total : 0.5
+      uploadIsZero = upload == 0
+      downloadIsZero = download == 0
+    }
+  }
+
   private let up: NSTextField, down: NSTextField
   private static let uploadArrow = PaxIcon.image("arrow.up", size: PaxTheme.Dashboard.bodyFont).map
   { PaxImageInk.normalized($0) }
@@ -49,18 +64,17 @@ public final class PaxTransferView: NSView {
   private let upIcon = NSImageView()
   private let downIcon = NSImageView()
   private var arrowInkBottom: CGFloat = 0
-  private let tooltip: PaxChartTooltipCoordinator?
-  private let readout: String
-  private let upload: Double, download: Double
+  private var tooltip: PaxChartTooltipCoordinator?
+  private var readout: String
+  private var proportion: Proportion
   public override var isFlipped: Bool { true }
   public init(
     uploadText: String, downloadText: String, upload: Double, download: Double,
     tooltip: PaxChartTooltipCoordinator? = nil
   ) {
     self.tooltip = tooltip
-    readout = "上传 " + uploadText + " · 下载 " + downloadText
-    self.upload = max(0, upload)
-    self.download = max(0, download)
+    readout = Self.readout(uploadText: uploadText, downloadText: downloadText)
+    proportion = Proportion(upload: upload, download: download)
     up = PaxText.label(
       uploadText,
       font: PaxTheme.Typography.metric(size: PaxTheme.Dashboard.bodyFont, weight: .medium))
@@ -72,6 +86,7 @@ public final class PaxTransferView: NSView {
       label.cell?.usesSingleLineMode = true
       label.lineBreakMode = .byTruncatingTail
     }
+    down.alignment = .right
     upIcon.image = Self.uploadArrow
     downIcon.image = Self.downloadArrow
     upIcon.imageScaling = .scaleProportionallyUpOrDown
@@ -85,6 +100,42 @@ public final class PaxTransferView: NSView {
   }
   @available(*, unavailable)
   public required init?(coder: NSCoder) { fatalError("代码构建") }
+
+  func update(
+    uploadText: String, downloadText: String, upload: Double, download: Double,
+    tooltip: PaxChartTooltipCoordinator?
+  ) {
+    if self.tooltip !== tooltip {
+      self.tooltip?.close(from: self)
+      self.tooltip = tooltip
+    }
+    let uploadChanged = up.stringValue != uploadText
+    let downloadChanged = down.stringValue != downloadText
+    if uploadChanged { up.stringValue = uploadText }
+    if downloadChanged { down.stringValue = downloadText }
+    if uploadChanged || downloadChanged {
+      needsLayout = true
+      readout = Self.readout(uploadText: uploadText, downloadText: downloadText)
+      setAccessibilityLabel(readout)
+      if tooltip?.isShowing(from: self) == true { tooltip?.show(readout, from: self) }
+    }
+    let next = Proportion(upload: upload, download: download)
+    guard proportion != next else { return }
+    let previousRects = transferRects
+    let colorsChanged =
+      proportion.uploadIsZero != next.uploadIsZero
+      || proportion.downloadIsZero != next.downloadIsZero
+    proportion = next
+    let parts = transferRects
+    if colorsChanged || previousRects != parts {
+      setNeedsDisplay(parts[0].union(parts[1]))
+    }
+  }
+
+  private static func readout(uploadText: String, downloadText: String) -> String {
+    "上传 " + uploadText + " · 下载 " + downloadText
+  }
+
   public override func layout() {
     super.layout()
     let icon = PaxTheme.Dashboard.bodyFont
@@ -104,13 +155,11 @@ public final class PaxTransferView: NSView {
     upIcon.frame = NSRect(x: 0, y: arrowInkBottom - imageHeight, width: icon, height: imageHeight)
     up.frame = NSRect(
       x: icon + gap, y: textY, width: max(1, bounds.width / 2 - icon - gap), height: line)
-    down.alignment = .right
     let dw = min(ceil(down.intrinsicContentSize.width) + gap, max(1, bounds.width / 2 - icon - gap))
     down.frame = NSRect(x: bounds.width - dw, y: textY, width: dw, height: line)
     downIcon.frame = NSRect(
       x: down.frame.minX - gap - icon, y: arrowInkBottom - imageHeight, width: icon,
       height: imageHeight)
-
   }
   public override func updateTrackingAreas() {
     super.updateTrackingAreas()
@@ -128,13 +177,11 @@ public final class PaxTransferView: NSView {
     super.viewDidMoveToWindow()
     if window == nil { tooltip?.close(from: self) }
   }
-  var zeroDirections: [Bool] { [upload == 0, download == 0] }
   var transferRects: [NSRect] {
     let d = PaxTheme.Dashboard.self
     let width = max(0, bounds.width - d.transferGap)
-    let total = upload + download
-    let fraction = total > 0 ? upload / total : 0.5
-    let upWidth = max(d.transferGap, min(max(0, width - d.transferGap), width * fraction))
+    let upWidth = max(
+      d.transferGap, min(max(0, width - d.transferGap), width * proportion.uploadFraction))
     let y = arrowInkBottom + d.transferArrowInkGap
     return [
       NSRect(x: 0, y: y, width: upWidth, height: d.transferHeight),
@@ -146,7 +193,7 @@ public final class PaxTransferView: NSView {
     let d = PaxTheme.Dashboard.self
     for (index, rect) in transferRects.enumerated() {
       let path = NSBezierPath(roundedRect: rect, xRadius: d.transferGap, yRadius: d.transferGap)
-      if zeroDirections[index] {
+      if index == 0 ? proportion.uploadIsZero : proportion.downloadIsZero {
         PaxTheme.Table.line.setFill()
         path.fill()
       } else {
@@ -201,14 +248,15 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     dimensionIndex: Int, filterIndex: Int, rowCount: Int, emptyMessage: String?,
     controlsEnabled: Bool = true
   ) {
-    dimension.isEnabled = controlsEnabled
-    filter.isEnabled = controlsEnabled
-    dimension.selectedIndex = dimensionIndex
-    filter.selectedIndex = filterIndex
-    setAccessibilityLabel("流量分析，\(rowCount) 项")
-    empty.stringValue = emptyMessage ?? ""
-    empty.isHidden = emptyMessage == nil
-    needsLayout = true
+    if dimension.isEnabled != controlsEnabled { dimension.isEnabled = controlsEnabled }
+    if filter.isEnabled != controlsEnabled { filter.isEnabled = controlsEnabled }
+    if dimension.selectedIndex != dimensionIndex { dimension.selectedIndex = dimensionIndex }
+    if filter.selectedIndex != filterIndex { filter.selectedIndex = filterIndex }
+    let label = "流量分析，\(rowCount) 项"
+    if accessibilityLabel() != label { setAccessibilityLabel(label) }
+    let message = emptyMessage ?? ""
+    if empty.stringValue != message { empty.stringValue = message }
+    if empty.isHidden != (emptyMessage == nil) { empty.isHidden = emptyMessage == nil }
   }
   public override func layout() {
     super.layout()

@@ -74,7 +74,7 @@ App 消费：只读取 Pax Connect 产品 gRPC 的 `Watch` 事件流和 `Query*`
 | 节点链接 | 外部输入 | VLESS/VMess/Trojan/SS/SOCKS/HTTP 导入 | 分享链接 | 首版支持清单 |
 | 订阅 URL | 外部输入 | 线路集合和分组 | HTTPS | 刷新失败保留旧版本 |
 | 二维码 | 外部输入 | 节点链接导入 | 图像解码 | 内容必须落入支持清单 |
-| sing-box outbound JSON | 外部输入 | 单线路导入 | JSON | 不导入完整配置 |
+| 节点配置 | 外部输入 | 导入单条或批量线路 | Clash/Mihomo YAML、sing-box JSON | [提取线路](../changes/pax-connect-network-control-plane/route-import-assessment-1119.md#第一期实施方案)，运行配置由 Pax 生成 |
 | Geo / rule-set | 外部数据 | 默认分流 | HTTPS 下载、本地缓存和版本校验 | 更新失败保留上一版 |
 | 加密 DNS | 外部服务 | DNS 解析和保护 | DoH/DoT/DoQ，由 sing-box 配置 | 不默认降级明文 DNS |
 

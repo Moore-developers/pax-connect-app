@@ -2,6 +2,8 @@
 
 本表由[协议§4](protocol.md#4-ipc-与协议)索引；只维护服务边界，字段编号以api/*.proto为准。
 
+`history.application_workbench_page.v1` 门控 `QueryLogs` 的应用工作台分页模式。显式选择时省略筛选选项，总数绑定令牌和筛选，游标按排序时间和记录键定位。令牌过期后通过 `recovery_offset` 在新快照恢复目标页，越界取末页。默认请求保留原有字段和游标。
+
 **RPC 族**（能力名以 `daemon/internal/controller` 通告为准）：
 
 [新增结果合同](../changes/pax-connect-network-control-plane/manual-proxy-routes.md)。

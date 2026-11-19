@@ -400,8 +400,8 @@ func (s *Store) keepOlderBuckets(ctx context.Context, old *sql.DB, attr attribut
 }
 
 func knownModel(model string) bool {
-	_, ok := tariffs[model]
-	return ok || model == syntheticModel || model == "deepseek-flash" || model == "deepseek-v4.1-flash"
+	_, version := modelTariff(model, 0)
+	return version != "" || model == syntheticModel
 }
 
 func (s *Store) summarizeInto(ctx context.Context, rep *Report) error {

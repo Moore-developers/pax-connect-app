@@ -8,6 +8,22 @@ func logObjectCell(
   if id == "group" { return NSView() }
   guard let object = store.objects.first(where: { $0.id == id }) else { return nil }
   if column == 1 {
+    if id == store.requestedObject && id != store.selectedObject {
+      let spinner = NSProgressIndicator()
+      spinner.style = .spinning
+      spinner.controlSize = .small
+      spinner.setAccessibilityLabel("正在切换到\(object.title)")
+      spinner.translatesAutoresizingMaskIntoConstraints = false
+      let content = NSView()
+      content.addSubview(spinner)
+      NSLayoutConstraint.activate([
+        spinner.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+        spinner.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+        content.heightAnchor.constraint(equalToConstant: PaxTheme.Control.navigationIcon),
+      ])
+      spinner.startAnimation(nil)
+      return content
+    }
     let count = PaxText.label(
       String(object.count),
       font: PaxTheme.Typography.metric(size: PaxTheme.Logs.directoryCountFont), secondary: true)

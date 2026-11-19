@@ -52,12 +52,22 @@ final class RoutingTrafficList: NSObject {
   let icons: WorkbenchObjectIcons
   let tooltip: PaxChartTooltipCoordinator
   private var renderedRows: [PaxCore.TrafficRow] = []
-  private var renderedCursor = ""
-  private var renderedDimension = -1
+  private var renderedScope: String?
+  private var renderedHasMore = false
+  private var renderedMinimumRows = 0
   private var renderedEmptyMessage = ""
   private var atTop = true
   private var selectedID: String?
   var activeTable: PaxDataTable { store.dimension == .system ? systemTable : table }
+  private var activeColumns: [Int] {
+    store.dimension == .system ? systemLogical : applicationLogical
+  }
+  private var scope: String {
+    let tableID =
+      store.dimension == .system ? style.identifiers.system : style.identifiers.application
+    return
+      "\(tableID)-\(store.dimension.rawValue)-\(store.period.rawValue)-\(store.direction.rawValue)-\(store.search)"
+  }
 
   init(
     store: RoutingWorkbenchStore, icons: WorkbenchObjectIcons, tooltip: PaxChartTooltipCoordinator,
@@ -146,7 +156,7 @@ final class RoutingTrafficList: NSObject {
     return "此时间窗暂无流量"
   }
 
-  /// 把 Store 当前行写入可见表格；返回表格是否真的重绘。
+  /// 提交 Store 的当前结果；返回是否需要准备表格结构。
   /// `limit` 截取前几行，`minimumRows` 用占位行补足固定高度。
   @discardableResult
   func render(emptyMessage: String, limit: Int = .max, minimumRows: Int = 0) -> Bool {
@@ -155,42 +165,91 @@ final class RoutingTrafficList: NSObject {
       let ids = store.visibleRows.prefix(limit).map(\.id)
       activeTable.apply(
         rows: slots(
-          ids, cursor: style.paging ? store.livePage.nextCursor : "", minimum: minimumRows),
+          ids, hasMore: style.paging && !store.livePage.nextCursor.isEmpty, minimum: minimumRows),
         emptyMessage: emptyMessage)
       return true
     }
-    let rows = Array(store.livePage.items.prefix(limit))
-    let cursor = style.paging ? store.livePage.nextCursor : ""
-    guard
-      rows != renderedRows || cursor != renderedCursor
-        || renderedDimension != store.dimension.rawValue || renderedEmptyMessage != emptyMessage
-    else { return false }
-    let old = Dictionary(uniqueKeysWithValues: renderedRows.map { ($0.id, $0) })
-    let changed = Set(rows.filter { old[$0.id] != $0 }.map(\.id))
-    activeTable.apply(
-      rows: slots(
-        rows.map(\.id), cursor: cursor,
-        minimum: minimumRows),
-      emptyMessage: emptyMessage, reloading: changed,
-      reusingVisibleCells: style.scrollMode == .fixedHeader)
+    let page = store.livePage
+    let rows = Array(page.items.prefix(limit))
+    let hasMore = style.paging && !page.nextCursor.isEmpty
+    let scope = self.scope
+    let scopeChanged = scope != renderedScope
+    let rowsChanged = rows != renderedRows
+    let structureChanged =
+      scopeChanged || hasMore != renderedHasMore || minimumRows != renderedMinimumRows
+      || (rowsChanged && rows.map(\.id) != renderedRows.map(\.id))
+    let emptyChanged =
+      rows.isEmpty && !hasMore && minimumRows == 0 && emptyMessage != renderedEmptyMessage
+    guard structureChanged || rowsChanged || emptyChanged else { return false }
+
+    let table = activeTable
+    if structureChanged || emptyChanged {
+      table.apply(
+        rows: slots(rows.map(\.id), hasMore: hasMore, minimum: minimumRows),
+        emptyMessage: emptyMessage, reloading: [])
+    }
+    if renderedScope != nil && (scopeChanged || rowsChanged) {
+      let columns = activeColumns
+      let changes = changedCells(
+        in: rows, columns: columns, scope: scope, scopeChanged: scopeChanged)
+      table.updateCells(changes)
+    }
     renderedRows = rows
-    renderedCursor = cursor
-    renderedDimension = store.dimension.rawValue
+    renderedScope = scope
+    renderedHasMore = hasMore
+    renderedMinimumRows = minimumRows
     renderedEmptyMessage = emptyMessage
-    return true
+    return structureChanged
   }
 
-  func cell(_ id: String, column: Int) -> NSView? {
+  private func changedCells(
+    in rows: [PaxCore.TrafficRow], columns: [Int], scope: String, scopeChanged: Bool
+  ) -> [String: IndexSet] {
+    if scopeChanged {
+      // A reattached table can still have cells created in its previous query.
+      let allColumns = IndexSet(integersIn: columns.indices)
+      return Dictionary(uniqueKeysWithValues: rows.map { ($0.id, allColumns) })
+    }
+    let previousRows = Dictionary(uniqueKeysWithValues: renderedRows.map { ($0.id, $0) })
+    let dimension = store.dimension
+    var changes: [String: IndexSet] = [:]
+    for row in rows {
+      guard let previous = previousRows[row.id], row != previous else { continue }
+      let pinKey = trafficPinKey(id: row.id, scope: scope)
+      let changed = IndexSet(
+        columns.indices.filter { index in
+          let column = columns[index]
+          return routingTrafficCellKey(row, column: column, dimension: dimension, pinKey: pinKey)
+            != routingTrafficCellKey(previous, column: column, dimension: dimension, pinKey: pinKey)
+        })
+      if !changed.isEmpty { changes[row.id] = changed }
+    }
+    return changes
+  }
+
+  private func trafficPinKey(id: String, scope: String) -> String {
+    "traffic-list-\(scope)-\(id)"
+  }
+
+  private func cellKey(_ id: String, column: Int) -> RoutingTrafficCellKey? {
+    guard let fact = store.liveFact(id: id) else { return nil }
+    return routingTrafficCellKey(
+      fact, column: column, dimension: store.dimension, pinKey: trafficPinKey(id: id, scope: scope))
+  }
+
+  func cell(_ id: String, column: Int, key: RoutingTrafficCellKey? = nil) -> NSView? {
     if id.hasPrefix("placeholder-") { return NSView() }
-    return makeRoutingTrafficCell(id, column: column, store: store, icons: icons, tooltip: tooltip)
-    {
+    return makeRoutingTrafficCell(
+      id, column: column, key: key ?? cellKey(id, column: column), store: store,
+      icons: icons, tooltip: tooltip
+    ) {
       [weak self] in self?.onOpen?(id)
     }
   }
 
-  private func slots(_ ids: [String], cursor: String, minimum: Int) -> [PaxDataTable.Row] {
+  private func slots(_ ids: [String], hasMore: Bool, minimum: Int) -> [PaxDataTable.Row] {
     var rows = ids.map { PaxDataTable.Row(id: $0, values: []) }
-    if !cursor.isEmpty { rows.append(.init(id: "load-more", values: ["加载更多"])) }
+    if hasMore { rows.append(.init(id: "load-more", values: ["加载更多"])) }
     for index in rows.count..<max(rows.count, minimum) {
       rows.append(.init(id: "placeholder-\(index)", values: []))
     }
@@ -199,20 +258,24 @@ final class RoutingTrafficList: NSObject {
 
   private func wire(_ table: PaxDataTable, logical: @escaping (Int) -> Int) {
     table.cellProvider = { [weak self] id, column in
-      guard let self, let content = self.cell(id, column: logical(column)) else { return nil }
+      guard let self else { return nil }
+      let column = logical(column)
+      let key = self.cellKey(id, column: column)
+      guard let content = self.cell(id, column: column, key: key) else { return nil }
       // Empty slots must rebuild their cell constraints when a real row arrives.
-      guard self.store.telemetry != nil,
-        let key = routingTrafficCellKey(id, column: logical(column), store: self.store)
-      else { return content }
+      guard let key else { return content }
       return PaxDataTable.reusableContent(content, reuseKey: key)
     }
     table.cellUpdater = { [weak self] existing, id, column in
-      guard let self, self.store.telemetry != nil,
-        let key = routingTrafficCellKey(id, column: logical(column), store: self.store)
-      else { return false }
-      return PaxDataTable.updateContent(existing, reusing: key) {
-        self.cell(id, column: logical(column)) ?? NSView()
-      }
+      guard let self else { return false }
+      let column = logical(column)
+      guard let key = self.cellKey(id, column: column) else { return false }
+      return PaxDataTable.updateContent(
+        existing, reusing: key,
+        updating: {
+          updateRoutingTrafficCell($0, key: key, store: self.store, tooltip: self.tooltip)
+        },
+        makeContent: { self.cell(id, column: column, key: key) ?? NSView() })
     }
     if style.freezesLive {
       table.onScrollPosition = { [weak self] atTop in

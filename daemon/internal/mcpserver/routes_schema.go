@@ -29,7 +29,7 @@ func routeDescription(name string) string {
 	case "pax_route_get":
 		return "Read one route's editable document with all credentials removed at the daemon; presence only. Chains return member references."
 	case "pax_routes_preview":
-		return "Preview supported links or a controlled HTTPS subscription, including invalid/duplicate/hidden items. Does not save routes. Use a stable client ID; tokens expire in five minutes."
+		return "Preview share links, Base64 subscriptions, Clash YAML, sing-box JSON, or a controlled HTTPS subscription. Review invalid, duplicate, or hidden items before saving. Use a stable client ID. Tokens expire in five minutes."
 	case "pax_routes_preview_cancel":
 		return "Release this client's pending import preview. Does not remove saved routes."
 	case "pax_routes_import":

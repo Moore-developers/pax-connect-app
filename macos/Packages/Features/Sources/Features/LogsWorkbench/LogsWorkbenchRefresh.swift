@@ -21,12 +21,15 @@ extension LogsWorkbenchViewController {
       return
     }
     if latestPending,
-      !store.followsLatestPage || latestPendingGeneration != store.requestGeneration
+      (store.requestedObject == nil && !store.followsLatestPage)
+        || latestPendingGeneration != store.requestGeneration
     {
       latestPending = false
       latestPendingGeneration = nil
     }
-    if latestPending, pageRefresh != nil, !store.pageLoading, !store.isLoading {
+    if latestPending, pageRefresh != nil, store.requestedObject == nil,
+      !store.pageLoading, !store.isLoading
+    {
       fetchLatest()
       return
     }
@@ -40,8 +43,10 @@ extension LogsWorkbenchViewController {
     else { return }
     let invalid = store.privacyInvalid
     let entry = entryPending
-    if !entry, !invalid, store.followsLatestPage, store.pageLoading || store.isLoading {
-      // The user's target can be page zero while pageIndex still describes the old page.
+    if !entry, !invalid,
+      store.requestedObject != nil
+        || (store.followsLatestPage && (store.pageLoading || store.isLoading))
+    {
       latestPending = true
       latestPendingGeneration = store.requestGeneration
       return
@@ -56,6 +61,11 @@ extension LogsWorkbenchViewController {
   private func startLatestRead(entering: Bool = false) {
     loadTask = Task { [weak self] in
       guard let self else { return }
+      if self.store.requestedObject != nil, !self.store.privacyInvalid {
+        self.latestPending = true
+        self.latestPendingGeneration = self.store.requestGeneration
+        return
+      }
       await self.store.updateSnapshotOnEntry(entering: entering)
     }
   }

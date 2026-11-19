@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/netip"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -121,16 +122,19 @@ func ValidateRoute(p RouteConfig) error {
 				return invalid
 			}
 		case "tcp":
-			if p.Security != "reality" || len(p.RealityPublicKey) != 43 || len(p.RealityShortID) > 16 || len(p.RealityShortID)%2 != 0 || (p.Flow != "" && p.Flow != "xtls-rprx-vision") {
+			if p.Security != "reality" || (p.Flow != "" && p.Flow != "xtls-rprx-vision") || !validRealityCredentials(p) {
 				return invalid
 			}
-			if _, err := hex.DecodeString(p.RealityShortID); err != nil {
+		case "grpc":
+			if p.Security != "tls" && p.Security != "reality" {
 				return invalid
 			}
-			if key, err := base64.RawURLEncoding.DecodeString(p.RealityPublicKey); err != nil || len(key) != 32 {
+			if p.Flow != "" || p.WSHost != "" || p.WSPath != "" || (len(p.ALPN) > 0 && !slices.Contains(p.ALPN, "h2")) {
+				return ErrDocumentField
+			}
+			if p.Security == "reality" && !validRealityCredentials(p) {
 				return invalid
 			}
-
 		default:
 			return errors.New("unsupported_transport")
 		}
@@ -144,4 +148,15 @@ func ValidateRoute(p RouteConfig) error {
 		return errors.New("unsupported_field")
 	}
 	return nil
+}
+
+func validRealityCredentials(p RouteConfig) bool {
+	if len(p.RealityPublicKey) != 43 || len(p.RealityShortID) > 16 {
+		return false
+	}
+	if _, err := hex.DecodeString(p.RealityShortID); err != nil {
+		return false
+	}
+	key, err := base64.RawURLEncoding.DecodeString(p.RealityPublicKey)
+	return err == nil && len(key) == 32
 }

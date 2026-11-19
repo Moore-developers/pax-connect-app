@@ -1,16 +1,15 @@
 import AppKit
 
 /// Latency readout plus shared time-series chart, for the traffic list (compact) and the
-/// traffic detail overview (regular). Both receive the same domain and points, so the same
-/// data lands at the same relative x. In regular density hover mirrors the bucket into the
-/// readout; in compact (list) density the value stays the latest real latency (SCT-09).
+/// traffic detail overview (regular). They place samples by sequence. In regular density hover
+/// mirrors the point into the readout. Compact density shows the latest real latency (SCT-09).
 @MainActor public final class PaxTimeLatencyView: NSView {
   public let chart: PaxTimeSeriesChart
   private let metric: NSTextField
   private let caption = PaxText.label("最新", font: PaxTheme.Typography.caption(), secondary: true)
   private let compact: Bool
-  private let latest: String
-  private let context: String
+  private var latest: String
+  private var context: String
   private let format: (Double?) -> String
   private var hover: PaxTimeSeriesSelection?
   /// Compact only: left edge of the visible value text, in this view's coordinates.
@@ -60,6 +59,37 @@ import AppKit
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
 
+  /// Refresh the existing compact chart for the same object and query.
+  public func updateCompact(series: PaxTimeSeries, latest: String, context: String) {
+    guard compact else { return }
+    let latestChanged = self.latest != latest
+    let contextChanged = self.context != context
+    if latestChanged {
+      self.latest = latest
+      metric.stringValue = latest
+      needsLayout = true
+    }
+    if contextChanged {
+      self.context = context
+      metric.toolTip = context
+    }
+    if latestChanged || contextChanged { metric.setAccessibilityValue(latest + " · " + context) }
+
+    let previous = chart.series
+    let changed =
+      series.axis == .samples && previous.axis == .samples
+      ? series.points != previous.points : series != previous
+    if changed {
+      let inset = chart.drawnTrailingInset
+      chart.series = series
+      let isHidden = !chart.hasData
+      if chart.isHidden != isHidden { chart.isHidden = isHidden }
+      if !isHidden, chart.superview == nil { addSubview(chart) }
+      if chart.drawnTrailingInset != inset { needsLayout = true }
+    }
+    if contextChanged || changed { caption.stringValue = defaultCaption }
+  }
+
   private var defaultCaption: String {
     chart.isHidden && context == "最新" ? "暂无有效延迟" : context
   }
@@ -92,10 +122,14 @@ import AppKit
       caption.isHidden = true
       metricTextLeft = metric.frame.maxX - padding / 2 - min(textWidth, width - padding)
       let trailing = chart.drawnTrailingInset
-      chart.frame = NSRect(
+      let chartFrame = NSRect(
         x: 0, y: (bounds.height - PaxTheme.Trend.latencyCompactHeight) / 2,
         width: max(0, metricTextLeft - PaxTheme.TimeSeries.compactValueGap + trailing),
         height: PaxTheme.Trend.latencyCompactHeight)
+      if chart.frame != chartFrame {
+        chart.frame = chartFrame
+        chart.repositionVisibleTooltip()
+      }
     } else {
       metric.frame = NSRect(
         x: 0, y: 0, width: bounds.width, height: PaxTheme.TrafficDetail.latencyReadoutHeight - label

@@ -3,17 +3,9 @@ import PaxCore
 import PaxUI
 
 /// Recent actual observations; the query filters the source, not the chart's spacing.
-func workbenchLatencySeries(
-  _ row: PaxCore.TrafficRow, from: Date, asOf: Date, coverageStart: Date? = nil,
-  compact: Bool = false
-) -> PaxTimeSeries? {
-  workbenchResponseSeries(
-    row.recentResponses, from: from, asOf: asOf,
-    limit: compact ? 20 : 60, dns: row.kind == "dns")
-}
-
 func workbenchResponseSeries(
-  _ responses: [TrafficResponsePoint], from: Date, asOf: Date, limit: Int, dns: Bool = false
+  _ responses: some Collection<TrafficResponsePoint>, from: Date, asOf: Date, limit: Int,
+  dns: Bool = false
 ) -> PaxTimeSeries {
   let points = responses.suffix(limit).map {
     PaxTimeSeriesPoint(

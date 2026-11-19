@@ -258,6 +258,9 @@ public final class TelemetryStore {
   }
   public var logSummaryAvailable: Bool { capabilities.contains("history.summary.v1") }
   public var logViewsAvailable: Bool { capabilities.contains("history.views.v1") }
+  public var applicationWorkbenchPageAvailable: Bool {
+    capabilities.contains("history.application_workbench_page.v1")
+  }
   public func recordDetail(_ q: LogDetailFilter) async throws -> HistoryLogDetail {
     guard available, logViewsAvailable else { throw ClientError.unavailable }
     let session = sessionGeneration

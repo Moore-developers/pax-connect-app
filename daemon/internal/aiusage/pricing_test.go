@@ -54,6 +54,68 @@ func TestFable52PricesTheFullContextAndBothCacheWriteTiers(t *testing.T) {
 	}
 }
 
+func TestUltrafastAliasesUseSupportedOfficialRates(t *testing.T) {
+	at := time.Date(2026, time.November, 19, 12, 0, 0, 0, time.UTC).UnixMilli()
+	for _, tc := range []struct {
+		model   string
+		rates   [5]float64 // uncached input, cache read, 30m write, 12h write, output
+		version string
+	}{
+		{"gpt-6-astra-ultrafast", [5]float64{60, 6, 75, 150, 300}, ultrafastPriceVersion},
+		{"gpt-6.1-sol-ultrafast", [5]float64{12, .6, 15, 30, 60}, ultrafastPriceVersion},
+		{"gpt-6.2-astra-ultrafast", [5]float64{24, 1.2, 30, 60, 120}, ultrafastPriceVersion},
+		{"gpt-6.2-sol-ultrafast", [5]float64{6, .3, 7.5, 15, 30}, ultrafastPriceVersion},
+		{"gpt-6.2-sol", [5]float64{2, .1, 2.5, 5, 10}, priceVersion},
+	} {
+		t.Run(tc.model, func(t *testing.T) {
+			r := Request{Model: tc.model, CLI: "codex", At: at, Input: 272000, Multiplier: .16, Details: Details{ReasoningEffort: "ultra"}}
+			r.price()
+			if !knownModel(r.Model) || r.Details.PriceVersion != tc.version {
+				t.Fatalf("model %s has pricing version %q, want %q for a known model", r.Model, r.Details.PriceVersion, tc.version)
+			}
+			rates := [5]*float64{r.InputPrice, r.Details.Prices[1], r.Details.CacheWritePrices[0], r.Details.CacheWritePrices[1], r.OutputPrice}
+			for i, rate := range rates {
+				if rate == nil {
+					t.Fatalf("missing rate %d", i)
+				}
+				if !near(rate, tc.rates[i]) {
+					t.Errorf("rate %d = %g, want %g", i, *rate, tc.rates[i])
+				}
+			}
+		})
+	}
+	unsupported := Request{Model: "gpt-6.1-terra-ultrafast", CLI: "codex", At: at, Input: 1000, Output: 1000, Multiplier: .16}
+	unsupported.price()
+	if knownModel(unsupported.Model) || unsupported.InputPrice != nil || unsupported.OutputPrice != nil || unsupported.Cost != 0 {
+		t.Fatalf("unsupported Ultrafast alias was priced: %+v", unsupported)
+	}
+}
+
+func TestUltrafastPromotionEndsAtPacificMidnightAndPricesLongContext(t *testing.T) {
+	cutoff := time.Date(2027, time.March, 1, 0, 0, 0, 0, time.FixedZone("PST", -8*3600))
+	short, long := int64(20000), int64(80000)
+	for _, tc := range []struct {
+		name     string
+		at       time.Time
+		official [4]int64
+		billed   [4]int64
+		cost     int64
+	}{
+		{"promotion", cutoff.Add(-time.Millisecond), [4]int64{3456048, 240000, 10800000, 1800000}, [4]int64{552968, 38400, 1728000, 288000}, 2607368},
+		{"list price", cutoff, [4]int64{6912096, 480000, 21600000, 3600000}, [4]int64{1105935, 76800, 3456000, 576000}, 5214735},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// One token over the threshold puts the whole request on long-context rates.
+			r := Request{Model: "gpt-6.2-astra-ultrafast", CLI: "codex", At: tc.at.UnixMilli(), Input: 272001, Read: 100000, Write: 100000, Output: 10000, Multiplier: .16}
+			r.Details.WriteShort, r.Details.WriteLong = &short, &long
+			r.price()
+			if r.Costs != tc.official || r.Details.Billed != tc.billed || r.Cost != tc.cost {
+				t.Fatalf("official %v, billed %v, total %d; want %v, %v, %d", r.Costs, r.Details.Billed, r.Cost, tc.official, tc.billed, tc.cost)
+			}
+		})
+	}
+}
+
 func TestSyntheticCostsNothingAndAnUnknownModelCostsZeroWithoutUnitPrices(t *testing.T) {
 	for _, model := range []string{"<synthetic>", "some-future-model"} {
 		r := Request{Model: model, CLI: "claude", Input: 1000, Output: 1000, Multiplier: 2}

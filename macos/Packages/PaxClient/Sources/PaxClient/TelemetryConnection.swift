@@ -161,6 +161,8 @@ extension DaemonConnection {
       $0.readToken = q.readToken
       $0.cursor = q.cursor
       $0.limit = q.limit
+      $0.applicationWorkbenchPage = q.applicationWorkbenchPage
+      $0.recoveryOffset = q.recoveryOffset
       if let from = q.from { $0.from.seconds = Int64(from.timeIntervalSince1970) }
       if let until = q.until { $0.until.seconds = Int64(until.timeIntervalSince1970) }
     }

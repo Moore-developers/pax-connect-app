@@ -266,33 +266,49 @@ final class RoutingWorkbenchViewController: NSViewController {
       return
     }
 
-    mode.selectedIndex = store.session.isRunning ? 0 : 1
-    mode.isEnabled = liveConnection?.canToggleProxy ?? store.canEdit
-    if let liveConnection { mode.selectedIndex = liveConnection.proxyEnabled ? 0 : 1 }
-    dimension.selectedIndex = store.dimension.rawValue
-    direction.selectedIndex = store.direction.rawValue
-    period.selectItem(at: RoutingWorkbenchStore.Period.allCases.firstIndex(of: store.period) ?? 0)
-    if search.currentEditor() == nil { search.stringValue = store.search }
+    let modeIndex = (liveConnection?.proxyEnabled ?? store.session.isRunning) ? 0 : 1
+    let modeEnabled = liveConnection?.canToggleProxy ?? store.canEdit
+    if mode.selectedIndex != modeIndex { mode.selectedIndex = modeIndex }
+    if mode.isEnabled != modeEnabled { mode.isEnabled = modeEnabled }
+    if dimension.selectedIndex != store.dimension.rawValue {
+      dimension.selectedIndex = store.dimension.rawValue
+    }
+    if direction.selectedIndex != store.direction.rawValue {
+      direction.selectedIndex = store.direction.rawValue
+    }
+    let periodIndex = RoutingWorkbenchStore.Period.allCases.firstIndex(of: store.period) ?? 0
+    if period.indexOfSelectedItem != periodIndex { period.selectItem(at: periodIndex) }
+    if search.currentEditor() == nil, search.stringValue != store.search {
+      search.stringValue = store.search
+    }
     tabs.apply(
       [.init(id: "traffic", title: "概览"), .init(id: "rules", title: "规则")],
       selected: store.tab == .traffic ? "traffic" : "rules")
-    traffic.isHidden = store.tab != .traffic
-    rules.isHidden = store.tab != .rules
-    notice.stringValue = store.stateMessage
-    notice.isHidden = notice.stringValue.isEmpty
+    let showingTraffic = store.tab == .traffic
+    if traffic.isHidden == showingTraffic { traffic.isHidden = !showingTraffic }
+    if rules.isHidden != showingTraffic { rules.isHidden = showingTraffic }
+    let message = store.stateMessage
+    if notice.stringValue != message { notice.stringValue = message }
+    if notice.isHidden != message.isEmpty { notice.isHidden = message.isEmpty }
     tableHost.show(activeTrafficTable)
-    dnsSummary.isHidden = store.dimension != .system
-    dnsSummary.update(
-      store.livePage.dnsSummary,
-      unavailable: store.liveLoading ? "正在读取本地解析记录" : store.liveError.isEmpty ? nil : "解析记录读取失败")
-    unknownSource.isHidden = store.dimension != .application || store.livePage.unknownSource == nil
-    let note =
-      store.dimension == .application ? RoutingWorkbenchStore.subtotalNote(store.livePage) : nil
-    subtotalNote.isHidden = note == nil
-    subtotalNote.stringValue = note ?? ""
-    if let unknown = store.livePage.unknownSource {
-      unknownSource.title =
+    let page = store.livePage
+    let showingDNS = store.dimension == .system
+    if dnsSummary.isHidden == showingDNS { dnsSummary.isHidden = !showingDNS }
+    if showingDNS {
+      dnsSummary.update(
+        page.dnsSummary,
+        unavailable: store.liveLoading ? "正在读取本地解析记录" : store.liveError.isEmpty ? nil : "解析记录读取失败")
+    }
+    let showingApplication = store.dimension == .application
+    let unknown = showingApplication ? page.unknownSource : nil
+    if unknownSource.isHidden != (unknown == nil) { unknownSource.isHidden = unknown == nil }
+    let note = showingApplication ? RoutingWorkbenchStore.subtotalNote(page) : nil
+    if subtotalNote.isHidden != (note == nil) { subtotalNote.isHidden = note == nil }
+    if subtotalNote.stringValue != (note ?? "") { subtotalNote.stringValue = note ?? "" }
+    if let unknown {
+      let title =
         "未识别来源 · \(unknown.connections) 条连接 · ↑ \(TrafficFormatting.bytes(unknown.upload)) · ↓ \(TrafficFormatting.bytes(unknown.download)) · 查看详情（不计入上方小计）"
+      if unknownSource.title != title { unknownSource.title = title }
     }
     if store.telemetry != nil {
       if list.render(emptyMessage: list.emptyMessage(unknownSourceBelow: true)) {
@@ -307,7 +323,9 @@ final class RoutingWorkbenchViewController: NSViewController {
         }
       }
       if pendingTrafficGeneration != store.liveGeneration { pendingTrafficGeneration = nil }
-      if pendingTrafficGeneration == nil { activeTrafficTable.isHidden = false }
+      if pendingTrafficGeneration == nil, activeTrafficTable.isHidden {
+        activeTrafficTable.isHidden = false
+      }
       return
     }
     activeTrafficTable.isHidden = false

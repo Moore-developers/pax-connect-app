@@ -5028,26 +5028,28 @@ func (x *SystemEvent) GetSections() []*EventSection {
 }
 
 type LogQuery struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Dimension     string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
-	ObjectId      string                 `protobuf:"bytes,2,opt,name=object_id,json=objectId,proto3" json:"object_id,omitempty"`
-	Search        string                 `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
-	Level         string                 `protobuf:"bytes,4,opt,name=level,proto3" json:"level,omitempty"`
-	RouteId       string                 `protobuf:"bytes,5,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
-	From          *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=from,proto3" json:"from,omitempty"`
-	Until         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=until,proto3" json:"until,omitempty"`
-	ReadToken     string                 `protobuf:"bytes,8,opt,name=read_token,json=readToken,proto3" json:"read_token,omitempty"`
-	Cursor        string                 `protobuf:"bytes,9,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Limit         uint32                 `protobuf:"varint,10,opt,name=limit,proto3" json:"limit,omitempty"`
-	View          string                 `protobuf:"bytes,11,opt,name=view,proto3" json:"view,omitempty"`
-	ProblemId     string                 `protobuf:"bytes,12,opt,name=problem_id,json=problemId,proto3" json:"problem_id,omitempty"`
-	ConnectionKey string                 `protobuf:"bytes,13,opt,name=connection_key,json=connectionKey,proto3" json:"connection_key,omitempty"`
-	IncludeDns    bool                   `protobuf:"varint,14,opt,name=include_dns,json=includeDns,proto3" json:"include_dns,omitempty"`
-	Quick         string                 `protobuf:"bytes,15,opt,name=quick,proto3" json:"quick,omitempty"`
-	Criteria      *LogCriteria           `protobuf:"bytes,16,opt,name=criteria,proto3" json:"criteria,omitempty"`
-	Scope         string                 `protobuf:"bytes,17,opt,name=scope,proto3" json:"scope,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Dimension                string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
+	ObjectId                 string                 `protobuf:"bytes,2,opt,name=object_id,json=objectId,proto3" json:"object_id,omitempty"`
+	Search                   string                 `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
+	Level                    string                 `protobuf:"bytes,4,opt,name=level,proto3" json:"level,omitempty"`
+	RouteId                  string                 `protobuf:"bytes,5,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
+	From                     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=from,proto3" json:"from,omitempty"`
+	Until                    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=until,proto3" json:"until,omitempty"`
+	ReadToken                string                 `protobuf:"bytes,8,opt,name=read_token,json=readToken,proto3" json:"read_token,omitempty"`
+	Cursor                   string                 `protobuf:"bytes,9,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit                    uint32                 `protobuf:"varint,10,opt,name=limit,proto3" json:"limit,omitempty"`
+	View                     string                 `protobuf:"bytes,11,opt,name=view,proto3" json:"view,omitempty"`
+	ProblemId                string                 `protobuf:"bytes,12,opt,name=problem_id,json=problemId,proto3" json:"problem_id,omitempty"`
+	ConnectionKey            string                 `protobuf:"bytes,13,opt,name=connection_key,json=connectionKey,proto3" json:"connection_key,omitempty"`
+	IncludeDns               bool                   `protobuf:"varint,14,opt,name=include_dns,json=includeDns,proto3" json:"include_dns,omitempty"`
+	Quick                    string                 `protobuf:"bytes,15,opt,name=quick,proto3" json:"quick,omitempty"`
+	Criteria                 *LogCriteria           `protobuf:"bytes,16,opt,name=criteria,proto3" json:"criteria,omitempty"`
+	Scope                    string                 `protobuf:"bytes,17,opt,name=scope,proto3" json:"scope,omitempty"`
+	ApplicationWorkbenchPage bool                   `protobuf:"varint,18,opt,name=application_workbench_page,json=applicationWorkbenchPage,proto3" json:"application_workbench_page,omitempty"`
+	RecoveryOffset           uint32                 `protobuf:"varint,19,opt,name=recovery_offset,json=recoveryOffset,proto3" json:"recovery_offset,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *LogQuery) Reset() {
@@ -5197,6 +5199,20 @@ func (x *LogQuery) GetScope() string {
 		return x.Scope
 	}
 	return ""
+}
+
+func (x *LogQuery) GetApplicationWorkbenchPage() bool {
+	if x != nil {
+		return x.ApplicationWorkbenchPage
+	}
+	return false
+}
+
+func (x *LogQuery) GetRecoveryOffset() uint32 {
+	if x != nil {
+		return x.RecoveryOffset
+	}
+	return 0
 }
 
 type LogCriteria struct {
@@ -8372,7 +8388,7 @@ const file_pax_proto_rawDesc = "" +
 	"error_code\x18\x05 \x01(\tR\terrorCode\x129\n" +
 	"\n" +
 	"started_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x120\n" +
-	"\bsections\x18\a \x03(\v2\x14.pax.v1.EventSectionR\bsections\"\x95\x04\n" +
+	"\bsections\x18\a \x03(\v2\x14.pax.v1.EventSectionR\bsections\"\xfc\x04\n" +
 	"\bLogQuery\x12\x1c\n" +
 	"\tdimension\x18\x01 \x01(\tR\tdimension\x12\x1b\n" +
 	"\tobject_id\x18\x02 \x01(\tR\bobjectId\x12\x16\n" +
@@ -8394,7 +8410,9 @@ const file_pax_proto_rawDesc = "" +
 	"includeDns\x12\x14\n" +
 	"\x05quick\x18\x0f \x01(\tR\x05quick\x12/\n" +
 	"\bcriteria\x18\x10 \x01(\v2\x13.pax.v1.LogCriteriaR\bcriteria\x12\x14\n" +
-	"\x05scope\x18\x11 \x01(\tR\x05scope\"\x8a\x03\n" +
+	"\x05scope\x18\x11 \x01(\tR\x05scope\x12<\n" +
+	"\x1aapplication_workbench_page\x18\x12 \x01(\bR\x18applicationWorkbenchPage\x12'\n" +
+	"\x0frecovery_offset\x18\x13 \x01(\rR\x0erecoveryOffset\"\x8a\x03\n" +
 	"\vLogCriteria\x12\x14\n" +
 	"\x05kinds\x18\x01 \x03(\tR\x05kinds\x12\x16\n" +
 	"\x06levels\x18\x02 \x03(\tR\x06levels\x12 \n" +
