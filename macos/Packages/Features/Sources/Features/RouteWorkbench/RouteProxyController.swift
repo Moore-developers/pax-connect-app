@@ -4,15 +4,19 @@ import PaxUI
 
 @MainActor
 final class RouteProxyController: RouteModalController {
+  override var localizedTitleKey: String? { "routes.create" }
+
   override var maximumPresentationWidth: CGFloat? { PaxTheme.ProxyRoute.width }
   private let store: RouteWorkbenchStore
-  private let form = RouteProxyForm(ProxyRouteDraft())
+  private lazy var form = RouteProxyForm(ProxyRouteDraft(), context: interfaceCopy.context)
   private let onSaved: (String) -> Void
   private var submitting = false
   private var attempted: ProxyRouteDraft?
   private var requestID = ""
-  private lazy var submit = button("添加线路", #selector(save), primary: true)
-  private lazy var paste = button("粘贴代理信息", #selector(pasteProxy))
+  private lazy var submit = button(
+    interfaceCopy.text("dashboard_value.add_route_action"), #selector(save), primary: true)
+  private lazy var paste = button(
+    interfaceCopy.text("proxy_validation.paste"), #selector(pasteProxy))
   init(store: RouteWorkbenchStore, onSaved: @escaping (String) -> Void) {
     self.store = store
     self.onSaved = onSaved
@@ -26,7 +30,7 @@ final class RouteProxyController: RouteModalController {
     form.onResize = { [weak self] in self?.pane.invalidateContentSize() }
     submit.keyEquivalent = "\r"
     submit.setAccessibilityIdentifier("proxy-save")
-    pane.setActions([button("取消", #selector(close)), submit])
+    pane.setActions([button(self.interfaceCopy.text("common.cancel"), #selector(close)), submit])
   }
   @objc private func pasteProxy() {
     do {
@@ -52,7 +56,7 @@ final class RouteProxyController: RouteModalController {
     form.setEnabled(false)
     submit.isEnabled = false
     paste.isEnabled = false
-    submit.title = "添加中…"
+    submit.title = self.interfaceCopy.text("interface_detail.f470193bcd")
     Task { [weak self] in
       guard let self else { return }
       defer {
@@ -60,7 +64,7 @@ final class RouteProxyController: RouteModalController {
         self.form.setEnabled(true)
         self.submit.isEnabled = true
         self.paste.isEnabled = true
-        self.submit.title = "添加线路"
+        self.submit.title = self.interfaceCopy.text("dashboard_value.add_route_action")
       }
       do {
         let result = try await self.store.createProxy(value, requestID: self.requestID)
@@ -73,7 +77,8 @@ final class RouteProxyController: RouteModalController {
           self.showError(saved)
         } else {
           self.pane.status.stringValue =
-            "保存未确认，请检查后台连接后重试；相同请求不会重复创建。\n" + ProductErrorPresentation.display(error)
+            self.interfaceCopy.text("interface_detail.d19a4e0ed2")
+            + ProductErrorPresentation.display(error, context: self.interfaceCopy.context)
           self.pane.status.isHidden = false
           self.pane.status.superview?.isHidden = false
         }
@@ -88,10 +93,10 @@ final class RouteProxyController: RouteModalController {
     }
     guard let window = view.window else { return }
     let alert = NSAlert()
-    alert.messageText = "放弃本次填写？"
-    alert.informativeText = "关闭后不会保存草稿。已受理的保存请求不会被撤销。"
-    alert.addButton(withTitle: "继续填写")
-    alert.addButton(withTitle: "放弃填写")
+    alert.messageText = self.interfaceCopy.text("interface_detail.6349cf8991")
+    alert.informativeText = self.interfaceCopy.text("interface_detail.dd7eeeb97b")
+    alert.addButton(withTitle: self.interfaceCopy.text("interface_detail.446f8327bf"))
+    alert.addButton(withTitle: self.interfaceCopy.text("interface_detail.9ee74f5bba"))
     alert.beginSheetModal(for: window) { [weak self] result in
       if result == .alertSecondButtonReturn { self?.dismissDraft() }
     }
@@ -99,9 +104,6 @@ final class RouteProxyController: RouteModalController {
   private func dismissDraft() { super.close() }
   override func showError(_ error: Error) {
     super.showError(error)
-    if let validation = error as? ProxyRouteDraft.Validation {
-      pane.status.stringValue = validation.message
-    }
     pane.invalidateContentSize()
   }
 }

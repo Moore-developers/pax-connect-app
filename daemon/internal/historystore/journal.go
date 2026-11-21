@@ -57,7 +57,7 @@ type Dropped struct {
 }
 
 // Journal is the append-only collection log: one SQLite file per UTC hour.
-// Append, DeleteHour and EvictOver belong to the single capture owner; the
+// Append and DeleteHour belong to the single capture owner; the
 // read methods may run concurrently from other goroutines.
 type Journal struct {
 	dir   string
@@ -224,53 +224,6 @@ func (j *Journal) removeLocked(hour time.Time) error {
 		}
 	}
 	return nil
-}
-
-// EvictOver deletes the oldest hour files until the total is within maxBytes and
-// maxFiles (HS-R1); the newest file is never deleted. It returns the evicted hours.
-func (j *Journal) EvictOver(maxBytes int64, maxFiles int) ([]time.Time, error) {
-	return j.evictOver(context.Background(), maxBytes, maxFiles, nil)
-}
-
-// EvictOverConsumed omits loss intents only for hours every consumer has passed.
-func (j *Journal) EvictOverConsumed(ctx context.Context, maxBytes int64, maxFiles int, consumed []time.Time) ([]time.Time, error) {
-	known := map[int64]bool{}
-	for _, hour := range consumed {
-		known[hour.Unix()] = true
-	}
-	return j.evictOver(ctx, maxBytes, maxFiles, known)
-}
-func (j *Journal) evictOver(ctx context.Context, maxBytes int64, maxFiles int, consumed map[int64]bool) ([]time.Time, error) {
-	files, err := j.Files()
-	if err != nil {
-		return nil, err
-	}
-	var total int64
-	for _, f := range files {
-		total += f.Bytes
-	}
-	var evicted []time.Time
-	for len(files) > 1 && (total > maxBytes || len(files) > maxFiles) {
-		j.mu.Lock()
-		var lossErr error
-		if consumed[files[0].Hour.Unix()] {
-			lossErr = j.removeLocked(files[0].Hour)
-		} else {
-			var dropped Dropped
-			dropped, lossErr = j.loseLocked(ctx, files[0].Hour, "evicted")
-			if lossErr == nil {
-				j.dropped = append(j.dropped, dropped)
-			}
-		}
-		j.mu.Unlock()
-		if err = lossErr; err != nil {
-			return evicted, err
-		}
-		evicted = append(evicted, files[0].Hour)
-		total -= files[0].Bytes
-		files = files[1:]
-	}
-	return evicted, nil
 }
 
 // Close closes the current writer.

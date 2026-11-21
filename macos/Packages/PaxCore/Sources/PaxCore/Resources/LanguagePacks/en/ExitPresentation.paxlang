@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "exit.region_missing": "Location unavailable",
+    "exit.query": "Query: ",
+    "exit.source": "Location source: ",
+    "exit.incomplete": "Location data incomplete",
+    "exit.estimate": "Location is estimated by an IP database and may differ from the actual datacenter",
+    "measurement.phase.latency": "Measuring latency",
+    "measurement.phase.exit_queued": "Exit query queued",
+    "measurement.phase.exit_running": "Querying exit IP",
+    "measurement.phase.exit_retrying": "Waiting for another exit-query service",
+    "measurement.phase.unknown": "Measuring"
+  }
+}

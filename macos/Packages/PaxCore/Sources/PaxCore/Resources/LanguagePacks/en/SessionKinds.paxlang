@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "session.kind.sessions": "Sessions",
+    "session.kind.models": "Models",
+    "session.kind.main": "Main session",
+    "session.kind.subagents": "Subagents",
+    "session.empty.no_usage": "No recorded usage for the selected dates",
+    "session.empty.no_main": "This session has no main-session requests",
+    "session.empty.no_agents": "This session has no subagents"
+  }
+}

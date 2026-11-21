@@ -1,0 +1,7 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "diagnostic.progress_failure": "进度读取失败：{error}"
+  }
+}

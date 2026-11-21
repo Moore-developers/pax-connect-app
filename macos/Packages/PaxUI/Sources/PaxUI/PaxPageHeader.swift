@@ -14,6 +14,7 @@ public final class PaxPageHeader: NSView {
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public override var isFlipped: Bool { true }
+  public func apply(title: String) { titleField.stringValue = title }
   public override var intrinsicContentSize: NSSize {
     NSSize(width: NSView.noIntrinsicMetric, height: PaxTheme.Dashboard.pageHeader)
   }

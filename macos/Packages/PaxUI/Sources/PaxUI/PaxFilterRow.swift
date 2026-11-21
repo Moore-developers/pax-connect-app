@@ -19,6 +19,7 @@ public final class PaxFilterRow: NSStackView {
 
 /// Equal-width range inputs; validation, units and delegate callbacks belong to the caller.
 public final class PaxFilterRange: NSStackView {
+  private let titleLabel = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
   public let minimum = PaxRouteField("", style: .filter)
   public let maximum = PaxRouteField("", style: .filter)
 
@@ -27,7 +28,8 @@ public final class PaxFilterRange: NSStackView {
     orientation = .horizontal
     alignment = .centerY
     spacing = PaxTheme.Spacing.tight
-    let label = PaxText.label(title, font: PaxTheme.Typography.caption(), secondary: true)
+    let label = titleLabel
+    titleLabel.stringValue = title
     let separator = PaxText.label("–", font: PaxTheme.Typography.caption(), secondary: true)
     for text in [label, separator] {
       text.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -39,5 +41,6 @@ public final class PaxFilterRange: NSStackView {
     for view in [label, minimum, separator, maximum] { addArrangedSubview(view) }
     minimum.widthAnchor.constraint(equalTo: maximum.widthAnchor).isActive = true
   }
+  public func applyTitle(_ title: String) { titleLabel.stringValue = title }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
 }

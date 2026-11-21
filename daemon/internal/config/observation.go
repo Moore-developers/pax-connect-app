@@ -75,6 +75,7 @@ type ObservationBatch struct {
 
 // HistoryEvent is a user-private product event. Raw is never included in summaries.
 type HistoryEvent struct {
+	TitleText                                       *ProductText `json:",omitempty"`
 	System                                          *SystemEvent `json:",omitempty"`
 	OperationFrom, OperationTo                      string
 	Metrics                                         *ConnectionMetrics `json:",omitempty"`

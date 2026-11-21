@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "error.core_required": "启动代理需要系统授权；线路管理、订阅与测速可正常使用。",
+    "error.core_identity_mismatch": "运行中的代理内核与当前 App 不匹配，请退出其它 Pax Connect 实例后重试。",
+    "error.core_selection_unknown": "尚未确认内核实际使用的线路，请关闭代理后重新连接。",
+    "error.core_power_failed": "睡眠状态转发暂未完成，正在重试。",
+    "error.core_unavailable": "代理内核没有响应，请退出并重新打开 App。",
+    "error.address_in_use": "代理内核启动资源被占用，请检查本地代理端口后重试。",
+    "error.route_conflict": "系统路由冲突，可能有其它 TUN 正在接管；请关闭对应工具的 TUN 后重试。",
+    "error.permission_denied": "代理内核权限不足，请检查系统授权后重试。",
+    "error.resource_unavailable": "代理内核所需资源不可用，请退出并重新打开 App。",
+    "error.configuration_rejected": "代理内核拒绝了当前配置，请检查线路配置和内置规则。",
+    "error.protection_unverified": "代理内核已启动，尚无当前连接的连通性验证结果。",
+    "error.service_privileges_required": "启动代理需要具备系统权限的代理内核；线路管理、订阅与测速可正常使用。"
+  }
+}

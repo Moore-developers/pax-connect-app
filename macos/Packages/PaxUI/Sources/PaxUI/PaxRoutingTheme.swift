@@ -15,6 +15,7 @@ extension PaxTheme {
     public static let packageTextGap: CGFloat = 2
     public static let ruleInset: CGFloat = 6
     public static let ruleNumberWidth: CGFloat = 40
+    public static let ruleActionsWidth: CGFloat = 144
     public static let ruleHeader: CGFloat = 36
     public static let routeInset: CGFloat = 10
     public static let routeRadius: CGFloat = 7

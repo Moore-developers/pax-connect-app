@@ -19,6 +19,7 @@ public struct PaxCurrentRouteModel: Equatable {
   /// 当前实际样本数量。
   public var axis: [String]
   public var trendEmpty: String
+  public var firstMeasurement = false
   public init(
     name: String = "", badge: String = "当前线路", tags: [String] = [], rtt: Double? = nil,
     note: String = "", delta: String? = nil, axis: [String] = [],
@@ -37,6 +38,25 @@ public struct PaxCurrentRouteModel: Equatable {
 
 /// 最新参照稿：线路身份、双列测量与出口摘要、通栏趋势。
 public final class PaxCurrentRouteCard: PaxCard {
+  public struct Copy {
+    public var noSelection = "未选择线路"
+    public var comparison = "较上次测量"
+    public var latencyTitle = "响应延迟"
+    public var latencyCopy = PaxTimeSeriesCopy()
+    public var protocolLabel = "协议"
+    public var exitLabel = "上次测得出口"
+    public var measuredPrefix = "测量时间 "
+    public init() {}
+  }
+  private var copy = Copy()
+  private var model = PaxCurrentRouteModel()
+  public func applyCopy(_ copy: Copy) {
+    self.copy = copy
+    comparison.stringValue = copy.comparison
+    protocolLabel.stringValue = copy.protocolLabel
+    exitLabel.stringValue = copy.exitLabel
+    apply(model)
+  }
   private let icon = PaxIconTile("antenna.radiowaves.left.and.right")
   private let heading = PaxText.label("")
   private let badge = PaxTag("", style: .currentRoute)
@@ -97,7 +117,8 @@ public final class PaxCurrentRouteCard: PaxCard {
   public required init?(coder: NSCoder) { fatalError("代码构建") }
 
   public func apply(_ model: PaxCurrentRouteModel) {
-    heading.stringValue = model.name.isEmpty ? "未选择线路" : model.name
+    self.model = model
+    heading.stringValue = model.name.isEmpty ? copy.noSelection : model.name
     heading.toolTip = heading.stringValue
     badge.text = model.badge
     proto.stringValue = model.tags.first ?? "—"
@@ -114,8 +135,8 @@ public final class PaxCurrentRouteCard: PaxCard {
     number.textColor = color
     unit.textColor = color
     delta.text = model.delta ?? "—"
-    comparison.isHidden = model.delta == "首次测量"
-    measured.stringValue = "测量时间 " + (model.measurementTime ?? "—")
+    comparison.isHidden = model.firstMeasurement
+    measured.stringValue = copy.measuredPrefix + (model.measurementTime ?? "—")
     note.stringValue = model.note
     note.toolTip = model.note
     note.isHidden = model.note.isEmpty
@@ -123,7 +144,11 @@ public final class PaxCurrentRouteCard: PaxCard {
     trend.isHidden = !drawable
     empty.isHidden = drawable
     empty.stringValue = model.trendEmpty
-    trend.style = .latency(color: color) { "\(Int($0.rounded())) ms" }
+    var style = PaxTimeSeriesStyle.latency(title: copy.latencyTitle, color: color) {
+      "\(Int($0.rounded())) ms"
+    }
+    style.copy = copy.latencyCopy
+    trend.style = style
     trend.pinKey = model.pinKey
     trend.series = model.series
     axis.stringValue = drawable ? model.axis.joined(separator: " · ") : ""

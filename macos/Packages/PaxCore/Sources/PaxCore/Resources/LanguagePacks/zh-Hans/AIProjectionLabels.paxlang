@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "usage.source.official_account": "官方账号",
+    "usage.source.official_api": "官方 API",
+    "usage.source.relay_api": "第三方中转",
+    "usage.source.unknown": "来源待确认",
+    "usage.legend.input": "输入",
+    "usage.legend.output": "输出",
+    "usage.legend.cache": "缓存",
+    "ai_period.custom": "自定义",
+    "ai_comparison.yesterday": "昨日",
+    "ai_comparison.day_before": "前日",
+    "ai_comparison.last_week": "上周",
+    "ai_comparison.last_month": "上月",
+    "ai_comparison.last_year": "去年同期",
+    "ai_comparison.previous": "上一时段"
+  }
+}

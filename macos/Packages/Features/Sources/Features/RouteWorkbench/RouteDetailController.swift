@@ -56,7 +56,8 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     pane.identity.addArrangedSubview(tagsRow)
     draftStatus.textColor = PaxTheme.Color.warning
     pane.identityActions.insertArrangedSubview(draftStatus, at: 0)
-    pane.identityActions.arrangedSubviews.last?.setAccessibilityLabel("关闭线路详情")
+    pane.identityActions.arrangedSubviews.last?.setAccessibilityLabel(
+      self.interfaceCopy.text("action.routes.close_detail"))
     pane.header.addArrangedSubview(tabs)
     tabs.widthAnchor.constraint(equalTo: pane.header.widthAnchor).isActive = true
     tabs.onSelect = { [weak self] key in self?.selectTab(key) }
@@ -73,26 +74,9 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     }
     if store.isLive && tab != "overview" && draft?.chainContext.isEmpty != false { loadDraft() }
   }
-  private func tags() -> NSView {
-    let row = NSStackView()
-    row.spacing = PaxTheme.Spacing.xs
-    if let n = store.node(id) {
-      row.addArrangedSubview(
-        PaxFeatureTag(ProxyRoutePresentation.protocolLabel(n), style: .protocolLabel))
-    }
-    let p = store.info(id)
-    if p.cfIP != nil {
-      row.addArrangedSubview(PaxFeatureTag("CF", tone: .blue))
-    }
-    if p.chain != nil { row.addArrangedSubview(PaxFeatureTag("链式代理", tone: .purple)) }
-    if store.isCurrent(id) {
-      row.addArrangedSubview(PaxFeatureTag("当前线路", symbol: "checkmark", tone: .blue))
-    }
-    return row
-  }
   private func observe() {
     withObservationTracking {
-      _ = store.info(id)
+      _ = store.info(id, context: self.interfaceCopy.context)
       _ = store.currentRouteID
       _ = store.isRunning
       _ = overviewSnapshot()
@@ -106,7 +90,8 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
   }
   private func selectTab(_ key: String) {
     guard store.canEdit || key == "overview" else {
-      showError(RouteWorkbenchStore.EditError("编辑功能尚未接入后台"))
+      showError(
+        RouteWorkbenchStore.EditError(self.interfaceCopy.text("interface_detail.38aeb4ea3c")))
       return
     }
     guard !saving else { return }
@@ -117,7 +102,9 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     }
     do {
       try capture()
-      if tab == "raw", store.info(id).chain == nil, var value = draft {
+      if tab == "raw", store.info(id, context: self.interfaceCopy.context).chain == nil,
+        var value = draft
+      {
         try store.acceptJSON(&value)
         draft = value
       }
@@ -158,7 +145,9 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       value.host = inputs["host"]?.stringValue ?? value.host
       value.sni = inputs["sni"]?.stringValue ?? value.sni
       if value.server != value.preferredIP { value.preferredIP = nil }
-      if store.info(id).chain == nil { try store.synchronizeJSON(&value) }
+      if store.info(id, context: self.interfaceCopy.context).chain == nil {
+        try store.synchronizeJSON(&value)
+      }
     } else if tab == "raw", let editor {
       value.json = editor.string
     }
@@ -171,7 +160,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     tooltip.close()
     draftStatus.isHidden = store.sameDraft(draft, original)
     pane.applyTitleColor(store.isCurrent(id) ? PaxTheme.Routes.blue : PaxTheme.Routes.text)
-    pane.applyTitle(store.node(id)?.name ?? "线路详情")
+    pane.applyTitle(store.node(id)?.name ?? self.interfaceCopy.text("modal.route.detail"))
     for child in tagsRow.arrangedSubviews {
       tagsRow.removeArrangedSubview(child)
       child.removeFromSuperview()
@@ -186,10 +175,15 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     pane.status.stringValue = ""
     pane.status.isHidden = true
     var detailTabs: [PaxTabBar.Item] = [
-      .init(id: "overview", title: "概览", symbol: "square.grid.2x2"),
-      .init(id: "config", title: "配置"),
+      .init(
+        id: "overview", title: self.interfaceCopy.text("ai_page.overview"),
+        symbol: "square.grid.2x2"),
+      .init(id: "config", title: self.interfaceCopy.text("profile_editor.configuration_tab")),
     ]
-    if store.info(id).chain == nil { detailTabs.append(.init(id: "raw", title: "详细参数")) }
+    if store.info(id, context: self.interfaceCopy.context).chain == nil {
+      detailTabs.append(
+        .init(id: "raw", title: self.interfaceCopy.text("interface_detail.ca83663bda")))
+    }
     tabs.apply(detailTabs, selected: tab)
     if !saved.isEmpty {
       let label = PaxRouteText.label(saved, font: PaxTheme.Typography.caption())
@@ -203,7 +197,11 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     }
     pane.setActions(
       tab == "overview"
-        ? [] : [button("取消", #selector(close)), button("保存", #selector(save), primary: true)])
+        ? []
+        : [
+          button(self.interfaceCopy.text("common.cancel"), #selector(close)),
+          button(self.interfaceCopy.text("action.common.save"), #selector(save), primary: true),
+        ])
   }
   func section(_ title: String, symbol: String, views: [NSView], detail: String = "") {
     let stack = NSStackView(
@@ -243,7 +241,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     var certificateKind: String
   }
   private func overviewSnapshot() -> OverviewState {
-    let p = store.info(id)
+    let p = store.info(id, context: self.interfaceCopy.context)
     var metrics = p
     metrics.uploadMB = nil
     metrics.downloadMB = nil
@@ -251,20 +249,28 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     metrics.windowConnections = nil
     metrics.transferSamples = nil
     return OverviewState(
-      path: store.path(id), current: store.isCurrent(id), running: store.isRunning,
-      title: store.node(id)?.name ?? "线路详情", metrics: metrics,
+      path: store.path(id, context: self.interfaceCopy.context), current: store.isCurrent(id),
+      running: store.isRunning,
+      title: store.node(id)?.name ?? self.interfaceCopy.text("modal.route.detail"),
+      metrics: metrics,
       availability: [
         store.canTest(id), store.canDownload(id), store.canDiagnose(id), store.canManage,
         store.isDownloading(id), store.sameDraft(draft, original), store.canTestCF(id),
       ],
-      captions: [store.downloadCaption(id), store.measurementCaption(id), store.physicalCaption],
-      history: store.historyRows(id), historyCaption: store.measurementHistoryCaption(id),
+      captions: [
+        store.downloadCaption(id, context: self.interfaceCopy.context),
+        store.measurementCaption(id, context: interfaceCopy.context),
+        store.physicalCaption(context: interfaceCopy.context),
+      ],
+      history: store.historyRows(id, context: self.interfaceCopy.context),
+      historyCaption: store.measurementHistoryCaption(id, context: self.interfaceCopy.context),
       more: store.hasMoreHistory(id), moreUsage: store.hasMoreUsage(id),
       upload: p.uploadMB, download: p.downloadMB, connections: p.activeConnections,
       windowConnections: p.windowConnections, transfer: p.transferSamples,
-      usageCaption: store.dataCaption(id),
+      usageCaption: store.dataCaption(id, context: self.interfaceCopy.context),
       certificateKind: store.node(id).map {
-        ($0.chain == nil && $0.security == "tls") ? "tls" : store.certificateExplanation(id)
+        ($0.chain == nil && $0.security == "tls")
+          ? "tls" : store.certificateExplanation(id, context: self.interfaceCopy.context)
       } ?? "missing")
   }
   private func addBody(_ view: NSView) {
@@ -357,24 +363,35 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
   private func connectionPath() {
     addBody(
       PaxRouteSectionHeading(
-        "连接路径", symbol: "point.3.connected.trianglepath.dotted",
-        detail: store.isCurrent(id) && store.isRunning ? "当前连接" : "配置路径"))
-    addBody(PaxConnectionPath(nodes: store.path(id)))
+        self.interfaceCopy.text("action.traffic.connection_path"),
+        symbol: "point.3.connected.trianglepath.dotted",
+        detail: store.isCurrent(id) && store.isRunning
+          ? self.interfaceCopy.text("interface_detail.e403ba5798")
+          : self.interfaceCopy.text("interface_detail.52a78a6e11")))
+    addBody(PaxConnectionPath(nodes: store.path(id, context: self.interfaceCopy.context)))
     if let node = store.node(id), let notice = ProxyRoutePresentation.transportNotice(node) {
       addBody(PaxRouteText.label(notice, secondary: true, wrapping: true))
     }
-    let p = store.info(id)
+    let p = store.info(id, context: self.interfaceCopy.context)
     if let value = p.exitLocation {
-      section("出口信息", symbol: "globe", views: [RouteExitInfoView(value: value, historical: false)])
+      section(
+        self.interfaceCopy.text("interface_detail.6f16af09ae"), symbol: "globe",
+        views: [
+          RouteExitInfoView(value: value, historical: false, context: self.interfaceCopy.context)
+        ])
     } else if p.exitMessage != nil || p.lastExitLocation != nil {
       let status = PaxRouteText.label(
-        p.exitMessage ?? "本次出口未获取", font: PaxTheme.Typography.caption(), wrapping: true)
+        p.exitMessage ?? self.interfaceCopy.text("interface_detail.d919bc11a4"),
+        font: PaxTheme.Typography.caption(), wrapping: true)
       status.textColor = PaxTheme.Color.warning
       var content: [NSView] = [status]
       if let previous = p.lastExitLocation {
-        content.append(RouteExitInfoView(value: previous, historical: true))
+        content.append(
+          RouteExitInfoView(value: previous, historical: true, context: self.interfaceCopy.context))
       }
-      section("出口信息", symbol: "globe", views: content, detail: "本次未获取")
+      section(
+        self.interfaceCopy.text("interface_detail.6f16af09ae"), symbol: "globe", views: content,
+        detail: self.interfaceCopy.text("interface_detail.0b9428d71c"))
     }
   }
 
@@ -383,17 +400,20 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       node.security == "tls", let connection = store.connectionStore
     {
       if tlsEditor == nil {
-        let editor = RouteTLSSettingsViewController(store: connection, route: node, embedded: true)
+        let editor = RouteTLSSettingsViewController(
+          store: connection, route: node, embedded: true, context: self.interfaceCopy.context)
         editor.onContentResize = { [weak self] in self?.pane.invalidateContentSize() }
         addChild(editor)
         tlsEditor = editor
       }
       if let editor = tlsEditor {
         editor.loadViewIfNeeded()
-        section("证书设置", symbol: "checkmark.shield", views: [editor.view])
+        section(
+          self.interfaceCopy.text("event.settings.certificate"), symbol: "checkmark.shield",
+          views: [editor.view])
       }
     } else {
-      let text = store.certificateExplanation(id)
+      let text = store.certificateExplanation(id, context: self.interfaceCopy.context)
       if !text.isEmpty {
         addBody(
           PaxRouteText.label(
@@ -402,38 +422,51 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     }
   }
   private func measurementResults() {
-    let p = store.info(id)
+    let c = interfaceCopy.context
+    let p = store.info(id, context: c)
     let row = PaxRouteMetricRow([
       RouteMetricPresentation.make(
-        "首次连接耗时", "bolt", p.firstConnection, kind: .latency, color: p.firstConnection.latencyColor),
+        c.text("interface_detail.c1ef5f1bb7"), "bolt", p.firstConnection,
+        kind: .latency, color: p.firstConnection.latencyColor, context: c),
       RouteMetricPresentation.make(
-        p.latency.historical ? "历史延迟" : "稳定延迟", "timer", p.latency, kind: .latency,
-        color: p.latency.latencyColor),
+        p.latency.historical
+          ? c.text("interface_detail.c5a571f36f")
+          : c.text("interface_detail.31421eb9bd"), "timer", p.latency,
+        kind: .latency, color: p.latency.latencyColor, context: c),
       RouteMetricPresentation.make(
-        "下载速度", "arrow.down", p.speed, kind: .speed, color: PaxTheme.DashboardColor.green),
+        c.text("settings.measurement.download"), "arrow.down", p.speed,
+        kind: .speed, color: PaxTheme.DashboardColor.green, context: c),
     ])
     row.spacing = PaxTheme.Spacing.regular
     if p.cfIP != nil && p.chain == nil {
       row.addMetric(
         RouteMetricPresentation.make(
-          "CF 入口延迟", "cloud", p.cfLatency, kind: .cf, color: p.cfLatency.latencyColor))
+          c.text("interface_detail.a360eca405"), "cloud", p.cfLatency, kind: .cf,
+          color: p.cfLatency.latencyColor, context: c))
     }
     let tests = NSStackView(views: [
-      button("查询 IP 地区", #selector(queryExit)),
-      button("测试延迟", #selector(testLatency)), button("测试下载速度", #selector(testSpeed)),
+      button(self.interfaceCopy.text("action.routes.lookup_exit"), #selector(queryExit)),
+      button(self.interfaceCopy.text("action.routes.test_latency"), #selector(testLatency)),
+      button(self.interfaceCopy.text("action.routes.test_download"), #selector(testSpeed)),
     ])
-    if store.isLive { tests.addArrangedSubview(button("诊断线路", #selector(diagnoseRoute))) }
+    if store.isLive {
+      tests.addArrangedSubview(
+        button(self.interfaceCopy.text("action.routes.diagnose"), #selector(diagnoseRoute)))
+    }
     if let chain = p.chain {
       if store.supportsCF(chain.front) {
-        tests.addArrangedSubview(button("验证前置 CF", #selector(frontCF)))
+        tests.addArrangedSubview(
+          button(self.interfaceCopy.text("action.cf.verify_front"), #selector(frontCF)))
       }
       if store.supportsCF(chain.final) {
-        tests.addArrangedSubview(button("验证最终 CF", #selector(finalCF)))
+        tests.addArrangedSubview(
+          button(self.interfaceCopy.text("action.cf.verify_final"), #selector(finalCF)))
       }
     }
     tests.spacing = PaxTheme.Spacing.tight
     if p.cfIP != nil && p.chain == nil {
-      tests.addArrangedSubview(button("测试 CF 入口", #selector(testCF)))
+      tests.addArrangedSubview(
+        button(self.interfaceCopy.text("action.cf.test_entry"), #selector(testCF)))
     }
     for view in tests.arrangedSubviews {
       guard let button = view as? NSButton else { continue }
@@ -449,47 +482,61 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
               : button.action == #selector(testCF) && store.isLive
                 ? store.canTestCF(id) : store.canManage
       if button.action == #selector(testLatency), store.isTestingLatency(id) {
-        button.title = "停止测试"
+        button.title = self.interfaceCopy.text("interface_detail.d3a18faf18")
       }
-      if button.action == #selector(queryExit), store.isQueryingExit(id) { button.title = "停止查询" }
-      if button.action == #selector(testCF), store.isTestingCF(id) { button.title = "测试中…" }
+      if button.action == #selector(queryExit), store.isQueryingExit(id) {
+        button.title = self.interfaceCopy.text("interface_detail.d4d18a6e9e")
+      }
+      if button.action == #selector(testCF), store.isTestingCF(id) {
+        button.title = self.interfaceCopy.text("interface_detail.105a9082c3")
+      }
       if button.action == #selector(testSpeed), store.isDownloading(id) {
-        button.title = store.isDownloadQueued(id) ? "取消排队" : "停止测速"
+        button.title =
+          store.isDownloadQueued(id)
+          ? self.interfaceCopy.text("interface_detail.16c1f9b337")
+          : self.interfaceCopy.text("interface_detail.4a372f90da")
       }
       if button.action == #selector(testSpeed), !store.isDownloading(id) {
-        button.toolTip = "每条最多8 MiB、30秒，可随时停止"
+        button.toolTip = self.interfaceCopy.text("interface_detail.332b2cac5f")
       }
       button.isEnabled =
         (button.action == #selector(testLatency) && store.isTestingLatency(id))
         || (button.action == #selector(testSpeed) && store.isDownloading(id))
         || (available && store.sameDraft(draft, original))
-      if !available { button.toolTip = "此功能尚未接入后台或正在执行" }
+      if !available { button.toolTip = self.interfaceCopy.text("interface_detail.cee462daef") }
     }
     var items: [NSView] = [row, tests]
     items.append(
       PaxRouteText.label(
-        store.downloadCaption(id), font: PaxTheme.Typography.caption(), secondary: true,
+        store.downloadCaption(id, context: c),
+        font: PaxTheme.Typography.caption(), secondary: true,
         wrapping: true))
     items.append(
       PaxRouteText.label(
-        store.measurementCaption(id), font: PaxTheme.Typography.caption(), secondary: true,
+        store.measurementCaption(id, context: c),
+        font: PaxTheme.Typography.caption(), secondary: true,
         wrapping: true))
     items.append(
       PaxRouteText.label(
-        store.physicalCaption, font: PaxTheme.Typography.caption(), secondary: true))
+        store.physicalCaption(context: c), font: PaxTheme.Typography.caption(), secondary: true))
     if store.isMeasuring(id) || p.latency.running || p.speed.running {
       let loading = PaxLoadingStateView()
       loading.apply(
         .loading,
         message: p.speed.running
-          ? (store.isDownloadQueued(id) ? "测速排队中，可取消" : "正在下载测速，可停止")
-          : store.measurementProgressCaption(id))
+          ? (store.isDownloadQueued(id)
+            ? self.interfaceCopy.text("interface_detail.c4ecefc021")
+            : self.interfaceCopy.text("interface_detail.34376d8b23"))
+          : store.measurementProgressCaption(id, context: self.interfaceCopy.context))
       items.append(loading)
     }
     if p.latency.samples.count >= 3 {
       items.append(
         PaxRouteButton(
-          historyOpen ? "收起延迟历史" : "延迟历史 · 最近 \(p.latency.samples.count) 次",
+          historyOpen
+            ? self.interfaceCopy.text("interface_detail.ede1ee8a27")
+            : self.interfaceCopy.text(
+              "interface_detail.065b02887a", ["arg0": String(describing: p.latency.samples.count)]),
           symbol: "chart.xyaxis.line", style: .quiet, target: self, action: #selector(toggleHistory)
         ))
       if historyOpen {
@@ -498,29 +545,36 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
             p.latency, color: PaxTheme.DashboardColor.amber, height: PaxTheme.Routes.chartHeight))
       }
     }
-    section("测试结果", symbol: "waveform.path.ecg", views: items, detail: "最近一次 · 按项目记录")
+    section(
+      self.interfaceCopy.text("interface_detail.b91effb8d3"), symbol: "waveform.path.ecg",
+      views: items, detail: self.interfaceCopy.text("interface_detail.13baa1b773"))
   }
   private func measurementHistory() {
     guard store.isLive else { return }
-    let records = store.historyRows(id)
+    let records = store.historyRows(id, context: self.interfaceCopy.context)
     let more = store.hasMoreHistory(id)
     if records.isEmpty, let error = store.measurementHistoryError(id) {
       let message = PaxRouteText.label(
         error, font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
       message.textColor = PaxTheme.Color.error
       section(
-        "测量记录", symbol: "clock.arrow.circlepath",
-        views: [message, button("重新读取记录", #selector(reloadHistory))], detail: "读取失败")
+        self.interfaceCopy.text("interface_detail.45eeea7be8"), symbol: "clock.arrow.circlepath",
+        views: [
+          message, button(self.interfaceCopy.text("action.logs.reload"), #selector(reloadHistory)),
+        ], detail: self.interfaceCopy.text("interface_detail.6aa27f14bf"))
       return
     }
     guard !records.isEmpty || more else { return }
     let toggle = PaxRouteButton(
-      measurementHistoryOpen ? "收起测量记录" : "展开测量记录",
+      measurementHistoryOpen
+        ? self.interfaceCopy.text("interface_detail.958304b7fd")
+        : self.interfaceCopy.text("interface_detail.336a2914c5"),
       symbol: measurementHistoryOpen ? "chevron.up" : "chevron.down", style: .quiet, target: self,
       action: #selector(toggleMeasurementHistory))
     let heading = NSStackView(views: [
       PaxRouteText.label(
-        store.measurementHistoryCaption(id), font: PaxTheme.Typography.caption(), secondary: true),
+        store.measurementHistoryCaption(id, context: self.interfaceCopy.context),
+        font: PaxTheme.Typography.caption(), secondary: true),
       NSView(), toggle,
     ])
     heading.distribution = .fill
@@ -528,12 +582,19 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     if measurementHistoryOpen {
       let table = PaxDataTable(
         columns: [
-          .init("测试时间", width: PaxTheme.Workbench.directionColumn, growth: 0.5, sortable: false),
-          .init("项目", width: PaxTheme.Routes.pathIcon * 2, growth: 0.25, sortable: false),
           .init(
-            "结果", width: PaxTheme.Workbench.directionColumn, numeric: true, growth: 2,
+            self.interfaceCopy.text("interface_detail.07c97746f5"),
+            width: PaxTheme.Workbench.directionColumn, growth: 0.5, sortable: false),
+          .init(
+            self.interfaceCopy.text("interface_detail.79f326be44"),
+            width: PaxTheme.Routes.pathIcon * 2, growth: 0.25, sortable: false),
+          .init(
+            self.interfaceCopy.text("event.field.result"),
+            width: PaxTheme.Workbench.directionColumn, numeric: true, growth: 2,
             alignment: .left, sortable: false),
-          .init("状态", width: PaxTheme.Routes.pathIcon * 2, growth: 0.25, sortable: false),
+          .init(
+            self.interfaceCopy.text("logs.status"), width: PaxTheme.Routes.pathIcon * 2,
+            growth: 0.25, sortable: false),
         ], selection: .none)
       table.setTableIdentifier("route-measurement-history")
       table.cellProvider = { rowID, column in
@@ -562,24 +623,34 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       if more {
         items.append(
           PaxRouteButton(
-            "加载更多记录", symbol: "clock", style: .quiet, target: self, action: #selector(moreHistory)))
+            self.interfaceCopy.text("action.common.load_more_records"), symbol: "clock",
+            style: .quiet, target: self, action: #selector(moreHistory)))
       }
     }
-    section("测量记录", symbol: "clock.arrow.circlepath", views: items, detail: "\(records.count) 条")
+    section(
+      self.interfaceCopy.text("interface_detail.45eeea7be8"), symbol: "clock.arrow.circlepath",
+      views: items,
+      detail: self.interfaceCopy.text(
+        "interface_detail.0adfac2e97", ["arg0": String(describing: records.count)]))
   }
   func controlTextDidChange(_ obj: Notification) { saved = "" }
   private func rawConfiguration() {
-    if let chain = store.info(id).chain {
+    if let chain = store.info(id, context: self.interfaceCopy.context).chain {
       section(
-        "节点引用", symbol: "point.3.connected.trianglepath.dotted",
+        self.interfaceCopy.text("interface_detail.e021a7287c"),
+        symbol: "point.3.connected.trianglepath.dotted",
         views: [
           PaxRouteText.label(
-            "前置：\(chain.front)\n最终：\(chain.final)\n\n协议参数在各自线路的详细参数中编辑。", secondary: true,
+            self.interfaceCopy.text(
+              "interface_detail.1e91559d9d",
+              ["arg0": String(describing: chain.front), "arg1": String(describing: chain.final)]),
+            secondary: true,
             wrapping: true)
         ])
       return
     }
-    let format = button("检查参数", #selector(formatJSON))
+    let format = button(
+      self.interfaceCopy.text("action.routes.check_parameters"), #selector(formatJSON))
     let scroll = NSScrollView()
     scroll.hasVerticalScroller = true
     scroll.borderType = .bezelBorder
@@ -601,11 +672,11 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     scroll.heightAnchor.constraint(equalToConstant: PaxTheme.Workbench.details).isActive = true
     self.editor = editor
     section(
-      "节点参数", symbol: "curlybraces",
+      self.interfaceCopy.text("interface_detail.a9ea76302f"), symbol: "curlybraces",
       views: [
         format, scroll,
-        PaxRouteText.label(
-          "仅编辑当前节点，保存时检查基础字段。", font: PaxTheme.Typography.caption(), secondary: true),
+        self.interfaceCopy.routeLabel(
+          "action.routes.node_editor_note", font: PaxTheme.Typography.caption(), secondary: true),
       ])
   }
   @objc func chooseCF() {
@@ -645,7 +716,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     usageRefreshTask = nil
   }
   @objc func frontChanged(_ sender: NSPopUpButton) {
-    guard store.info(id).chain != nil else { return }
+    guard store.info(id, context: self.interfaceCopy.context).chain != nil else { return }
     let routes = frontChoices
     if routes.indices.contains(sender.indexOfSelectedItem) {
       do { try capture() } catch {
@@ -661,7 +732,9 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
     do {
       try capture()
       guard var value = draft else { return }
-      if tab == "raw" && store.info(id).chain == nil { try store.acceptJSON(&value) }
+      if tab == "raw" && store.info(id, context: self.interfaceCopy.context).chain == nil {
+        try store.acceptJSON(&value)
+      }
       if store.isLive {
         guard !saving else { return }
         saving = true
@@ -669,7 +742,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
         editor?.isEditable = false
         proxyForm?.setEnabled(false, editing: true)
         draft = value
-        pane.status.stringValue = "正在保存…"
+        pane.status.stringValue = self.interfaceCopy.text("profile_editor.saving")
         pane.status.isHidden = false
         editTask = Task { [weak self] in
           guard let self else { return }
@@ -685,7 +758,10 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
             self.draft = nil
             self.original = nil
             self.tab = "overview"
-            self.saved = self.store.isCurrent(self.id) ? "已保存，重新连接后生效" : "已保存"
+            self.saved =
+              self.store.isCurrent(self.id)
+              ? self.interfaceCopy.text("interface_detail.2a3454c016")
+              : self.interfaceCopy.text("interface_detail.1bd91a7d0c")
             self.render()
           } catch { if !Task.isCancelled { self.showError(error) } }
         }
@@ -695,7 +771,10 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       draft = store.draft(id)
       original = draft
       tab = "overview"
-      saved = store.info(id).override ? "已保存 · 本地覆盖" : "已保存"
+      saved =
+        store.info(id, context: self.interfaceCopy.context).override
+        ? self.interfaceCopy.text("interface_detail.eb7b38440f")
+        : self.interfaceCopy.text("interface_detail.1bd91a7d0c")
       render()
     } catch { showError(error) }
   }
@@ -706,7 +785,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       try store.acceptJSON(&value)
       draft = value
       editor?.string = value.json
-      pane.status.stringValue = "JSON 基础检查通过"
+      pane.status.stringValue = self.interfaceCopy.text("interface_detail.87aa0779c8")
       pane.status.isHidden = false
     } catch { showError(error) }
   }
@@ -797,7 +876,7 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
   }
   override func close() {
     guard !saving else {
-      pane.status.stringValue = "正在等待后台保存结果，请稍候"
+      pane.status.stringValue = self.interfaceCopy.text("interface_detail.134f2e2443")
       pane.status.isHidden = false
       return
     }
@@ -810,10 +889,10 @@ final class RouteDetailController: RouteModalController, NSTextFieldDelegate {
       return
     }
     let alert = NSAlert()
-    alert.messageText = "放弃未保存的修改？"
-    alert.informativeText = "关闭后，本次修改不会保存。"
-    alert.addButton(withTitle: "继续编辑")
-    alert.addButton(withTitle: "放弃修改")
+    alert.messageText = self.interfaceCopy.text("interface_detail.01aeaa37ee")
+    alert.informativeText = self.interfaceCopy.text("interface_detail.c3542282cc")
+    alert.addButton(withTitle: self.interfaceCopy.text("profile_editor.keep_editing"))
+    alert.addButton(withTitle: self.interfaceCopy.text("interface_detail.9b7824cefa"))
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self else { return }
       if response == .alertSecondButtonReturn { self.finishDiscard() }

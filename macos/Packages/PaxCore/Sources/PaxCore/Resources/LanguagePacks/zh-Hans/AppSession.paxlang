@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "app_session.title": "开启代理需要授权",
+    "app_session.detail": "Pax Connect 需要管理员权限才能更改网络设置。请输入当前 Mac 账户的登录密码；该账户需有管理员权限。密码仅用于本次授权，不会保存。",
+    "app_session.password": "当前账户登录密码",
+    "app_session.submit": "授权并开启",
+    "app_session.starting": "正在启动后台…",
+    "app_session.retry": "重试启动",
+    "app_session.failure.password_required": "启动后台需要管理员授权",
+    "app_session.failure.authentication_failed": "密码未通过，或当前账户没有管理员权限",
+    "app_session.failure.invalid_bundle": "应用文件校验失败，请重新安装 Pax Connect",
+    "app_session.failure.legacy_service": "旧版后台服务仍已登记，请先停用旧版后台后重试",
+    "app_session.failure.another_session": "另一个 Pax Connect 实例正在使用后台，请先退出它",
+    "app_session.failure.residue_unknown": "无法确认旧 Pax 资源归属，已暂停启动；请重试或查看诊断",
+    "app_session.failure.cleanup_failed": "旧 Pax 后台或网络资源尚未释放，已暂停启动，请稍后重试",
+    "app_session.failure.recovery_storage_unavailable": "后台恢复存储不可用，启动已暂停；请更新 App 后重试，无需反复输入密码",
+    "app_session.failure.launch_failed": "后台未能启动，请重试",
+    "app_session.failure.shutdown_failed": "后台尚未确认关闭，App 已保留运行，请重试退出"
+  }
+}

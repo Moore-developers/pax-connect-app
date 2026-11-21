@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 /// Edge measurements remain distinct from full draft validation.
 @MainActor enum CFRecordPresentation {
   static func row(
-    _ record: CFRecord, currentNetwork: String = "", selected: String, pendingColumn: Int? = nil
+    _ record: CFRecord, currentNetwork: String = "", selected: String, pendingColumn: Int? = nil,
+    context: PresentationContext = .chinese
   )
     -> PaxCFRecordTable.Row
   {
@@ -18,13 +19,16 @@ import UniformTypeIdentifiers
           .init(
             ip: record.ip, countryCode: value.countryCode, country: value.country,
             region: value.region, city: value.city, at: value.at ?? Date()))
-      } ?? "未获取"
+      } ?? context.text("route_readouts.c9c37a1eba")
     func caption(_ sample: CFSample) -> String {
       let time =
-        (record.network != currentNetwork && sample.value > 0 ? "原网络 · " : "")
+        (record.network != currentNetwork && sample.value > 0
+          ? context.text("route_readouts.bc849d9979") : "")
         + MeasurementTimestamp.text(sample.measuredAt)
       return sample.errorCode.isEmpty
-        ? time : time + " · 最近失败 " + MeasurementTimestamp.text(sample.attemptedAt)
+        ? time
+        : time + context.text("route_readouts.bb62f62a2e")
+          + MeasurementTimestamp.text(sample.attemptedAt)
     }
     var values = [
       record.ip,
@@ -44,14 +48,20 @@ import UniformTypeIdentifiers
       && record.validation.attemptedAt != nil && !record.validation.errorCode.isEmpty
     if validationFailed {
       captions[0] =
-        "本线路验证失败 · "
-        + ProductErrorPresentation.message(ProductError(code: record.validation.errorCode))
+        context.text("route_readouts.fe54b3e26d")
+        + ProductErrorPresentation.message(
+          ProductError(code: record.validation.errorCode), context: context)
         + " · " + MeasurementTimestamp.text(record.validation.attemptedAt)
     }
     if let pendingColumn, (1...3).contains(pendingColumn) {
       let previous = values[pendingColumn]
-      values[pendingColumn] = pendingColumn == 3 ? "查询中…" : "测试中…"
-      captions[pendingColumn] = previous == "—" || previous == "未获取" ? "等待本次结果" : "上次：" + previous
+      values[pendingColumn] =
+        pendingColumn == 3
+        ? context.text("route_readouts.d302f90b09") : context.text("route_readouts.105a9082c3")
+      captions[pendingColumn] =
+        previous == "—" || location == nil
+        ? context.text("route_readouts.029954b7a5")
+        : context.text("route_readouts.4ce1601064") + previous
     }
     return .init(
       id: record.ip, values: values, captions: captions,

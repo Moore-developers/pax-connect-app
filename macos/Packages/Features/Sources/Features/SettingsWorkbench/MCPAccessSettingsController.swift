@@ -5,7 +5,14 @@ import PaxUI
 
 /// Each client registration is independent of entry readiness and backend availability.
 @MainActor
-final class MCPAccessSettingsController: NSViewController {
+final class MCPAccessSettingsController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
+  private var feedbackKey: String?
+  private var entryRow: PaxPreferenceRow?
+  private var checkButton: PaxRouteButton?
+  private var entryControlsWidth: NSLayoutConstraint?
+  private var verifyButton: PaxRouteButton?
+  private var clientRows: [(MCPAccessReport.Client, PaxPreferenceRow, PaxRouteButton)] = []
   private let actions: MCPAccessActions
   private let connection: ConnectionStore
   private let content = NSStackView()
@@ -29,9 +36,12 @@ final class MCPAccessSettingsController: NSViewController {
     content.orientation = .vertical
     content.alignment = .leading
     content.spacing = PaxTheme.Spacing.tight
-    permission.addItems(withTitles: ["仅查询", "查询与诊断"])
+    interfaceCopy.picker(permission, keys: ["settings.mcp.read", "settings.mcp.diagnose"])
     permission.setAccessibilityIdentifier("mcp-initial-permissions")
-    permission.setAccessibilityLabel("新接入客户端权限")
+    interfaceCopy.bind(permission, key: "settings.mcp.permissions_ax") {
+      $0.setAccessibilityLabel($1)
+    }
+    interfaceCopy.onChange = { [weak self] in self?.updateCopy() }
     permission.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive =
       true
     observeBackend()
@@ -45,10 +55,9 @@ final class MCPAccessSettingsController: NSViewController {
 
   private func observeBackend() {
     withObservationTracking {
-      backend.stringValue =
+      backend.stringValue = interfaceCopy.text(
         connection.connection == .connected
-        ? "Pax 后台就绪；客户端连接状态未检测。"
-        : "Pax 后台未就绪；客户端暂时不能调用业务。"
+          ? "settings.mcp.backend_ready" : "settings.mcp.backend_missing")
     } onChange: { [weak self] in
       Task { @MainActor in self?.observeBackend() }
     }
@@ -59,38 +68,49 @@ final class MCPAccessSettingsController: NSViewController {
       content.removeArrangedSubview(item)
       item.removeFromSuperview()
     }
-    let check = PaxRouteButton("检查状态", target: self, action: #selector(inspect))
+    clientRows.removeAll()
+    let check = interfaceCopy.button(
+      PaxRouteButton("", target: self, action: #selector(inspect)), key: "settings.mcp.inspect")
+    checkButton = check
     check.setAccessibilityIdentifier("mcp-inspect")
     check.isEnabled = !busy
     let verify = PaxRouteButton(
-      report?.entry == "repair" ? "修复接入" : "验证入口", target: self, action: #selector(verifyEntry))
+      interfaceCopy.text(report?.entry == "repair" ? "settings.mcp.repair" : "settings.mcp.verify"),
+      target: self, action: #selector(verifyEntry))
+    verifyButton = verify
     verify.setAccessibilityIdentifier("mcp-verify-entry")
     verify.isEnabled = !busy && report?.entry != "missing" && report != nil
     let controls = NSStackView(views: [check, verify])
     controls.spacing = PaxTheme.Spacing.tight
-    controls.widthAnchor.constraint(
-      equalToConstant: check.fittingSize.width + verify.fittingSize.width + PaxTheme.Spacing.tight
-    ).isActive = true
-    var rows: [NSView] = [
-      PaxPreferenceRow(
-        title: "Pax MCP", detail: entryDescription, control: controls, style: .compact)
-    ]
+    controls.orientation = .horizontal
+    controls.alignment = .centerY
+    let width = controls.widthAnchor.constraint(equalToConstant: 0)
+    width.isActive = true
+    entryControlsWidth = width
+    updateEntryControlsWidth()
+    let entry = PaxPreferenceRow(
+      title: "Pax MCP", detail: entryDescription, control: controls, style: .compact)
+    entryRow = entry
+    var rows: [NSView] = [entry]
     for client in report?.clients ?? [] {
       let button = PaxRouteButton(
         buttonTitle(client), target: self, action: #selector(connectClient(_:)))
       button.identifier = NSUserInterfaceItemIdentifier(client.id)
       button.setAccessibilityIdentifier("mcp-connect-" + client.id)
       button.isEnabled = !busy && ["missing", "outdated", "disabled"].contains(client.state)
-      rows.append(
-        PaxPreferenceRow(
-          title: client.name, detail: clientDescription(client), control: button, style: .compact))
+      let row = PaxPreferenceRow(
+        title: clientName(client), detail: clientDescription(client), control: button,
+        style: .compact)
+      clientRows.append((client, row, button))
+      rows.append(row)
     }
     rows.append(
-      PaxPreferenceRow(
-        title: "新接入权限", detail: "已有接入保留原权限。", control: permission, style: .compact))
+      interfaceCopy.preference(
+        title: "settings.mcp.initial_permissions", detail: "settings.mcp.permissions_detail",
+        control: permission))
     permission.isEnabled = !busy
-    let note = PaxText.label(
-      "接入时自动准备入口。查询结果可能发送到客户端使用的 AI 服务。",
+    let note = interfaceCopy.label(
+      "settings.mcp.note",
       font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
     let footer = NSStackView(views: [backend, note, feedback])
     footer.orientation = .vertical
@@ -101,47 +121,81 @@ final class MCPAccessSettingsController: NSViewController {
       item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
     }
     let group = PaxPreferenceGroup(
-      title: "AI 客户端接入", symbol: "terminal", rows: rows, style: .compact, footer: footer)
+      title: self.interfaceCopy.text("settings.mcp.title"), symbol: "terminal", rows: rows,
+      style: .compact, footer: footer)
+    interfaceCopy.group(group, key: "settings.mcp.title")
     content.addArrangedSubview(group)
     group.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
   }
 
   private var entryDescription: String {
-    guard let report else { return "正在检查入口与客户端配置…" }
-    if report.verified { return "入口验证通过；初始化与工具发现成功。" }
+    guard let report else { return interfaceCopy.text("settings.mcp.inspecting") }
+    if report.verified { return interfaceCopy.text("settings.mcp.verified") }
     switch report.entry {
-    case "ready": return "入口有效，等待客户端连接；无需常驻 MCP 进程。"
-    case "missing": return "尚未准备；接入客户端时自动完成。"
-    default: return "入口需修复；客户端配置保持。"
+    case "ready": return interfaceCopy.text("settings.mcp.ready")
+    case "missing": return interfaceCopy.text("settings.mcp.missing")
+    default: return interfaceCopy.text("settings.mcp.needs_repair")
     }
   }
 
+  private func clientName(_ client: MCPAccessReport.Client) -> String {
+    client.id == "dsh-desktop" ? interfaceCopy.text("settings.mcp.dsh_desktop") : client.name
+  }
   private func buttonTitle(_ client: MCPAccessReport.Client) -> String {
     switch client.state {
-    case "configured": return "已接入"
-    case "outdated": return "更新配置"
-    case "disabled": return "启用接入"
-    case "missing": return "接入"
-    default: return "不可接入"
+    case "configured": return interfaceCopy.text("settings.mcp.configured")
+    case "outdated": return interfaceCopy.text("settings.mcp.update")
+    case "disabled": return interfaceCopy.text("settings.mcp.enable")
+    case "missing": return interfaceCopy.text("settings.mcp.connect")
+    default: return interfaceCopy.text("settings.mcp.unavailable")
     }
   }
 
   private func clientDescription(_ client: MCPAccessReport.Client) -> String {
-    let scope = client.id == "codex" ? "桌面与 CLI 共用。" : ""
+    let scope = client.id == "codex" ? interfaceCopy.text("settings.mcp.codex_scope") : ""
     switch client.state {
     case "configured":
-      return scope + "配置有效（\(client.entryName)）；权限：\(client.permissions)。"
-    case "missing": return scope + "未配置 Pax；点击接入后重新加载客户端。"
-    case "outdated": return scope + "Pax 入口路径需更新；保留原权限。"
-    case "disabled": return scope + "Pax 配置已禁用；启用时保留原权限。"
-    case "inherited": return "全局 patch 含 Pax 登记，请在客户端核对，避免重复配置。"
-    case "not_found": return "未发现客户端或配置目录，请先安装并打开客户端。"
-    case "unreadable": return "无法安全读取配置，请检查文件权限或路径。"
-    case "invalid": return "配置格式无法识别，请先在客户端修复。"
-    default: return "同名、重复或自定义配置冲突；未覆盖，请手动核对。"
+      return interfaceCopy.text(
+        "settings.mcp.client_configured",
+        ["scope": scope, "entry": client.entryName, "permissions": client.permissions])
+    case "missing": return interfaceCopy.text("settings.mcp.client_missing", ["scope": scope])
+    case "outdated": return interfaceCopy.text("settings.mcp.client_outdated", ["scope": scope])
+    case "disabled": return interfaceCopy.text("settings.mcp.client_disabled", ["scope": scope])
+    case "inherited": return interfaceCopy.text("settings.mcp.client_inherited")
+    case "not_found": return interfaceCopy.text("settings.mcp.client_not_found")
+    case "unreadable": return interfaceCopy.text("settings.mcp.client_unreadable")
+    case "invalid": return interfaceCopy.text("settings.mcp.client_invalid")
+    default: return interfaceCopy.text("settings.mcp.client_conflict")
     }
   }
 
+  private func setFeedback(_ key: String?) {
+    feedbackKey = key
+    updateCopy()
+  }
+  private func updateCopy() {
+    backend.stringValue = interfaceCopy.text(
+      connection.connection == .connected
+        ? "settings.mcp.backend_ready" : "settings.mcp.backend_missing")
+    entryRow?.apply(title: "Pax MCP", detail: entryDescription)
+    verifyButton?.title = interfaceCopy.text(
+      report?.entry == "repair" ? "settings.mcp.repair" : "settings.mcp.verify")
+    updateEntryControlsWidth()
+    for (client, row, button) in clientRows {
+      row.apply(title: clientName(client), detail: clientDescription(client))
+      button.title = buttonTitle(client)
+    }
+    feedback.stringValue =
+      feedbackKey.map { $0 == "error" ? message(report?.error ?? "") : interfaceCopy.text($0) }
+      ?? ""
+    feedback.isHidden = feedback.stringValue.isEmpty
+  }
+  private func updateEntryControlsWidth() {
+    guard let checkButton, let verifyButton else { return }
+    entryControlsWidth?.constant =
+      checkButton.intrinsicContentSize.width
+      + verifyButton.intrinsicContentSize.width + PaxTheme.Spacing.tight
+  }
   @objc private func inspect() { run("inspect") }
   @objc private func verifyEntry() { run(report?.entry == "repair" ? "repair" : "verify") }
   @objc private func connectClient(_ sender: NSButton) {
@@ -155,7 +209,7 @@ final class MCPAccessSettingsController: NSViewController {
     guard !busy else { return }
     busy = true
     let allow = permission.indexOfSelectedItem == 1 ? "read,diagnose" : "read"
-    feedback.stringValue = action == "inspect" ? "" : "正在处理…"
+    setFeedback(action == "inspect" ? nil : "settings.mcp.working")
     render()
     Task { [weak self] in
       guard let self else { return }
@@ -167,29 +221,31 @@ final class MCPAccessSettingsController: NSViewController {
         report = try await actions.run(action, client?.id ?? "", allow, client?.state ?? "")
         guard let report else { return }
         if !report.error.isEmpty {
-          feedback.stringValue = message(report.error)
+          setFeedback("error")
         } else if action == "connect" {
-          feedback.stringValue = "配置已核对。请在目标客户端重新加载 MCP 或新建会话。"
+          setFeedback("settings.mcp.connected_feedback")
         } else if action == "verify" {
-          feedback.stringValue = "入口探针已退出；这不代表目标客户端已连接。"
+          setFeedback("settings.mcp.verified_feedback")
         } else if action == "repair" {
-          feedback.stringValue = "入口已修复，客户端配置未改动。"
+          setFeedback("settings.mcp.repaired_feedback")
         }
       } catch {
-        feedback.stringValue = "检查失败，请确认正在运行完整的 Pax Connect 后重试。"
+        setFeedback("settings.mcp.check_failed")
       }
     }
   }
 
   private func message(_ code: String) -> String {
     switch code {
-    case "configuration_changed": return "配置已被外部修改，请检查状态后重试。"
-    case "configuration_conflict": return "配置有冲突，未覆盖。请在客户端核对。"
-    case "configuration_backup_failed": return "备份失败，未写入客户端配置。"
-    case "configuration_commit_uncertain": return "配置可能已写入，请检查状态；原配置备份已保留。"
-    case "entry_probe_failed": return "入口初始化或工具发现失败，请修复接入后重试。"
-    case "installation_invalid": return "入口校验失败，请重新打开完整 App 后修复接入。"
-    default: return "接入未完成，请检查目标配置；不要反复覆盖原文件。"
+    case "configuration_changed": return interfaceCopy.text("settings.mcp.configuration_changed")
+    case "configuration_conflict": return interfaceCopy.text("settings.mcp.configuration_conflict")
+    case "configuration_backup_failed":
+      return interfaceCopy.text("settings.mcp.configuration_backup_failed")
+    case "configuration_commit_uncertain":
+      return interfaceCopy.text("settings.mcp.configuration_commit_uncertain")
+    case "entry_probe_failed": return interfaceCopy.text("settings.mcp.entry_probe_failed")
+    case "installation_invalid": return interfaceCopy.text("settings.mcp.installation_invalid")
+    default: return interfaceCopy.text("settings.mcp.unknown_error")
     }
   }
 }

@@ -36,11 +36,7 @@ func TestSetViewVisibilityRejectsUnknownView(t *testing.T) {
 	}
 }
 
-func TestPushContractFieldsAreMapped(t *testing.T) {
-	h := historyState(historyMetadata{RouteHistoryRevision: 7})
-	if h.RouteHistoryRevision != 7 {
-		t.Fatalf("route_history_revision: %+v", h)
-	}
+func TestAIUsageStateMapsRevisionAndGeneration(t *testing.T) {
 	a := usageState(aiusage.State{Revision: 3, Generation: 2})
 	if a.Revision != 3 || a.Generation != 2 {
 		t.Fatalf("ai usage state: %+v", a)

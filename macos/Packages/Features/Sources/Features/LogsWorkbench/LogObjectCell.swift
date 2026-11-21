@@ -1,9 +1,11 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 @MainActor
 func logObjectCell(
-  id: String, column: Int, store: LogsWorkbenchStore, icons: WorkbenchObjectIcons
+  id: String, column: Int, store: LogsWorkbenchStore, icons: WorkbenchObjectIcons,
+  context: PresentationContext = .chinese
 ) -> NSView? {
   if id == "group" { return NSView() }
   guard let object = store.objects.first(where: { $0.id == id }) else { return nil }
@@ -12,7 +14,8 @@ func logObjectCell(
       let spinner = NSProgressIndicator()
       spinner.style = .spinning
       spinner.controlSize = .small
-      spinner.setAccessibilityLabel("正在切换到\(object.title)")
+      spinner.setAccessibilityLabel(
+        context.text("logs_presentation.cac242b31f", ["arg0": String(describing: object.title)]))
       spinner.translatesAutoresizingMaskIntoConstraints = false
       let content = NSView()
       content.addSubview(spinner)
@@ -38,10 +41,14 @@ func logObjectCell(
     ? PaxIcon.image("list.bullet", size: iconSize) ?? NSImage()
     : icons.image(
       kind: store.dimension.iconKind, id: object.id, name: object.title)
+  let displayTitle =
+    id == "all"
+    ? store.allTitle(context: context)
+    : id == "unknown" ? store.dimension.unknown(context: context) : object.title
   let text = PaxText.label(
-    object.title, font: PaxTheme.Typography.label(size: PaxTheme.Logs.directoryFont))
+    displayTitle, font: PaxTheme.Typography.label(size: PaxTheme.Logs.directoryFont))
   text.lineBreakMode = .byTruncatingTail
-  text.toolTip = object.title
+  text.toolTip = displayTitle
   let color = id == store.selectedObject ? PaxTheme.Table.rail : PaxTheme.Table.text
   text.textColor = color
   if id == "all" || store.dimension == .system {
@@ -60,10 +67,13 @@ func logObjectCell(
 
 /// Identity content excludes the changing count; selecting another object recolors both rows.
 @MainActor
-func logObjectCellKey(id: String, store: LogsWorkbenchStore) -> [String] {
+func logObjectCellKey(
+  id: String, store: LogsWorkbenchStore, context: PresentationContext = .chinese
+) -> [String] {
   let object = store.objects.first { $0.id == id }
   return [
-    id, object?.title ?? "", object?.symbol ?? "", String(store.dimension.rawValue),
+    String(context.revision), id, object?.title ?? "", object?.symbol ?? "",
+    String(store.dimension.rawValue),
     String(id == store.selectedObject),
   ]
 }

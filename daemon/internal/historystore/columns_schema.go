@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS col_connections(
 CREATE TABLE IF NOT EXISTS col_answers(
  owner_kind INTEGER NOT NULL, owner_key TEXT NOT NULL, ordinal INTEGER NOT NULL, value TEXT NOT NULL,
  PRIMARY KEY(owner_kind,owner_key,ordinal)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS col_texts(event_id TEXT PRIMARY KEY, body BLOB NOT NULL) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS col_raw(
  event_id TEXT NOT NULL, ordinal INTEGER NOT NULL, value TEXT NOT NULL,
  PRIMARY KEY(event_id,ordinal)) WITHOUT ROWID;

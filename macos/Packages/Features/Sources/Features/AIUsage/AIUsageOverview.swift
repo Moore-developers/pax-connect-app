@@ -37,14 +37,19 @@ extension AIUsageViewController {
       note?.apply(
         .idle,
         text: self.store.data?.state.backfilling == true
-          ? "补录中 · 正在读取本机 CLI 历史用量，可能包含安装前记录" : "用量来自本机 CLI 会话日志；费用为本地估算，非平台账单。")
+          ? self.interfaceCopy.text("ai_usage.backfilling")
+          : self.interfaceCopy.text("ai_usage.local_estimate"))
       let code = self.store.data?.state.errorCode ?? ""
       let error =
         self.store.data?.error ?? (code.isEmpty ? nil : AIUsageFormatting.collectionError(code))
       failure?.isHidden = error == nil
-      failure?.apply(.failure, text: error ?? "", action: error == nil ? nil : "重试")
+      failure?.apply(
+        .failure, text: error ?? "",
+        action: error == nil ? nil : self.interfaceCopy.text("ai_usage.retry"))
       config?.isHidden = self.store.configuration.error == nil
-      config?.apply(.failure, text: self.store.configuration.error ?? "", action: "重试")
+      config?.apply(
+        .failure, text: self.store.configuration.error(context: interfaceCopy.context) ?? "",
+        action: self.interfaceCopy.text("ai_usage.retry"))
     }
     contentRefreshers.append(update)
     update()
@@ -53,7 +58,7 @@ extension AIUsageViewController {
 
   private func loadingCard() -> NSView {
     let loading = PaxLoadingStateView()
-    loading.apply(.loading, message: "正在读取本地用量…")
+    loading.apply(.loading, message: self.interfaceCopy.text("ai_usage.loading_usage"))
     let card = PaxCard()
     card.contentView = loading
     card.heightAnchor.constraint(
@@ -74,29 +79,35 @@ extension AIUsageViewController {
     ])
   }
   func measureTabs(cost: Bool, onSelect: @escaping (Bool) -> Void) -> PaxTabs {
-    let tabs = PaxTabs(["Token", "费用"])
+    let tabs = PaxTabs(["Token", self.interfaceCopy.text("ai_usage.cost")])
     tabs.selectedIndex = cost ? 1 : 0
     tabs.onSelect = { onSelect($0 == 1) }
+    interfaceCopy.bind(tabs, key: "ai_usage.cost") { tabs, cost in
+      tabs.apply(labels: ["Token", cost])
+    }
     return tabs
   }
 
   private func legend() -> NSView {
     let items = zip(
-      ["输入", "输出", "缓存"],
+      [
+        "ai_usage.input", "ai_usage.output", "ai_usage.cache",
+      ],
       [PaxTheme.Chart.inputSeries, PaxTheme.Chart.outputSeries, PaxTheme.Chart.cacheSeries]
     ).map { name, color in
       let pair = AIUsageLayout.stack(
-        [PaxLegendDot(color: color), AIUsageLayout.label(name, secondary: true)], vertical: false)
+        [PaxLegendDot(color: color), self.interfaceCopy.usageLabel(name, secondary: true)],
+        vertical: false)
       pair.spacing = PaxTheme.Spacing.xs
       return pair
     }
     let average = AIUsageLayout.stack(
       [
         PaxLegendDot(color: PaxTheme.Chart.unitCostSeries),
-        AIUsageLayout.label("输入成本", secondary: true),
+        self.interfaceCopy.usageLabel("ai_usage.input_cost", secondary: true),
       ], vertical: false)
     average.spacing = PaxTheme.Spacing.xs
-    average.toolTip = "四项官方费用总和 ÷ 总输入Token × 一百万；单位成本下降不代表总费用下降"
+    average.toolTip = self.interfaceCopy.text("ai_usage.input_cost_detail")
     let row = AIUsageLayout.stack(items + [average], vertical: false)
     row.spacing = PaxTheme.Spacing.medium
     return row
@@ -111,19 +122,23 @@ extension AIUsageViewController {
     contentRefreshers.append { [weak self, weak measure] in
       measure?.selectedIndex = self?.store.measureCost == true ? 1 : 0
     }
-    let meta = AIUsageLayout.label(store.trendMeta, secondary: true)
+    let meta = AIUsageLayout.label(
+      store.trendMeta(context: self.interfaceCopy.context), secondary: true)
     let picker = PaxRoutePicker(style: .filter)
     picker.target = self
     picker.action = #selector(selectTrendModel(_:))
     picker.setAccessibilityIdentifier("ai-trend-model")
-    picker.setAccessibilityLabel("趋势 Profile 与模型筛选")
+    picker.setAccessibilityLabel(self.interfaceCopy.text("ai_usage.trend_filters"))
     let width = picker.widthAnchor.constraint(equalToConstant: 112)
     width.isActive = true
     trendModelPicker = picker
     trendModelWidth = width
     trendMetaLabel = meta
     refreshTrendHeader()
-    let header = AIUsageTrendHeader(meta: meta, legend: legend(), picker: picker, measure: measure)
+    let title = AIUsageLayout.heading(interfaceCopy.text("ai_usage.trend"))
+    interfaceCopy.bind(title, key: "ai_usage.trend") { $0.stringValue = $1 }
+    let header = AIUsageTrendHeader(
+      title: title, meta: meta, legend: legend(), picker: picker, measure: measure)
     let content = AIUsageLayout.stack([header, trendBody()])
     content.distribution = .fill
     content.spacing = PaxTheme.Spacing.regular
@@ -133,7 +148,8 @@ extension AIUsageViewController {
   private func trendBody() -> NSView {
     let chart = trendChart()
     let empty = PaxEmptyState(
-      symbol: "chart.bar", title: "暂无用量趋势", caption: "", identifier: "ai-trend-empty")
+      symbol: "chart.bar", title: self.interfaceCopy.text("ai_usage.trend_empty"), caption: "",
+      identifier: "ai-trend-empty")
     chart.heightAnchor.constraint(greaterThanOrEqualToConstant: trendChartFloor).isActive = true
     empty.heightAnchor.constraint(greaterThanOrEqualToConstant: trendChartFloor).isActive = true
     let holder = AIUsageLayout.stack([chart, empty])
@@ -145,15 +161,16 @@ extension AIUsageViewController {
     let update: () -> Void = { [weak self, weak chart, weak empty] in
       guard let self else { return }
       self.refreshTrendHeader()
-      let (samples, unit) = self.store.trendSeries(cost: self.store.measureCost)
+      let (samples, unit) = self.store.trendSeries(
+        cost: self.store.measureCost, context: self.interfaceCopy.context)
       chart?.valueLine = self.trendUnitCostLine()
       chart?.samples = samples
       chart?.minimumColumnCount =
         self.store.trendFillsWidth ? samples.count : PaxTheme.Chart.usageMinimumColumns
       chart?.automaticallySpacesCategoryLabels = self.store.trendFillsWidth
       chart?.unit = unit
-      chart?.hoverDetails = self.store.trendHoverDetails
-      let reason = self.store.trendEmptyReason
+      chart?.hoverDetails = self.store.trendHoverDetails(context: interfaceCopy.context)
+      let reason = self.store.trendEmptyReason(context: self.interfaceCopy.context)
       chart?.isHidden = reason != nil
       empty?.isHidden = reason == nil
       empty?.update(caption: reason ?? "")
@@ -164,9 +181,13 @@ extension AIUsageViewController {
   }
 
   func refreshTrendHeader() {
-    trendMetaLabel?.stringValue = store.trendMeta
+    trendMetaLabel?.stringValue = store.trendMeta(context: self.interfaceCopy.context)
     guard let picker = trendModelPicker else { return }
-    PaxUsageFilterMenu.populate(picker, groups: store.trendGroups, selection: store.trendFilter)
+    picker.setAccessibilityLabel(interfaceCopy.text("ai_usage.trend_filters"))
+    PaxUsageFilterMenu.populate(
+      picker, groups: store.trendGroups(context: interfaceCopy.context),
+      selection: store.trendFilter,
+      allTitle: interfaceCopy.text("common.all"))
     trendModelWidth?.constant = PaxUsageFilterMenu.pickerWidth(for: picker)
     picker.superview?.needsLayout = true
   }
@@ -178,8 +199,17 @@ extension AIUsageViewController {
   }
 
   private func trendChart() -> PaxStackedChart {
-    let (samples, unit) = store.trendSeries(cost: store.measureCost)
-    let chart = PaxStackedChart(samples: samples, seriesLabels: ["输入", "输出", "缓存"], unit: unit)
+    let (samples, unit) = store.trendSeries(
+      cost: store.measureCost, context: self.interfaceCopy.context)
+    let chart = PaxStackedChart(
+      samples: samples,
+      seriesLabels: [
+        interfaceCopy.text("ai_usage.input"), interfaceCopy.text("ai_usage.output"),
+        interfaceCopy.text("ai_usage.cache"),
+      ], unit: unit)
+    interfaceCopy.bind(chart) { chart, context in
+      chart.summarize = stackedChartSummary(context)
+    }
     chart.colors = [
       PaxTheme.Chart.inputSeries, PaxTheme.Chart.outputSeries, PaxTheme.Chart.cacheSeries,
     ]
@@ -189,15 +219,16 @@ extension AIUsageViewController {
     chart.barWidthFraction = PaxTheme.Chart.usageBarFraction
     chart.minimumBarColumnCount = PaxTheme.Chart.usageMinimumColumns
     chart.valueLine = trendUnitCostLine()
-    chart.hoverDetails = store.trendHoverDetails
+    chart.hoverDetails = store.trendHoverDetails(context: interfaceCopy.context)
     chart.setAccessibilityIdentifier("ai-usage-trend-chart")
     return chart
   }
 
   private func trendUnitCostLine() -> PaxStackedChart.ValueLine {
     var line = PaxStackedChart.ValueLine(
-      values: store.trendUnitCosts, name: "综合输入成本",
-      unit: "USD / M 输入", color: PaxTheme.Chart.unitCostSeries)
+      values: store.trendUnitCosts, name: self.interfaceCopy.text("ai_usage.combined_input_cost"),
+      unit: self.interfaceCopy.text("ai_usage.usd_per_m_input"),
+      color: PaxTheme.Chart.unitCostSeries)
     line.connectsGaps = true
     line.showsAxis = false
     return line

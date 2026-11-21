@@ -1,8 +1,12 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 /// The page owns list reading state; the Store owns the selected session and its data.
 @MainActor final class AISessionLimitsView: NSView {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   private(set) var model: AISessionLimitsModel
   let options: AISessionOptions
   private var selection: String?
@@ -16,19 +20,28 @@ import PaxUI
   private var renderedTrend: AILimitTrend?
   var onSelect: ((String?) -> Void)?
   var loadingStatus: NSTextField { list.loadingStatus }
-  private let summary = AILimitSummaryStrip()
+  private let summary: AILimitSummaryStrip
   private let list: AILimitListCard
   private let trend: AILimitTrendCard
   private lazy var summarySlot = AILimitLoadingSlot(
-    summary.view, placeholder: AILimitLoadingSlot.summary(), height: AILimitKpiCard.height)
+    summary.view, placeholder: AILimitLoadingSlot.summary(context: context),
+    height: AILimitKpiCard.height)
   private lazy var trendSlot = AILimitLoadingSlot(
-    trend.view, placeholder: AILimitLoadingSlot.trend(), height: trend.view.fittingSize.height)
+    trend.view, placeholder: AILimitLoadingSlot.trend(context: context),
+    height: trend.view.fittingSize.height)
 
-  init(model: AISessionLimitsModel = AISessionLimitsFixture.model, options: AISessionOptions) {
-    list = AILimitListCard(readout: summary.readout)
+  init(
+    model: AISessionLimitsModel = AISessionLimitsFixture.model, options: AISessionOptions,
+    interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()
+  ) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
+    summary = AILimitSummaryStrip(interfaceCopy: interfaceCopy)
+    list = AILimitListCard(readout: summary.readout, interfaceCopy: interfaceCopy)
     self.model = model
     self.options = options
-    trend = AILimitTrendCard(options: options)
+    trend = AILimitTrendCard(options: options, interfaceCopy: interfaceCopy)
     super.init(frame: .zero)
     setAccessibilityIdentifier("ai-session-limits")
     list.onSelect = { [weak self] id in self?.choose(id) }
@@ -82,6 +95,14 @@ import PaxUI
   func resetListPosition() {
     listOrigin = nil
     pendingOrigin = .zero
+  }
+
+  func invalidateLanguage() {
+    renderedSummary = nil
+    renderedTrend = nil
+    list.invalidateLanguage()
+    trend.invalidateLanguage()
+    refresh()
   }
 
   func refresh() {

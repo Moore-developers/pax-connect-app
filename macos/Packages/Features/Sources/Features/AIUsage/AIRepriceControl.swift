@@ -13,6 +13,7 @@ final class AIRepriceControl: NSObject {
   var blockReason: () -> String? = { nil }
   var onDismiss: (() -> Void)?
   var onLayoutChange: (() -> Void)?
+  private let context: PresentationContext
   private let profileID: String
   private let todayOnly: Bool
   private let now: () -> Date
@@ -34,8 +35,10 @@ final class AIRepriceControl: NSObject {
   /// `todayOnly` is the post-save shortcut: whole profile, today, no pickers.
   init(
     profileID: String, flow: AIRepriceFlow, todayOnly: Bool = false,
-    now: @escaping () -> Date = Date.init, calendar: Calendar = .current
+    now: @escaping () -> Date = Date.init, calendar: Calendar = .current,
+    context: PresentationContext = .chinese
   ) {
+    self.context = context
     self.profileID = profileID
     self.flow = flow
     self.todayOnly = todayOnly
@@ -44,13 +47,26 @@ final class AIRepriceControl: NSObject {
     from = now()
     to = now()
     super.init()
+    scope.apply(titles: [
+      context.text("reprice.entire_profile"), context.text("reprice.specific_model"),
+    ])
+    window.apply(titles: [
+      context.text("reprice.today"), context.text("reprice.week"),
+      context.text("reprice.custom_dates"), context.text("reprice.all_history"),
+    ])
     dateButton.image = PaxRouteIcon.image("calendar")
     dateButton.trailingImage = PaxIcon.image("chevron.down", size: PaxTheme.DateRange.chevronSize)
-    dateButton.setAccessibilityLabel("选择重算日期")
+    dateButton.setAccessibilityLabel(self.context.text("reprice.select_dates"))
     let scopeRow = AIUsageLayout.stack(
-      [AIUsageLayout.label("范围", secondary: true), scope, model, NSView()], vertical: false)
+      [
+        AIUsageLayout.label(self.context.text("reprice.scope"), secondary: true), scope, model,
+        NSView(),
+      ], vertical: false)
     let timeRow = AIUsageLayout.stack(
-      [AIUsageLayout.label("时间", secondary: true), window, dateButton, NSView()], vertical: false)
+      [
+        AIUsageLayout.label(self.context.text("reprice.time"), secondary: true), window, dateButton,
+        NSView(),
+      ], vertical: false)
     for row in [scopeRow, timeRow] {
       choices.addArrangedSubview(row)
       // The date button only shows for 自定义日期; a fixed row height keeps the card from jumping.
@@ -58,9 +74,9 @@ final class AIRepriceControl: NSObject {
     }
     scope.setAccessibilityIdentifier("ai-reprice-scope")
     window.setAccessibilityIdentifier("ai-reprice-window")
-    scope.setAccessibilityLabel("重算范围")
-    model.setAccessibilityLabel("指定模型")
-    window.setAccessibilityLabel("重算时间")
+    scope.setAccessibilityLabel(self.context.text("reprice.scope_ax"))
+    model.setAccessibilityLabel(self.context.text("reprice.specific_model"))
+    window.setAccessibilityLabel(self.context.text("reprice.time_ax"))
     for group in [scope, window] { group.onSelect = { [weak self] _ in self?.inputChanged() } }
     model.target = self
     model.action = #selector(inputChanged)
@@ -118,7 +134,7 @@ final class AIRepriceControl: NSObject {
     // 时间下拉已有今日/本周/全部，日期弹层不再放预设。
     let picker = PaxDateRangePicker(
       start: from, end: to, calendar: calendar, now: now(),
-      options: .init(presets: [], maxDate: now()))
+      options: .init(presets: [], maxDate: now()), copy: dateRangeCopy(context))
     let popover = NSPopover()
     popover.behavior = .transient
     popover.applyMotionPreference()
@@ -151,12 +167,13 @@ final class AIRepriceControl: NSObject {
       dateButton.title += " – " + AIUsageFormatting.date(to)
     }
     choices.isHidden = todayOnly
-    let blocked = blockReason() ?? (flow.available ? nil : "演示数据不支持更新历史")
+    let blocked =
+      blockReason() ?? (flow.available ? nil : self.context.text("reprice.demo_unavailable"))
     var reason = blocked
     if reason == nil, request == nil {
       reason =
         scope.selectedIndex == 1 && model.titleOfSelectedItem == nil
-        ? "暂无可选模型" : "结束日期不能早于开始日期"
+        ? self.context.text("reprice.no_models") : self.context.text("reprice.invalid_dates")
     }
     if blocked != nil, case .preview = flow.state {
       flow.reset()  // the preview no longer matches what would be saved
@@ -167,16 +184,16 @@ final class AIRepriceControl: NSObject {
     let working = flow.state == .working
     switch flow.state {
     case .idle: status.stringValue = reason ?? ""
-    case .working: status.stringValue = "正在处理…"
+    case .working: status.stringValue = self.context.text("reprice.working")
     case .preview(let result):
-      status.stringValue = AIReprice.previewText(result)
+      status.stringValue = AIReprice.previewText(result, context: context)
       if result.requests > 0 {
-        note.stringValue = "确认后将改写已入库费用，不可撤销；如需恢复，请用原倍率再次更新。"
+        note.stringValue = self.context.text("reprice.confirmation_note")
       }
     case .done(let result):
-      status.stringValue = AIReprice.doneText(result)
-    case .failed(let message):
-      status.stringValue = message
+      status.stringValue = AIReprice.doneText(result, context: context)
+    case .failed(let error):
+      status.stringValue = AIReprice.message(error, context: context)
       status.textColor = PaxTheme.Color.error
     }
     // Empty captions would still reserve a line plus stack spacing, so collapse them.
@@ -200,18 +217,27 @@ final class AIRepriceControl: NSObject {
     case .preview(let result):
       items.append(
         actions.button(
-          "确认更新", primary: true, enabled: result.requests > 0 && !working, id: "ai-reprice-confirm"
+          self.context.text("reprice.confirm"), primary: true,
+          enabled: result.requests > 0 && !working, id: "ai-reprice-confirm"
         ) { [weak self] in
           guard let self else { return }
           Task { await self.flow.confirm() }
         })
-      items.append(actions.button("取消", id: "ai-reprice-cancel") { [weak self] in self?.cancel() })
+      items.append(
+        actions.button(self.context.text("reprice.cancel"), id: "ai-reprice-cancel") {
+          [weak self] in self?.cancel()
+        })
     case .done:
-      items.append(actions.button("完成", id: "ai-reprice-finish") { [weak self] in self?.cancel() })
+      items.append(
+        actions.button(self.context.text("reprice.finish"), id: "ai-reprice-finish") {
+          [weak self] in self?.cancel()
+        })
     default:
-      let title = todayOnly ? "同步更新今日数据" : "预览"
+      let title =
+        todayOnly
+        ? self.context.text("reprice.update_today") : self.context.text("reprice.preview_action")
       let go = actions.button(
-        working ? "处理中…" : title, primary: todayOnly,
+        working ? self.context.text("reprice.working_action") : title, primary: todayOnly,
         enabled: reason == nil && !working, id: "ai-reprice-preview"
       ) { [weak self] in
         guard let self, let request = self.request else { return }
@@ -222,7 +248,9 @@ final class AIRepriceControl: NSObject {
       items.append(go)
       if todayOnly {
         items.append(
-          actions.button("暂不更新", id: "ai-reprice-dismiss") { [weak self] in self?.onDismiss?() })
+          actions.button(self.context.text("reprice.later"), id: "ai-reprice-dismiss") {
+            [weak self] in self?.onDismiss?()
+          })
       }
     }
     items.append(NSView())

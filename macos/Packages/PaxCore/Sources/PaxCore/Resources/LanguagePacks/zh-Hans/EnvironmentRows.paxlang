@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "environment.row.public_ip": "公网 IP",
+    "environment.row.language": "语言",
+    "environment.row.timezone": "时区",
+    "environment.row.dns": "DNS",
+    "environment.row.webrtc": "WebRTC",
+    "environment.row.ipv6": "IPv6",
+    "environment.row.location": "定位"
+  }
+}

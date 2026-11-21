@@ -37,11 +37,14 @@ extension WorkbenchDashboardViewController {
   }
   public func focusSearch() {
     tooltip.close()
-    let sheet = WorkbenchSheet(title: "搜索流量分析", explanation: "搜索今日的目标、线路或规则。")
+    let sheet = WorkbenchSheet(
+      title: self.interfaceCopy.text("interface_detail.0647744dca"),
+      explanation: self.interfaceCopy.text("interface_detail.134f8227ab"))
     let input = NSSearchField()
     input.stringValue = analysisStore.search
     sheet.addView(input)
-    sheet.addAction("应用筛选") { [weak self, weak sheet] in
+    sheet.addAction(self.interfaceCopy.text("interface_detail.dd0a97ab36")) {
+      [weak self, weak sheet] in
       self?.changeAnalysis(.search(input.stringValue))
       sheet?.dismissSheet()
     }
@@ -77,14 +80,16 @@ extension RoutingTrafficList {
       PaxTheme.Dashboard.maximumRows,
       store.telemetry == nil ? store.visibleRows.count : store.livePage.items.count)
     let message =
-      store.liveLoading && count == 0 ? "正在读取流量" : emptyMessage(unknownSourceBelow: false)
+      store.liveLoading && count == 0
+      ? context.text("traffic_details.b8735f7ddc") : emptyMessage(unknownSourceBelow: false)
     card.show(activeTable)
     let changed = render(
       emptyMessage: "", limit: PaxTheme.Dashboard.maximumRows,
       minimumRows: PaxTheme.Dashboard.minimumRows)
     card.apply(
       dimensionIndex: store.dimension.rawValue, filterIndex: min(2, store.direction.rawValue),
-      rowCount: count, emptyMessage: count == 0 ? message : nil, controlsEnabled: enabled)
+      accessibilityTitle: context.text("dashboard.analysis_rows", ["count": String(count)]),
+      emptyMessage: count == 0 ? message : nil, controlsEnabled: enabled)
     if changed { activeTable.preparePageRows() }
   }
 }

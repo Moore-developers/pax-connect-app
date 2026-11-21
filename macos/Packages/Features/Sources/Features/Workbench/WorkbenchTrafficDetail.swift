@@ -19,6 +19,8 @@ struct WorkbenchTrafficRecord: Equatable, Identifiable {
   let routeID: String
   let route: String
   let direction: String
+  var directionCode = ""
+  var actualConnectionKey = ""
   let started: Date
   let transport: String
   let ended: Bool
@@ -31,11 +33,18 @@ struct WorkbenchTrafficRecord: Equatable, Identifiable {
 
   var stateUnknown = false
   var latencyNote = "历史未采集响应计时"
-  var state: String {
-    if stateUnknown { return "采集中断，状态未知" }
-    return failure != nil ? "建立失败" : ended ? "已结束" : "活动中"
+  var state: String { state(context: .chinese) }
+  func state(context: PresentationContext) -> String {
+    if stateUnknown { return context.text("traffic_details.1e3d78c3da") }
+    return failure != nil
+      ? context.text("traffic_details.73ee1fca67")
+      : ended
+        ? context.text("traffic_details.d79b1d0e5c") : context.text("traffic_details.3c01089ea0")
   }
-  var target: String { domain ?? (ip.isEmpty ? "目标未采集" : ip) }
+  var target: String { target(context: .chinese) }
+  func target(context: PresentationContext) -> String {
+    domain ?? (ip.isEmpty ? context.text("traffic_details.947d020039") : ip)
+  }
   var sourceNote = ""
 }
 
@@ -55,6 +64,7 @@ struct WorkbenchTrafficDetail: Identifiable {
     var route: String = ""
     var rawEvidence: [String] = []
   }
+  var context: PresentationContext = .chinese
   let id: String
   let name: String
   let identity: String
@@ -82,9 +92,10 @@ struct WorkbenchTrafficDetail: Identifiable {
     return connections.reduce(0) { $0 + $1.download }
   }
   var successful: [WorkbenchTrafficRecord] {
-    (aggregate.map { $0.timings.map(WorkbenchTrafficRecord.init) } ?? windowConnections).filter {
-      ($0.failure == nil || aggregate != nil) && $0.establishmentMS != nil
-    }
+    (aggregate.map { $0.timings.map { WorkbenchTrafficRecord($0, context: context) } }
+      ?? windowConnections).filter {
+        ($0.failure == nil || aggregate != nil) && $0.establishmentMS != nil
+      }
   }
   var windowConnections: [WorkbenchTrafficRecord] {
     connections.filter { $0.started > lowerBound && $0.started <= capturedAt }
@@ -108,7 +119,8 @@ struct WorkbenchTrafficDetail: Identifiable {
     }
     guard !successful.isEmpty else { return [] }
     var values: [(Date, PaxTrendSample)] =
-      (aggregate.map { $0.timings.map(WorkbenchTrafficRecord.init) } ?? windowConnections).map {
+      (aggregate.map { $0.timings.map { WorkbenchTrafficRecord($0, context: context) } }
+      ?? windowConnections).map {
         connection in
         (
           connection.started,
@@ -116,7 +128,8 @@ struct WorkbenchTrafficDetail: Identifiable {
             value: connection.establishmentMS,
             label: TrafficFormatting.dateMinute(connection.started) + " · "
               + (connection.failure != nil && connection.establishmentMS == nil
-                ? "未收到响应" : TrafficFormatting.milliseconds(connection.establishmentMS)))
+                ? context.text("traffic_details.4cab7e2408")
+                : TrafficFormatting.milliseconds(connection.establishmentMS)))
         )
       }
     if let interruption {
@@ -125,7 +138,7 @@ struct WorkbenchTrafficDetail: Identifiable {
           (
             time,
             .init(
-              value: nil, label: "采集中断 · 未采集")
+              value: nil, label: context.text("traffic_details.008b524f87"))
           ))
       }
     }
@@ -133,47 +146,80 @@ struct WorkbenchTrafficDetail: Identifiable {
   }
   var quality: String {
     if aggregate?.summary.basis == "历史规则包未细分" {
-      return "旧汇总未保存各规则包的流量贡献，无法准确拆分；保留原总量，不推算连接明细或近期响应。"
+      return context.text("traffic_details.3ae0843f52")
     }
     if aggregate?.summary.objectID == "unknown" && dimension == .domain {
-      return "历史汇总未区分仅 IP 与目标缺失；没有可证明属于此组的连接明细或近期响应。"
+      return context.text("traffic_details.e5a53ddc6c")
     }
     guard let interruption else { return recordingMessage }
-    return "记录不完整 · " + TrafficFormatting.dateMinute(interruption.start) + " — "
-      + TrafficFormatting.dateMinute(interruption.end) + " 采集中断"
+    return context.text("traffic_details.ebd24ab2b5")
+      + TrafficFormatting.dateMinute(interruption.start) + " — "
+      + TrafficFormatting.dateMinute(interruption.end) + context.text("traffic_details.b6db0d17be")
   }
   var sampleSummary: String {
     if let aggregate {
       if TrafficFormatting.isIPv6LimitedPath(aggregate.summary) {
         return
-          "范围内新建连接 \(aggregate.summary.connections) 条 · 阻断 \(aggregate.summary.failedCount) 次（IPv6 未启用）· 保留明细 \(retainedConnectionCount) 条；明细仅显示仍保留的真实记录。"
+          context.text(
+            "traffic_details.026f760f62",
+            [
+              "arg0": String(describing: aggregate.summary.connections),
+              "arg1": String(describing: aggregate.summary.failedCount),
+              "arg2": String(describing: retainedConnectionCount),
+            ])
       }
       if ["hour", "day"].contains(aggregate.window) {
         return
-          "范围内新建连接 \(aggregate.summary.connections) 条 · 失败尝试 \(aggregate.summary.failedCount) 次；下方仅含仍保留的真实明细；旧汇总无法逐条恢复。近期响应仅取真实保留明细。"
+          context.text(
+            "traffic_details.3e39dbbbd5",
+            [
+              "arg0": String(describing: aggregate.summary.connections),
+              "arg1": String(describing: aggregate.summary.failedCount),
+            ])
       }
       if aggregate.aggregateOnly {
         return
-          "范围内新建连接 \(aggregate.summary.connections) 条 · 有效响应 \(aggregate.summary.validLatencyCount) 个 · 失败 \(aggregate.summary.failedCount) 条 · 最新真实响应观测"
+          context.text(
+            "traffic_details.a90d75e9cb",
+            [
+              "arg0": String(describing: aggregate.summary.connections),
+              "arg1": String(describing: aggregate.summary.validLatencyCount),
+              "arg2": String(describing: aggregate.summary.failedCount),
+            ])
       }
       return
-        "\(aggregate.summary.connections) 条活动 · \(aggregate.summary.validLatencyCount) 个有效延迟样本 · \(aggregate.summary.missingLatencyCount) 条未取得延迟 · \(aggregate.summary.failedCount) 条失败 · \(aggregate.summary.earlierCount) 条窗口前建立"
+        context.text(
+          "traffic_details.5ba03e319b",
+          [
+            "arg0": String(describing: aggregate.summary.connections),
+            "arg1": String(describing: aggregate.summary.validLatencyCount),
+            "arg2": String(describing: aggregate.summary.missingLatencyCount),
+            "arg3": String(describing: aggregate.summary.failedCount),
+            "arg4": String(describing: aggregate.summary.earlierCount),
+          ])
 
     }
     let failures = windowConnections.filter { $0.failure != nil }.count
     let missing = windowConnections.count - successful.count - failures
     let earlier = connections.count - windowConnections.count
     return [
-      "\(successful.count) 个有效延迟样本", missing > 0 ? "\(missing) 条无法计时" : "",
-      failures > 0 ? "\(failures) 条建立失败" : "",
-      earlier > 0 ? "\(earlier) 条此前已建立" : "",
+      context.text("traffic_details.86a18339f0", ["arg0": String(describing: successful.count)]),
+      missing > 0
+        ? context.text("traffic_details.1d0a0bc001", ["arg0": String(describing: missing)]) : "",
+      failures > 0
+        ? context.text("traffic_details.8e8ed60db8", ["arg0": String(describing: failures)]) : "",
+      earlier > 0
+        ? context.text("traffic_details.865ce263c3", ["arg0": String(describing: earlier)]) : "",
     ].filter { !$0.isEmpty }.joined(separator: " · ")
   }
   var basis: [Basis] {
     if let aggregate {
       var result: [Basis] = []
       for saved in aggregate.basis {
-        let raw = "规则：" + saved.rule + "\n来源：" + saved.source
+        let raw =
+          context.text("traffic_details.7851c3fac4")
+          + TrafficRuleFormatting.recordedRuleText(saved.rule)
+          + context.text("traffic_details.563cd1e4d3") + saved.source
         let ipv6 = TrafficRuleFormatting.isIPv4OnlyRule(rule: saved.rule, source: saved.source)
         if ipv6,
           let index = result.firstIndex(where: {
@@ -189,7 +235,9 @@ struct WorkbenchTrafficDetail: Identifiable {
         } else {
           result.append(
             .init(
-              hit: .init(condition: saved.rule, kind: "建立时依据", source: saved.source),
+              hit: .init(
+                condition: saved.rule, kind: context.text("traffic_details.3fcb97b8dc"),
+                source: saved.source),
               count: Int(saved.connections), target: saved.target, route: saved.routeName,
               rawEvidence: [raw]))
         }
@@ -214,7 +262,9 @@ struct WorkbenchTrafficDetail: Identifiable {
     }
     return grouped.map { key, values in
       Related(
-        id: key, name: dimension == .application ? key : values.first?.application ?? "未识别进程",
+        id: key,
+        name: dimension == .application
+          ? key : values.first?.application ?? context.text("traffic_details.c03d35ce7a"),
         connectionIDs: Set(values.map(\.id)), download: values.reduce(0) { $0 + $1.download })
     }.sorted { $0.download == $1.download ? $0.id < $1.id : $0.download > $1.download }
   }

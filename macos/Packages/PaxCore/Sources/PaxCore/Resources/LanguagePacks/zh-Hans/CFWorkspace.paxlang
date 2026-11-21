@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "cf.workspace.host": "关联域名：{host}",
+    "cf.workspace.select_ip": "选择 {ip}",
+    "cf.workspace.test": "测试 IP",
+    "cf.workspace.column.ip": "IP 地址",
+    "cf.workspace.column.latency": "入口延迟",
+    "cf.workspace.column.download": "CF 下载速度",
+    "cf.workspace.column.location": "IP 地区",
+    "cf.workspace.column.actions": "操作",
+    "cf.workspace.row.configured": "当前配置",
+    "cf.workspace.row.actions": "此 IP 的测试操作",
+    "cf.workspace.row.latency": "测试此 IP 延迟",
+    "cf.workspace.row.download": "测试此 IP 下载",
+    "cf.workspace.row.both": "延迟和下载都测",
+    "cf.workspace.row.location": "查询此 IP 地区",
+    "cf.workspace.empty.network_changed": "网络已变化，请重新扫描",
+    "cf.workspace.empty.no_match": "没有匹配的 IP 或网段",
+    "cf.workspace.empty.scanning": "正在扫描，等待可用入口…",
+    "cf.workspace.empty.scan_incomplete": "扫描未完成，请重新扫描",
+    "cf.workspace.empty.scan_complete": "本次未发现可用入口",
+    "cf.workspace.empty.initial": "暂无 IP。点击扫描网段查找可用入口。"
+  }
+}

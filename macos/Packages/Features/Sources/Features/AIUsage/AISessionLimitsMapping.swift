@@ -1,5 +1,6 @@
 import Foundation
 import PaxClient
+import PaxCore
 
 /// Projection only: business amounts, thresholds, classifications and markers come from daemon.
 enum AISessionLimitsMapping {
@@ -7,7 +8,9 @@ enum AISessionLimitsMapping {
     .init(official: value.official, channel: value.channel, channelUnknown: value.channelUnknown)
   }
 
-  static func scope(_ value: AISessionLimits, selected: Bool) -> AILimitScope {
+  static func scope(
+    _ value: AISessionLimits, selected: Bool, context: PresentationContext = .chinese
+  ) -> AILimitScope {
     let s = value.summary
     // Selected primary rows include a main total followed by its model breakdown. Count
     // that total once, then the disjoint agent rows; all-session primary rows are disjoint.
@@ -37,10 +40,11 @@ enum AISessionLimitsMapping {
         }, unpriced: unpriced),
       lists: [
         .init(
-          kind: selected ? .main : .sessions, rows: value.primary.map(row),
+          kind: selected ? .main : .sessions, rows: value.primary.map { row($0, context: context) },
           emptyMessage: selected ? "该会话没有主会话请求" : "所选日期没有已记录用量"),
         .init(
-          kind: selected ? .subagents : .models, rows: value.secondary.map(row),
+          kind: selected ? .subagents : .models,
+          rows: value.secondary.map { row($0, context: context) },
           emptyMessage: selected ? "该会话没有子代理" : "所选日期没有已记录用量"),
       ], trend: value.trend.map(trend))
   }
@@ -50,16 +54,33 @@ enum AISessionLimitsMapping {
       requests: value.requests, money: money(value.money), pricedRequests: value.pricedRequests)
   }
 
-  private static func row(_ value: AISessionLimitRow) -> AILimitListRow {
+  static func title(_ value: AISessionLimitRow, context: PresentationContext) -> String {
+    if value.titleSource == "pax.unnamed" {
+      return context.text("session_title.unnamed_id", ["id": value.rawTitle])
+    }
+    if ["claude.last-prompt", "claude.user-message"].contains(value.titleSource) {
+      return context.text("session_title.recent_with_title", ["title": value.rawTitle])
+    }
+    return value.rawTitle.isEmpty ? value.title : value.rawTitle
+  }
+  private static func row(_ value: AISessionLimitRow, context: PresentationContext)
+    -> AILimitListRow
+  {
     var row = AILimitListRow(
-      id: value.id, cli: value.cli, title: value.id == "main" ? "主会话" : value.title,
+      id: value.id, cli: value.cli,
+      title: value.id == "main"
+        ? context.text("session.kind.main") : title(value, context: context),
       model: value.model, effort: value.effort)
     row.emphasized = value.emphasized
     row.sessionID =
       value.sessionID.isEmpty ? nil : AISessionKey(cli: value.cli, session: value.sessionID).id
-    row.note =
-      value.note.isEmpty && value.modelLines.count > 1
-      ? "另 \(value.modelLines.count - 1) 个模型" : value.note
+    if let count = value.sessionCount {
+      row.note = context.text("session_note.sessions", count: count)
+    } else if value.note.isEmpty && value.modelLines.count > 1 {
+      row.note = context.text("session_note.more_models", count: value.modelLines.count - 1)
+    } else {
+      row.note = value.note
+    }
     row.bands = value.bands.map(band)
     row.percents = AISessionLimitsMath.percents(row.bands.map(\.money.official))
     row.lines = value.lines.map(AIModelLimit.init)

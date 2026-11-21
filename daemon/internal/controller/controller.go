@@ -135,7 +135,7 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 		capabilities = append(capabilities, "settings.operations.v1")
 	}
 	if c.tests != nil {
-		capabilities = append(capabilities, "network.environment_diagnostics.v1")
+		capabilities = append(capabilities, "network.environment_diagnostics.v1", "network.browser_presentation.v1")
 	}
 	if c.userMode && c.initialInstallKnown {
 		capabilities = append(capabilities, "onboarding.v1")

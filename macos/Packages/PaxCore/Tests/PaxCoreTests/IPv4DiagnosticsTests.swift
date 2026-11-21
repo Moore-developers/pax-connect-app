@@ -5,7 +5,7 @@ import Testing
 
 @MainActor @Suite("IPv4运行诊断")
 struct IPv4DiagnosticsTests {
-  @Test("IPv6关闭、不适用和未知不能混用，复制报告与主表同源")
+  @Test("IPv6关闭、不适用和未知分别展示")
   func states() {
     let cases = [
       ("disabled", "关闭（系统已关闭）"),
@@ -17,8 +17,6 @@ struct IPv4DiagnosticsTests {
       let finding = TrafficPathFinding(kind: "ip_family", subject: "ipv6", state: state)
       #expect(TrafficPathPresentation.title(finding) == "公网 IPv6")
       #expect(TrafficPathPresentation.detail(finding) == expected)
-      let report = TrafficPathDiagnostics(at: Date(), findings: [finding])
-      #expect(TrafficPathPresentation.text(report).contains("公网 IPv6：" + expected))
     }
     #expect(
       TrafficPathPresentation.detail(

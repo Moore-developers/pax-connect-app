@@ -5,12 +5,15 @@ import PaxUI
 
 @MainActor
 final class RouteImportController: RouteModalController, NSTextViewDelegate {
+  override var localizedTitleKey: String? { "routes.import" }
+  override var localizedSubtitleKey: String? { "modal.route.import_note" }
+
   private let session: RouteImportSession
   private let input = NSTextView()
   private let rows = NSStackView()
   private let results = NSScrollView()
   private var resultsHeight: NSLayoutConstraint?
-  private lazy var pasteButton = button("粘贴", #selector(pasteLink))
+  private lazy var pasteButton = button(interfaceCopy.text("app.paste"), #selector(pasteLink))
   private let loading = PaxLoadingStateView()
   init(store: RouteWorkbenchStore) {
     session = store.makeImportSession()
@@ -23,7 +26,7 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
     super.loadView()
     input.isRichText = false
     input.font = PaxTheme.Typography.label()
-    input.setAccessibilityLabel("待导入的链接、订阅地址或配置正文")
+    input.setAccessibilityLabel(self.interfaceCopy.text("action.routes.import_input_ax"))
     input.setAccessibilityIdentifier("import-input")
     input.isAutomaticQuoteSubstitutionEnabled = false
     input.isAutomaticDashSubstitutionEnabled = false
@@ -74,7 +77,7 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
       case .failed: state = .failure
       case .idle, .cancelled: state = .idle
       }
-      loading.apply(state, message: session.message)
+      loading.apply(state, message: session.message(context: interfaceCopy.context))
       if session.finished && session.phase == .completed {
         Task { @MainActor [weak self] in
           guard let self, self.session.finished, self.session.phase == .completed else { return }
@@ -84,9 +87,12 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
       pane.status.stringValue = ""
       pane.status.isHidden = true
       pasteButton.isEnabled = !session.committing
-      let close = button(session.busy ? "取消" : "关闭", #selector(close))
+      let close = button(
+        session.busy
+          ? self.interfaceCopy.text("common.cancel")
+          : self.interfaceCopy.text("profile_editor.close"), #selector(close))
       close.isEnabled = !session.committing
-      let retry = button("重试", #selector(retryImport))
+      let retry = button(self.interfaceCopy.text("ai_usage.retry"), #selector(retryImport))
       retry.isEnabled = !session.busy && session.phase == .failed
       pane.setActions(session.phase == .failed ? [close, retry] : [close])
       for child in rows.arrangedSubviews {
@@ -96,10 +102,13 @@ final class RouteImportController: RouteModalController, NSTextViewDelegate {
       for item in session.preview?.items ?? [] {
         guard !item.errorCode.isEmpty else { continue }
         let details: [String?] = [
-          item.line > 0 ? "第 \(item.line) 行" : nil,
+          item.line > 0
+            ? self.interfaceCopy.text(
+              "interface_detail.50cf3a22f9", ["arg0": String(describing: item.line)]) : nil,
           item.displayName.isEmpty ? nil : item.displayName,
           item.protocolName.isEmpty ? nil : item.protocolName.uppercased(),
-          ProductErrorPresentation.message(ProductError(code: item.errorCode)),
+          ProductErrorPresentation.message(
+            ProductError(code: item.errorCode), context: self.interfaceCopy.context),
         ]
         let title = details.compactMap { $0 }.joined(separator: " · ")
         let result = NSTextField(wrappingLabelWithString: title)

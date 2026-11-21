@@ -7,6 +7,8 @@ import PaxUI
 /// invokes route selection, import, subscription refresh, or measurement intents.
 @MainActor
 final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
+  let context: PresentationContext
+
   private let browser: RouteWorkbenchStore?
   private let modes: PaxTabs
   private let groups = PaxTabBar()
@@ -36,22 +38,31 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
   init(
     browser: RouteWorkbenchStore?, current: RoutingWorkbenchStore.Destination,
     requiresRoute: Bool = false,
-    onChange: @escaping () -> Void, onResize: @escaping () -> Void
+    onChange: @escaping () -> Void, onResize: @escaping () -> Void,
+    context: PresentationContext = .chinese
   ) {
+    self.context = context
+
     self.browser = browser
     self.onChange = onChange
     self.onResize = onResize
-    modes = PaxTabs(["指定线路", "直连", "阻断"])
+    modes = PaxTabs([
+      context.text("network_controls.bd170d0c23"), context.text("network_controls.b06325c566"),
+      context.text("network_controls.6d363f5a1d"),
+    ])
     table = PaxDataTable(
       columns: [
         .init(
-          "线路", width: 0, growth: PaxTheme.Routing.destinationColumns[0], symbol: "network",
+          context.text("network_controls.223b24b821"), width: 0,
+          growth: PaxTheme.Routing.destinationColumns[0], symbol: "network",
           sortable: false),
         .init(
-          "延迟", width: 0, growth: PaxTheme.Routing.destinationColumns[1], symbol: "timer",
+          context.text("network_controls.18045b8c40"), width: 0,
+          growth: PaxTheme.Routing.destinationColumns[1], symbol: "timer",
           sortable: false),
         .init(
-          "下载速度", width: 0, growth: PaxTheme.Routing.destinationColumns[2], symbol: "arrow.down",
+          context.text("network_controls.56f0864c08"), width: 0,
+          growth: PaxTheme.Routing.destinationColumns[2], symbol: "arrow.down",
           sortable: false),
       ],
       metrics: .init(
@@ -85,7 +96,7 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
       self?.browser?.perform(.group(id))
       self?.render()
     }
-    search.placeholderString = "搜索线路"
+    search.placeholderString = context.text("network_controls.8653cc47e1")
     search.stringValue = browser?.search ?? ""
     search.delegate = self
     search.setAccessibilityIdentifier("routing-destination-search")
@@ -130,7 +141,7 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
       for view in [groups, search, table] { view.isHidden = true }
       status.stringValue =
         modes.selectedIndex == 0
-        ? "线路目录尚未就绪；不展示演示线路或启动测速。" : "按所选去向处理新连接。"
+        ? context.text("network_controls.38fd56e3a3") : context.text("network_controls.3ec030ac79")
       onResize()
       return
     }
@@ -144,7 +155,8 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
       groups.apply(
         [
           .init(
-            id: "default", title: "默认", count: browser.defaultMembers.intersection(eligible).count)
+            id: "default", title: context.text("network_controls.844b8cc8df"),
+            count: browser.defaultMembers.intersection(eligible).count)
         ]
           + browser.displayGroups.map {
             .init(id: $0.id, title: $0.name, count: $0.members.intersection(eligible).count)
@@ -161,7 +173,7 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
       for row in rows { _ = browser.info(row.id) }
       table.apply(
         rows: rows.map { .init(id: $0.id, values: []) },
-        emptyMessage: "没有匹配的线路", selectedID: selectedRoute)
+        emptyMessage: context.text("network_controls.a058369d32"), selectedID: selectedRoute)
       updateStatus()
     } onChange: { [weak self] in
       Task { @MainActor [weak self] in
@@ -176,30 +188,36 @@ final class RoutingDestinationPicker: NSStackView, NSSearchFieldDelegate {
     switch modes.selectedIndex {
     case 0:
       if let id = selectedRoute, let browser, selection != nil {
-        status.stringValue = "已选择：" + (browser.nodes.first { $0.id == id }?.name ?? id)
+        status.stringValue =
+          context.text("network_controls.d4102e5d06")
+          + (browser.nodes.first { $0.id == id }?.name ?? id)
       } else if selectedRoute != nil {
-        status.stringValue = "原指定线路不可用或延迟异常，请重新选择；未保存前原规则不变。"
+        status.stringValue = context.text("network_controls.1f6e6cfe35")
       } else {
-        status.stringValue = "请选择线路；已隐藏延迟异常线路，未测量不代表异常。"
+        status.stringValue = context.text("network_controls.ea8550a7c0")
       }
-    case 1: status.stringValue = "匹配后直接连接目标，不经过代理线路。"
-    default: status.stringValue = "匹配后阻断新连接。"
+    case 1: status.stringValue = context.text("network_controls.d55eb98f86")
+    default: status.stringValue = context.text("network_controls.eebf793db3")
     }
   }
 
   private func cell(_ id: String, column: Int) -> NSView? {
     guard let browser, let node = browser.nodes.first(where: { $0.id == id }) else { return nil }
-    let info = browser.info(id)
+    let info = browser.info(id, context: context)
     let value =
       column == 0
       ? node.name
-      : column == 1 ? info.latency.display(.latency) : info.speed.display(.speed)
+      : column == 1
+        ? info.latency.display(.latency, context: context)
+        : info.speed.display(.speed, context: context)
     let label = PaxText.label(value, font: PaxTheme.Typography.caption())
     label.lineBreakMode = .byTruncatingTail
     label.toolTip =
       column == 0
       ? node.name + " · " + node.protocolName
-      : value + "\n" + ((column == 1 ? info.latency.time : info.speed.time) ?? "未测量")
+      : value + "\n"
+        + ((column == 1 ? info.latency.time : info.speed.time)
+          ?? context.text("network_controls.d5c29499c6"))
     if column == 1 { label.textColor = info.latency.latencyColor }
     return label
   }

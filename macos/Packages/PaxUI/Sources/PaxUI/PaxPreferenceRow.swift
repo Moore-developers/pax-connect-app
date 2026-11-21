@@ -5,20 +5,21 @@ public final class PaxPreferenceRow: NSView {
   public enum Style { case standard, compact }
 
   private let detailField: NSTextField
+  private let titleField: NSTextField
   private let currentField = PaxText.label("", font: PaxTheme.Typography.caption())
   public init(title: String, detail: String, control: NSView, style: Style = .standard) {
     detailField = PaxText.label(
       detail, font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-    super.init(frame: .zero)
-    let label = PaxText.label(
+    titleField = PaxText.label(
       title, font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont))
+    super.init(frame: .zero)
     currentField.textColor = PaxTheme.Color.accent
     currentField.isHidden = true
-    let copy = NSStackView(views: [label, detailField, currentField])
+    let copy = NSStackView(views: [titleField, detailField, currentField])
     copy.orientation = .vertical
     copy.alignment = .leading
     copy.spacing = PaxTheme.Spacing.xs
-    for field in [label, detailField, currentField] {
+    for field in [titleField, detailField, currentField] {
       field.widthAnchor.constraint(equalTo: copy.widthAnchor).isActive = true
       field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
@@ -53,6 +54,10 @@ public final class PaxPreferenceRow: NSView {
     }
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func apply(title: String, detail: String) {
+    titleField.stringValue = title
+    detailField.stringValue = detail
+  }
   public func apply(detail: String, currentValue: String?) {
     detailField.stringValue = detail
     currentField.stringValue = currentValue.map { "当前：" + $0 } ?? ""

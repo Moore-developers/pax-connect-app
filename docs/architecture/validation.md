@@ -17,6 +17,17 @@
 
 PaxUI、Features 与 App 的自动测试组及 App 专用测试 manifest 已移除；Swift 自动测试保留 PaxClient / PaxCore，PaxProto 由依赖方编译与契约检查覆盖；Go 与静态检查保留。共享改动的真实验收覆盖受影响调用方；历史文档中的旧测试名、路径和命令只作当时证据，不是当前运行入口。
 
+默认全量的专项排除项由 [Makefile](../../Makefile) 定义。下列定向入口仍可运行这些用例。
+
+- 日志突发、空闲 TLS 重读和路由命中实窗夹具预检使用 `make test-go PKG=./internal/controller RUN='TestHistoryBurstRemainsQueryableAndBounded|TestIdleControllerDoesNotReparseCatalogTLSEverySecond|TestRoutingMatchFixtureRecordedScenarios'`。
+- 重算错误提示、定位行顺序、图表时间和老用户引导使用 `make test-swift PKG=macos/Packages/PaxCore FILTER='AIRepriceTests/messages|LocationExposureTests/assessed|TrafficChartFormattingTests/connectionTime|OnboardingStoreTests/returningUsersAreNotForcedThroughWelcome'`。
+
+工具专项由 `make check` 按改动选中。也可直接运行对应命令。
+
+- 旧 root 数据迁移使用 `python3 -B scripts/test-migrate-root-data.py`。触发范围包括迁移脚本与迁移名单内的产品存储边界。
+- 构建前退出使用 `python3 -B scripts/test-quiesce-build-app.py`。触发范围包括退出工具、构建、重启和发布备份入口。
+- 代理验收探针使用 `python3 -B tests/proxy-session/test_probe.py`。触发范围包括探针、用例和验收脚本。
+
 Web 原型（`ui/prototype`）保留作信息结构参考；原生视觉规范见 ui/design-system.md，不移植旧暖色 token。静态布局可用 AppKit 离屏渲染辅助比对；视觉与交互验收使用真实窗口，玻璃材质必须有真实窗口证据。
 
 列表单行摘要合同：`docs/changes/pax-connect-network-control-plane/traffic-list-summary.md`。
@@ -33,7 +44,7 @@ Web 原型（`ui/prototype`）保留作信息结构参考；原生视觉规范�
 
 规则归因回归：`geo_rule_attribution_test.go`验证最终profile字段/匹配标签；`geo_rule_observation_test.go`贯穿隔离真实连接观测。
 
-DNS优先级：config/dns_routing_priority_test.go及singbox/dns_priority_observation_test.go；Geo来源合同geo-source-chain.md。
+DNS 优先级由 `config/dns_routing_priority_test.go` 和 `singbox/dns_priority_observation_test.go` 覆盖。指定线路、App 归属和热更新见[票 1151 验收](../../tests/network-privacy/1151-results.md)。Geo 来源见 geo-source-chain.md。
 
 Google资产rulesets/geosite-google.srs；真实重叠路由/DNS验证google_geo_test.go，旧缓存兼容及三源原子更新routing_geo_test.go；规则页走真实页面验收。
 

@@ -20,7 +20,6 @@ import (
 const (
 	trafficPollInterval     = cadence.HistoryTraffic
 	trafficBatchRecords     = 128
-	trafficCapacityBytes    = 128 << 20
 	trafficCursorName       = "traffic"
 	trafficMetaLastPoll     = "last_poll"
 	trafficMetaDeletion     = "traffic_deletion_generation"
@@ -48,8 +47,6 @@ type trafficStore interface {
 	Meta(ctx context.Context, key string) (string, bool, error)
 	FlowMarks(ctx context.Context) ([]historystore.FlowMark, error)
 	Prune(ctx context.Context, cutoffs historystore.TrafficCutoffs, limits historystore.Limits) (historystore.Pruned, error)
-	EvictOldest(ctx context.Context, capBytes int64, limits historystore.Limits) (bool, error)
-	LiveBytes(ctx context.Context) (int64, error)
 	IncrementalVacuum(ctx context.Context, pages int) error
 	Checkpoint(ctx context.Context) (bool, error)
 	Close() error
@@ -103,7 +100,6 @@ type historyTraffic struct {
 	down       bool
 	executing  bool
 	failure    error // set by fail during the current pass: drain reads it instead of guessing from the delay
-	capBytes   int64
 	lastVacuum time.Time
 }
 
@@ -112,7 +108,7 @@ func newHistoryTraffic(ctx context.Context, store trafficStore, journal trafficJ
 	if consumers == nil {
 		consumers = newJournalConsumers()
 	}
-	t := &historyTraffic{store: store, journal: journal, consumers: consumers, now: time.Now, capBytes: trafficCapacityBytes,
+	t := &historyTraffic{store: store, journal: journal, consumers: consumers, now: time.Now,
 		apps: newApplicationIdentities(), backoff: backoff{max: 60 * time.Second}, done: make(chan struct{}),
 		commands: make(chan trafficCommand, trafficCommandCapacity), wake: make(chan struct{}, 1)}
 	cursor, ok, err := store.Cursor(ctx, trafficCursorName)

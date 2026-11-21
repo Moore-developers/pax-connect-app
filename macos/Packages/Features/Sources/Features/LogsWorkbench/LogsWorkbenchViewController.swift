@@ -5,15 +5,16 @@ import PaxUI
 
 /// 固定工具栏与底栏；两张共享表格独立滚动。
 @MainActor
-final class LogsWorkbenchViewController: NSViewController {
+final class LogsWorkbenchViewController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   let store: LogsWorkbenchStore
   private let inspectorHost = NSView()
   private let objectIcons: WorkbenchObjectIcons
   private let connection: ConnectionStore?
   private let session: WorkbenchDemoStore?
-  private let mode = PaxTabs(["代理", "直连"], style: .mode)
-  private lazy var toolsHost = LogsFilterBar(level: level, range: range)
-  private let level = PaxTabs(["全部级别", "错误", "警告", "信息"])
+  let mode = PaxTabs(["代理", "直连"], style: .mode)
+  lazy var toolsHost = LogsFilterBar(level: level, range: range)
+  let level = PaxTabs(["全部级别", "错误", "警告", "信息"])
   private var renderedDimension: LogsWorkbenchStore.Dimension?
 
   private var inspector: LogEventDetailController?
@@ -21,11 +22,11 @@ final class LogsWorkbenchViewController: NSViewController {
   private var inspectorWidth: NSLayoutConstraint?
   private var detailInvalidation: UInt64 = 0
   private var revokedDirectoryOrigin: NSPoint?
-  private lazy var previousPage = PaxRouteButton(
+  lazy var previousPage = PaxRouteButton(
     "上一页", style: .quiet, target: self, action: #selector(previousRecords))
-  private lazy var nextPage = PaxRouteButton(
+  lazy var nextPage = PaxRouteButton(
     "下一页", style: .quiet, target: self, action: #selector(nextRecords))
-  private let pageLabel = PaxText.label("第1页", font: PaxTheme.Typography.caption(), secondary: true)
+  let pageLabel = PaxText.label("第1页", font: PaxTheme.Typography.caption(), secondary: true)
   @ObservationIgnored private var renderedObjects: [LogsWorkbenchStore.ObjectRow] = []
   @ObservationIgnored private var renderedEvents: [LogPreviewEvent] = []
   private var renderedRecords: [LogRecord] = []
@@ -38,9 +39,9 @@ final class LogsWorkbenchViewController: NSViewController {
   /// 第 1 页加载中到来的推送：加载完成后再拉一次最新。
   var latestPending = false
   var latestPendingGeneration: UInt64?
-  private let tabs = PaxTabs(["应用", "域名", "系统"])
-  private let search = PaxRouteSearchField()
-  private let range = PaxRoutePicker(style: .toolbar)
+  let tabs = PaxTabs(["应用", "域名", "系统"])
+  let search = PaxRouteSearchField()
+  let range = PaxRoutePicker(style: .toolbar)
   var loadTask: Task<Void, Never>?
   var detailTask: Task<Void, Never>?
   var detailGeneration: UInt64 = 0
@@ -49,20 +50,20 @@ final class LogsWorkbenchViewController: NSViewController {
   private var initialLogMessage: String {
     guard store.telemetry != nil, store.initialized, store.liveMessage.isEmpty,
       !store.privacyInvalid, store.selectedObject == "all", store.level == .all
-    else { return store.emptyMessage }
+    else { return store.emptyMessage(context: interfaceCopy.context) }
     return connection?.proxyEnabled == true
       ? "等待访问记录；正常上网后自动显示，Pax 操作也会记录在这里"
       : "当前未采集网络访问；开启代理后开始记录，已保存的访问和操作仍可查看"
   }
   private let sourceLabel = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
   private let countLabel = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
-  private lazy var moreObjectsButton = PaxRouteButton(
+  lazy var moreObjectsButton = PaxRouteButton(
     "更多", style: .quiet, target: self, action: #selector(loadMoreObjects))
-  private lazy var directoryFooter = NSStackView(views: [countLabel, NSView(), moreObjectsButton])
-  private let directoryScroll = NSScrollView()
-  private let directory: PaxDataTable
-  private let events: PaxDataTable
-  private let systemEvents: PaxDataTable
+  lazy var directoryFooter = NSStackView(views: [countLabel, NSView(), moreObjectsButton])
+  let directoryScroll = NSScrollView()
+  let directory: PaxDataTable
+  let events: PaxDataTable
+  let systemEvents: PaxDataTable
   private var activeTable: PaxDataTable { store.dimension == .system ? systemEvents : events }
   init(
     store: LogsWorkbenchStore = LogsWorkbenchStore(), connection: ConnectionStore? = nil,
@@ -132,13 +133,15 @@ final class LogsWorkbenchViewController: NSViewController {
     super.init(nibName: nil, bundle: nil)
     pageRefresh?.bind(.logs) { [weak self] in self?.fetchLatest() }
   }
+
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     view = WorkbenchSurface()
     view.setAccessibilityIdentifier("logs-page")
     let header = PaxPageHeader(
-      title: "运行日志",
+      title: self.interfaceCopy.text("navigation.logs"),
       accessory: ProxyStatusAccessory(mode: mode, connection: connection, presenter: self))
+    configureLanguage(header: header)
     mode.setAccessibilityIdentifier("logs-power")
     mode.onSelect = { [weak self] index in
       guard let self else { return }
@@ -194,118 +197,6 @@ final class LogsWorkbenchViewController: NSViewController {
     wireActions()
     observe()
   }
-  private func buildColumns(in body: NSView) {
-    let left = WorkbenchSurface()
-    left.surfaceColor = PaxTheme.Logs.directoryFill
-    let right = NSView()
-    let divider = NSBox()
-    divider.boxType = .separator
-    for item in [left, divider, right] {
-      item.translatesAutoresizingMaskIntoConstraints = false
-      body.addSubview(item)
-      item.topAnchor.constraint(equalTo: body.topAnchor).isActive = true
-      item.bottomAnchor.constraint(equalTo: body.bottomAnchor).isActive = true
-    }
-    NSLayoutConstraint.activate([
-      left.leadingAnchor.constraint(equalTo: body.leadingAnchor),
-      left.widthAnchor.constraint(equalToConstant: PaxTheme.Logs.directoryWidth),
-      divider.leadingAnchor.constraint(equalTo: left.trailingAnchor),
-      divider.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.cardBorder),
-      right.leadingAnchor.constraint(equalTo: divider.trailingAnchor),
-      right.trailingAnchor.constraint(equalTo: body.trailingAnchor),
-    ])
-    tabs.distributesEqually = true
-    search.placeholderString = store.dimension == .system ? "筛选系统分类" : "筛选当前分类"
-    search.sendsSearchStringImmediately = true
-    search.sendsWholeSearchString = false
-    search.setAccessibilityIdentifier("logs-object-search")
-    search.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    search.setContentHuggingPriority(.defaultLow, for: .horizontal)
-    let directoryDocument = WorkbenchDocument()
-    directoryDocument.translatesAutoresizingMaskIntoConstraints = false
-    directoryScroll.documentView = directoryDocument
-    directoryScroll.hasVerticalScroller = true
-    directoryScroll.autohidesScrollers = true
-    directoryScroll.drawsBackground = false
-    directoryDocument.widthAnchor.constraint(equalTo: directoryScroll.contentView.widthAnchor)
-      .isActive = true
-    directory.translatesAutoresizingMaskIntoConstraints = false
-    directoryDocument.addSubview(directory)
-    NSLayoutConstraint.activate([
-      directory.leadingAnchor.constraint(equalTo: directoryDocument.leadingAnchor),
-      directory.trailingAnchor.constraint(equalTo: directoryDocument.trailingAnchor),
-      directory.topAnchor.constraint(equalTo: directoryDocument.topAnchor),
-      directory.bottomAnchor.constraint(equalTo: directoryDocument.bottomAnchor),
-    ])
-    for item in [tabs, search, directoryScroll, directoryFooter] {
-      item.translatesAutoresizingMaskIntoConstraints = false
-      left.addSubview(item)
-    }
-    let inset = PaxTheme.Spacing.medium
-    NSLayoutConstraint.activate([
-      tabs.leadingAnchor.constraint(equalTo: left.leadingAnchor, constant: inset),
-      tabs.trailingAnchor.constraint(equalTo: left.trailingAnchor, constant: -inset),
-      tabs.topAnchor.constraint(equalTo: left.topAnchor, constant: inset),
-      search.leadingAnchor.constraint(equalTo: tabs.leadingAnchor),
-      search.trailingAnchor.constraint(equalTo: tabs.trailingAnchor),
-      search.topAnchor.constraint(equalTo: tabs.bottomAnchor, constant: PaxTheme.Spacing.tight),
-      search.heightAnchor.constraint(equalToConstant: PaxTheme.Routes.controlHeight),
-      directoryScroll.leadingAnchor.constraint(equalTo: left.leadingAnchor),
-      directoryScroll.trailingAnchor.constraint(equalTo: left.trailingAnchor),
-      directoryScroll.topAnchor.constraint(
-        equalTo: search.bottomAnchor, constant: PaxTheme.Spacing.tight),
-      directoryScroll.bottomAnchor.constraint(equalTo: directoryFooter.topAnchor),
-      directoryFooter.leadingAnchor.constraint(equalTo: tabs.leadingAnchor),
-      directoryFooter.trailingAnchor.constraint(equalTo: tabs.trailingAnchor),
-      directoryFooter.bottomAnchor.constraint(equalTo: left.bottomAnchor),
-      directoryFooter.heightAnchor.constraint(equalToConstant: PaxTheme.Logs.footerHeight),
-    ])
-    level.setAccessibilityLabel("日志级别")
-    level.setAccessibilityIdentifier("logs-level")
-    range.addItems(withTitles: ["30分钟", "6小时", "24小时"])
-    range.selectItem(at: store.rangeIndex)
-    range.target = self
-    range.action = #selector(rangeChanged)
-    toolsHost.setAccessibilityIdentifier("logs-filters")
-    range.setAccessibilityIdentifier("logs-range")
-    let foot = NSStackView(views: [pageLabel, NSView(), previousPage, nextPage])
-    foot.spacing = PaxTheme.Spacing.tight
-    for item in [toolsHost, events, systemEvents, foot] {
-      item.translatesAutoresizingMaskIntoConstraints = false
-      right.addSubview(item)
-    }
-    NSLayoutConstraint.activate([
-      toolsHost.leadingAnchor.constraint(equalTo: right.leadingAnchor, constant: inset),
-      toolsHost.trailingAnchor.constraint(equalTo: right.trailingAnchor, constant: -inset),
-      toolsHost.topAnchor.constraint(equalTo: right.topAnchor),
-      toolsHost.heightAnchor.constraint(
-        equalToConstant: PaxTheme.Logs.toolsHeight),
-      events.leadingAnchor.constraint(equalTo: right.leadingAnchor),
-      events.trailingAnchor.constraint(equalTo: right.trailingAnchor),
-      events.topAnchor.constraint(equalTo: toolsHost.bottomAnchor),
-      events.bottomAnchor.constraint(equalTo: foot.topAnchor),
-      foot.leadingAnchor.constraint(equalTo: toolsHost.leadingAnchor),
-      foot.trailingAnchor.constraint(equalTo: toolsHost.trailingAnchor),
-      foot.bottomAnchor.constraint(equalTo: right.bottomAnchor),
-      foot.heightAnchor.constraint(equalToConstant: PaxTheme.Logs.footerHeight),
-    ])
-    NSLayoutConstraint.activate([
-      systemEvents.leadingAnchor.constraint(equalTo: events.leadingAnchor),
-      systemEvents.trailingAnchor.constraint(equalTo: events.trailingAnchor),
-      systemEvents.topAnchor.constraint(equalTo: events.topAnchor),
-      systemEvents.bottomAnchor.constraint(equalTo: events.bottomAnchor),
-    ])
-    systemEvents.isHidden = true
-    let line = NSBox()
-    line.boxType = .separator
-    line.translatesAutoresizingMaskIntoConstraints = false
-    right.addSubview(line)
-    NSLayoutConstraint.activate([
-      line.leadingAnchor.constraint(equalTo: right.leadingAnchor),
-      line.trailingAnchor.constraint(equalTo: right.trailingAnchor),
-      line.bottomAnchor.constraint(equalTo: foot.topAnchor),
-    ])
-  }
   private func wireActions() {
     tabs.onSelect = { [weak self] index in
       let dimension: LogsWorkbenchStore.Dimension = [.application, .domain, .system][index]
@@ -325,7 +216,8 @@ final class LogsWorkbenchViewController: NSViewController {
         guard let self else { return nil }
         let menu = NSMenu()
         let item = LogDetailMenuItem(
-          title: "查看详情", action: #selector(self.openContextDetail(_:)), keyEquivalent: "")
+          title: self.interfaceCopy.text("interface_detail.a748cc074f"),
+          action: #selector(self.openContextDetail(_:)), keyEquivalent: "")
         item.target = self
         item.recordID = id
         menu.addItem(item)
@@ -337,9 +229,13 @@ final class LogsWorkbenchViewController: NSViewController {
     systemEvents.setTableIdentifier("logs-system-events")
     directory.rowContent = { [weak self] id in
       guard id == "group", let self else { return nil }
-      return PaxText.label(
-        self.store.dimension == .ip ? "目标 IP" : self.store.dimension.title,
-        font: PaxTheme.Typography.caption(), secondary: true)
+      let dimension = self.store.dimension
+      let heading = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
+      return self.interfaceCopy.bind(heading) { label, context in
+        label.stringValue =
+          dimension == .ip
+          ? context.text("log_detail.target_ip") : dimension.title(context: context)
+      }
     }
     directory.menuForRow = { [weak self] id in
       guard let self, self.store.dimension == .domain,
@@ -351,11 +247,13 @@ final class LogsWorkbenchViewController: NSViewController {
     directory.cellProvider = { [weak self] id, column in
       guard let self,
         let content = logObjectCell(
-          id: id, column: column, store: self.store, icons: self.objectIcons)
+          id: id, column: column, store: self.store, icons: self.objectIcons,
+          context: self.interfaceCopy.context)
       else { return nil }
       guard self.store.telemetry != nil, column == 0 else { return content }
       return PaxDataTable.reusableContent(
-        content, reuseKey: logObjectCellKey(id: id, store: self.store))
+        content,
+        reuseKey: logObjectCellKey(id: id, store: self.store, context: self.interfaceCopy.context))
     }
     directory.cellUpdater = { [weak self] existing, id, column in
       guard let self, self.store.telemetry != nil else { return false }
@@ -371,9 +269,12 @@ final class LogsWorkbenchViewController: NSViewController {
         return true
       }
       return PaxDataTable.updateContent(
-        existing, reusing: logObjectCellKey(id: id, store: self.store)
+        existing,
+        reusing: logObjectCellKey(id: id, store: self.store, context: self.interfaceCopy.context)
       ) {
-        logObjectCell(id: id, column: column, store: self.store, icons: self.objectIcons)
+        logObjectCell(
+          id: id, column: column, store: self.store, icons: self.objectIcons,
+          context: self.interfaceCopy.context)
           ?? NSView()
       }
     }
@@ -419,7 +320,7 @@ final class LogsWorkbenchViewController: NSViewController {
       Task { @MainActor [weak self] in self?.observe() }
     }
   }
-  private func render() {
+  func render() {
     level.selectedIndex = store.level.rawValue
     range.selectItem(at: store.rangeIndex)
     if let telemetry = store.telemetry {
@@ -430,29 +331,32 @@ final class LogsWorkbenchViewController: NSViewController {
           revokedDirectoryOrigin = directoryScroll.contentView.bounds.origin
         }
         store.revokeSnapshot()
-        events.revokeRows(emptyMessage: "正在重新读取日志")
-        systemEvents.revokeRows(emptyMessage: "正在重新读取日志")
+        events.revokeRows(emptyMessage: self.interfaceCopy.text("interface_detail.850e6a9b37"))
+        systemEvents.revokeRows(
+          emptyMessage: self.interfaceCopy.text("interface_detail.850e6a9b37"))
         renderedRecords = []
       }
       if !telemetry.isShown(.logs, focus: pageRefresh == nil) { return }
     }
     mode.selectedIndex = connection?.proxyEnabled == true || session?.isRunning == true ? 0 : 1
     mode.isEnabled = connection?.canToggleProxy ?? (session != nil)
-    directory.setColumnTitle("记录", at: 1)
+    directory.setColumnTitle(interfaceCopy.text("logs.records"), at: 1)
     let dimensionChanged = renderedDimension != store.dimension
     if dimensionChanged {
       events.setColumnTitle(
-        store.dimension == .domain ? "域名 → 目标" : "应用 → 目标", at: 1, symbol: "arrow.up.right")
+        interfaceCopy.text(store.dimension == .domain ? "logs.domain_target" : "logs.app_target"),
+        at: 1, symbol: "arrow.up.right")
       renderedDimension = store.dimension
     }
     previousPage.isEnabled = store.canPreviousPage
     nextPage.isEnabled = store.canNextPage
-    pageLabel.stringValue = store.pageTitle
+    pageLabel.stringValue = store.pageTitle(context: interfaceCopy.context)
 
     tabs.selectedIndex = store.dimension == .application ? 0 : store.dimension == .domain ? 1 : 2
     systemEvents.isHidden = store.dimension != .system
     events.isHidden = store.dimension == .system
-    search.placeholderString = store.dimension == .system ? "筛选系统分类" : "筛选当前分类"
+    search.placeholderString = interfaceCopy.text(
+      store.dimension == .system ? "logs.search_system" : "logs.search")
     search.setAccessibilityLabel(search.placeholderString)
     if search.currentEditor() == nil { search.stringValue = store.query }
     moreObjectsButton.isHidden = store.telemetry == nil || store.objectCursor.isEmpty
@@ -472,7 +376,15 @@ final class LogsWorkbenchViewController: NSViewController {
       }
       directory.apply(
         rows: store.objects.enumerated().flatMap { index, object -> [PaxDataTable.Row] in
-          let row = PaxDataTable.Row(id: object.id, values: [object.title, String(object.count)])
+          let row = PaxDataTable.Row(
+            id: object.id,
+            values: [
+              object.id == "all"
+                ? store.allTitle(context: interfaceCopy.context)
+                : object.id == "unknown"
+                  ? store.dimension.unknown(context: interfaceCopy.context) : object.title,
+              String(object.count),
+            ])
           return index == 0 ? [row, .init(id: "group", values: ["", ""])] : [row]
         },
         selectedID: store.selectedObject, reloading: store.telemetry == nil ? nil : changed,
@@ -490,19 +402,29 @@ final class LogsWorkbenchViewController: NSViewController {
     let visible = store.visibleEvents
     sourceLabel.stringValue =
       store.telemetry != nil
-      ? "本机保存 · " + store.message
+      ? self.interfaceCopy.text("interface_detail.304ee84bba")
+        + store.message(context: interfaceCopy.context)
 
       : store.backendAvailable
-        ? "v2rayN / sing-box · 演示数据（\(store.events.count) 条）" : "日志数据尚未接入后台"
+        ? self.interfaceCopy.text(
+          "interface_detail.6089733c57", ["arg0": String(describing: store.events.count)])
+        : self.interfaceCopy.text("interface_detail.61c63305fa")
     countLabel.stringValue =
       store.directoryIsSyncing
-      ? "正在同步统计"
+      ? self.interfaceCopy.text("interface_detail.a56af3c003")
       : store.telemetry != nil && (store.privacyInvalid || !store.initialized)
-        ? "正在读取目录"
+        ? self.interfaceCopy.text("interface_detail.dcf97098be")
         : store.query.isEmpty
-          ? (store.telemetry == nil ? "" : "已加载 ")
-            + "\(max(0, store.objects.count - 1)) 个\(store.dimension.title)"
-          : "\(max(0, store.objects.count - 1)) 个匹配对象"
+          ? (store.telemetry == nil ? "" : self.interfaceCopy.text("interface_detail.4f191e636a"))
+            + self.interfaceCopy.text(
+              "interface_detail.25a3ca9484",
+              [
+                "arg0": String(describing: max(0, store.objects.count - 1)),
+                "arg1": String(describing: store.dimension.title(context: interfaceCopy.context)),
+              ])
+          : self.interfaceCopy.text(
+            "interface_detail.62ebc1540a",
+            ["arg0": String(describing: max(0, store.objects.count - 1))])
     if store.telemetry != nil {
       let records = store.visibleRecords
       let emptyMessage = initialLogMessage
@@ -573,7 +495,7 @@ final class LogsWorkbenchViewController: NSViewController {
         let controller = LogEventDetailController(
           detail: detail, telemetry: telemetry,
           perspective: perspective,
-          onTraffic: self.onTraffic, onRoute: self.onRoute)
+          onTraffic: self.onTraffic, onRoute: self.onRoute, context: self.interfaceCopy.context)
         if self.store.usesViews && self.view.bounds.width >= PaxTheme.Logs.inspectorThreshold {
           self.closeInspector(cancelRequest: false)
           self.inspector = controller
@@ -592,8 +514,9 @@ final class LogsWorkbenchViewController: NSViewController {
           self.presentWorkbenchModal(controller)
         }
       } catch {
-        if !Task.isCancelled, self?.detailGeneration == request {
-          self?.sourceLabel.stringValue = ProductErrorPresentation.display(error)
+        if !Task.isCancelled, let self, self.detailGeneration == request {
+          self.sourceLabel.stringValue = ProductErrorPresentation.display(
+            error, context: self.interfaceCopy.context)
         }
       }
     }
@@ -651,7 +574,7 @@ final class LogsWorkbenchViewController: NSViewController {
     closeInspector()
     store.changePage(1)
   }
-  @objc private func rangeChanged() {
+  @objc func rangeChanged() {
     closeInspector()
     store.rangeIndex = range.indexOfSelectedItem
     store.resetRange()

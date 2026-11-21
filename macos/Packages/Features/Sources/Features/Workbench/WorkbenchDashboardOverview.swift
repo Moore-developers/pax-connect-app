@@ -78,7 +78,10 @@ extension WorkbenchDashboardViewController {
     let wasVisible = document.showsAction
     document.showsAction = action != nil
     if wasVisible != document.showsAction { document.needsLayout = true }
-    if let action { actionCard.apply(DashboardInsightProjection.actionModel(action)) }
+    if let action {
+      actionCard.apply(
+        DashboardInsightProjection.actionModel(action, context: interfaceCopy.context))
+    }
   }
 
   /// 当前线路：代理运行中取实际线路，否则取选定线路。
@@ -93,7 +96,11 @@ extension WorkbenchDashboardViewController {
     onPresentRegion?("route")
     let route = overviewRoute(routes: routes, connection: connection, running: running)
     let badge =
-      connection.connection != .connected ? "最后线路" : running ? "当前线路" : "选定线路"
+      connection.connection != .connected
+      ? interfaceCopy.text("dashboard.last_route")
+      : running
+        ? interfaceCopy.text("dashboard.current_route")
+        : interfaceCopy.text("dashboard.selected_route")
     // 切换线路后旧线路的趋势立即撤下：历史只在 id 与配置版本都匹配时使用。
     let history =
       route.map {
@@ -103,11 +110,12 @@ extension WorkbenchDashboardViewController {
     var routeModel = DashboardRouteProjection.card(
       route: route, badge: badge,
       exitIP: route.flatMap { savedExit($0)?.ip },
-      exitRegion: route.flatMap { savedExit($0)?.region }, running: running, history: history)
+      exitRegion: route.flatMap { savedExit($0)?.region }, running: running, history: history,
+      context: interfaceCopy.context)
     if live.trendFailed, route != nil, routeModel.series.points.isEmpty {
-      routeModel.trendEmpty = "延迟趋势读取失败"
+      routeModel.trendEmpty = interfaceCopy.text("dashboard.latency_trend_failed")
     } else if live.trendFailed {
-      routeModel.note += " · 趋势更新失败"
+      routeModel.note += interfaceCopy.text("dashboard.trend_update_failed")
     }
     routeCard.apply(routeModel)
   }
@@ -120,12 +128,17 @@ extension WorkbenchDashboardViewController {
     if problems {
       onPresentRegion?("problems")
       let attention = DashboardInsightProjection.attention(
-        feedback: connection.feedback, problems: fresh ? live.problems : [])
+        feedback: connection.feedback(context: interfaceCopy.context),
+        problems: fresh ? live.problems : [],
+        context: interfaceCopy.context)
       attentionCard.apply(
         PaxInsightModel(
           items: attention,
           emptyTitle: live.problemsFailed || logsUnavailable
-            ? "问题摘要暂不可用" : activityReady && live.problemsLoaded ? "一切正常 · 今日暂无问题" : "正在读取问题摘要",
+            ? interfaceCopy.text("dashboard.problem_unavailable")
+            : activityReady && live.problemsLoaded
+              ? interfaceCopy.text("dashboard.no_problems")
+              : interfaceCopy.text("dashboard.problems_loading"),
           updateFailed: live.problemsFailed)
       )
     }
@@ -133,9 +146,13 @@ extension WorkbenchDashboardViewController {
       onPresentRegion?("operations")
       changesCard.apply(
         PaxInsightModel(
-          items: DashboardInsightProjection.changes(operations: fresh ? live.operations : []),
+          items: DashboardInsightProjection.changes(
+            operations: fresh ? live.operations : [], context: interfaceCopy.context),
           emptyTitle: live.operationsFailed || logsUnavailable
-            ? "操作记录暂不可用" : activityReady && live.operationsLoaded ? "今日暂无 Pax 操作记录" : "正在读取操作记录",
+            ? interfaceCopy.text("dashboard.operations_unavailable")
+            : activityReady && live.operationsLoaded
+              ? interfaceCopy.text("dashboard.no_operations")
+              : interfaceCopy.text("dashboard.operations_loading"),
           updateFailed: live.operationsFailed)
       )
     }
@@ -166,12 +183,15 @@ extension WorkbenchDashboardViewController {
     let page = todayLoaded && todayValid ? todayPage : nil
     var model = DashboardTrafficProjection.card(
       snapshot: todaySnapshot, page: page, trendPage: page == nil ? nil : live.trafficTrendPage,
-      failed: live.trafficFailed || (telemetry.map { !$0.trafficAvailable } ?? false), now: Date())
+      failed: live.trafficFailed || (telemetry.map { !$0.trafficAvailable } ?? false), now: Date(),
+      context: interfaceCopy.context)
     if page != nil && live.trafficTrendFailed {
       model.hourly = []
-      model.hourlyNote = "趋势暂不可用"
+      model.hourlyNote = interfaceCopy.text("dashboard.trend_unavailable")
     }
-    if live.trafficFailed && page != nil { model.asOf += " · 更新失败" }
+    if live.trafficFailed && page != nil {
+      model.asOf += interfaceCopy.text("dashboard.update_failed")
+    }
     trafficCard.apply(model)
   }
 
@@ -206,19 +226,27 @@ extension WorkbenchDashboardViewController {
       var trend = DashboardUsageProjection.trend(
         buckets: live.usageBuckets, state: live.usageState,
         failed: live.usageFailed && !live.usageLoaded,
-        updatedAt: live.usageUpdated, now: now, filter: live.selectedUsageFilter)
-      if live.usageFailed && live.usageLoaded { trend.updated += " · 更新失败" }
+        updatedAt: live.usageUpdated, now: now, filter: live.selectedUsageFilter,
+        context: interfaceCopy.context)
+      if live.usageFailed && live.usageLoaded {
+        trend.updated += interfaceCopy.text("dashboard.update_failed")
+      }
       trendCard.apply(trend)
       if !trendOnly {
         var rank = DashboardUsageProjection.rank(
           buckets: live.usageBuckets, state: live.usageState,
-          failed: live.usageFailed && !live.usageLoaded, now: now)
-        if live.usageFailed && live.usageLoaded { rank.caption += " · 更新失败" }
+          failed: live.usageFailed && !live.usageLoaded, now: now, context: interfaceCopy.context)
+        if live.usageFailed && live.usageLoaded {
+          rank.caption += interfaceCopy.text("dashboard.update_failed")
+        }
         rankCard.apply(rank)
       }
     } else {
       var trend = PaxModelTrendModel()
-      trend.empty = sources == nil ? "用量尚未接入" : "正在读取用量"
+      trend.empty =
+        sources == nil
+        ? interfaceCopy.text("dashboard.usage_not_connected")
+        : interfaceCopy.text("dashboard.usage_loading")
       trendCard.apply(trend)
       var rank = PaxModelRankModel()
       rank.empty = trend.empty
@@ -233,7 +261,7 @@ extension WorkbenchDashboardViewController {
         $0.id == route.id && $0.configRevision == route.configRevision
       })
     else { return nil }
-    return DashboardRouteProjection.savedExit(node)
+    return DashboardRouteProjection.savedExit(node, context: interfaceCopy.context)
   }
 
 }

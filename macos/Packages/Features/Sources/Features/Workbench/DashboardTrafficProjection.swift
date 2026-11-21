@@ -20,13 +20,13 @@ enum DashboardTrafficProjection {
   static func card(
     snapshot: TrafficSnapshot?, page: TrafficPage?, trendPage: TrafficPage? = nil,
     failed: Bool = false, now: Date,
-    calendar: Calendar = .current
+    calendar: Calendar = .current, context: PresentationContext = .chinese
   ) -> PaxTodayTrafficModel {
     var model = PaxTodayTrafficModel()
     // 大数与「截至」优先取今日窗口读到的合计（与流量页同源，代理关闭时仍是本地历史）；
     // 占比取 `Snapshot.today_traffic` 的三项去向。
     let measured = page.flatMap { $0.history.revision > 0 ? $0 : nil }
-    let hourly = hours(page: trendPage ?? page, now: now, calendar: calendar)
+    let hourly = hours(page: trendPage ?? page, now: now, calendar: calendar, context: context)
     let hasStats = page?.trend.contains { !$0.gap } == true
     // 缺统计显示「—」（模型默认值），不把没读到的数据写成 0 流量。
     if let measured {
@@ -42,27 +42,40 @@ enum DashboardTrafficProjection {
       }
     }
     let asOf = snapshot?.asOf ?? measured.map(\.asOf)
-    model.asOf = asOf.map { "截至 " + DashboardFormat.clock($0, calendar: calendar) } ?? ""
+    model.asOf =
+      asOf.map {
+        context.text("dashboard_value.as_of") + DashboardFormat.clock($0, calendar: calendar)
+      } ?? ""
     if let snapshot {
       model.shares = [snapshot.proxiedBytes, snapshot.directBytes, snapshot.unclassifiedBytes].map {
         Double($0)
       }
       if model.shares.reduce(0, +) == 0 {
-        model.shareEmpty = snapshot.collectionState == "collecting" ? "今日暂无流量" : "今日去向未采集"
+        model.shareEmpty =
+          snapshot.collectionState == "collecting"
+          ? context.text("dashboard_value.no_traffic")
+          : context.text("dashboard_value.directions_missing")
       }
     } else {
-      model.shareEmpty = "统计尚未读取"
+      model.shareEmpty = context.text("dashboard_value.stats_unread")
     }
     model.hourly = hourly
     if !hourly.contains(where: { !$0.values.isEmpty }) {
       model.hourly = []
-      model.hourlyNote = failed ? "统计暂不可用" : page == nil ? "正在读取统计" : "暂无统计"
+      model.hourlyNote =
+        failed
+        ? context.text("dashboard_value.stats_unavailable")
+        : page == nil
+          ? context.text("dashboard_value.stats_loading")
+          : context.text("dashboard_value.stats_missing")
     }
     return model
   }
 
   /// 当前小时及之前11个完整小时；用绝对时间分桶，跨日和夏令时重复小时不会混到同一根柱。
-  static func hours(page: TrafficPage?, now: Date, calendar: Calendar) -> [PaxChartSample] {
+  static func hours(
+    page: TrafficPage?, now: Date, calendar: Calendar, context: PresentationContext = .chinese
+  ) -> [PaxChartSample] {
     guard let page, let current = calendar.dateInterval(of: .hour, for: now)?.start else {
       return []
     }
@@ -86,7 +99,7 @@ enum DashboardTrafficProjection {
       let time = date.string(from: at)
       guard seen[hour] else {
         var gap = PaxChartSample(label, values: [], at: at)
-        gap.readout = [time, "缺统计 —"]
+        gap.readout = [time, context.text("dashboard_value.missing_sample")]
         return gap
       }
       var sample = PaxChartSample(
@@ -94,9 +107,10 @@ enum DashboardTrafficProjection {
         at: at)
       sample.amountLabel = TrafficFormatting.bytes(upload[hour] + download[hour])
       sample.readout = [
-        time, "上传 " + TrafficFormatting.bytes(upload[hour]),
-        "下载 " + TrafficFormatting.bytes(download[hour]),
-        "合计 " + TrafficFormatting.bytes(upload[hour] + download[hour]),
+        time, context.text("dashboard_value.upload_prefix") + TrafficFormatting.bytes(upload[hour]),
+        context.text("dashboard_value.download_prefix") + TrafficFormatting.bytes(download[hour]),
+        context.text("dashboard_value.total_prefix")
+          + TrafficFormatting.bytes(upload[hour] + download[hour]),
       ]
       return sample
     }

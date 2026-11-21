@@ -1,4 +1,5 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 /// 新建与改名共用的名称编辑浮层；确认成功才更新父窗口草稿。
@@ -8,15 +9,18 @@ final class RouteGroupNameController: NSViewController {
     case create
     case rename(String)
   }
+  private let context: PresentationContext
   private let mode: Mode
   private let applyName: (String) throws -> Void
   private let dismiss: () -> Void
   private let input = PaxRouteField("")
-  private let message = PaxText.label(
-    "1–24 个字，与已有分组不同。", font: PaxTheme.Typography.caption(), secondary: true)
+  private lazy var message = PaxText.label(
+    context.text("routing_copy.c8b21c62bd"), font: PaxTheme.Typography.caption(), secondary: true)
   init(
-    mode: Mode = .create, confirm: @escaping (String) throws -> Void, dismiss: @escaping () -> Void
+    mode: Mode = .create, context: PresentationContext = .chinese,
+    confirm: @escaping (String) throws -> Void, dismiss: @escaping () -> Void
   ) {
+    self.context = context
     self.mode = mode
     self.applyName = confirm
     self.dismiss = dismiss
@@ -29,23 +33,24 @@ final class RouteGroupNameController: NSViewController {
     let actionText: String
     switch mode {
     case .create:
-      titleText = "新建分组"
-      actionText = "创建"
+      titleText = context.text("routing_copy.3d49d9fcb6")
+      actionText = context.text("routing_copy.cde2cd071d")
     case .rename(let name):
-      titleText = "编辑名称"
-      actionText = "保存"
+      titleText = context.text("routing_copy.d4d65e113b")
+      actionText = context.text("routing_copy.a3030bf8f1")
       input.stringValue = name
     }
     let title = PaxText.label(
       titleText,
       font: PaxTheme.Typography.label(size: PaxTheme.Routes.auxiliaryTitleFont, weight: .semibold))
-    input.placeholderString = "输入分组名称"
-    input.setAccessibilityLabel("分组名称")
+    input.placeholderString = context.text("routing_copy.6621657b14")
+    input.setAccessibilityLabel(context.text("routing_copy.d7e266bdc8"))
     input.setAccessibilityIdentifier("group-name-editor")
     input.identifier = .init("group-name-editor")
     input.target = self
     input.action = #selector(confirmName)
-    let cancel = PaxRouteButton("取消", target: self, action: #selector(cancel))
+    let cancel = PaxRouteButton(
+      context.text("routing_copy.2cd0f3be87"), target: self, action: #selector(cancel))
     cancel.keyEquivalent = "\u{1b}"
     let create = PaxRouteButton(
       actionText, style: .primary, target: self, action: #selector(confirmName))
@@ -87,7 +92,9 @@ final class RouteGroupNameController: NSViewController {
       try applyName(input.stringValue)
       dismiss()
     } catch {
-      message.stringValue = (error as? RouteWorkbenchStore.EditError)?.message ?? "请输入有效的分组名称"
+      message.stringValue =
+        (error as? RouteWorkbenchStore.EditError)?.message(context: context)
+        ?? context.text("routing_copy.1e08246a8b")
       message.textColor = PaxTheme.Color.error
     }
   }

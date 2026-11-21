@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "environment_evidence.d310bbb488": "存在潜在风险 · 公网地址与网页出口不同，需核对保护策略",
+    "environment_evidence.cf943558d7": "当前未经代理，WebRTC 与网页同为本机出口",
+    "environment_evidence.1358862289": "泄露风险待确认 · 缺少同地址族网页出口，无法对照公网地址",
+    "environment_evidence.18bba4f6b7": "本次未发现公网地址泄露 · 与网页出口一致",
+    "environment_evidence.b800649cdb": "正在采集线路证据",
+    "environment_evidence.0b14cb55fa": "旧记录未采集线路证据",
+    "environment_evidence.65056867fd": "STUN 经 ",
+    "environment_evidence.5e84ea61e8": "代理",
+    "environment_evidence.657ae6e7b8": "（WebRTC 出口限制生效）",
+    "environment_evidence.33624cb33d": "STUN 直连",
+    "environment_evidence.70cce55728": "STUN 被阻断",
+    "environment_evidence.781901bb36": "未观察到 STUN 连接",
+    "environment_evidence.5619715e64": "Pax 未接管，无线路证据",
+    "environment_evidence.0d696bafc0": "STUN 方向未知",
+    "environment_evidence.b06325c566": "直连",
+    "environment_evidence.c9a7fb33f3": "被阻断",
+    "environment_evidence.10c2a89724": "未观察到连接",
+    "environment_evidence.7da664f560": "无线路证据",
+    "environment_evidence.195f984a5c": "方向未知"
+  }
+}

@@ -20,10 +20,25 @@ final class LogsWorkbenchStore {
   private var canChangePage: Bool {
     !privacyInvalid && requestedObject == nil && !pageLoading && !isLoading
   }
-  var pageTitle: String {
-    if privacyInvalid { return liveMessage.isEmpty ? "记录已失效，正在重新读取" : "记录读取失败" }
-    if telemetry != nil && !initialized { return liveMessage.isEmpty ? "正在读取记录" : "记录读取失败" }
-    return "第 \(pageIndex+1) / \(max(1,Int((recordTotal+99)/100))) 页 · \(recordTotal) 条记录"
+  var pageTitle: String { pageTitle(context: .chinese) }
+  func pageTitle(context: PresentationContext) -> String {
+    if privacyInvalid {
+      return liveMessage.isEmpty
+        ? context.text("logs_presentation.9df987ee3c")
+        : context.text("logs_presentation.42119368ca")
+    }
+    if telemetry != nil && !initialized {
+      return liveMessage.isEmpty
+        ? context.text("logs_presentation.c8a5375f98")
+        : context.text("logs_presentation.42119368ca")
+    }
+    return context.text(
+      "logs_presentation.a02251e150",
+      [
+        "arg0": String(describing: pageIndex + 1),
+        "arg1": String(describing: max(1, Int((recordTotal + 99) / 100))),
+        "arg2": String(describing: recordTotal),
+      ])
   }
   func changePage(_ delta: Int) {
     let target = pageIndex + delta
@@ -59,10 +74,17 @@ final class LogsWorkbenchStore {
   var usesApplicationPages: Bool {
     dimension == .application && usesViews && telemetry?.applicationWorkbenchPageAvailable == true
   }
-  var unit: String { "条记录" }
+  var unit: String { unit(context: .chinese) }
+  func unit(context: PresentationContext) -> String { context.text("logs_presentation.6016bf63b0") }
   enum Dimension: Int, CaseIterable {
     case domain, application, ip, system
-    var title: String { ["域名", "应用", "IP", "系统"][rawValue] }
+    var title: String { title(context: .chinese) }
+    func title(context: PresentationContext) -> String {
+      [
+        context.text("logs_presentation.2229524311"), context.text("logs_presentation.63c73c4730"),
+        "IP", context.text("logs_presentation.5b50d7c4b5"),
+      ][rawValue]
+    }
     func value(_ event: LogPreviewEvent) -> String? {
       switch self {
       case .domain: event.domain
@@ -71,11 +93,22 @@ final class LogsWorkbenchStore {
       case .system: nil
       }
     }
-    var unknown: String { self == .application ? "未识别应用" : "未记录\(title)" }
+    var unknown: String { unknown(context: .chinese) }
+    func unknown(context: PresentationContext) -> String {
+      self == .application
+        ? context.text("logs_presentation.0a1cf0dcc8")
+        : context.text("logs_presentation.542629d51f", ["arg0": title(context: context)])
+    }
   }
   enum Level: Int, CaseIterable {
     case all, error, warning, info
-    var title: String { ["全部级别", "错误", "警告", "信息"][rawValue] }
+    var title: String { title(context: .chinese) }
+    func title(context: PresentationContext) -> String {
+      [
+        context.text("logs_presentation.81f9b55545"), context.text("logs_presentation.0bc1fb72ae"),
+        context.text("logs_presentation.a8b7a44804"), context.text("logs_presentation.e7028601e7"),
+      ][rawValue]
+    }
   }
   enum Scene: String, CaseIterable {
     case normal = "正常"
@@ -129,12 +162,17 @@ final class LogsWorkbenchStore {
     usesApplicationPages && !readToken.isEmpty && directoryToken != readToken
   }
   var requestGeneration: UInt64 = 0
-  var liveMessage = ""
+  var logReadMessage = RetainedProductMessage(original: "")
   var rangeIndex = 0
   var includeDNS = false
   private var directoryMemory: [Dimension: (query: String, object: String)] = [:]
-  var allTitle: String {
-    dimension == .system ? "全部系统记录" : dimension == .domain ? "全部域名记录" : "全部应用记录"
+  var allTitle: String { allTitle(context: .chinese) }
+  func allTitle(context: PresentationContext) -> String {
+    dimension == .system
+      ? context.text("logs_presentation.4c101e3d34")
+      : dimension == .domain
+        ? context.text("logs_presentation.161c3b1e06")
+        : context.text("logs_presentation.93e7f401b6")
   }
   var rangeStart: Date? = nil
   var fromDate: Date? {
@@ -204,36 +242,50 @@ final class LogsWorkbenchStore {
         && (level == .all || $0.level == level)
     }.sorted { $0.sequence > $1.sequence }
   }
-  var objectTitle: String {
-    if privacyInvalid { return "记录已失效" }
+  var objectTitle: String { objectTitle(context: .chinese) }
+  func objectTitle(context: PresentationContext) -> String {
+    if privacyInvalid { return context.text("logs_presentation.0bcb7c62fd") }
     return selectedObject == "all"
-      ? allTitle
-      : selectedObject == "unknown" ? dimension.unknown : selectedObject
+      ? allTitle(context: context)
+      : selectedObject == "unknown" ? dimension.unknown(context: context) : selectedObject
   }
-  var message: String {
-    if privacyInvalid { return liveMessage.isEmpty ? "记录已失效，正在重新读取" : liveMessage }
-    if telemetry != nil && !initialized && liveMessage.isEmpty { return "正在读取日志" }
-    if let telemetry { return liveMessage.isEmpty ? telemetry.qualityMessage : liveMessage }
+  var message: String { message(context: .chinese) }
+  func message(context: PresentationContext) -> String {
+    if privacyInvalid {
+      return liveMessage.isEmpty
+        ? context.text("logs_presentation.9df987ee3c") : liveMessageText(context: context)
+    }
+    if telemetry != nil && !initialized && liveMessage.isEmpty {
+      return context.text("logs_presentation.87e0cec6c5")
+    }
+    if let telemetry {
+      return liveMessage.isEmpty
+        ? telemetry.qualityMessage(context: context) : liveMessageText(context: context)
+    }
 
     return switch scene {
-    case .loading: "正在读取日志…"
-    case .failed: "日志读取失败。请稍后重试。"
-    case .disconnected: "与后台服务断开，保留最后一次日志。"
+    case .loading: context.text("logs_presentation.1718310516")
+    case .failed: context.text("logs_presentation.a78489a3a5")
+    case .disconnected: context.text("logs_presentation.f0f2133c79")
     default: ""
     }
   }
-  var emptyMessage: String {
-    if scene == .loading || scene == .failed { return message }
+  var emptyMessage: String { emptyMessage(context: .chinese) }
+  func emptyMessage(context: PresentationContext) -> String {
+    if scene == .loading || scene == .failed { return message(context: context) }
     if telemetry != nil {
       if privacyInvalid || !liveMessage.isEmpty || !initialized {
-        return message.isEmpty ? "正在读取日志" : message
+        return message(context: context).isEmpty
+          ? context.text("logs_presentation.87e0cec6c5") : message(context: context)
       }
-      return "此时间与级别下暂无"
+      return context.text("logs_presentation.5174f68f19")
         + (selectedObject == "all"
-          ? dimension.title
-          : objects.first(where: { $0.id == selectedObject })?.title ?? dimension.title) + "记录"
+          ? dimension.title(context: context)
+          : objects.first(where: { $0.id == selectedObject })?.title
+            ?? dimension.title(context: context)) + context.text("logs_presentation.9fad24e2c3")
     }
-    return events.isEmpty ? "暂无日志" : "没有符合条件的事件"
+    return events.isEmpty
+      ? context.text("logs_presentation.10fafbeaa7") : context.text("logs_presentation.17f13d145b")
   }
   func perform(_ intent: Intent) {
     switch intent {
@@ -303,13 +355,15 @@ final class LogsWorkbenchStore {
 }
 
 struct LogPreviewEvent: Identifiable, Sendable, Equatable {
-  var title: String { kind.title }
+  var title: String { title(context: .chinese) }
+  func title(context: PresentationContext) -> String { kind.title }
   enum Kind: Int, CaseIterable, Sendable {
     case timeout, rule, dns, started, closed, dnsFailure
     var symbol: String {
       self == .timeout || self == .dnsFailure ? "exclamationmark.circle" : "info.circle"
     }
-    var title: String {
+    var title: String { title(context: .chinese) }
+    func title(context: PresentationContext) -> String {
       ["连接超时", "已选择线路", "已找到服务器地址", "开始连接", "连接已关闭", "域名解析失败"][rawValue]
     }
   }
@@ -396,25 +450,31 @@ extension LogsWorkbenchStore.Dimension {
 }
 
 extension LogsWorkbenchStore {
-  func recordIdentity(_ record: LogRecord) -> String {
+  func recordIdentity(_ record: LogRecord, context: PresentationContext = .chinese) -> String {
     guard let flow = record.flow else {
       return record.kind == "operation"
-        ? "Pax Connect → " + String(record.title.split(separator: "：").first ?? "应用操作")
-        : "— → 未记录目标"
+        ? "Pax Connect → "
+          + (record.systemEvent.map { ProductTextPresentation.eventName($0, context: context) }
+            ?? ProductTextPresentation.recordTitle(record, context: context))
+        : context.text("logs_presentation.db809aae35")
     }
     if dimension == .domain {
-      let domain = flow.domain.isEmpty ? "域名未采集" : flow.domain
+      let domain = flow.domain.isEmpty ? context.text("logs_presentation.421f95faeb") : flow.domain
       let address: String
       if flow.ip.isEmpty {
-        address = flow.ipSource == "proxy_domain" ? "目标IP未提供" : "目标IP未采集"
+        address =
+          flow.ipSource == "proxy_domain"
+          ? context.text("logs_presentation.4cf80028f6")
+          : context.text("logs_presentation.6a47cd39fa")
       } else {
         var ipFlow = flow
         ipFlow.domain = ""
-        address = FlowPresentation.target(ipFlow)
+        address = FlowPresentation.target(ipFlow, context: context)
       }
       return domain + " → " + address
     }
-    return LogDetailPresentation.application(record) + " → " + FlowPresentation.target(flow)
+    return LogDetailPresentation.application(record, context: context) + " → "
+      + FlowPresentation.target(flow, context: context)
   }
   func restoreDirectorySelection(_ availableID: String?) {
     if selectedObject != "all" && availableID != selectedObject {
@@ -423,7 +483,8 @@ extension LogsWorkbenchStore {
     }
   }
 
-  func eventIdentity(_ event: LogPreviewEvent) -> String {
-    return (event.application ?? "来源应用未采集") + " → " + (event.domain ?? event.ip ?? "目标未采集")
+  func eventIdentity(_ event: LogPreviewEvent, context: PresentationContext = .chinese) -> String {
+    return (event.application ?? context.text("logs_presentation.9465a6fde8")) + " → "
+      + (event.domain ?? event.ip ?? context.text("logs_presentation.947d020039"))
   }
 }

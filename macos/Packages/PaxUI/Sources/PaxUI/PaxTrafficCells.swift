@@ -3,7 +3,9 @@ import AppKit
 /// 概览和分流共用的流量单元格；只收显示输入，保持图标/标签/曲线/数值同一布局。
 @MainActor public enum PaxTrafficCells {
   /// 对象与规则来源的轻量文字入口；列表和详情共用截断、Return 与辅助访问行为。
-  public static func objectButton(_ title: String, onActivate: (() -> Void)?) -> NSButton {
+  public static func objectButton(
+    _ title: String, accessibilityTitle: String? = nil, onActivate: (() -> Void)?
+  ) -> NSButton {
     let name = AnalysisNameButton()
     name.title = title
     name.toolTip = title
@@ -19,18 +21,21 @@ import AppKit
       ])
     name.cell?.lineBreakMode = .byTruncatingTail
     name.onActivate = onActivate
-    name.setAccessibilityLabel(title + "，查看连接详情")
+    name.setAccessibilityLabel(accessibilityTitle ?? title)
     return name
   }
   public static func make(
     _ value: PaxTrafficAnalysisRow, column: Int, tooltip: PaxChartTooltipCoordinator? = nil,
     onActivate: (() -> Void)? = nil,
-    objectContent: ((NSView) -> NSView)? = nil
+    objectContent: ((NSView) -> NSView)? = nil,
+    timeSeriesCopy: PaxTimeSeriesCopy = .init(), objectAccessibilityTitle: String? = nil,
+    transferReadout: String? = nil
   ) -> NSView {
     let d = PaxTheme.Dashboard.self
     switch column {
     case 0:
-      let name = objectButton(value.name, onActivate: onActivate)
+      let name = objectButton(
+        value.name, accessibilityTitle: objectAccessibilityTitle, onActivate: onActivate)
       if let objectContent { return objectContent(name) }
       let image = PaxIcon.image(value.symbol, size: d.nodeTitle) ?? NSImage()
       return PaxObjectIdentityView(
@@ -61,7 +66,7 @@ import AppKit
         return PaxTimeLatencyView(
           series: series, latest: value.latencyText, compact: true, tooltip: tooltip,
           context: value.latencyContext, title: value.latencyTitle,
-          pinKey: value.latencyPinKey ?? "traffic-list-" + value.id,
+          pinKey: value.latencyPinKey ?? "traffic-list-" + value.id, copy: timeSeriesCopy,
           format: format)
       }
       return PaxLatencyView(
@@ -75,7 +80,7 @@ import AppKit
     case 4:
       return transfer(
         uploadText: value.upload, downloadText: value.download, upload: value.uploadValue,
-        download: value.downloadValue, tooltip: tooltip)
+        download: value.downloadValue, tooltip: tooltip, accessibilityReadout: transferReadout)
     default: return NSView()
     }
   }
@@ -93,13 +98,15 @@ import AppKit
 
   public static func transfer(
     uploadText: String, downloadText: String, upload: Double, download: Double,
-    tooltip: PaxChartTooltipCoordinator? = nil, note: String? = nil
+    tooltip: PaxChartTooltipCoordinator? = nil, note: String? = nil,
+    accessibilityReadout: String? = nil, stacksWhenNarrow: Bool = false
   ) -> NSView {
     let value = PaxTransferView(
       uploadText: uploadText, downloadText: downloadText, upload: upload,
-      download: download, tooltip: tooltip)
+      download: download, tooltip: tooltip, accessibilityReadout: accessibilityReadout,
+      stacksWhenNarrow: stacksWhenNarrow)
     let cell = TrafficCell(views: [value]) { bounds in
-      let height = min(bounds.height, PaxTheme.Dashboard.transferContentHeight)
+      let height = min(bounds.height, value.contentHeight(for: bounds.width))
       value.frame = NSRect(
         x: 0, y: (bounds.height - height) / 2, width: bounds.width, height: height)
     }
@@ -110,14 +117,14 @@ import AppKit
   /// Update the labels and bar in a cell created by `transfer`.
   public static func updateTransfer(
     _ cell: NSView, uploadText: String, downloadText: String, upload: Double, download: Double,
-    tooltip: PaxChartTooltipCoordinator?, note: String?
+    tooltip: PaxChartTooltipCoordinator?, note: String?, accessibilityReadout: String? = nil
   ) -> Bool {
     guard cell is TrafficCell, let view = cell.subviews.first as? PaxTransferView else {
       return false
     }
     view.update(
       uploadText: uploadText, downloadText: downloadText, upload: upload, download: download,
-      tooltip: tooltip)
+      tooltip: tooltip, accessibilityReadout: accessibilityReadout)
     setTransferNote(note, in: cell, view: view)
     return true
   }

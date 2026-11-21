@@ -99,17 +99,21 @@ final class AIUsageStore {
       || logModelID != nil
       || logResult != nil
   }
-  var logProfileOptions: [(String, String)] {
+  func logProfileOptions(context: PresentationContext) -> [(String, String)] {
     var names = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
     for b in (data?.lifetime ?? []) where b.client != .harness {
       let id = AIUsageTrendFilter.profileKey(
         profileID: b.profileID, client: b.client, serviceSource: b.serviceSource)
-      if names[id] == nil { names[id] = AIUsageTrendFilter.fallbackName(id) ?? b.profileName }
+      if names[id] == nil {
+        names[id] = AIUsageTrendFilter.fallbackName(id, context: context) ?? b.profileName
+      }
     }
     for request in requests where request.client != .harness {
       let id = AIUsageTrendFilter.profileKey(
         profileID: request.profileID, client: request.client, serviceSource: request.serviceSource)
-      if names[id] == nil { names[id] = AIUsageTrendFilter.fallbackName(id) ?? request.profileName }
+      if names[id] == nil {
+        names[id] = AIUsageTrendFilter.fallbackName(id, context: context) ?? request.profileName
+      }
     }
     return names.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value < $1.value }
       .map { ($0.key, $0.value) }

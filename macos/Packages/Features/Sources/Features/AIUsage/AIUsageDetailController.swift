@@ -13,10 +13,10 @@ final class AIUsageDetailController: WorkbenchModalController {
     case model(String)
     case request(String)
   }
-  private let store: AIUsageStore
-  private let kind: Kind
+  let store: AIUsageStore
+  let kind: Kind
   private var invalidation: UInt64 = 0
-  private let actions = AIUsageActions()
+  let actions = AIUsageActions()
   private var isRequest: Bool {
     if case .request = kind { return true }
     return false
@@ -29,23 +29,17 @@ final class AIUsageDetailController: WorkbenchModalController {
   init(store: AIUsageStore, kind: Kind) {
     self.store = store
     self.kind = kind
-    let title: String
     let width: CGFloat
     switch kind {
     case .cost:
-      title = "估算费用"
       width = Self.statisticsWidth
     case .tokens:
-      title = "Token 用量"
       width = Self.statisticsWidth
     case .requests:
-      title = "请求统计"
       width = Self.statisticsWidth
-    case .model(let id):
-      title = store.model(id) + " · 用量分析"
+    case .model:
       width = Self.inspectorWidth
     case .request:
-      title = "请求详情"
       width = Self.editorWidth
     }
     let subtitle: String
@@ -57,7 +51,7 @@ final class AIUsageDetailController: WorkbenchModalController {
         + AIUsageFormatting.date(store.interval.upperBound.addingTimeInterval(-1))
     }
     super.init(
-      title: title,
+      title: "",
       subtitle: subtitle,
       size: .init(width: width, height: PaxTheme.Routes.picker.height), style: .compact,
       symbol: "chart.bar")
@@ -77,6 +71,16 @@ final class AIUsageDetailController: WorkbenchModalController {
   }
   override func loadView() {
     super.loadView()
+    let title: String
+    switch kind {
+    case .cost: title = interfaceCopy.text("ai_projection.dd4e402aba")
+    case .tokens: title = interfaceCopy.text("ai_usage.detail.tokens")
+    case .requests: title = interfaceCopy.text("ai_usage.detail.requests")
+    case .model(let id):
+      title = interfaceCopy.text("ai_usage.detail.model", ["model": store.model(id)])
+    case .request: title = interfaceCopy.text("ai_usage.detail.request")
+    }
+    pane.applyTitle(title)
     invalidation = store.data?.invalidationVersion ?? 0
     observeInvalidation()
     pane.setActions([])
@@ -98,58 +102,99 @@ final class AIUsageDetailController: WorkbenchModalController {
     case .tokens:
       pane.add(
         statisticsChart(
-          title: "总用量", total: AIUsageFormatting.tokens(s.tokens), unit: " Token",
-          labels: ["普通输入", "缓存读取", "缓存写入", "输出"],
+          title: self.interfaceCopy.text("interface_detail.e506bdf346"),
+          total: AIUsageFormatting.tokens(s.tokens),
+          unit: interfaceCopy.text("ai_usage.detail.token_suffix"),
+          labels: [
+            self.interfaceCopy.text("session_limits.faa58c14d8"),
+            self.interfaceCopy.text("session_limits.1ded6559f6"),
+            self.interfaceCopy.text("session_limits.6078a681a3"),
+            self.interfaceCopy.text("dashboard_value.output"),
+          ],
           values: [Double(s.ordinary), Double(s.read), Double(s.write), Double(s.output)],
           colors: PaxTheme.Chart.categorySeries,
           format: { AIUsageFormatting.tokens(Int($0)) }))
       pane.add(AIUsageLayout.separator())
       pane.add(
-        fact("缓存命中率", AIUsageFormatting.percent(s.cache), color: PaxTheme.Color.text))
+        fact(
+          self.interfaceCopy.text("interface_detail.13b61c5f69"),
+          AIUsageFormatting.percent(s.cache), color: PaxTheme.Color.text))
     case .requests:
       pane.add(
         statisticsChart(
-          title: "总请求", total: "\(s.count)", unit: " 次", labels: ["成功", "失败"],
+          title: self.interfaceCopy.text("interface_detail.ddde16f883"), total: "\(s.count)",
+          unit: self.interfaceCopy.text("dashboard_value.request_suffix"),
+          labels: [
+            self.interfaceCopy.text("dashboard_value.success"),
+            self.interfaceCopy.text("event.result.failed"),
+          ],
           values: [Double(s.success), Double(s.failed)],
           colors: PaxTheme.Chart.requestSeries,
-          format: { String(Int($0)) + " 次" }))
+          format: { String(Int($0)) + self.interfaceCopy.text("dashboard_value.request_suffix") }))
       pane.add(AIUsageLayout.separator())
       pane.add(
-        fact("成功率", AIUsageFormatting.percent(s.successRate), color: PaxTheme.Color.healthy)
+        fact(
+          self.interfaceCopy.text("ai_usage.success_rate"),
+          AIUsageFormatting.percent(s.successRate), color: PaxTheme.Color.healthy)
       )
       if s.failed > 0 {
-        pane.add(AIUsageLayout.heading("失败原因"))
-        pane.add(fact("上游请求失败", "\(s.failed) 次", color: PaxTheme.Color.error))
+        pane.add(self.interfaceCopy.usageHeading("action.usage.failure_reason"))
+        pane.add(
+          fact(
+            self.interfaceCopy.text("interface_detail.088b70840a"),
+            self.interfaceCopy.text(
+              "interface_detail.8cc9b62351", ["arg0": String(describing: s.failed)]),
+            color: PaxTheme.Color.error))
       }
     case .cost:
       pane.add(
         statisticsChart(
-          title: "总费用（官方）", total: s.officialCostLabel, unit: "",
-          labels: ["普通输入", "缓存读取", "缓存写入", "输出"], values: s.officialCosts,
+          title: self.interfaceCopy.text("interface_detail.e9e3f1858d"), total: s.officialCostLabel,
+          unit: "",
+          labels: [
+            self.interfaceCopy.text("session_limits.faa58c14d8"),
+            self.interfaceCopy.text("session_limits.1ded6559f6"),
+            self.interfaceCopy.text("session_limits.6078a681a3"),
+            self.interfaceCopy.text("dashboard_value.output"),
+          ], values: s.officialCosts,
           colors: PaxTheme.Chart.categorySeries,
           format: { AIUsageFormatting.cost($0, precision: 4) }))
-      pane.add(fact("渠道估算费用", s.costLabel))
+      pane.add(fact(self.interfaceCopy.text("interface_detail.2d26875b04"), s.costLabel))
       pane.add(AIUsageLayout.separator())
       profileRows(list, expanded: false, official: true)
     case .model, .request:
       pane.add(
         AIUsageLayout.equalRow([
-          AIUsageLayout.stack([AIUsageLayout.heading("Token 构成"), tokenChart(s, stacked: true)]),
           AIUsageLayout.stack([
-            AIUsageLayout.heading(isRequest ? "官方费用构成" : "费用构成"),
+            self.interfaceCopy.usageHeading("action.usage.token_breakdown"),
+            tokenChart(s, stacked: true),
+          ]),
+          AIUsageLayout.stack([
+            AIUsageLayout.heading(
+              isRequest
+                ? self.interfaceCopy.text("interface_detail.65120c457d")
+                : self.interfaceCopy.text("interface_detail.0b72cfc3ac")),
             costChart(s, stacked: true, official: isRequest),
           ]),
         ]))
       if isRequest {
         pane.add(
           fact(
-            s.accountOnly ? "API 等值估算" : "官方费用（1×）", s.officialCostLabel,
+            s.accountOnly
+              ? self.interfaceCopy.text("interface_detail.0bd0fec783")
+              : self.interfaceCopy.text("interface_detail.a68c3521af"), s.officialCostLabel,
             color: AIUsageCostDisplay.officialColor))
         if s.hasChannelEstimate {
-          pane.add(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
+          pane.add(
+            fact(
+              self.interfaceCopy.text("session_limits.4d14ea51f5"), s.costLabel,
+              color: AIUsageCostDisplay.channelColor))
         }
         if let request = list.first, request.hasChannelEstimate {
-          pane.add(fact("请求记录倍率", AIUsageFormatting.multiplier(request.multiplier)))
+          pane.add(
+            fact(
+              self.interfaceCopy.text("interface_detail.1b13fb3ed3"),
+              AIUsageFormatting.multiplier(request.multiplier)))
         }
       }
       pane.add(AIUsageLayout.separator())
@@ -157,7 +202,9 @@ final class AIUsageDetailController: WorkbenchModalController {
       pane.add(
         AIUsageLayout.equalRow([
           metric(
-            isRequest ? "输出 TPS" : "平均输出 TPS",
+            isRequest
+              ? self.interfaceCopy.text("ai_usage.output_tps")
+              : self.interfaceCopy.text("interface_detail.cb7a549d50"),
             speed.map { String(format: "%.1f tok/s", $0) } ?? "—",
             color: isRequest
               ? PaxTheme.Color.healthy
@@ -165,61 +212,92 @@ final class AIUsageDetailController: WorkbenchModalController {
                 PaxTheme.RTT.endpoints(band: $0 >= 50 ? 0 : $0 >= 25 ? 1 : 2, role: .text).0
               }),
           metric(
-            isRequest ? "总耗时" : "平均总耗时",
+            isRequest
+              ? self.interfaceCopy.text("interface_detail.42aa8e01e9")
+              : self.interfaceCopy.text("interface_detail.c111608af2"),
             (isRequest ? list.first?.elapsed : s.mean(\.elapsed)).map {
               String(format: "%.1fs", $0)
             } ?? "—"),
-          metric("缓存命中率", AIUsageFormatting.percent(s.cache)),
+          metric(
+            self.interfaceCopy.text("interface_detail.13b61c5f69"),
+            AIUsageFormatting.percent(s.cache)),
         ]))
-      pane.add(AIUsageLayout.label("总耗时 = 发送到结束；输出 TPS = 输出 Token ÷ 总耗时。", secondary: true))
+      pane.add(self.interfaceCopy.usageLabel("action.usage.timing_note", secondary: true))
       if !isRequest {
         let resultColors = PaxTheme.Chart.requestSeries
         let resultHeader = AIUsageLayout.stack(
           [
-            AIUsageLayout.label("请求 \(s.count) 次"), NSView(),
-            AIUsageLayout.label("成功率 " + AIUsageFormatting.percent(s.successRate), secondary: true),
+            AIUsageLayout.label(
+              self.interfaceCopy.text(
+                "interface_detail.db74e7a8c2", ["arg0": String(describing: s.count)])), NSView(),
+            AIUsageLayout.label(
+              self.interfaceCopy.text("interface_detail.1357d7666f")
+                + AIUsageFormatting.percent(s.successRate), secondary: true),
           ], vertical: false)
         let resultBar = PaxShareBar(
           segments: [
-            .init("成功", value: Double(s.success)), .init("失败", value: Double(s.failed)),
+            .init(self.interfaceCopy.text("dashboard_value.success"), value: Double(s.success)),
+            .init(self.interfaceCopy.text("event.result.failed"), value: Double(s.failed)),
           ], colors: resultColors)
         let resultLegend = AIUsageLayout.stack(
           [
             PaxLegendDot(color: resultColors[0]),
-            AIUsageLayout.label("成功 \(s.success)", secondary: true),
+            AIUsageLayout.label(
+              self.interfaceCopy.text(
+                "interface_detail.4afe849f28", ["arg0": String(describing: s.success)]),
+              secondary: true),
             PaxLegendDot(color: resultColors[1]),
-            AIUsageLayout.label("失败 \(s.failed)", secondary: true),
+            AIUsageLayout.label(
+              self.interfaceCopy.text(
+                "interface_detail.7a4339ce33", ["arg0": String(describing: s.failed)]),
+              secondary: true),
             NSView(),
           ], vertical: false)
         pane.add(AIUsageLayout.stack([resultHeader, resultBar, resultLegend]))
 
       } else if let request = list.first, !request.succeeded {
-        pane.add(AIUsageLayout.heading("失败信息"))
-        pane.add(fact("原因", Self.failureMessage(request.errorMessage), color: PaxTheme.Color.error))
-        pane.add(fact("错误码", request.errorMessage ?? "未提供"))
+        pane.add(self.interfaceCopy.usageHeading("action.usage.failure_information"))
+        pane.add(
+          fact(
+            self.interfaceCopy.text("interface_detail.f029d9cb4a"),
+            failureMessage(request.errorMessage), color: PaxTheme.Color.error))
+        pane.add(
+          fact(
+            self.interfaceCopy.text("interface_detail.9c7ff3321e"),
+            request.errorMessage ?? self.interfaceCopy.text("diagnostic_evidence.756762e293")))
       }
       if isRequest, let request = list.first {
         pane.add(AIUsageLayout.separator())
-        pane.add(fact("Profile", request.sourceLabel))
+        pane.add(fact("Profile", request.sourceLabel(context: interfaceCopy.context)))
         pane.add(fact("CLI", request.client.rawValue))
-        pane.add(fact("模型", store.model(request.modelID)))
-        pane.add(fact("请求时间", TrafficFormatting.logDate(request.at)))
-        pane.add(fact("请求 ID", request.id))
-        pane.add(fact("推理强度", request.reasoningEffort.isEmpty ? "—" : request.reasoningEffort))
-        if !request.reasoningEffort.isEmpty { pane.add(fact("配置来源", request.effortSource)) }
-        pane.add(AIUsageLayout.label("缺少可靠发送时间的请求不显示耗时与 TPS。", secondary: true))
+        pane.add(fact(self.interfaceCopy.text("session.kind.models"), store.model(request.modelID)))
+        pane.add(
+          fact(
+            self.interfaceCopy.text("interface_detail.444e4ac452"),
+            TrafficFormatting.logDate(request.at)))
+        pane.add(fact(self.interfaceCopy.text("interface_detail.12da486580"), request.id))
+        pane.add(
+          fact(
+            self.interfaceCopy.text("interface_detail.c8c14507b2"),
+            request.reasoningEffort.isEmpty ? "—" : request.reasoningEffort))
+        if !request.reasoningEffort.isEmpty {
+          pane.add(
+            fact(self.interfaceCopy.text("interface_detail.1fa1a10b63"), request.effortSource))
+        }
+        pane.add(self.interfaceCopy.usageLabel("action.usage.missing_timing", secondary: true))
       } else {
         profileRows(list, expanded: true)
       }
       if isRequest {
         addPricing(list)
       } else {
-        pane.add(AIUsageLayout.label("费用按官方分项价与请求当时的倍率汇总；价格表未覆盖的模型记 0。", secondary: true))
+        pane.add(self.interfaceCopy.usageLabel("action.usage.pricing_note", secondary: true))
       }
     }
     if case .model(let id) = kind {
       pane.setActions([
-        actions.button("查看模型日志", primary: true) { [weak self] in
+        actions.button(self.interfaceCopy.text("action.usage.view_model_logs"), primary: true) {
+          [weak self] in
           guard let self else { return }
           self.store.perform(.openLogs(model: id, profile: nil))
           self.close()
@@ -283,12 +361,12 @@ final class AIUsageDetailController: WorkbenchModalController {
     stack.spacing = PaxTheme.Spacing.xs
     return stack
   }
-  private func colored(_ value: String, _ color: NSColor) -> NSView {
+  func colored(_ value: String, _ color: NSColor) -> NSView {
     let label = AIUsageLayout.label(value, numeric: true)
     label.textColor = color
     return label
   }
-  private func fact(_ name: String, _ value: String, color: NSColor? = nil) -> NSView {
+  func fact(_ name: String, _ value: String, color: NSColor? = nil) -> NSView {
     let label = AIUsageLayout.label(value, numeric: true)
     if let color { label.textColor = color }
     return AIUsageLayout.stack(
@@ -296,7 +374,12 @@ final class AIUsageDetailController: WorkbenchModalController {
   }
   private func tokenChart(_ s: AIUsageSummary, stacked: Bool = false) -> NSView {
     AIUsageLayout.composition(
-      ["普通输入", "缓存读取", "缓存写入", "输出"],
+      [
+        self.interfaceCopy.text("session_limits.faa58c14d8"),
+        self.interfaceCopy.text("session_limits.1ded6559f6"),
+        self.interfaceCopy.text("session_limits.6078a681a3"),
+        self.interfaceCopy.text("dashboard_value.output"),
+      ],
       values: [Double(s.ordinary), Double(s.read), Double(s.write), Double(s.output)],
       center: AIUsageFormatting.tokens(s.tokens), stacked: stacked,
       format: { AIUsageFormatting.tokens(Int($0)) })
@@ -305,115 +388,23 @@ final class AIUsageDetailController: WorkbenchModalController {
     -> NSView
   {
     return AIUsageLayout.composition(
-      ["普通输入", "缓存读取", "缓存写入", "输出"], values: official ? s.officialCosts : s.costs,
+      [
+        self.interfaceCopy.text("session_limits.faa58c14d8"),
+        self.interfaceCopy.text("session_limits.1ded6559f6"),
+        self.interfaceCopy.text("session_limits.6078a681a3"),
+        self.interfaceCopy.text("dashboard_value.output"),
+      ], values: official ? s.officialCosts : s.costs,
       center: official ? s.officialCostLabel : s.costLabel,
       stacked: stacked, format: { AIUsageFormatting.cost($0, precision: 4) })
   }
-  private func profileRows(_ list: [AIRequest], expanded: Bool, official: Bool = false) {
-    pane.add(AIUsageLayout.heading("Profile 分布"))
-    let modelID: String?
-    if case .model(let id) = kind { modelID = id } else { modelID = nil }
-    let all = store.usageSummary(model: modelID)
-    let total = official ? all.originalCost : all.cost
-    let ids =
-      store.preview ? Set(list.map(\.profileID)) : Set(all.aggregateBuckets.map(\.profileID))
-    for id in ids.sorted() {
-      let rows = list.filter { $0.profileID == id }
-      let s = store.usageSummary(model: modelID, profile: id)
-      pane.add(
-        AIUsageLayout.stack(
-          [
-            AIUsageLayout.label(
-              rows.first?.profileName ?? all.aggregateBuckets.first { $0.profileID == id }?
-                .profileName ?? id), NSView(),
-            AIUsageLayout.label(AIUsageFormatting.tokens(s.tokens) + " Token", numeric: true),
-            colored(official ? s.officialCostLabel : s.costLabel, PaxTheme.Color.text),
-          ], vertical: false))
-      if expanded {
-        pane.add(
-          PaxShareBar(
-            segments: [.init(id, value: official ? s.originalCost : s.cost)],
-            colors: [PaxTheme.Routes.blue],
-            striped: [0], total: total))
-        pane.add(
-          AIUsageLayout.stack(
-            [
-              AIUsageLayout.label(
-                s.timingText(\.tps, "%.1f tok/s") ?? "—", secondary: true),
-              AIUsageLayout.label(
-                s.timingText(\.elapsed, "平均 %.1fs") ?? "—", secondary: true),
-              AIUsageLayout.label("缓存 " + AIUsageFormatting.percent(s.cache), secondary: true),
-              NSView(),
-              actions.button("查看日志") { [weak self] in
-                guard let self else { return }
-                guard let modelID = modelID ?? rows.first?.modelID else { return }
-                self.store.perform(.openLogs(model: modelID, profile: id))
-                self.close()
-              },
-            ], vertical: false))
-      }
-    }
-  }
-  private func addPricing(_ list: [AIRequest]) {
-    let s = AIUsageSummary(requests: list)
-    func prices(_ values: [Double?]) -> String {
-      guard !values.isEmpty, values.allSatisfy({ $0 != nil }) else { return "—" }
-      return Set(values.compactMap { $0 }).sorted().map { AIUsageFormatting.cost($0, precision: 4) }
-        .joined(separator: " / ")
-    }
-    let r = list.first
-    var fields: [NSView] = []
-    let titles = ["普通输入单价 / 1M", "缓存读取单价 / 1M", "缓存写入加权单价 / 1M", "输出单价 / 1M"]
-    for i in 0..<4 {
-      let unit: Double? = r.flatMap { item in
-        if item.componentPrices.count == 4 { return item.componentPrices[i] }
-        return i == 0 ? item.inputPrice : i == 3 ? item.outputPrice : nil
-      }
-      fields.append(fact(titles[i], prices([unit]), color: PaxTheme.Color.text))
-    }
-    if let r {
-      if let short = r.cacheWriteShort, let long = r.cacheWriteLong {
-        let labels = r.client == .claude ? ["5分钟", "1小时"] : ["30分钟", "12小时"]
-        fields.append(
-          fact(
-            "缓存写入 " + labels[0] + " / " + labels[1],
-            prices([r.cacheWriteShortPrice]) + " / " + prices([r.cacheWriteLongPrice])))
-        fields.append(fact("缓存写入短期 / 长期Token", "\(short) / \(long)"))
-      }
-      if r.hasChannelEstimate {
-        fields.append(fact("渠道倍率", AIUsageFormatting.multiplier(r.multiplier)))
-      }
-      fields.append(fact("官方价格版本", r.priceVersion.isEmpty ? "预览样本" : r.priceVersion))
-    }
-    fields.append(
-      fact(
-        s.accountOnly ? "API 等值估算" : "官方费用（1×）",
-        AIUsageFormatting.cost(s.originalCost, precision: 6),
-        color: AIUsageCostDisplay.officialColor))
-    if s.hasChannelEstimate {
-      fields.append(fact("渠道费用", s.costLabel, color: AIUsageCostDisplay.channelColor))
-    }
-    fields.append(AIUsageLayout.label(AIUsageCostDisplay.explanation, secondary: true))
-    let facts = AIUsageLayout.stack(fields)
-    facts.isHidden = true
-    let toggle = actions.button("计费依据  ·  历史单价与倍率  ›") { [weak self, weak facts] in
-      facts?.isHidden.toggle()
-      self?.pane.invalidateContentSize()
-    }
-    toggle.compactStyle = .text
-    toggle.leadingAligned = true
-    pane.add(AIUsageLayout.separator())
-    pane.add(toggle)
-    pane.add(facts)
-  }
-  private static func failureMessage(_ code: String?) -> String {
+  private func failureMessage(_ code: String?) -> String {
     switch code {
-    case "AUTH", "http_401", "http_403": return "认证失败或没有访问权限"
-    case "RATE_LIMIT", "http_429": return "请求超过服务限流"
-    case "TIMEOUT": return "请求超时"
-    case "http_402": return "服务拒绝计费或额度不足"
-    case "TRANSPORT": return "服务连接失败"
-    default: return "上游请求失败，日志没有更详细的安全说明"
+    case "AUTH", "http_401", "http_403": return interfaceCopy.text("ai_usage.detail.auth_failed")
+    case "RATE_LIMIT", "http_429": return interfaceCopy.text("ai_usage.detail.rate_limit")
+    case "TIMEOUT": return interfaceCopy.text("ai_usage.detail.timeout")
+    case "http_402": return interfaceCopy.text("ai_usage.detail.billing_failed")
+    case "TRANSPORT": return interfaceCopy.text("ai_usage.detail.connection_failed")
+    default: return interfaceCopy.text("ai_usage.detail.upstream_failed")
     }
   }
 

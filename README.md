@@ -21,7 +21,7 @@ Route traffic, switch API profiles, and see token usage and cost, all in one nat
 
 <img src="docs/images/overview.webp" width="880" alt="Pax Connect network overview: current route, today's traffic, model usage trend and ranking">
 
-<sub>Demo mode with simulated data. The app interface is currently Chinese only.</sub>
+<sub>Demo mode with simulated data.</sub>
 
 </div>
 
@@ -96,7 +96,7 @@ Things worth knowing:
 - **The first time you turn the proxy on, Pax asks for your administrator password once.** It is entered in a secure input box inside Pax and used to start the network core (`pax-core`) as root. Pax does not change `sudoers` and does not cache the password. Cancelling leaves the proxy off. This is separate from the Gatekeeper prompt above.
 - **Turn off other VPN / TUN apps** before enabling Pax's TUN mode.
 - **Closing the window does not quit the app.** Press **⌘Q** to quit Pax and its background processes; turning the proxy off releases the network Pax took over.
-- **The interface is Chinese only for now.**
+- **Interface language** can follow macOS or be set to English or Simplified Chinese in Settings. Some historical messages may appear in their original language.
 - **Your data** (routes, subscriptions, API profiles, local records) lives in `~/Library/Application Support/Pax Connect/`. It can contain credentials; do not share it. Error logs are in `~/Library/Logs/Pax Connect/`. Updating or deleting the app does not remove this folder; downgrading is not supported.
 
 ## Privacy

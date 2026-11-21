@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "environment.row.public_ip": "Public IP",
+    "environment.row.language": "Languages",
+    "environment.row.timezone": "Timezone",
+    "environment.row.dns": "DNS",
+    "environment.row.webrtc": "WebRTC",
+    "environment.row.ipv6": "IPv6",
+    "environment.row.location": "Location"
+  }
+}

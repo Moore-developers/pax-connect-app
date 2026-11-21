@@ -407,6 +407,7 @@ public struct ConnectionMetrics: Sendable, Equatable {
   public init() {}
 }
 public struct LogRecord: Sendable, Equatable, Identifiable {
+  public var titleText: ProductText? = nil
   public var systemEvent: SystemEvent? = nil
   public var categoryName = ""
   public var categorySymbol = ""
@@ -453,12 +454,17 @@ public struct LogOptions: Sendable, Equatable {
 }
 
 public struct EventCategory: Sendable, Equatable {
+  public var nameText: ProductText? = nil
   public var key = ""
   public var name = ""
   public var symbol = ""
   public init() {}
 }
 public struct EventField: Sendable, Equatable {
+  public var labelText: ProductText? = nil
+  public var valueText: ProductText? = nil
+  public var beforeText: ProductText? = nil
+  public var afterText: ProductText? = nil
   public var label = ""
   public var value = ""
   public var before = ""
@@ -466,12 +472,14 @@ public struct EventField: Sendable, Equatable {
   public init() {}
 }
 public struct EventSection: Sendable, Equatable {
+  public var titleText: ProductText? = nil
   public var kind = ""
   public var title = ""
   public var fields: [EventField] = []
   public init() {}
 }
 public struct SystemEvent: Sendable, Equatable {
+  public var nameText: ProductText? = nil
   public var type = ""
   public var name = ""
   public var category = EventCategory()

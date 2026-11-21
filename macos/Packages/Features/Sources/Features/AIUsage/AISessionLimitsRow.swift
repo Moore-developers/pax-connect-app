@@ -6,6 +6,9 @@ import PaxUI
 /// One line of the limits list. Columns have fixed widths so the flexible bar column aligns; the
 /// header in `AILimitListCard` uses the same widths. A 1px divider closes every row but the last.
 @MainActor final class AILimitRowView: NSView, NSGestureRecognizerDelegate {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   static let iconWidth: CGFloat = 24
   static let nameWidth: CGFloat = 230
   static let multipleWidth: CGFloat = 76
@@ -29,10 +32,16 @@ import PaxUI
   private lazy var bandHost = AILimitReadoutHost(
     band, readout: readout,
     content: { [weak self] in
-      self.map { AILimitRowReadout.view($0.row) } ?? NSView()
+      self.map { AILimitRowReadout.view($0.row, context: $0.context) } ?? NSView()
     })
 
-  init(row: AILimitListRow, readout: AILimitReadout) {
+  init(
+    row: AILimitListRow, readout: AILimitReadout,
+    interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()
+  ) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
     self.readout = readout
     self.row = row
     super.init(frame: .zero)
@@ -93,6 +102,8 @@ import PaxUI
     return bandHost
   }
 
+  func invalidateLanguage() { updateContent(previous: nil) }
+
   func apply(_ row: AILimitListRow) {
     guard self.row != row else { return }
     let previous = self.row
@@ -135,7 +146,7 @@ import PaxUI
     if row.lines == nil {
       segments = [
         .init(
-          share: row.input.official > 0 ? 100 : 0, text: "未设上限 100%",
+          share: row.input.official > 0 ? 100 : 0, text: context.text("session_limits.09b444eb90"),
           fill: AILimitStyle.neutralFill, tone: AILimitStyle.neutral)
       ]
     } else {
@@ -171,7 +182,9 @@ import PaxUI
     let label = fixed(multipleLabel, Self.multipleWidth)
     label.toolTip = nil
     return AILimitReadoutHost(label, readout: readout) { [weak self] in
-      AILimitReadout.explanation("费用倍率", self?.multipleTip() ?? "")
+      guard let self else { return nil }
+      return AILimitReadout.explanation(
+        context.text("session_limits.76c84b1e3a"), self.multipleTip())
     }
   }
 
@@ -179,12 +192,16 @@ import PaxUI
     let label = fixed(spendLabel, Self.spendWidth)
     label.toolTip = nil
     return AILimitReadoutHost(label, readout: readout) { [weak self] in
-      AILimitReadout.explanation("超限增费", self?.spendTip() ?? "")
+      guard let self else { return nil }
+      return AILimitReadout.explanation(
+        context.text("session_limits.2f7cdaa366"), self.spendTip())
     }
   }
 
   private func valueText() -> String {
-    "费用倍率 " + (judged ? AILimitStyle.multipleText(row.multiple) : "—") + "，超限增费 "
+    context.text("session_limits.02779d1754")
+      + (judged ? AILimitStyle.multipleText(row.multiple) : "—")
+      + context.text("session_limits.5b83ceadbd")
       + (judged ? AILimitStyle.plus(row.overSpend?.official) : "—")
   }
 
@@ -194,50 +211,68 @@ import PaxUI
     var lines: [String] = []
     if row.lines == nil {
       lines.append(
-        "该模型未设上限，整条为一段：" + AILimitStyle.both(row.input, precision: 4) + " · \(row.requests) 次")
+        context.text("session_limits.9cfb51623a")
+          + AILimitStyle.both(row.input, precision: 4, context: context)
+          + context.text("session_limits.7097672ee0", ["arg0": String(describing: row.requests)]))
     } else {
-      let edges = AILimitStyle.edges(row.lines)
+      let edges = AILimitStyle.edges(row.lines, context: context)
       for index in 0..<3 {
         let band = row.bands[index]
-        let name = "\(AILimitStyle.bandNames[index]) \(edges[index])："
+        let name = "\(AILimitStyle.bandNames(context: context)[index]) \(edges[index])："
         lines.append(
-          name + AILimitStyle.both(band.money, precision: 4)
-            + " · \(band.requests) 次 · \(row.percents[index])%")
+          name + AILimitStyle.both(band.money, precision: 4, context: context)
+            + context.text(
+              "session_limits.58a69ebe34",
+              [
+                "arg0": String(describing: band.requests),
+                "arg1": String(describing: row.percents[index]),
+              ]))
       }
     }
-    if row.unpriced > 0 { lines.append("另有 \(row.unpriced) 次未定价请求，不计入费用与占比") }
+    if row.unpriced > 0 {
+      lines.append(
+        context.text("session_limits.789f474a2f", ["arg0": String(describing: row.unpriced)]))
+    }
     if let flat = row.flat {
       lines.append(
-        "不翻倍情形（上限 \(AILimitStyle.k(flat.limit))）：>\(AILimitStyle.k(flat.limit)) 共 \(flat.requests) 次，"
-          + AILimitStyle.both(flat.cost, precision: 4))
+        context.text(
+          "session_limits.6843736d5b",
+          [
+            "arg0": String(describing: AILimitStyle.k(flat.limit)),
+            "arg1": String(describing: AILimitStyle.k(flat.limit)),
+            "arg2": String(describing: flat.requests),
+          ])
+          + AILimitStyle.both(flat.cost, precision: 4, context: context))
     }
-    lines.append("百分比 = 各段输入费用 ÷ 本行输入费用（官方口径）；超限段为斜纹")
+    lines.append(context.text("session_limits.a36930ba4d"))
     if row.modelLines.count > 1 {
-      lines.append("各模型的线：")
+      lines.append(context.text("session_limits.1482ea4ba9"))
       for item in row.modelLines {
         lines.append(
           "  " + item.model + " "
-            + AILimitStyle.edges(item.limit).joined(separator: " / ") + " · \(item.requests) 次")
+            + AILimitStyle.edges(item.limit, context: context).joined(separator: " / ")
+            + context.text("session_limits.7097672ee0", ["arg0": String(describing: item.requests)])
+        )
       }
     }
     return lines.joined(separator: "\n")
   }
 
   private func multipleTip() -> String {
-    guard judged else { return "没有超限请求，无需比较。" }
-    guard row.multiple != .dash else { return "缺少可比较的费用，暂时算不出。" }
-    var text = AILimitStyle.multipleExplanation
+    guard judged else { return context.text("session_limits.69756599cc") }
+    guard row.multiple != .dash else { return context.text("session_limits.dbc69bba38") }
+    var text = AILimitStyle.multipleExplanation(context: context)
     if row.bands[0].pricedRequests == 0 {
-      text += "\n没有已定价安全记录时，按模型参考费用比较。"
+      text += context.text("session_limits.588ec98494")
     }
     return text
   }
 
   private func spendTip() -> String {
-    guard judged else { return "没有超限请求，没有额外费用。" }
-    guard let spend = row.overSpend else { return "缺少可比较的费用，暂时算不出。" }
-    var text = AILimitStyle.spendExplanation
-    if spend.official < 0 { text += "\n负数表示花费比参考费用低。" }
+    guard judged else { return context.text("session_limits.9f7a7e66b8") }
+    guard let spend = row.overSpend else { return context.text("session_limits.dbc69bba38") }
+    var text = AILimitStyle.spendExplanation(context: context)
+    if spend.official < 0 { text += context.text("session_limits.75717bd0b6") }
     return text
   }
 

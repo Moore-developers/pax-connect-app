@@ -7,7 +7,11 @@ import PaxClient
 public final class AIProfilesStore {
   public private(set) var workspace = AIProfilesWorkspace()
   public private(set) var loading = false
-  public private(set) var error: String?
+  public private(set) var errorMeaning: ProductText?
+  public var error: String? { error(context: .chinese) }
+  public func error(context: PresentationContext) -> String? {
+    errorMeaning.map { ProductTextPresentation.text($0, original: "—", context: context) }
+  }
   public private(set) var available: Bool
   private let connection: DaemonConnection?
   private var backendConnected = true
@@ -56,11 +60,11 @@ public final class AIProfilesStore {
       let result = try await task.value
       guard token == generation, !Task.isCancelled else { return }
       workspace = result
-      error = nil
+      errorMeaning = nil
       available = true
     } catch {
       guard token == generation, !Task.isCancelled else { return }
-      self.error = Self.message(error)
+      self.errorMeaning = Self.failureMeaning(error)
       available = false
     }
   }
@@ -72,18 +76,18 @@ public final class AIProfilesStore {
   }
   private func commit(_ action: () async throws -> AIProfilesWorkspace) async -> Bool {
     guard backendConnected else {
-      error = "后台连接已断开，请恢复后台后重试"
+      errorMeaning = ProductText(code: "profile_error.backend_disconnected")
       return false
     }
     guard !loading, !mutating else {
-      error = "配置正在更新，请稍后重试"
+      errorMeaning = ProductText(code: "profile_error.updating")
       return false
     }
     generation += 1
     let token = generation
     mutating = true
     loading = true
-    error = nil
+    errorMeaning = nil
     defer {
       mutating = false
       loading = false
@@ -96,7 +100,7 @@ public final class AIProfilesStore {
       return true
     } catch {
       guard token == generation else { return false }
-      self.error = Self.message(error)
+      self.errorMeaning = Self.failureMeaning(error)
       return false
     }
   }
@@ -107,7 +111,7 @@ public final class AIProfilesStore {
   @discardableResult
   public func savePreview(_ p: AIProfile, key: String = "") -> Bool {
     guard connection == nil, available else {
-      error = "配置服务未连接"
+      errorMeaning = ProductText(code: "profile_error.service_disconnected")
       return false
     }
     guard !p.name.isEmpty, p.kind == "native" || URL(string: p.endpoint)?.host != nil,
@@ -115,13 +119,13 @@ public final class AIProfilesStore {
       (0...100).contains(p.multiplier),
       !workspace.profiles.contains(where: { $0.id != p.id && $0.name == p.name })
     else {
-      error = "请填写有效名称、地址和倍率"
+      errorMeaning = ProductText(code: "profile_error.invalid_values")
       return false
     }
     if let existing = workspace.profiles.first(where: { $0.id == p.id }),
       existing.revision != p.revision
     {
-      error = "配置已更新，请刷新后重试"
+      errorMeaning = ProductText(code: "profile_error.ai_profile_conflict")
       return false
     }
     var value = p
@@ -132,7 +136,7 @@ public final class AIProfilesStore {
     } else {
       workspace.profiles.append(value)
     }
-    error = nil
+    errorMeaning = nil
     return true
   }
   public func delete(_ p: AIProfile) async -> Bool {
@@ -143,11 +147,11 @@ public final class AIProfilesStore {
   public func deletePreview(_ p: AIProfile) -> Bool {
     guard connection == nil, available else { return false }
     guard !workspace.bindings.values.contains(where: { $0.profileID == p.id }) else {
-      error = "此 Profile 仍在使用，请先切换"
+      errorMeaning = ProductText(code: "profile_error.ai_profile_in_use")
       return false
     }
     workspace.profiles.removeAll { $0.id == p.id }
-    error = nil
+    errorMeaning = nil
     return true
   }
   public func importCurrent(
@@ -182,34 +186,34 @@ public final class AIProfilesStore {
     -> AIProfilePlan?
   {
     guard backendConnected else {
-      error = "后台连接已断开，请恢复后台后重试"
+      errorMeaning = ProductText(code: "profile_error.backend_disconnected")
       return nil
     }
     guard cli != .harness, let connection, let binding = workspace.bindings[cli] else {
-      error = "当前客户端配置不可用，请重新检查"
+      errorMeaning = ProductText(code: "profile_error.client_unavailable")
       return nil
     }
     guard !loading, !mutating else {
-      error = "配置正在更新，请稍后重试"
+      errorMeaning = ProductText(code: "profile_error.updating")
       return nil
     }
-    error = nil
+    errorMeaning = nil
     let token = backendGeneration
     do {
       let plan = try await connection.planAIProfile(
         cli, profile: profile, binding: binding, restore: restore, initialize: initialize,
         modelID: modelID)
       guard token == backendGeneration, backendConnected else {
-        self.error = "后台连接已变更，请重新检查后重试"
+        self.errorMeaning = ProductText(code: "profile_error.backend_changed")
         return nil
       }
       return plan
     } catch {
       guard token == backendGeneration, backendConnected else {
-        self.error = "后台连接已变更，请重新检查后重试"
+        self.errorMeaning = ProductText(code: "profile_error.backend_changed")
         return nil
       }
-      self.error = Self.message(error)
+      self.errorMeaning = Self.failureMeaning(error)
       return nil
     }
   }
@@ -217,9 +221,9 @@ public final class AIProfilesStore {
     guard plan.cli != .harness, let connection else { return false }
     let success = await commit { try await connection.applyAIProfile(plan) }
     if !success {
-      let message = error
+      let meaning = errorMeaning
       await refresh()
-      error = message
+      errorMeaning = meaning
     }
     return success
   }

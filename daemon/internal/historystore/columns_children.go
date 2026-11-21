@@ -65,7 +65,7 @@ func columnEventChildren(ctx context.Context, q columnQueryer, e *config.History
 		}
 	}
 	if e.System == nil || e.System.Sections == nil {
-		return nil
+		return columnEventTexts(ctx, q, e)
 	}
 	rows, err := q.QueryContext(ctx, "SELECT kind,title,fields_present FROM col_sections WHERE event_id=? ORDER BY ordinal", e.ID)
 	if err != nil {
@@ -117,5 +117,5 @@ func columnEventChildren(ctx context.Context, q columnQueryer, e *config.History
 			return closeErr
 		}
 	}
-	return nil
+	return columnEventTexts(ctx, q, e)
 }

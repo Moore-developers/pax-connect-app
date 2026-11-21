@@ -5,6 +5,8 @@ import PaxUI
 /// Shared fields for creating and editing purchased proxies; no I/O or persistence.
 @MainActor
 final class RouteProxyForm: NSStackView {
+  let context: PresentationContext
+
   var onResize: (() -> Void)?
   private var draft: ProxyRouteDraft
   private let kind = PaxRoutePicker()
@@ -20,10 +22,14 @@ final class RouteProxyForm: NSStackView {
   private let advanced = NSStackView()
   private let sniRow = NSStackView()
   private let help = PaxRouteText.label("", secondary: true, wrapping: true)
-  private let reveal = NSButton(checkboxWithTitle: "显示密码", target: nil, action: nil)
-  private let disclosure = NSButton(checkboxWithTitle: "高级设置", target: nil, action: nil)
+  private lazy var reveal = NSButton(
+    checkboxWithTitle: context.text("network_controls.ffe21a6711"), target: nil, action: nil)
+  private lazy var disclosure = NSButton(
+    checkboxWithTitle: context.text("network_controls.44455611b9"), target: nil, action: nil)
 
-  init(_ draft: ProxyRouteDraft, editing: Bool = false) {
+  init(_ draft: ProxyRouteDraft, editing: Bool = false, context: PresentationContext = .chinese) {
+    self.context = context
+
     self.draft = draft
     super.init(frame: .zero)
     orientation = .vertical
@@ -34,34 +40,42 @@ final class RouteProxyForm: NSStackView {
     kind.action = #selector(kindChanged)
     kind.isEnabled = !editing
     kind.setAccessibilityIdentifier("proxy-kind")
-    authentication.addItems(withTitles: ["用户名和密码", "无需账号密码"])
+    authentication.addItems(withTitles: [
+      context.text("network_controls.c0e75bfc70"), context.text("network_controls.4962150cec"),
+    ])
     authentication.target = self
     authentication.action = #selector(authChanged)
     authentication.setAccessibilityIdentifier("proxy-auth")
-    addArrangedSubview(row("代理类型", kind))
-    addArrangedSubview(PaxFormGrid(rows: [[row("服务器地址", server), row("端口", port)]]))
-    addArrangedSubview(row("认证方式", authentication))
+    addArrangedSubview(row(context.text("network_controls.ba1de0bdf2"), kind))
+    addArrangedSubview(
+      PaxFormGrid(rows: [
+        [
+          row(context.text("network_controls.d3716cc5a2"), server),
+          row(context.text("network_controls.e71ac32b54"), port),
+        ]
+      ]))
+    addArrangedSubview(row(context.text("network_controls.d1ff8f98bc"), authentication))
     credentials.orientation = .vertical
     credentials.alignment = .leading
     credentials.spacing = PaxTheme.Spacing.regular
-    credentials.addArrangedSubview(row("用户名", username))
+    credentials.addArrangedSubview(row(context.text("network_controls.1a3f0617d6"), username))
     let passwordFields = NSStackView(views: [password, visiblePassword])
     passwordFields.orientation = .vertical
     passwordFields.alignment = .leading
     passwordFields.spacing = 0
-    credentials.addArrangedSubview(row("密码", passwordFields))
+    credentials.addArrangedSubview(row(context.text("network_controls.a621ab606d"), passwordFields))
     credentials.addArrangedSubview(reveal)
     reveal.target = self
     reveal.action = #selector(revealChanged)
     addArrangedSubview(credentials)
-    addArrangedSubview(row("线路名称（可选）", name))
+    addArrangedSubview(row(context.text("network_controls.c6f3c5b91e"), name))
     advanced.orientation = .vertical
     advanced.alignment = .leading
     advanced.spacing = PaxTheme.Spacing.tight
     disclosure.target = self
     disclosure.action = #selector(advancedChanged)
     advanced.addArrangedSubview(disclosure)
-    let serverNameFields = row("服务器名称（SNI）", sni)
+    let serverNameFields = row(context.text("network_controls.dc92600e29"), sni)
     sniRow.addArrangedSubview(serverNameFields)
     advanced.addArrangedSubview(sniRow)
     sniRow.widthAnchor.constraint(equalTo: advanced.widthAnchor).isActive = true
@@ -69,10 +83,13 @@ final class RouteProxyForm: NSStackView {
     addArrangedSubview(advanced)
     addArrangedSubview(help)
     for (field, id, title) in [
-      (server, "proxy-server", "服务器地址"), (port, "proxy-port", "端口"),
-      (username, "proxy-username", "用户名"), (password, "proxy-password", "密码"),
-      (visiblePassword, "proxy-password-visible", "密码"), (name, "proxy-name", "线路名称"),
-      (sni, "proxy-sni", "服务器名称"),
+      (server, "proxy-server", context.text("network_controls.d3716cc5a2")),
+      (port, "proxy-port", context.text("network_controls.e71ac32b54")),
+      (username, "proxy-username", context.text("network_controls.1a3f0617d6")),
+      (password, "proxy-password", context.text("network_controls.a621ab606d")),
+      (visiblePassword, "proxy-password-visible", context.text("network_controls.a621ab606d")),
+      (name, "proxy-name", context.text("network_controls.2035432e8a")),
+      (sni, "proxy-sni", context.text("network_controls.ec79bfcf63")),
     ] {
       field.font = PaxTheme.Typography.label()
       field.setAccessibilityIdentifier(id)
@@ -80,10 +97,10 @@ final class RouteProxyForm: NSStackView {
     }
     password.heightAnchor.constraint(equalToConstant: PaxTheme.Routes.fieldHeight).isActive = true
     password.backgroundColor = PaxTheme.Routes.canvas
-    server.placeholderString = "IP 或域名"
-    port.placeholderString = "服务商提供的端口"
-    name.placeholderString = "留空自动生成"
-    sni.placeholderString = "默认跟随服务器域名"
+    server.placeholderString = context.text("network_controls.c0325588e5")
+    port.placeholderString = context.text("network_controls.2546bd3979")
+    name.placeholderString = context.text("network_controls.47d9506855")
+    sni.placeholderString = context.text("network_controls.d4d46fe96e")
     for child in arrangedSubviews {
       child.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
     }
@@ -162,13 +179,13 @@ final class RouteProxyForm: NSStackView {
     sniRow.isHidden = disclosure.state != .on
     help.stringValue =
       value.needsProtocolConfirmation
-      ? "请确认代理类型：打开上方菜单选择 SOCKS5、HTTP 或 HTTPS。"
+      ? context.text("network_controls.7c18e15a3e")
       : value.kind == .https
-        ? "HTTPS 加密连接代理服务器，并校验证书。能访问 HTTPS 网站不代表必须选择 HTTPS 代理。"
+        ? context.text("network_controls.cefed18ab3")
         : value.kind == .http
-          ? "HTTP 可访问 HTTPS 网站；代理连接本身未加密。普通 HTTP 代理不支持 UDP。"
-          : "SOCKS5 本身不加密；UDP 是否可用取决于服务商。"
-    if !value.authenticated { help.stringValue += " IP 白名单请在服务商后台设置。" }
+          ? context.text("network_controls.f07c72ff31")
+          : context.text("network_controls.6bd85fff8a")
+    if !value.authenticated { help.stringValue += context.text("network_controls.f9b28d52de") }
     needsLayout = true
     onResize?()
   }

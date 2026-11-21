@@ -1,7 +1,7 @@
 import Foundation
 
 /// 预设周期；页面按场景决定出现哪几个（见 `PaxDateRangeOptions.presets`）。
-public enum PaxDatePreset: CaseIterable {
+public enum PaxDatePreset: CaseIterable, Hashable {
   case today, yesterday, week, month
 
   public var title: String {

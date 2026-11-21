@@ -198,6 +198,10 @@ message AIUsageLimitRow {
  AIUsageModelLimit lines=10; repeated AIUsageLimitModelLine model_lines=11;
  optional double multiple=12; AIUsageLimitMoney over_spend=13; AIUsageLimitFlat flat=14;
  int64 unpriced=15;
+ // Distinct sessions in an all-session model row; absent in legacy replies and other row kinds.
+ optional int64 session_count=16;
+ // Raw catalog title and provenance; title remains the legacy display fallback.
+ string title_source=17; string raw_title=18;
 }
 message AIUsageLimitCurrent { int64 context=1; optional int64 limit=2; int32 band=3; }
 message AIUsageLimitSummary {

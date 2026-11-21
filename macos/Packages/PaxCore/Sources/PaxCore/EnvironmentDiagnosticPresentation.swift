@@ -6,17 +6,41 @@ public enum EnvironmentDiagnosticPresentation {
   public enum Tone: Sendable { case information, matching, difference, failure, pending }
   public struct Row: Sendable {
     public let title, symbol, value, detail: String
+    /// Stable built-in identity, independent of the displayed title or language pack.
+    public let kind: String
+    public init(
+      title: String, symbol: String, value: String, detail: String, tone: Tone,
+      context: PresentationContext = .chinese
+    ) {
+      let keys = [
+        "公网 IP": "public_ip", "语言": "language", "时区": "timezone", "DNS": "dns",
+        "WebRTC": "webrtc", "IPv6": "ipv6", "定位": "location",
+      ]
+      self.kind = keys[title] ?? title
+      self.title =
+        (keys[title] ?? (keys.values.contains(title) ? title : nil)).map {
+          context.text("environment.row." + $0)
+        } ?? title
+      self.symbol = symbol
+      self.value = value
+      self.detail = detail
+      self.tone = tone
+    }
     public let tone: Tone
   }
   public static func rows(
     _ sample: EnvironmentDiagnosticReport.Sample?, local: NetworkDiagnosticEnvironment? = nil,
-    browser: Bool, waiting: Bool, at: Date? = nil
+    browser: Bool, waiting: Bool, at: Date? = nil, context: PresentationContext = .chinese
   ) -> [Row] {
     if sample == nil && local == nil && !waiting {
       let items =
         [("公网 IP", "globe"), ("语言", "character.bubble"), ("时区", "clock"), ("DNS", "server.rack")]
         + (browser ? [("WebRTC", "point.3.connected.trianglepath.dotted")] : [])
-      return items.map { Row(title: $0.0, symbol: $0.1, value: "尚未检测", detail: "", tone: .pending) }
+      return items.map {
+        Row(
+          title: $0.0, symbol: $0.1, value: context.text("environment_evidence.4d2966c438"),
+          detail: "", tone: .pending, context: context)
+      }
     }
     let pending = sample?.complete != true && waiting
     let languages = browser ? sample?.languages ?? [] : local?.languages ?? []
@@ -29,101 +53,145 @@ public enum EnvironmentDiagnosticPresentation {
         title: "公网 IP", symbol: "globe",
         value: ips.isEmpty
           ? (pending
-            ? "正在获取公网 IP…" : sampleProblem(sample?.ipError ?? "", fallback: "公网 IP 请求未取得有效地址"))
-          : location(sample),
+            ? context.text("environment_evidence.24de95eab9")
+            : sampleProblem(
+              sample?.ipError ?? "", fallback: context.text("environment_evidence.ae00dafe64"),
+              context: context))
+          : location(sample, context: context),
         detail: ips.isEmpty
-          ? "本项尚未完成，不能据此判断网络不可用"
+          ? context.text("environment_evidence.feeda78116")
           : ips.joined(separator: "\n"),
-        tone: ips.isEmpty ? (pending ? .pending : .failure) : .information))
-    let locale = Locale(identifier: "zh_CN")
+        tone: ips.isEmpty ? (pending ? .pending : .failure) : .information, context: context))
+    let locale = Locale(identifier: context.language == .chinese ? "zh_CN" : "en")
     let language =
       languages.first.map {
         locale.localizedString(
           forLanguageCode: Locale(identifier: $0).language.languageCode?.identifier ?? $0) ?? $0
       } ?? ""
     let code = Locale(identifier: region).region?.identifier ?? ""
-    let country = code.isEmpty ? "" : NetworkDiagnosticPresentation.countryName(code)
+    let country =
+      code.isEmpty ? "" : NetworkDiagnosticPresentation.countryName(code, context: context)
     rows.append(
       Row(
         title: "语言", symbol: "character.bubble",
-        value: language.isEmpty ? (pending ? "等待读取语言…" : "无法读取语言") : language,
-        detail: languages.joined(separator: " → ") + (country.isEmpty ? "" : " · 地区设为" + country),
-        tone: language.isEmpty ? (pending ? .pending : .failure) : .information))
+        value: language.isEmpty
+          ? (pending
+            ? context.text("environment_evidence.8c45a5bbbf")
+            : context.text("environment_evidence.263ebd99b1")) : language,
+        detail: languages.joined(separator: " → ")
+          + (country.isEmpty ? "" : context.text("environment_evidence.549da762ae") + country),
+        tone: language.isEmpty ? (pending ? .pending : .failure) : .information, context: context))
     rows.append(
       Row(
         title: "时区", symbol: "clock",
         value: zone.isEmpty
-          ? (pending ? "等待读取时区…" : "无法读取时区") : timezone(zone, at: local?.at ?? at ?? Date()),
-        detail: zone.isEmpty ? "" : zone + " · " + localTime(zone, at: local?.at ?? at ?? Date()),
-        tone: zone.isEmpty ? (pending ? .pending : .failure) : .information))
+          ? (pending
+            ? context.text("environment_evidence.5181fb2a7b")
+            : context.text("environment_evidence.d4b04cb131"))
+          : timezone(zone, at: local?.at ?? at ?? Date(), context: context),
+        detail: zone.isEmpty
+          ? "" : zone + " · " + localTime(zone, at: local?.at ?? at ?? Date(), context: context),
+        tone: zone.isEmpty ? (pending ? .pending : .failure) : .information, context: context))
     let resolvers = sample?.resolvers ?? []
     rows.append(
       Row(
         title: "DNS", symbol: "server.rack",
         value: resolvers.isEmpty
           ? (pending
-            ? "正在检测 DNS 解析出口…" : sampleProblem(sample?.dnsError ?? "", fallback: "DNS 服务未返回有效解析器"))
-          : dnsSummary(resolvers),
+            ? context.text("environment_evidence.a2a8af90ba")
+            : sampleProblem(
+              sample?.dnsError ?? "", fallback: context.text("environment_evidence.1567b0a5b3"),
+              context: context))
+          : dnsSummary(resolvers, context: context),
         detail: resolvers.isEmpty
-          ? (pending ? "" : "未取得有效结果，本项检测未完成")
+          ? (pending ? "" : context.text("environment_evidence.15d8603daf"))
           : resolvers.prefix(2).map(\.ip).joined(separator: " · ")
-            + (resolvers.count > 2 ? "\n其余 \(resolvers.count - 2) 个可在详情中查看" : ""),
-        tone: resolvers.isEmpty ? (pending ? .pending : .failure) : .information))
+            + (resolvers.count > 2
+              ? context.text(
+                "environment_evidence.3d9397bc02", ["arg0": String(describing: resolvers.count - 2)]
+              ) : ""),
+        tone: resolvers.isEmpty ? (pending ? .pending : .failure) : .information, context: context))
     if browser {
       let addresses = (sample?.rtcAddresses ?? []).filter { isPublicAddress($0) }
       let state = sample?.rtcState ?? ""
-      let verdict = webRTCVerdict(sample, pending: pending)
+      let verdict = webRTCVerdict(sample, pending: pending, context: context)
       let evidence = (sample?.checks ?? []).filter { $0.kind.hasPrefix("rtc_") }
-        .map { $0.target + "：" + checkOutcome($0) }
+        .map { $0.target + "：" + checkOutcome($0, context: context) }
       var lines =
         addresses.isEmpty
-        ? (pending || state == "unsupported" ? [] : ["可能已禁用或受到限制；不代表已确认防泄露"]) : addresses
+        ? (pending || state == "unsupported"
+          ? [] : [context.text("environment_evidence.650a19b9eb")]) : addresses
       lines += verdict.routeDetails + evidence
       rows.append(
         Row(
           title: "WebRTC", symbol: "point.3.connected.trianglepath.dotted",
-          value: verdict.text, detail: lines.joined(separator: "\n"), tone: verdict.tone))
+          value: verdict.text, detail: lines.joined(separator: "\n"), tone: verdict.tone,
+          context: context))
     }
     return rows
   }
-  private static func sampleProblem(_ code: String, fallback: String) -> String {
+  private static func sampleProblem(
+    _ code: String, fallback: String, context: PresentationContext = .chinese
+  ) -> String {
     switch code {
-    case "sampling_timeout": "45 秒会话超时，未收到该项结果"
-    case "dns_cancelled": "DNS 检测已取消"
-    case "dns_unavailable": "DNS 服务未返回有效解析器，具体原因未记录"
-    case "ip_unavailable": "公网 IP 请求未取得有效地址，具体原因未记录"
+    case "sampling_timeout": context.text("environment_evidence.875d1d42cd")
+    case "dns_cancelled": context.text("environment_evidence.bb69d85029")
+    case "dns_unavailable": context.text("environment_evidence.c1160cf273")
+    case "ip_unavailable": context.text("environment_evidence.4ec8f916ca")
     case "": fallback
-    default: checkProblem(code)
+    default: checkProblem(code, context: context)
     }
   }
-  public static func location(_ sample: EnvironmentDiagnosticReport.Sample?) -> String {
-    guard let sample, !sample.ipv4.isEmpty || !sample.ipv6.isEmpty else { return "尚未取得公网 IP" }
+  public static func location(
+    _ sample: EnvironmentDiagnosticReport.Sample?, context: PresentationContext = .chinese
+  ) -> String {
+    guard let sample, !sample.ipv4.isEmpty || !sample.ipv6.isEmpty else {
+      return context.text("environment_evidence.400be355bf")
+    }
     if let error = sample.intelligence?.providerError, !error.isEmpty {
-      return "公网 IP 已取得，资料查询失败：" + NetworkDiagnosticPresentation.problem(error)
+      return context.text("environment_evidence.5aaa9e6b89")
+        + NetworkDiagnosticPresentation.problem(error, context: context)
     }
     guard let intel = sample.intelligence, !intel.country.isEmpty else {
-      return "公网 IP 已取得，地区资料未取得"
+      return context.text("environment_evidence.6dc8c692de")
     }
     let city = intel.sources.first { $0.country == intel.country && !$0.city.isEmpty }?.city ?? ""
-    return NetworkDiagnosticPresentation.countryName(intel.country)
+    return NetworkDiagnosticPresentation.countryName(intel.country, context: context)
       + (city.isEmpty ? "" : " · " + city)
   }
-  public static func dnsSummary(_ values: [EnvironmentDiagnosticReport.Resolver]) -> String {
+  public static func dnsSummary(
+    _ values: [EnvironmentDiagnosticReport.Resolver], context: PresentationContext = .chinese
+  ) -> String {
     let grouped = Dictionary(grouping: values, by: \.country)
     let countries = grouped.keys.sorted().map {
-      NetworkDiagnosticPresentation.countryName($0)
-        + (grouped.count > 1 ? " \(grouped[$0]?.count ?? 0) 个" : "")
+      NetworkDiagnosticPresentation.countryName($0, context: context)
+        + (grouped.count > 1
+          ? context.text(
+            "environment_evidence.f3ccaefd18", ["arg0": String(describing: grouped[$0]?.count ?? 0)]
+          ) : "")
     }.joined(separator: "、")
-    return "发现 \(values.count) 个 DNS 解析出口，" + (grouped.count == 1 ? "均位于" : "分布于") + countries
+    return context.text(
+      "environment_evidence.144e5251ed", ["arg0": String(describing: values.count)])
+      + (grouped.count == 1
+        ? context.text("environment_evidence.9654415847")
+        : context.text("environment_evidence.ae0cb210d8")) + countries
   }
-  public static func timezone(_ identifier: String, at: Date) -> String {
-    guard let zone = TimeZone(identifier: identifier) else { return "无法识别时区（\(identifier)）" }
+  public static func timezone(
+    _ identifier: String, at: Date, context: PresentationContext = .chinese
+  ) -> String {
+    guard let zone = TimeZone(identifier: identifier) else {
+      return context.text(
+        "environment_evidence.e8fc21c6b1", ["arg0": String(describing: identifier)])
+    }
     let countries = (zoneCountries[identifier] ?? []).map {
-      NetworkDiagnosticPresentation.countryName($0)
+      NetworkDiagnosticPresentation.countryName($0, context: context)
     }.joined(separator: " / ")
-    let name = zone.localizedName(for: .generic, locale: Locale(identifier: "zh_CN")) ?? identifier
+    let name =
+      zone.localizedName(
+        for: .generic, locale: Locale(identifier: context.language == .chinese ? "zh_CN" : "en"))
+      ?? identifier
     return (countries.isEmpty ? "" : countries + " · ") + name + "，"
-      + NetworkDiagnosticPresentation.utcOffset(identifier, at: at)
+      + NetworkDiagnosticPresentation.utcOffset(identifier, at: at, context: context)
   }
   private static let zoneCountries: [String: [String]] = {
     guard let text = try? String(contentsOfFile: "/usr/share/zoneinfo/zone.tab", encoding: .utf8)
@@ -137,12 +205,14 @@ public enum EnvironmentDiagnosticPresentation {
     }
     return result
   }()
-  private static func localTime(_ identifier: String, at: Date) -> String {
+  private static func localTime(
+    _ identifier: String, at: Date, context: PresentationContext = .chinese
+  ) -> String {
     let format = DateFormatter()
-    format.locale = Locale(identifier: "zh_CN")
+    format.locale = .current
     format.timeZone = TimeZone(identifier: identifier)
-    format.dateFormat = "MM月dd日 HH:mm"
-    return "检测时当地时间 " + format.string(from: at)
+    format.setLocalizedDateFormatFromTemplate("MMMdd HHmm")
+    return context.text("environment_evidence.639b333de7") + format.string(from: at)
   }
   public static func isPublicAddress(_ address: String) -> Bool {
     let lower = address.lowercased()
@@ -186,116 +256,19 @@ public enum EnvironmentDiagnosticPresentation {
     return result
   }
   public static func difference(
-    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment? = nil
+    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment? = nil,
+    context: PresentationContext = .chinese
   ) -> String {
     guard let report, report.mac.complete, report.browser.complete, !report.browser.browser.isEmpty
-    else { return "等待两侧结果" }
+    else { return context.text("environment_evidence.6c353e9dc8") }
     let values = differences(report, local: local)
-    if !values.isEmpty { return "发现 \(values.count) 项差异" }
+    if !values.isEmpty {
+      return context.text(
+        "environment_evidence.f35db5d500", ["arg0": String(describing: values.count)])
+    }
     guard !report.mac.ipv4.isEmpty || !report.mac.ipv6.isEmpty,
       !report.browser.ipv4.isEmpty || !report.browser.ipv6.isEmpty
-    else { return "部分项目未完成" }
-    return "可对照项一致"
-  }
-  @MainActor public static func markdown(_ store: EnvironmentDiagnosticStore) -> String {
-    var lines = [
-      "## 当前环境检测",
-      "采集：" + MeasurementTimestamp.text(store.report?.at) + (store.stale ? " · 历史结果" : ""),
-    ]
-    lines.append("\n### 环境结果")
-    lines.append("- 出口判断：" + exitAssessment(store.report?.browser.checks ?? []).text)
-    for row in assessedRows(
-      store.report, local: store.local, waiting: store.busy, includePhysical: false)
-    {
-      let detail =
-        row.title == locationTitle
-        ? locationReportDetail(local: store.local)
-        : row.title == ipv6Title ? ipv6ReportDetail(store.report) : row.detail
-      lines.append("- " + row.title + "：" + row.value + "\n  依据：" + detail)
-    }
-    for browser in [false, true] {
-      let sample = browser ? store.report?.browser : store.report?.mac
-      lines.append("\n### " + (browser ? "浏览器" : "Mac"))
-      for row in rows(
-        sample, local: browser ? nil : store.local, browser: browser, waiting: false,
-        at: store.report?.at)
-      {
-        lines.append("- " + row.title + "：" + row.value + "；" + row.detail)
-      }
-      if let intel = sample?.intelligence {
-        lines.append("\n#### IP 资料 · " + NetworkDiagnosticPresentation.acquisitionSummary(intel))
-        for provider in intel.providers ?? [] {
-          lines.append(NetworkDiagnosticPresentation.providerDetails(intel, id: provider.id))
-        }
-        for source in intel.sources {
-          lines.append(
-            "- " + source.name + "：" + source.country + " / " + source.city
-              + " · " + source.asn + " · " + source.org + " · "
-              + NetworkDiagnosticPresentation.channel(source.providerID)
-              + " · 资料时标：" + NetworkDiagnosticPresentation.value(source.providerDate))
-        }
-        for fact in intel.facts {
-          lines.append(
-            "- " + fact.label + "：" + fact.value + " · "
-              + NetworkDiagnosticPresentation.factState(fact.state) + " · " + fact.source
-              + " · "
-              + (fact.providerID.map { NetworkDiagnosticPresentation.channel($0) }
-                ?? (intel.providers == nil ? "旧记录未记录获取渠道" : "未调用第三方来源")))
-        }
-      }
-      if sample?.checks == nil { lines.append("- 分项诊断：旧记录未采集") }
-      for check in sample?.checks ?? [] {
-        if check.kind == "egress_physical" {
-          lines.append("- egress_physical · " + check.target + "：" + check.state + "（地址不写入报告）")
-          continue
-        }
-        if check.kind == "ipv6_route" {
-          lines.append("- ipv6_route · " + check.target + "：" + check.state + "（接口名不写入报告）")
-          continue
-        }
-        lines.append(
-          "- " + check.kind + " · " + check.target + "："
-            + checkText(check, ipv6Off: ipv6Exposure(store.report) == .off))
-      }
-      for resolver in sample?.resolvers ?? [] {
-        lines.append("- DNS：\(resolver.ip) · \(resolver.country) · \(resolver.organization)")
-      }
-    }
-    if let previous = store.previousReport {
-      lines.append("\n### 上次环境成功读值（历史） · " + MeasurementTimestamp.text(previous.at))
-      for (title, sample) in [("Mac", previous.mac), ("浏览器", previous.browser)] {
-        lines.append("- " + title + " IPv4：" + sample.ipv4 + "；IPv6：" + sample.ipv6)
-        lines.append("- " + title + " DNS：" + sample.resolvers.map(\.ip).joined(separator: "、"))
-      }
-    }
-    var output = lines.joined(separator: "\n")
-    let samples = [
-      store.report?.mac, store.report?.browser, store.previousReport?.mac,
-      store.previousReport?.browser,
-    ].compactMap { $0 }
-    let addresses = samples.flatMap {
-      [$0.ipv4, $0.ipv6] + $0.rtcAddresses + $0.resolvers.map(\.ip)
-        + ($0.intelligence?.providers ?? []).map(\.queryIP)
-    }
-    let physicalAddresses = samples.flatMap {
-      ($0.checks ?? []).filter { $0.kind == "egress_physical" }.flatMap {
-        $0.value.components(separatedBy: ";").compactMap { part in
-          part.split(separator: "=", maxSplits: 1).last.map(String.init)
-        }
-      }
-    }
-    let echoAddresses = samples.flatMap {
-      ($0.checks ?? []).filter { $0.kind.hasPrefix("echo_") }.map {
-        $0.value.components(separatedBy: " · ")[0]
-      }
-    }
-    for address in Set(addresses + echoAddresses + physicalAddresses).filter({ !$0.isEmpty })
-      .sorted(by: {
-        $0.count > $1.count
-      })
-    {
-      output = output.replacingOccurrences(of: address, with: "[已脱敏]")
-    }
-    return output
+    else { return context.text("environment_evidence.6954ee060e") }
+    return context.text("environment_evidence.b84f03e250")
   }
 }

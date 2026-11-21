@@ -36,14 +36,16 @@ enum DashboardRouteProjection {
 
   /// 已保存的出口测量：只认 `exitSummary` 且与当前配置版本一致。成功取最新 IP / 地区；
   /// 最近一次失败时 IP 与地区一并回退 `lastLocation`。无任何可显示内容返回 nil。
-  @MainActor static func savedExit(_ node: NodeProfile) -> (ip: String?, region: String?)? {
+  @MainActor static func savedExit(_ node: NodeProfile, context: PresentationContext) -> (
+    ip: String?, region: String?
+  )? {
     guard let exit = node.exitSummary, exit.testedConfigRevision == node.configRevision else {
       return nil
     }
     let location = exit.location ?? exit.lastLocation
     let ip = [exit.ip, location?.ip ?? ""].first { !$0.isEmpty }
-    let region = location.map { ExitLocationPresentation.region($0) }
-    let shown = region == "地区未获取" ? nil : region
+    let region = location.map { ExitLocationPresentation.region($0, context: context) }
+    let shown = region == context.text("exit.region_missing") ? nil : region
     return ip == nil && shown == nil ? nil : (ip, shown)
   }
 
@@ -51,16 +53,19 @@ enum DashboardRouteProjection {
   static func card(
     route: NodeProfile?, badge: String, exitIP: String?, exitRegion: String? = nil,
     running: Bool,
-    history: [RouteHistorySample], calendar: Calendar = .current
+    history: [RouteHistorySample], calendar: Calendar = .current,
+    context: PresentationContext = .chinese
   ) -> PaxCurrentRouteModel {
     guard let route else {
       if running {
         return PaxCurrentRouteModel(
-          name: "当前线路待确认", badge: badge, tags: [],
-          note: "请先关闭代理，再重新连接", trendEmpty: "后台已恢复，尚未确认当前线路")
+          name: context.text("dashboard_value.route_unconfirmed"), badge: badge, tags: [],
+          note: context.text("dashboard_value.reconnect_instruction"),
+          trendEmpty: context.text("dashboard_value.backend_recovered"))
       }
       return PaxCurrentRouteModel(
-        name: "", badge: badge, tags: [], note: "添加线路后开启代理", trendEmpty: "暂无线路")
+        name: "", badge: badge, tags: [], note: context.text("dashboard_value.add_route_connect"),
+        trendEmpty: context.text("dashboard_value.no_routes"))
     }
     var model = PaxCurrentRouteModel(
       name: route.name, badge: badge, tags: [route.protocolName.uppercased()])
@@ -69,12 +74,17 @@ enum DashboardRouteProjection {
     let all = samples(history, route: route)
     model.measurementTime = all.last.map { DashboardFormat.clock($0.at, calendar: calendar) }
     let good = Array(all.filter(isMeasured).suffix(displayCapacity))
-    let waiting = running ? "等待首次自动测量" : "代理开启后自动测量"
-    let waitingNote = running ? waiting : "代理未开启"
+    let waiting =
+      running
+      ? context.text("dashboard_value.waiting_measurement")
+      : context.text("dashboard_value.measure_when_enabled")
+    let waitingNote = running ? waiting : context.text("dashboard_value.proxy_off")
     model.trendEmpty =
       good.isEmpty ? waiting : ""
     if let last = all.last, !last.success {
-      model.note = "最近一次测量失败 · " + DashboardFormat.clock(last.at, calendar: calendar)
+      model.note =
+        context.text("dashboard_value.last_measurement_failed")
+        + DashboardFormat.clock(last.at, calendar: calendar)
     } else if all.isEmpty || good.isEmpty {
       model.note = waitingNote
     } else if let last = good.last {
@@ -83,9 +93,13 @@ enum DashboardRouteProjection {
     if model.rtt != nil, let last = good.last {
       if good.count >= 2 {
         let change = Int((last.value - good[good.count - 2].value).rounded())
-        model.delta = change == 0 ? "持平" : "\(change > 0 ? "↑" : "↓") \(abs(change)) ms"
+        model.delta =
+          change == 0
+          ? context.text("dashboard_value.unchanged")
+          : "\(change > 0 ? "↑" : "↓") \(abs(change)) ms"
       } else {
-        model.delta = "首次测量"
+        model.delta = context.text("dashboard_value.first_measurement")
+        model.firstMeasurement = true
       }
     }
     model.pinKey = "route-\(route.id)-\(route.configRevision)"
@@ -94,12 +108,13 @@ enum DashboardRouteProjection {
         at: sample.at, value: sample.value,
         sampleID:
           "\(sample.configRevision)|\(sample.metric)|\(sample.network)|\(sample.method)|\(sample.at.timeIntervalSince1970)|\(sample.value)",
-        note: "测量时间")
+        note: context.text("dashboard_value.measurement_time"))
     }
     model.series = PaxTimeSeries(
       domain: .init(start: good.first?.at ?? .distantPast, end: good.last?.at ?? .distantPast),
       points: points, axis: .samples)
-    model.axis = points.isEmpty ? [] : ["最近 \(points.count) 次有效测量"]
+    model.axis =
+      points.isEmpty ? [] : [context.text("dashboard_value.recent_samples", count: points.count)]
     return model
   }
 }

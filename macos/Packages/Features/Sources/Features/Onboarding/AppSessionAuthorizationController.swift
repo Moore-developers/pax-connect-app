@@ -7,30 +7,32 @@ import PaxUI
 @MainActor
 public final class AppSessionAuthorizationController: NSViewController {
   private let store: AppSessionStore
+  private let context: PresentationContext
   private let onReady: () -> Void
   private let onCancel: () -> Void
   private let password = NSSecureTextField()
   private let message = NSTextField(wrappingLabelWithString: "")
-  private let submit = NSButton(title: "授权并开启", target: nil, action: nil)
-  private let cancel = NSButton(title: "取消", target: nil, action: nil)
-  public init(store: AppSessionStore, onReady: @escaping () -> Void, onCancel: @escaping () -> Void)
-  {
+  private let submit = NSButton(title: "", target: nil, action: nil)
+  private let cancel = NSButton(title: "", target: nil, action: nil)
+  public init(
+    store: AppSessionStore, context: PresentationContext,
+    onReady: @escaping () -> Void, onCancel: @escaping () -> Void
+  ) {
     self.store = store
+    self.context = context
     self.onReady = onReady
     self.onCancel = onCancel
     super.init(nibName: nil, bundle: nil)
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public override func loadView() {
-    let title = NSTextField(labelWithString: "开启代理需要授权")
+    let title = NSTextField(labelWithString: context.text("app_session.title"))
     title.font = PaxTheme.Typography.section
-    let explanation = NSTextField(
-      wrappingLabelWithString:
-        "Pax Connect 需要管理员权限才能更改网络设置。请输入当前 Mac 账户的登录密码；该账户需有管理员权限。密码仅用于本次授权，不会保存。")
+    let explanation = NSTextField(wrappingLabelWithString: context.text("app_session.detail"))
     explanation.font = PaxTheme.Typography.caption()
     explanation.textColor = PaxTheme.Color.textSecondary
-    password.placeholderString = "当前账户登录密码"
-    password.setAccessibilityLabel("当前账户登录密码")
+    password.placeholderString = context.text("app_session.password")
+    password.setAccessibilityLabel(context.text("app_session.password"))
     password.setAccessibilityIdentifier("session-password")
     password.target = self
     password.action = #selector(authorize)
@@ -38,6 +40,7 @@ public final class AppSessionAuthorizationController: NSViewController {
     submit.action = #selector(authorize)
     submit.bezelStyle = .rounded
     cancel.target = self
+    cancel.title = context.text("common.cancel")
     cancel.action = #selector(cancelAuthorization)
     cancel.bezelStyle = .rounded
     let actions = NSStackView(views: [cancel, submit])
@@ -67,7 +70,9 @@ public final class AppSessionAuthorizationController: NSViewController {
   }
   private func observe() {
     withObservationTracking {
-      message.stringValue = store.state == .starting ? "正在启动后台…" : store.failure?.message ?? ""
+      message.stringValue =
+        store.state == .starting
+        ? context.text("app_session.starting") : store.failure?.message(context: context) ?? ""
       message.font = PaxTheme.Typography.caption()
       message.textColor =
         store.state == .starting ? PaxTheme.Color.textSecondary : PaxTheme.Color.error
@@ -75,7 +80,8 @@ public final class AppSessionAuthorizationController: NSViewController {
       cancel.isEnabled = store.state != .starting
       password.isEnabled = store.state != .starting
       password.isHidden = store.state != .needsPassword && store.state != .starting
-      submit.title = store.state == .needsPassword ? "授权并开启" : "重试启动"
+      submit.title = context.text(
+        store.state == .needsPassword ? "app_session.submit" : "app_session.retry")
     } onChange: { [weak self] in
       Task { @MainActor [weak self] in self?.observe() }
     }

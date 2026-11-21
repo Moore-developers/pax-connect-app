@@ -23,13 +23,16 @@
 
 ### 5.1 状态 owner 与持久化
 
+语言偏好及自定义包由App独立持有，不入daemon配置。事件可选文本语义随journal及col_texts落盘；子表在同事务写入、快照和清理，旧事实不回填。环境检测网页词条只存于短会话并在结束时释放，报告不携带词条；接口见[协议§4](protocol.md)。
+
+
 - **产品状态**：用户 paxd 内只有 `controller` 的串行 owner（`ConfigureOperations` 队列）写目录、偏好、来源与代理意图；任务进度（`testOwner`）只是短寿命投影，不写入已保存的测量事实；observer 回传不可变值且在池锁外执行，不得锁内等待产品回调。
 - **私有文件**：产品数据文件统一经 `storage.PrivateFile`（受保护路径 / owner / 权限、有界字节、同步 + 原子替换）；纯产品 schema 在 `config` 校验，损坏文件不被空文件覆盖，写入故障与“提交后不确定”分别向 App 公布。目前的文件及唯一写入方：
   - `route-measurements.json`（`config/measurement_store.go`）、`route-history.json` 与 `route-usage.json`（`controller/route_data.go`）：线路测量最近结果、线路历史样本、线路用量；
   - `measurement-preferences.json`、`network-privacy.json`、`routing-library.json`、`cf-evidence.json`：测量偏好、网络保护设置、规则包库、CF 证据，各由 controller 对应 owner 单写；
   - `physical_egress_cache`（`config/physical_egress_cache.go`）：本机出口缓存，仅物理观察线程写；
   - 日志 / 流量历史在分库 SQLite（`internal/historystore`，每库单写协程，proxy 操作只非阻塞提交事件），模型与保留期见 [history-storage](../changes/pax-connect-network-control-plane/history-storage.md)。
-- **调度与历史链路**：循环统一用 `internal/cadence`（声明间隔、唤醒、运行条件、是否有变化；业务间隔集中在 `intervals.go`）。采集每 5 s 读 core，空读取不写 journal、不改版本号：它只延长内存里的采集区间，区间在满 60 s、状态切换、停顿超过 8 s 或随下一批数据落成一行 `poll{from_ms,at_ms}`，作为流量覆盖证明（崩溃最多丢未落区间）。入库有新行即唤醒日志整理（60 s 仅兜底，新日志约 6 s 内可查）；日志 / 流量整理仅在元数据变化时通知发布；发布每秒最多一次。流量过期清理与容量淘汰与 `traffic_revision` 同事务推进 `traffic_deletion_generation`。自动测延迟 30 s 一点，新点与裁剪推进 `route_history_revision`。代理循环的 1 s 刷新只在测速 / 下载 / 出口检测或唤醒后跟进进行时才有定时器，不再有 checkpoint 定时。版本号规则见 [protocol §4.2](protocol.md)。
+- **调度与历史链路**：循环统一用 `internal/cadence`（声明间隔、唤醒、运行条件、是否有变化；业务间隔集中在 `intervals.go`）。采集每 5 s 读 core，空读取不写 journal、不改版本号：它只延长内存里的采集区间，区间在满 60 s、状态切换、停顿超过 8 s 或随下一批数据落成一行 `poll{from_ms,at_ms}`，作为流量覆盖证明（崩溃最多丢未落区间）。入库有新行即唤醒日志整理（60 s 仅兜底，新日志约 6 s 内可查）；日志 / 流量整理仅在元数据变化时通知发布；发布每秒最多一次。流量过期清理与 `traffic_revision` 同事务推进 `traffic_deletion_generation`；各库不按容量提前删数据。自动测延迟 30 s 一点，新点与裁剪推进 `route_history_revision`。代理循环的 1 s 刷新只在测速 / 下载 / 出口检测或唤醒后跟进进行时才有定时器，不再有 checkpoint 定时。版本号规则见 [protocol §4.2](protocol.md)。
 - **AI会话分析**：aiusage以schema9追加独立原生目录、schema10追加子会话标记、schema11追加原生代理/活动日期/请求归属并只重读目录元数据，保留轮次/请求关联表与Analyze读取，首次旧cursor补读元数据仍沿账本去重；原生事件确认轮次/压缩，采集增量索引Codex/Claude/DeepSeek原生身份与名称，分析查询只读目录投影，按日期分档的上下文用量在同一读事务聚合，含全范围/单会话合计与模型×推理强度行，主会话包含子代理且全局请求只计一次，轮次跨模型去重。正式上限投影由session_limits_*在同一读事务现算，不迁移存储；DeepSeek历史基准与行内比较按同模型/峰谷分组，复用计价时段规则；合同见[上限视图 §7](../changes/pax-connect-network-control-plane/ui/specs/P07d-ai-session-limits.md#7-数据接入)。旧Analyze固定分档保留兼容。Claude代理类型名只取旁侧元数据agentType并缓存于现有目录文件状态，变名只推进目录版本；不存描述/正文。
 
 - **AI本地用量**：`internal/aiusage` 独立拥有只读CLI日志扫描、解析和 `ai_usage.db` 单写；aiprofile 的应用/来源观测时间线（每次扫描前检查配置并取快照，按请求时间归属）通过cmd注入；schema12新增小时桶来源维度，旧账本不重标，见[来源合同](../changes/pax-connect-network-control-plane/ai-service-sources.md)；`cmd/pax-ai-usage-rebuild` 是重新处理入口；Open仅补保留期内已收录模型的无单价行并同步小时桶，保留历史归属/倍率，见AI采集§5；daemon遇<5旧结构只报`ai_usage_rebuild_required`；5/6仅原事务追加兼容表和索引至7，不重读历史。controller仅映射三RPC，App不读源日志。合同见[AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md)。

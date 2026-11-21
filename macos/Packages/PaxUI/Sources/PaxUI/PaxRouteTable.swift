@@ -7,10 +7,10 @@ public struct PaxRouteTableRow: Equatable {
   public let connection: String
   public let certificateWarning: String?
   public let cf: String?
-  public let chained: Bool
+  public let chainLabel: String?
   public let selected: Bool
   public let current: Bool
-  public var selectionLabel: String { current ? "当前线路" : selected ? "已选线路" : "" }
+  public let selectionLabel: String
   public var emphasized: Bool { current || selected }
   public let address: String
   public let addressCaption: String
@@ -19,8 +19,9 @@ public struct PaxRouteTableRow: Equatable {
   public let speed: String
   public let latencyColor: NSColor
   public init(
-    id: String, name: String, connection: String, cf: String? = nil, chained: Bool = false,
-    current: Bool = false, selected: Bool = false, certificateWarning: String? = nil,
+    id: String, name: String, connection: String, cf: String? = nil, chainLabel: String? = nil,
+    current: Bool = false, selected: Bool = false, selectionLabel: String = "",
+    certificateWarning: String? = nil,
     address: String = "未获取", addressCaption: String = "",
     latency: String = "—", latencyCaption: String = "",
     speed: String = "—",
@@ -31,9 +32,10 @@ public struct PaxRouteTableRow: Equatable {
     self.connection = connection
     self.certificateWarning = certificateWarning
     self.cf = cf
-    self.chained = chained
+    self.chainLabel = chainLabel
     self.current = current
     self.selected = selected
+    self.selectionLabel = selectionLabel
     self.addressCaption = addressCaption
     self.address = address
     self.latency = latency
@@ -52,6 +54,8 @@ public final class PaxRouteTable: NSView {
   private var rows: [PaxRouteTableRow] = []
   private let data: PaxDataTable
   private var initialAppearance = true
+  private var latencyHelp = "；延迟 ≤200 ms 绿色，200–500 ms 橙色，>500 ms 红色；历史与未知结果不分级。"
+  private var speedHelp = "；正文平均下载速度，使用十进制字节率。"
   public init() {
     let c = PaxTheme.Routes.self
     let titles = ["", "线路", "线路特性", "出口地址", "延迟", "下载速度"]
@@ -90,6 +94,17 @@ public final class PaxRouteTable: NSView {
     ])
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func applyColumnTitles(_ titles: [String], emptyText: String) {
+    for (index, title) in titles.enumerated() { data.setColumnTitle(title, at: index) }
+    data.setEmptyText(emptyText)
+  }
+  public func applyAccessibilityCopy(table: String, latencyHelp: String, speedHelp: String) {
+    data.setTableAccessibilityLabel(table)
+    guard self.latencyHelp != latencyHelp || self.speedHelp != speedHelp else { return }
+    self.latencyHelp = latencyHelp
+    self.speedHelp = speedHelp
+    data.refreshVisibleCopy()
+  }
   public func showFirstRowIfNeeded() {
     guard initialAppearance else { return }
     initialAppearance = false
@@ -166,8 +181,8 @@ public final class PaxRouteTable: NSView {
       if let cf = item.cf {
         stack.addArrangedSubview(PaxFeatureTag(cf, symbol: "cloud", tone: .blue))
       }
-      if item.chained {
-        stack.addArrangedSubview(PaxFeatureTag("链式代理", symbol: "network", tone: .purple))
+      if let chainLabel = item.chainLabel {
+        stack.addArrangedSubview(PaxFeatureTag(chainLabel, symbol: "network", tone: .purple))
       }
       content = stack
     } else if index == 3 && !item.addressCaption.isEmpty {
@@ -219,9 +234,9 @@ public final class PaxRouteTable: NSView {
           : PaxTheme.Routes.text
       label.lineBreakMode = .byTruncatingTail
       if index == 4 {
-        label.toolTip = text + "；延迟 ≤200 ms 绿色，200–500 ms 橙色，>500 ms 红色；历史与未知结果不分级。"
+        label.toolTip = text + latencyHelp
       } else if index == 5 {
-        label.toolTip = text + "；正文平均下载速度，使用十进制字节率。"
+        label.toolTip = text + speedHelp
       }
       content = label
     }
@@ -231,7 +246,7 @@ public final class PaxRouteTable: NSView {
         item.latency, item.speed,
       ].filter {
         !$0.isEmpty
-      }.joined(separator: "，"))
+      }.joined(separator: " · "))
     return content
   }
 }

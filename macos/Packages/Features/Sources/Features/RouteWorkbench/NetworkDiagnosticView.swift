@@ -4,6 +4,7 @@ import PaxUI
 
 @MainActor final class NetworkDiagnosticView: NSStackView {
   typealias P = NetworkDiagnosticPresentation
+  let context: PresentationContext
   let store: NetworkDiagnosticStore
   weak var connection: ConnectionStore?
   var onResize: (() -> Void)?
@@ -15,7 +16,11 @@ import PaxUI
     Dictionary(grouping: intelligenceReport?.facts ?? [], by: \.group)
   }
 
-  init(store: NetworkDiagnosticStore, connection: ConnectionStore?) {
+  init(
+    store: NetworkDiagnosticStore, connection: ConnectionStore?,
+    context: PresentationContext = .chinese
+  ) {
+    self.context = context
     self.store = store
     self.connection = connection
     super.init(frame: .zero)
@@ -33,7 +38,7 @@ import PaxUI
       connection?.routesStore?.routes.first { $0.id == value.targetRouteID }
     }
     let stamp =
-      "\(store.currentEnvironment?.revision ?? 0)|\(store.generation)|\(store.busy)|\(store.message)|\(store.stale)|\(store.onlyDifferences)|\(store.selectedSource ?? -1)|\(store.preview)|\(store.expanded.sorted())|\(report?.at.timeIntervalSince1970 ?? 0)|\(store.services?.at.timeIntervalSince1970 ?? 0)|\(route?.downloadSummary?.at.timeIntervalSince1970 ?? 0)|\(connection?.routesStore?.downloadOperationID ?? "")|\(connection?.trafficPathStore?.report?.at.timeIntervalSince1970 ?? 0)|\(connection?.routesStore?.history[route?.id ?? ""]?.count ?? 0)"
+      "\(store.currentEnvironment?.revision ?? 0)|\(store.generation)|\(store.busy)|\(store.message)|\(store.stale)|\(store.onlyDifferences)|\(store.selectedSource ?? -1)|\(store.expanded.sorted())|\(report?.at.timeIntervalSince1970 ?? 0)|\(store.services?.at.timeIntervalSince1970 ?? 0)|\(route?.downloadSummary?.at.timeIntervalSince1970 ?? 0)|\(connection?.routesStore?.downloadOperationID ?? "")|\(connection?.trafficPathStore?.report?.at.timeIntervalSince1970 ?? 0)|\(connection?.routesStore?.history[route?.id ?? ""]?.count ?? 0)"
     guard signature != stamp else { return }
     signature = stamp
     callbacks = []
@@ -41,12 +46,8 @@ import PaxUI
       removeArrangedSubview(view)
       view.removeFromSuperview()
     }
-    if store.preview {
-      showPreview()
-    } else {
-      showEnvironmentBlock()
-      showIPBlock()
-    }
+    showEnvironmentBlock()
+    showIPBlock()
     onResize?()
   }
   func text(_ value: String, secondary: Bool = false) -> NSTextField {
@@ -120,14 +121,6 @@ import PaxUI
     addArrangedSubview(view)
     view.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
   }
-  func section(_ title: String, detail: String = "", views: [NSView], accessory: NSView? = nil) {
-    let heading = text(title)
-    heading.font = PaxTheme.Typography.label(size: PaxTheme.Routes.nameFont, weight: .medium)
-    let headingRow = horizontal([heading, NSView()] + (accessory.map { [$0] } ?? []))
-    let titleBlock = vertical(
-      [headingRow] + (detail.isEmpty ? [] : [text(detail, secondary: true)]))
-    append(card(vertical([titleBlock] + views, spacing: PaxTheme.Spacing.medium)))
-  }
   func padded(_ view: NSView, vertical inset: CGFloat) -> NSView {
     padded(view, top: inset, bottom: inset)
   }
@@ -159,14 +152,5 @@ import PaxUI
     left.widthAnchor.constraint(equalTo: right.widthAnchor, multiplier: ratio / (1 - ratio))
       .isActive = true
     return columns
-  }
-  func showPreview() {
-    let field = text(reportText())
-    field.isSelectable = true
-    field.setAccessibilityIdentifier("network-diagnostic-report-preview")
-    section(
-      "报告预览", detail: "默认脱敏；包含系统语言、时区、已取得的证据及未测项目。",
-      views: [field],
-      accessory: action("返回诊断", quiet: false) { [weak self] in self?.store.preview = false })
   }
 }

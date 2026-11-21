@@ -10,12 +10,15 @@ import (
 	"pax-connect/daemon/internal/historystore"
 )
 
-// Conversion failure must not bypass the owner's ordinary capacity/vacuum
+// Conversion failure must not bypass the owner's ordinary retention/vacuum
 // work. This is separate from the storage-level frozen-evidence check.
-func TestColumnUpgradeFailedOwnerMaintainsCapacity(t *testing.T) {
+func TestColumnUpgradeFailedOwnerMaintainsRetention(t *testing.T) {
 	h := newLogsHarness(t)
 	ctx := context.Background()
 	if err := h.logs.Update(ctx, func(tx *historystore.LogsTx) error {
+		if _, _, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: "expired-after-failure", At: h.clock.Add(-25 * time.Hour)}); err != nil {
+			return err
+		}
 		if _, _, err := tx.AppendEvent(ctx, config.HistoryEvent{ID: "new-after-failure", At: h.clock, Raw: []string{strings.Repeat("x", 32768)}}); err != nil {
 			return err
 		}
@@ -23,13 +26,15 @@ func TestColumnUpgradeFailedOwnerMaintainsCapacity(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	h.l.capBytes = 1
 	if delay := h.l.maintain(ctx); delay != 0 || h.l.down {
 		t.Fatalf("maintenance failed: %v down=%v", delay, h.l.down)
 	}
 	var events int
-	if err := h.logs.Reader().QueryRowContext(ctx, "SELECT count(*) FROM col_events").Scan(&events); err != nil || events != 0 {
-		t.Fatalf("failed conversion blocked active-data eviction: %d %v", events, err)
+	if err := h.logs.Reader().QueryRowContext(ctx, "SELECT count(*) FROM col_events").Scan(&events); err != nil || events != 1 {
+		t.Fatalf("failed conversion changed retained data: %d %v", events, err)
+	}
+	if _, found, err := h.logs.Columns().Event(ctx, "new-after-failure"); err != nil || !found {
+		t.Fatalf("recent event lost: found=%v err=%v", found, err)
 	}
 	if h.l.lastVacuum.IsZero() {
 		t.Fatal("failed conversion bypassed idle vacuum/checkpoint")

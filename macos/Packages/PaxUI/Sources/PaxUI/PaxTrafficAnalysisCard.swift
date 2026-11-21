@@ -67,13 +67,17 @@ public final class PaxTransferView: NSView {
   private var tooltip: PaxChartTooltipCoordinator?
   private var readout: String
   private var proportion: Proportion
+  private let stacksWhenNarrow: Bool
   public override var isFlipped: Bool { true }
   public init(
     uploadText: String, downloadText: String, upload: Double, download: Double,
-    tooltip: PaxChartTooltipCoordinator? = nil
+    tooltip: PaxChartTooltipCoordinator? = nil, accessibilityReadout: String? = nil,
+    stacksWhenNarrow: Bool = false
   ) {
     self.tooltip = tooltip
-    readout = Self.readout(uploadText: uploadText, downloadText: downloadText)
+    self.stacksWhenNarrow = stacksWhenNarrow
+    readout =
+      accessibilityReadout ?? Self.readout(uploadText: uploadText, downloadText: downloadText)
     proportion = Proportion(upload: upload, download: download)
     up = PaxText.label(
       uploadText,
@@ -103,7 +107,7 @@ public final class PaxTransferView: NSView {
 
   func update(
     uploadText: String, downloadText: String, upload: Double, download: Double,
-    tooltip: PaxChartTooltipCoordinator?
+    tooltip: PaxChartTooltipCoordinator?, accessibilityReadout: String?
   ) {
     if self.tooltip !== tooltip {
       self.tooltip?.close(from: self)
@@ -113,9 +117,11 @@ public final class PaxTransferView: NSView {
     let downloadChanged = down.stringValue != downloadText
     if uploadChanged { up.stringValue = uploadText }
     if downloadChanged { down.stringValue = downloadText }
-    if uploadChanged || downloadChanged {
-      needsLayout = true
-      readout = Self.readout(uploadText: uploadText, downloadText: downloadText)
+    if uploadChanged || downloadChanged { needsLayout = true }
+    let nextReadout =
+      accessibilityReadout ?? Self.readout(uploadText: uploadText, downloadText: downloadText)
+    if nextReadout != readout {
+      readout = nextReadout
       setAccessibilityLabel(readout)
       if tooltip?.isShowing(from: self) == true { tooltip?.show(readout, from: self) }
     }
@@ -135,6 +141,17 @@ public final class PaxTransferView: NSView {
   private static func readout(uploadText: String, downloadText: String) -> String {
     "上传 " + uploadText + " · 下载 " + downloadText
   }
+  private var numberLineHeight: CGFloat {
+    max(up.intrinsicContentSize.height, down.intrinsicContentSize.height)
+  }
+  private func needsStack(at width: CGFloat) -> Bool {
+    stacksWhenNarrow
+      && width / 2 < max(up.intrinsicContentSize.width, down.intrinsicContentSize.width)
+        + PaxTheme.Dashboard.bodyFont + PaxTheme.Spacing.xs * 2
+  }
+  func contentHeight(for width: CGFloat) -> CGFloat {
+    PaxTheme.Dashboard.transferContentHeight + (needsStack(at: width) ? numberLineHeight : 0)
+  }
 
   public override func layout() {
     super.layout()
@@ -144,7 +161,7 @@ public final class PaxTransferView: NSView {
       up.font ?? PaxTheme.Typography.metric(size: PaxTheme.Dashboard.bodyFont, weight: .medium)
     // NSTextField draws its glyph baseline after the cell's top inset. Offset the
     // field by font metrics. Number and arrow gaps are independent user settings.
-    let line = max(up.intrinsicContentSize.height, down.intrinsicContentSize.height)
+    let line = numberLineHeight
     let baseline = ceil(font.ascender)
     let imageHeight = icon
     let numberBaseline = max(baseline, imageHeight)
@@ -153,6 +170,16 @@ public final class PaxTransferView: NSView {
       + PaxTheme.Dashboard.transferNumberInkGap - PaxTheme.Dashboard.transferArrowInkGap
     let textY = numberBaseline - baseline
     upIcon.frame = NSRect(x: 0, y: arrowInkBottom - imageHeight, width: icon, height: imageHeight)
+    if needsStack(at: bounds.width) {
+      let width = max(1, bounds.width - icon - gap)
+      up.frame = NSRect(x: icon + gap, y: textY, width: width, height: line)
+      down.frame = NSRect(x: icon + gap, y: textY + line, width: width, height: line)
+      down.alignment = .left
+      arrowInkBottom += line
+      downIcon.frame = upIcon.frame.offsetBy(dx: 0, dy: line)
+      return
+    }
+    down.alignment = .right
     up.frame = NSRect(
       x: icon + gap, y: textY, width: max(1, bounds.width / 2 - icon - gap), height: line)
     let dw = min(ceil(down.intrinsicContentSize.width) + gap, max(1, bounds.width / 2 - icon - gap))
@@ -235,6 +262,12 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     setAccessibilityIdentifier("workbench-traffic-table")
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func applyCopy(title: String, dimensions: [String], directions: [String]) {
+    heading.text = title
+    dimension.apply(labels: dimensions)
+    filter.apply(labels: directions)
+    needsLayout = true
+  }
   /// 展示给定表格；维度切换时可换成另一张表，旧表只摘下不销毁。
   public func show(_ next: PaxDataTable) {
     guard next !== table else { return }
@@ -245,15 +278,14 @@ public final class PaxTrafficAnalysisCard: PaxCard {
   }
   /// `emptyMessage` 非空时显示在占位行上方；数据行数只用于辅助功能描述。
   public func apply(
-    dimensionIndex: Int, filterIndex: Int, rowCount: Int, emptyMessage: String?,
+    dimensionIndex: Int, filterIndex: Int, accessibilityTitle: String, emptyMessage: String?,
     controlsEnabled: Bool = true
   ) {
     if dimension.isEnabled != controlsEnabled { dimension.isEnabled = controlsEnabled }
     if filter.isEnabled != controlsEnabled { filter.isEnabled = controlsEnabled }
     if dimension.selectedIndex != dimensionIndex { dimension.selectedIndex = dimensionIndex }
     if filter.selectedIndex != filterIndex { filter.selectedIndex = filterIndex }
-    let label = "流量分析，\(rowCount) 项"
-    if accessibilityLabel() != label { setAccessibilityLabel(label) }
+    if accessibilityLabel() != accessibilityTitle { setAccessibilityLabel(accessibilityTitle) }
     let message = emptyMessage ?? ""
     if empty.stringValue != message { empty.stringValue = message }
     if empty.isHidden != (emptyMessage == nil) { empty.isHidden = emptyMessage == nil }

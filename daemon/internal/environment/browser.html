@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="{{.Locale}}"{{if .Pinned}} data-pax-locale="{{.Locale}}"{{end}}>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pax Connect · 浏览器检测</title>
+<title>{{index .Messages "browser.title"}}</title>
 <style>
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -31,25 +31,25 @@
   @media (max-width: 400px) { body { padding: 16px; } main { padding: 24px; } h1 { font-size: 18px; } }
 </style>
 <main data-stage="sampling">
-  <header>Pax Connect · 浏览器检测</header>
+  <header data-copy="browser.title">{{index .Messages "browser.title"}}</header>
   <section aria-live="polite" aria-atomic="true">
     <div class="status-row">
       <span id="icon" aria-hidden="true"></span>
-      <h1 id="state">正在检测浏览器环境…</h1>
+      <h1 id="state" data-copy="browser.sampling">{{index .Messages "browser.sampling"}}</h1>
     </div>
-    <p id="hint">请保持页面打开，回传成功后 5 秒尝试自动关闭。</p>
+    <p id="hint" data-copy="browser.hint">{{index .Messages "browser.hint"}}</p>
   </section>
   <p id="countdown" hidden></p>
   <div id="actions" hidden>
-    <button id="close" type="button">立即关闭</button>
-    <button id="keep" type="button">保留页面</button>
+    <button id="close" type="button" data-copy="browser.close">{{index .Messages "browser.close"}}</button>
+    <button id="keep" type="button" data-copy="browser.keep">{{index .Messages "browser.keep"}}</button>
   </div>
   <details id="details">
-    <summary>检测内容与隐私</summary>
-    <p>检测语言、时区、公网 IP、DNS 和 WebRTC。详细结果在 Pax Connect 内查看。</p>
-    <p>IP 查询：icanhazip；DNS 探针：bash.ws；STUN：Cloudflare、Google；出口回显：Cloudflare、IPinfo、IPIP。这些服务会看到本次请求的网络地址。</p>
-    <p>语言、时区和浏览器读值仅回传本机。不采集账号、Cookie 或浏览历史，不会申请摄像头和麦克风权限。</p>
+    <summary data-copy="browser.privacy_title">{{index .Messages "browser.privacy_title"}}</summary>
+    <p data-copy="browser.privacy_checks">{{index .Messages "browser.privacy_checks"}}</p>
+    <p data-copy="browser.privacy_services">{{index .Messages "browser.privacy_services"}}</p>
+    <p data-copy="browser.privacy_local">{{index .Messages "browser.privacy_local"}}</p>
   </details>
 </main>
-<script nonce="__NONCE__" src="browser.js"></script>
+<script nonce="{{.Nonce}}" src="browser.js"></script>
 </html>

@@ -27,16 +27,18 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
       timezone: TimeZone.current.identifier, languages: Locale.preferredLanguages,
       region: Locale.current.identifier, at: Date())
   }
-  public func timezoneComparison(_ remote: String) -> String {
+  public func timezoneComparison(_ remote: String, context: PresentationContext = .chinese)
+    -> String
+  {
     guard let local = TimeZone(identifier: timezone), let other = TimeZone(identifier: remote)
     else {
-      return "缺少有效 IP 时区资料，无法对照"
+      return context.text("diagnostic_state.239819bd20")
     }
-    if local.identifier == other.identifier { return "系统时区与 IP 推定时区相同" }
+    if local.identifier == other.identifier { return context.text("diagnostic_state.4361092a47") }
     if local.secondsFromGMT(for: at) == other.secondsFromGMT(for: at) {
-      return "时区标识不同，检测时刻 UTC 偏移相同"
+      return context.text("diagnostic_state.3f117a942d")
     }
-    return "系统时区与 IP 推定时区不同；先核对定位和预期设置"
+    return context.text("diagnostic_state.5075976f12")
   }
 }
 
@@ -52,18 +54,35 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
   public private(set) var runState = NetworkDiagnosticRunState.idle
   public private(set) var progress: NetworkDiagnosticProgress?
   public private(set) var elapsedSeconds = 0
-  public private(set) var progressError: String?
+  private var progressErrorValue: RetainedProductMessage?
+  public private(set) var progressError: String? {
+    get { progressErrorValue?.original }
+    set { progressErrorValue = newValue.map { RetainedProductMessage(original: $0) } }
+  }
+  public func progressError(context: PresentationContext) -> String? {
+    progressErrorValue?.text(context: context)
+  }
   public private(set) var startedAt: Date?
-  public private(set) var message = "尚未检测；点击重新检测才会发出网络请求"
+  private var messageValue = RetainedProductMessage(key: "diagnostic_state.7f2694a199")
+  public private(set) var message: String {
+    get { messageValue.original }
+    set { messageValue = RetainedProductMessage(original: newValue) }
+  }
+  public func message(context: PresentationContext) -> String {
+    messageValue.text(context: context)
+  }
+  public var isShowingHistoryMessage: Bool { messageValue.key == "diagnostic_state.d226731dec" }
   public private(set) var stale = false
   public private(set) var generation: UInt64 = 0
   public var topic = 0
   public var onlyDifferences = false
   public var selectedSource: Int?
-  public var preview = false
   public var expanded: Set<String> = []
   private let history: NetworkDiagnosticHistory?
   public var historyMessage: String? { history?.message }
+  public func historyMessage(context: PresentationContext) -> String? {
+    history?.message(context: context)
+  }
   private let run: @Sendable (String, String) async throws -> NetworkDiagnosticReport
   private let readProgress: (@Sendable (String) async throws -> NetworkDiagnosticProgress?)?
   private var progressTask: Task<Void, Never>?
@@ -86,7 +105,7 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
       previousReport = previous.previous
       environment = previous.environment
       stale = report != nil || services != nil
-      if stale { message = "显示上次线路检测结果，请按需重新检测" }
+      if stale { messageValue = RetainedProductMessage(key: "diagnostic_state.d226731dec") }
     }
   }
   public static func sameBoundary(_ a: NetworkDiagnosticReport, _ b: NetworkDiagnosticReport)
@@ -114,7 +133,7 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
       guard let self, generation == token, busy || currentEnvironment?.busy == true else { return }
       cancel()
       currentEnvironment?.cancel()
-      message = "整轮 60 秒预算耗尽；已停止在途检测并保留已有结果"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.f795d5bb02")
     }
   }
 
@@ -131,7 +150,7 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
     let operationID = UUID().uuidString
     followProgress(operationID, generation: token)
     if mode != "services", report != nil { stale = true }
-    message = "正在经目标线路检测，最多 45 秒；已有结果为上次记录"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.11cfb999c4")
     let local = NetworkDiagnosticEnvironment.current()
     task = Task { [weak self, run] in
       do {
@@ -161,7 +180,7 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
           {
             services = nil
             stale = true
-            message = "服务检测目标与原报告不同，请重新进行快速检测"
+            messageValue = RetainedProductMessage(key: "diagnostic_state.d1b316128a")
             busy = false
             runState = .failed
             progressTask?.cancel()
@@ -171,13 +190,16 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
           if !value.changedDuringCapture { services = value }
           if value.changedDuringCapture { stale = true }
         }
-        message = value.changedDuringCapture ? "检测期间网络或线路已变化，本轮结果已失效" : "本轮已结束；资料、实测与未验证项分别标记"
+        messageValue =
+          value.changedDuringCapture
+          ? RetainedProductMessage(key: "diagnostic_state.aecdcf2c6c")
+          : RetainedProductMessage(key: "diagnostic_state.5c8150e6db")
         runState = value.changedDuringCapture ? .failed : .finished
         history?.saveRoute(
           report: report, services: services, environment: environment, previous: previousReport)
       } catch {
         guard let self, generation == token, !Task.isCancelled else { return }
-        message = ProductErrorPresentation.display(error)
+        messageValue = RetainedProductMessage(failure: ProductFailure(error))
         runState = .failed
       }
       guard let self, generation == token else { return }
@@ -199,26 +221,27 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
     busy = false
     progressTask?.cancel()
     progressTask = nil
-    message = "已停止检测；保留上次结果"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.5713061b59")
   }
   public func invalidate() {
     if busy { cancel() }
     if report != nil || services != nil {
       stale = true
-      message = "网络或运行条件已变化，以下为历史结果，请重新检测"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.25d85db49c")
     }
   }
   public func retainLastResult() {
     if busy { cancel() }
     if report != nil || services != nil {
       stale = true
-      message = "显示上次线路检测结果，请按需重新检测"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.d226731dec")
     }
     currentEnvironment?.retainLastResult()
-    preview = false
     expanded.removeAll()
   }
-  public func showFailure(_ error: any Error) { message = ProductErrorPresentation.display(error) }
+  public func showFailure(_ error: any Error) {
+    messageValue = RetainedProductMessage(failure: ProductFailure(error))
+  }
   public func clear() {
     currentEnvironment?.clear()
     cancel()
@@ -230,7 +253,7 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
     runState = .idle
     progress = nil
     startedAt = nil
-    message = "尚未检测；点击重新检测才会发出网络请求"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.7f2694a199")
   }
 
   private func followProgress(_ operationID: String, generation token: UInt64) {
@@ -249,7 +272,8 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
             progressError = nil
           } catch {
             guard generation == token, busy, !Task.isCancelled else { return }
-            progressError = "进度读取失败：" + ProductErrorPresentation.display(error)
+            progressErrorValue = RetainedProductMessage(
+              key: "diagnostic.progress_failure", failure: ProductFailure(error))
           }
         }
         do { try await Task.sleep(for: .seconds(1)) } catch { return }

@@ -5,7 +5,8 @@ import PaxUI
 
 /// 分流页只转发用户意图；实际连接与配置由隔离 Store 提供。
 @MainActor
-final class RoutingWorkbenchViewController: NSViewController {
+final class RoutingWorkbenchViewController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   let objectIcons: WorkbenchObjectIcons
   private var detailTask: Task<Void, Never>?
   private var pageVisible = false
@@ -22,10 +23,10 @@ final class RoutingWorkbenchViewController: NSViewController {
   private let direction = PaxTabs(["全部", "代理", "直连"])
   private let period = PaxRoutePicker(style: .toolbar)
   private let search = PaxRouteSearchField()
-  private let notice = PaxText.label(
-    "", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-  private let subtotalNote = PaxText.label(
-    "", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
+  private let notice = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
+  private let subtotalNote = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
+  private lazy var footer = NSStackView(
+    views: [subtotalNote, unknownSource, dnsSummary, notice, NSView()])
   private let content = NSView()
   private let traffic = NSView()
   private let rules = NSView()
@@ -48,6 +49,24 @@ final class RoutingWorkbenchViewController: NSViewController {
     self.tooltip = tooltip
     list = RoutingTrafficList(store: store, icons: objectIcons, tooltip: tooltip)
     super.init(nibName: nil, bundle: nil)
+  }
+  private func applyLanguage() {
+    mode.apply(labels: [interfaceCopy.text("common.proxy"), interfaceCopy.text("common.direct")])
+    let context = interfaceCopy.context
+    dimension.apply(
+      labels: RoutingWorkbenchStore.Dimension.allCases.map { $0.title(context: context) })
+    direction.apply(labels: [
+      interfaceCopy.text("common.all"), interfaceCopy.text("common.proxy"),
+      interfaceCopy.text("common.direct"),
+    ])
+    tabs.apply(
+      [
+        .init(id: "traffic", title: interfaceCopy.text("ai_page.overview")),
+        .init(id: "rules", title: interfaceCopy.text("traffic.rules")),
+      ], selected: store.tab == .traffic ? "traffic" : "rules")
+    list.applyLanguage(interfaceCopy.context)
+    render()
+    activeTrafficTable.refreshVisibleCopy()
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   convenience init(
@@ -121,8 +140,10 @@ final class RoutingWorkbenchViewController: NSViewController {
     surface.surfaceColor = PaxTheme.Color.workspace
     view = surface
     let header = PaxPageHeader(
-      title: "流量监控",
+      title: self.interfaceCopy.text("navigation.traffic"),
       accessory: ProxyStatusAccessory(mode: mode, connection: liveConnection, presenter: self))
+    interfaceCopy.bind(header, key: "navigation.traffic") { $0.apply(title: $1) }
+    interfaceCopy.onChange = { [weak self] in self?.applyLanguage() }
     mode.onSelect = { [weak self] index in
       if let self, let connection = self.liveConnection {
         self.mode.selectedIndex = connection.proxyEnabled ? 0 : 1
@@ -135,7 +156,10 @@ final class RoutingWorkbenchViewController: NSViewController {
       self.store.session.perform(.toggleProxy)
     }
     tabs.apply(
-      [.init(id: "traffic", title: "概览"), .init(id: "rules", title: "规则")], selected: "traffic")
+      [
+        .init(id: "traffic", title: interfaceCopy.text("ai_page.overview")),
+        .init(id: "rules", title: interfaceCopy.text("traffic.rules")),
+      ], selected: "traffic")
     tabs.onSelect = { [weak self] id in
       self?.store.perform(.tab(id == "traffic" ? .traffic : .rules))
     }
@@ -151,7 +175,14 @@ final class RoutingWorkbenchViewController: NSViewController {
         page.bottomAnchor.constraint(equalTo: content.bottomAnchor),
       ])
     }
-    let stack = NSStackView(views: [header, tabs, content, notice])
+    footer.alignment = .centerY
+    footer.spacing = PaxTheme.Spacing.tight
+    notice.lineBreakMode = .byTruncatingTail
+    notice.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    subtotalNote.lineBreakMode = .byTruncatingTail
+    unknownSource.setAccessibilityIdentifier("routing-unknown-details")
+    interfaceCopy.button(unknownSource, key: "traffic.unknown_details")
+    let stack = NSStackView(views: [header, tabs, content, footer])
     stack.orientation = .vertical
     stack.alignment = .leading
     stack.spacing = PaxTheme.Spacing.medium
@@ -187,24 +218,31 @@ final class RoutingWorkbenchViewController: NSViewController {
         self?.store.perform(.direction(value))
       }
     }
-    search.placeholderString = "搜索目标、线路或规则"
+    interfaceCopy.bind(search, key: "action.traffic.search") {
+      $0.placeholderString = $1
+      $0.setAccessibilityLabel($1)
+    }
     search.sendsSearchStringImmediately = true
     search.target = self
     search.action = #selector(searchChanged)
     search.setAccessibilityIdentifier("routing-search")
-    search.setAccessibilityLabel("搜索目标、线路或规则")
     let tools = NSStackView(views: [dimension, direction, NSView(), search, period])
     tools.spacing = PaxTheme.Spacing.tight
-    let searchWidth = search.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.searchWidth)
-    searchWidth.priority = .defaultHigh
-    searchWidth.isActive = true
+    search.widthAnchor.constraint(lessThanOrEqualToConstant: PaxTheme.Layout.searchWidth)
+      .isActive = true
     search.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     search.heightAnchor.constraint(equalToConstant: PaxTheme.Routes.controlHeight).isActive = true
-    period.addItems(withTitles: RoutingWorkbenchStore.Period.allCases.map(\.title))
+    let periods = RoutingWorkbenchStore.Period.allCases
+    period.addItems(withTitles: periods.map { $0.title(context: interfaceCopy.context) })
+    interfaceCopy.bind(period) { picker, context in
+      for (index, period) in periods.enumerated() {
+        picker.item(at: index)?.title = period.title(context: context)
+      }
+    }
     period.target = self
     period.action = #selector(periodChanged)
     period.setAccessibilityIdentifier("routing-period")
-    period.setAccessibilityLabel("流量统计时间窗")
+    interfaceCopy.bind(period, key: "action.traffic.window_ax") { $0.setAccessibilityLabel($1) }
     let card = PaxCard(insets: NSEdgeInsets())
     card.clipsContent = true
     let minimum = card.heightAnchor.constraint(
@@ -219,7 +257,7 @@ final class RoutingWorkbenchViewController: NSViewController {
     dnsSummary.onOpen = { [weak self] in
       if let id = self?.store.livePage.dnsSummary?.id { self?.showTraffic(id) }
     }
-    let stack = NSStackView(views: [tools, card, subtotalNote, dnsSummary, unknownSource])
+    let stack = NSStackView(views: [tools, card])
     mount(stack, in: traffic)
   }
   private func buildRules() {
@@ -282,33 +320,54 @@ final class RoutingWorkbenchViewController: NSViewController {
       search.stringValue = store.search
     }
     tabs.apply(
-      [.init(id: "traffic", title: "概览"), .init(id: "rules", title: "规则")],
+      [
+        .init(id: "traffic", title: interfaceCopy.text("ai_page.overview")),
+        .init(id: "rules", title: interfaceCopy.text("traffic.rules")),
+      ],
       selected: store.tab == .traffic ? "traffic" : "rules")
     let showingTraffic = store.tab == .traffic
     if traffic.isHidden == showingTraffic { traffic.isHidden = !showingTraffic }
     if rules.isHidden != showingTraffic { rules.isHidden = showingTraffic }
-    let message = store.stateMessage
-    if notice.stringValue != message { notice.stringValue = message }
+    let message = store.stateMessage(context: interfaceCopy.context)
+    if notice.stringValue != message {
+      notice.stringValue = message
+      notice.toolTip = message.isEmpty ? nil : message
+    }
     if notice.isHidden != message.isEmpty { notice.isHidden = message.isEmpty }
     tableHost.show(activeTrafficTable)
     let page = store.livePage
-    let showingDNS = store.dimension == .system
+    let showingDNS = showingTraffic && store.dimension == .system
     if dnsSummary.isHidden == showingDNS { dnsSummary.isHidden = !showingDNS }
     if showingDNS {
       dnsSummary.update(
         page.dnsSummary,
-        unavailable: store.liveLoading ? "正在读取本地解析记录" : store.liveError.isEmpty ? nil : "解析记录读取失败")
+        unavailable: store.liveLoading
+          ? self.interfaceCopy.text("interface_detail.c039e85d8a")
+          : store.liveError.isEmpty ? nil : self.interfaceCopy.text("interface_detail.089bd0e27f"),
+        context: interfaceCopy.context)
     }
-    let showingApplication = store.dimension == .application
+    let showingApplication = showingTraffic && store.dimension == .application
     let unknown = showingApplication ? page.unknownSource : nil
     if unknownSource.isHidden != (unknown == nil) { unknownSource.isHidden = unknown == nil }
-    let note = showingApplication ? RoutingWorkbenchStore.subtotalNote(page) : nil
+    let note =
+      showingApplication
+      ? RoutingWorkbenchStore.subtotalNote(page, context: interfaceCopy.context) : nil
     if subtotalNote.isHidden != (note == nil) { subtotalNote.isHidden = note == nil }
-    if subtotalNote.stringValue != (note ?? "") { subtotalNote.stringValue = note ?? "" }
+    if subtotalNote.stringValue != (note ?? "") {
+      subtotalNote.stringValue = note ?? ""
+      subtotalNote.toolTip = note
+    }
+    footer.isHidden = !showingDNS && note == nil && unknown == nil && message.isEmpty
     if let unknown {
       let title =
-        "未识别来源 · \(unknown.connections) 条连接 · ↑ \(TrafficFormatting.bytes(unknown.upload)) · ↓ \(TrafficFormatting.bytes(unknown.download)) · 查看详情（不计入上方小计）"
-      if unknownSource.title != title { unknownSource.title = title }
+        self.interfaceCopy.text(
+          "interface_detail.8c944370ef",
+          [
+            "arg0": String(describing: unknown.connections),
+            "arg1": String(describing: TrafficFormatting.bytes(unknown.upload)),
+            "arg2": String(describing: TrafficFormatting.bytes(unknown.download)),
+          ])
+      if unknownSource.toolTip != title { unknownSource.toolTip = title }
     }
     if store.telemetry != nil {
       if list.render(emptyMessage: list.emptyMessage(unknownSourceBelow: true)) {
@@ -369,7 +428,7 @@ final class RoutingWorkbenchViewController: NSViewController {
       snapshot: store.trafficDetail(for: row), tooltip: tooltip, icons: objectIcons,
       onLocate: { [weak store] key in
         guard let store, let index = Int(key), hits.indices.contains(index) else {
-          return "原规则来源已不可用"
+          return self.interfaceCopy.text("interface_detail.6a861b4be6")
         }
         store.perform(.locate(hits[index]))
         return store.tab == .rules ? nil : store.packageMessage

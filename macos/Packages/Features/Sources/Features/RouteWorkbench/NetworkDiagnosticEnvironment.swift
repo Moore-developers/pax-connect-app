@@ -12,9 +12,10 @@ extension NetworkDiagnosticView {
 
   private func environmentSummary() -> NSView {
     let environment = store.currentEnvironment
-    let overview = E.overview(environment?.report)
+    let overview = E.overview(environment?.report, context: context)
     let intel = overview.intelligence
-    let address = overview.address.isEmpty ? "等待检测" : overview.address
+    let address =
+      overview.address.isEmpty ? context.text("native_diagnostic.f97f6a88ec") : overview.address
     let ip = text(address)
     ip.font = PaxTheme.Typography.label(
       size: PaxTheme.NetworkDiagnostics.ipFont, weight: .medium)
@@ -30,49 +31,66 @@ extension NetworkDiagnosticView {
     let city = source?.country == intel?.country ? source?.city ?? "" : ""
     let location =
       intel?.country.isEmpty == false
-      ? [P.countryName(intel?.country ?? ""), city].filter { !$0.isEmpty }.joined(
+      ? [P.countryName(intel?.country ?? "", context: context), city].filter { !$0.isEmpty }.joined(
         separator: " · ")
-      : (overview.address.isEmpty ? "尚未取得出口" : "地区未取得")
+      : (overview.address.isEmpty
+        ? context.text("native_diagnostic.97840fdd43")
+        : context.text("native_diagnostic.98bf0fd777"))
     let asn = source?.asn ?? ""
     let detail = [
       location, asn.isEmpty ? "" : (asn.uppercased().hasPrefix("AS") ? asn : "AS" + asn),
       source?.org ?? "",
     ].filter { !$0.isEmpty }.joined(separator: " · ")
     let counts = P.riskCounts(intel)
-    let native = P.nativeAssessment(intel)
+    let native = P.nativeAssessment(intel, context: context)
     let risk = blacklistSummary(intel)
-    let type = intel?.ipType.isEmpty == false ? P.typeName(intel?.ipType ?? "") : "类型未取得"
+    let type =
+      intel?.ipType.isEmpty == false
+      ? P.typeName(intel?.ipType ?? "", context: context)
+      : context.text("native_diagnostic.ae33a0af26")
     let shortType: String
     switch intel?.ipType {
-    case "hosting": shortType = "机房"
-    case "isp": shortType = "家宽"
-    case "mobile": shortType = "移动"
-    case "business": shortType = "企业"
-    case "edu": shortType = "教育"
-    case nil, "": shortType = "未取得"
+    case "hosting": shortType = context.text("native_diagnostic.3c8bfb2399")
+    case "isp": shortType = context.text("native_diagnostic.572b0172bf")
+    case "mobile": shortType = context.text("native_diagnostic.fc6bb436b8")
+    case "business": shortType = context.text("native_diagnostic.409d071901")
+    case "edu": shortType = context.text("native_diagnostic.c883995ff5")
+    case nil, "": shortType = context.text("native_diagnostic.e7954a2f3a")
     default: shortType = type
     }
     let cells: [NSView] = [
       vertical(
         [
-          text(flag(intel?.country ?? "") + "出口 IP", secondary: true), ip,
+          text(
+            flag(intel?.country ?? "") + context.text("native_diagnostic.4ebb761ac3"),
+            secondary: true), ip,
         ],
         spacing: PaxTheme.Spacing.tight),
       metricCard(
-        "风险记录", value: intel == nil ? "—" : "\(counts.hits) 命中 / \(counts.unknown) 未知",
+        context.text("native_diagnostic.14ace9bd02"),
+        value: intel == nil
+          ? "—"
+          : context.text(
+            "native_diagnostic.e77ea3c4c6",
+            ["arg0": String(describing: counts.hits), "arg1": String(describing: counts.unknown)]),
         color: summaryColor(counts.hits > 0 ? .difference : .pending),
-        detail: P.acquisitionSummary(intel) + "；按检查项统计，不是安全分"),
+        splitValue: true,
+        detail: P.acquisitionSummary(intel, context: context)
+          + context.text("native_diagnostic.3dec23eae6")),
       metricCard(
-        "原生性 · 来源判断", value: native.text,
+        context.text("native_diagnostic.33ea5ef367"), value: native.text,
         color: native.tone == .pending
           ? PaxTheme.Color.textSecondary : PaxTheme.NetworkDiagnostics.summaryAccent,
-        detail: "ipx.al 根据登记国和推定使用国判断；不证明原生家宽。\n" + P.providerDetails(intel, id: "ipx.al")),
+        detail: context.text("native_diagnostic.303b57d760")
+          + P.providerDetails(intel, id: "ipx.al", context: context)),
       metricCard(
-        "类型", value: shortType,
+        context.text("native_diagnostic.ba40014ff4"), value: shortType,
         color: intel?.ipType.isEmpty == false
           ? PaxTheme.NetworkDiagnostics.summaryText : PaxTheme.Color.textSecondary,
-        detail: "资料供应方分类；未标记机房不代表住宅网络"),
-      metricCard("黑名单", value: risk.text, color: summaryColor(risk.tone), detail: risk.detail),
+        detail: context.text("native_diagnostic.2a6065d3d5")),
+      metricCard(
+        context.text("native_diagnostic.174ec5a4ab"), value: risk.text,
+        color: summaryColor(risk.tone), splitValue: true, detail: risk.detail),
     ]
     var columns: [NSView] = []
     for (index, cell) in cells.enumerated() {
@@ -89,30 +107,42 @@ extension NetworkDiagnosticView {
     }
     let row = horizontal(columns, spacing: PaxTheme.Spacing.medium)
     row.alignment = .top
-    for cell in cells.dropFirst() {
-      cell.widthAnchor.constraint(equalTo: cells[1].widthAnchor).isActive = true
+    let baseWidth = cells[2].widthAnchor
+    for cell in cells.dropFirst(3) {
+      cell.widthAnchor.constraint(equalTo: baseWidth).isActive = true
     }
-    cells[0].widthAnchor.constraint(equalTo: cells[1].widthAnchor, multiplier: 2).isActive = true
+    let riskWeight: CGFloat = context.language == .english ? 1.25 : 1
+    cells[1].widthAnchor.constraint(equalTo: baseWidth, multiplier: riskWeight).isActive = true
+    cells[0].widthAnchor.constraint(equalTo: baseWidth, multiplier: 3 - riskWeight).isActive = true
     let result = card(row, summary: true)
     result.toolTip = detail + "\n" + overview.source + " · " + overview.comparison
     return result
   }
 
-  private func metricCard(_ title: String, value: String, color: NSColor, detail: String) -> NSView
-  {
+  private func metricCard(
+    _ title: String, value: String, color: NSColor, splitValue: Bool = false, detail: String
+  ) -> NSView {
+    let english = context.language == .english
     let parts =
-      ["黑名单", "风险记录"].contains(title)
+      splitValue && !english
       ? value.split(separator: " ", maxSplits: 1).map(String.init) : [value]
+    let caption = text(title, secondary: true)
     let label = text(parts[0])
     label.font = PaxTheme.Typography.label(
-      size: PaxTheme.NetworkDiagnostics.metricFont, weight: .medium)
+      size: english ? PaxTheme.Routes.nameFont : PaxTheme.NetworkDiagnostics.metricFont,
+      weight: .medium)
     label.textColor = color
+    if english {
+      for field in [caption, label] {
+        field.maximumNumberOfLines = 1
+        field.lineBreakMode = .byTruncatingTail
+      }
+    }
     let valueRow = horizontal(
       [label] + (parts.count > 1 ? [text(parts[1], secondary: true)] : []) + [NSView()],
       spacing: PaxTheme.Spacing.xs)
-    let result = vertical(
-      [text(title, secondary: true), valueRow], spacing: PaxTheme.Spacing.tight)
-    result.toolTip = detail
+    let result = vertical([caption, valueRow], spacing: PaxTheme.Spacing.tight)
+    result.toolTip = english ? "\(title) · \(value)\n\(detail)" : detail
     return result
   }
 
@@ -125,24 +155,30 @@ extension NetworkDiagnosticView {
     let unknown = facts.count - checked
     let text =
       hits > 0
-      ? "\(hits) 项命中"
+      ? context.text("native_diagnostic.a2966368ac", ["arg0": String(describing: hits)])
       : checked > 0
-        ? "\(checked) 项未命中" + (unknown > 0 ? " · 未全测" : "")
-        : (intel?.providers == nil ? "未取得" : "未检测")
+        ? context.text("native_diagnostic.cb5cde9cad", ["arg0": String(describing: checked)])
+          + (unknown > 0 ? context.text("native_diagnostic.abc328f9f4") : "")
+        : (intel?.providers == nil
+          ? context.text("native_diagnostic.e7954a2f3a")
+          : context.text("native_diagnostic.3acaa83343"))
     return (
       text, hits > 0 ? .difference : checked > 0 ? .matching : .pending,
       intel?.providers != nil && checked == 0
-        ? "未取得有效 DNSBL 结果；独立与补充来源缺失均不视为安全。"
-        : "DNSBL：已取得 \(checked) 项结果，经 ipx.al 获取；缺失项目不视为安全。"
+        ? context.text("native_diagnostic.536dcc7411")
+        : context.text("native_diagnostic.a69eb123c4", ["arg0": String(describing: checked)])
     )
   }
 
   private func mergedEnvironmentCard() -> NSView {
     let environment = store.currentEnvironment
     let rows = E.assessedRows(
-      environment?.report, local: environment?.local, waiting: environment?.busy == true)
+      environment?.report, local: environment?.local, waiting: environment?.busy == true,
+      context: context)
     let timestamp = text(
-      (environment?.stale == true ? "上次环境检测 · " : "环境检测 · ")
+      (environment?.stale == true
+        ? context.text("native_diagnostic.46acb06da6")
+        : context.text("native_diagnostic.d3aababeca"))
         + MeasurementTimestamp.text(environment?.report?.at), secondary: true)
     timestamp.maximumNumberOfLines = 1
     let timestampRow = horizontal([timestamp])
@@ -162,7 +198,7 @@ extension NetworkDiagnosticView {
 
   private func environmentRow(_ row: E.Row) -> NSView {
     diagnosticRow(
-      title: row.title, subtitle: row.value, symbol: row.symbol,
+      title: row.title, kind: row.kind, subtitle: row.value, symbol: row.symbol,
       detail: environmentReadingDetails(row), tone: row.tone)
   }
 
@@ -173,61 +209,87 @@ extension NetworkDiagnosticView {
     for browser in [false, true] {
       if row.title == "WebRTC" && !browser { continue }
       let sample = browser ? report.browser : report.mac
-      let name = browser ? (sample.browser.isEmpty ? "浏览器" : sample.browser) : "Mac"
+      let name =
+        browser
+        ? (sample.browser.isEmpty ? context.text("native_diagnostic.e19c3b9e26") : sample.browser)
+        : "Mac"
       lines.append(name + " · " + row.title)
-      lines.append("检测时间：" + MeasurementTimestamp.text(report.at))
-      switch row.title {
-      case "公网 IP":
+      lines.append(
+        context.text("native_diagnostic.2f3e61e480") + MeasurementTimestamp.text(report.at))
+      switch row.kind {
+      case "public_ip":
         lines += [
-          "IPv4：" + E.familyValue(sample, v6: false), "IPv6：" + E.familyValue(sample, v6: true),
-          "归属资料：" + E.location(sample), P.acquisitionSummary(sample.intelligence),
+          "IPv4：" + E.familyValue(sample, v6: false, context: context),
+          "IPv6：" + E.familyValue(sample, v6: true, context: context),
+          context.text("native_diagnostic.35e12e464c") + E.location(sample, context: context),
+          P.acquisitionSummary(sample.intelligence, context: context),
           (sample.intelligence?.providers ?? []).map {
-            P.providerDetails(sample.intelligence, id: $0.id)
+            P.providerDetails(sample.intelligence, id: $0.id, context: context)
           }.joined(separator: "\n\n"),
         ]
-      case "语言":
+      case "language":
         let languages = browser ? sample.languages : local?.languages ?? []
         lines += [
-          "语言顺序：" + (languages.isEmpty ? "未取得" : languages.joined(separator: " → ")),
-          "地区设置：" + (browser ? sample.region : local?.region ?? "未取得"),
+          context.text("native_diagnostic.315e93563e")
+            + (languages.isEmpty
+              ? context.text("native_diagnostic.e7954a2f3a") : languages.joined(separator: " → ")),
+          context.text("native_diagnostic.8f466fd632")
+            + (browser
+              ? sample.region : local?.region ?? context.text("native_diagnostic.e7954a2f3a")),
         ]
-      case "时区":
+      case "timezone":
         let zone = browser ? sample.timezone : local?.timezone ?? ""
         lines += [
-          "时区标识：" + (zone.isEmpty ? "未取得" : zone),
-          "时区说明：" + E.timezone(zone, at: report.at),
+          context.text("native_diagnostic.58600047a4")
+            + (zone.isEmpty ? context.text("native_diagnostic.e7954a2f3a") : zone),
+          context.text("native_diagnostic.eb22b3bfcb")
+            + E.timezone(zone, at: report.at, context: context),
         ]
-      case "DNS":
+      case "dns":
         lines += [
-          E.dnsPathDetails(sample, name: browser ? "浏览器" : "Mac"),
-          "解析器数量：\(sample.resolvers.count)", "检测来源：bash.ws · 本轮随机域名采样",
+          E.dnsPathDetails(
+            sample, name: browser ? context.text("native_diagnostic.e19c3b9e26") : "Mac",
+            context: context),
+          context.text(
+            "native_diagnostic.3cc64903bf", ["arg0": String(describing: sample.resolvers.count)]),
+          context.text("native_diagnostic.bbb17e8cb8"),
         ]
-        if !sample.dnsError.isEmpty { lines.append("未完成原因：" + E.checkProblem(sample.dnsError)) }
-        lines += sample.resolvers.map {
-          $0.ip + " · " + P.countryName($0.country) + " · " + $0.organization
+        if !sample.dnsError.isEmpty {
+          lines.append(
+            context.text("native_diagnostic.edd04ba74c")
+              + E.checkProblem(sample.dnsError, context: context))
         }
-      case "WebRTC":
-        lines.append("候选数量：\(sample.rtcAddresses.count)")
-        if sample.rtcAddresses.isEmpty { lines.append("采样结果：未取得候选，不能据此确认防泄露") }
+        lines += sample.resolvers.map {
+          $0.ip + " · " + P.countryName($0.country, context: context) + " · " + $0.organization
+        }
+      case "webrtc":
+        lines.append(
+          context.text(
+            "native_diagnostic.963e43ae47", ["arg0": String(describing: sample.rtcAddresses.count)])
+        )
+        if sample.rtcAddresses.isEmpty {
+          lines.append(context.text("native_diagnostic.ff9a9d1d55"))
+        }
         lines += sample.rtcAddresses
       default: return row.detail
       }
       let checks = (sample.checks ?? []).filter { check in
-        switch row.title {
-        case "公网 IP": ["ipv4", "ipv6", "ipv6_route", "intelligence"].contains(check.kind)
-        case "DNS": ["dns_session", "dns_query", "dns_result"].contains(check.kind)
-        case "WebRTC": check.kind.hasPrefix("rtc_")
+        switch row.kind {
+        case "public_ip": ["ipv4", "ipv6", "ipv6_route", "intelligence"].contains(check.kind)
+        case "dns": ["dns_session", "dns_query", "dns_result"].contains(check.kind)
+        case "webrtc": check.kind.hasPrefix("rtc_")
         default: false
         }
       }
       if !checks.isEmpty {
-        lines.append("采样证据")
+        lines.append(context.text("native_diagnostic.d46cb91a2d"))
         lines += checks.map {
-          $0.target + "：" + E.checkText($0, ipv6Off: E.ipv6Exposure(report) == .off)
+          $0.target + "："
+            + E.checkText($0, ipv6Off: E.ipv6Exposure(report) == .off, context: context)
         }
       }
     }
-    let explanation = E.riskExplanation(for: row.title)
+    let explanation = E.riskExplanation(for: row.kind, context: context)
     if !explanation.isEmpty { lines.append(explanation) }
     return lines.joined(separator: "\n")
   }

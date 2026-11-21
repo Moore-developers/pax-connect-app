@@ -22,6 +22,12 @@ PaxConnectApp（Xcode App target）
 | `Features` | 各页 ViewController 和页面专属 View | 通过 Store 读状态、发 Intent；不直接调 `PaxClient` |
 | App target | `AppDelegate`、`WorkbenchWindowController`、daemon 注册/授权引导、菜单 | 组装依赖 |
 
+### 10.1 界面语言与资源
+
+AppDelegate 创建唯一 `InterfaceLanguageStore`，注入窗口和设置，UserDefaults 仅存 system／zh-Hans／en。PaxCore 的 `LanguagePackRepository` 是自定义包校验与私有文件读写 owner；`PresentationContext` 是不可变词条快照与本地呈现版本。资源与替换合同见[语言包](../changes/pax-connect-network-control-plane/interface-language-packs-1120.md)。PaxClient 只保留连接错误语义，产品文案在 PaxCore；兼容调用以简中呈现。
+
+Features 页面持 `InterfaceCopyBindings`，只绑定明确的产品控件，不扫描或替换任意显示字符串。Shell 在语言变更／切页时将 context 送入已有子控制器；绑定更新现有控件，不触发业务查询、不重建 Store。PaxUI 的设置行、组、侧栏和页头只增加收文字值的更新接口，不依赖 PaxCore。已打开的编辑器与报告沿用创建时快照。当前实施状态唯一见 architecture §19。
+
 ## 12. UI 骨架
 
 
@@ -49,6 +55,8 @@ NSApplication
 ```
 
 **Dashboard（连接工作台）**：`NSScrollView` + flipped document view，固定两档手写布局；净内容宽 ≥700pt 时左 44% RTT线路质量卡（下含可选线路历史列表）、右 56% 流量，跨列明细，下方事件和条件性异常；不足时堆叠，收紧连接卡。唯一开关在 toolbar，线路选择在质量卡列表，详情可从线路页进入，不再常驻线路网格。窗口默认 1280×860、最小 1000×680。页面合同唯一见 `ui/specs/P01-dashboard.md`；token 与组件状态唯一见 `ui/design-system.md`。
+
+主窗口在内容区顶部留出拖动区，双击遵循系统标题栏偏好。填满时适配当前屏幕的可用区域，再次双击可还原窗口。中英文共用这套窗口行为。
 
 UI 阶段默认 App 装配 `WorkbenchWindowController → WorkbenchShellViewController → Dashboard / ComponentGallery`；`WorkbenchDemoStore` 只持有内存演示状态，不创建 ConnectionSession / DaemonInstaller。PAX_MODE=demo 强制演示；显式 PAX_MODE=live 或非空 PAX_SOCKET 进入同一新工作台的真实装配；动作按 Hello 通告的能力启用，未通告的保持禁用。旧MainWindow/MainSplit/Sidebar已删除。演示目录以产品快照驱动核心Store，OFF选路走命令替身；未交付的运行中演示交互仍隔离在fixture。
 

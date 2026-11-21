@@ -25,12 +25,24 @@ final class RoutingTrafficList: NSObject {
         freezesLive: false, paging: false)
     }
   }
-  static let titles = ["应用", "实际连接", "最近命中规则", "延迟", "连接数", "上传 / 下载"]
+  static func titles(context: PresentationContext = .chinese) -> [String] {
+    [
+      context.text("traffic_details.63c73c4730"), context.text("traffic_details.6f4ef658cb"),
+      context.text("traffic_details.d17db68e8a"), context.text("traffic_details.18045b8c40"),
+      context.text("traffic_details.3669d1a3f0"), context.text("traffic_details.ebab9eed49"),
+    ]
+  }
   private static let symbols = [
     "app", "point.3.connected.trianglepath.dotted", "line.3.horizontal.decrease.circle",
     "timer", "number", "arrow.up.arrow.down",
   ]
-  private static let systemTitles = ["系统与进程", "实际连接", "最近命中规则", "响应延迟", "连接数", "上传 / 下载"]
+  private static func systemTitles(context: PresentationContext = .chinese) -> [String] {
+    [
+      context.text("traffic_details.360c4bd731"), context.text("traffic_details.6f4ef658cb"),
+      context.text("traffic_details.d17db68e8a"), context.text("traffic_details.abe05d4485"),
+      context.text("traffic_details.3669d1a3f0"), context.text("traffic_details.ebab9eed49"),
+    ]
+  }
   private static let systemSymbols = [
     "gearshape", "point.3.connected.trianglepath.dotted", "line.3.horizontal.decrease.circle",
     "timer", "number", "arrow.up.arrow.down",
@@ -43,6 +55,11 @@ final class RoutingTrafficList: NSObject {
   /// 逻辑列在可见应用表里的位置；被隐藏则为 nil。
   private func applicationIndex(_ logical: Int) -> Int? {
     applicationLogical.firstIndex(of: logical)
+  }
+  private(set) var context = PresentationContext.chinese
+  private struct DisplayKey: Hashable {
+    let revision: UInt64
+    let fact: RoutingTrafficCellKey
   }
   let store: RoutingWorkbenchStore
   let table: PaxDataTable
@@ -77,12 +94,12 @@ final class RoutingTrafficList: NSObject {
     self.icons = icons
     self.tooltip = tooltip
     self.style = style
-    let application = Self.titles.indices.filter { !style.hiddenColumns.contains($0) }
+    let application = Self.titles().indices.filter { !style.hiddenColumns.contains($0) }
     let system = Self.systemColumns.filter { !style.hiddenColumns.contains($0) }
     applicationLogical = application
     systemLogical = system
-    table = Self.makeApplicationTable(style, logical: application)
-    systemTable = Self.makeSystemTable(style, logical: system)
+    table = Self.makeApplicationTable(style, logical: application, context: .chinese)
+    systemTable = Self.makeSystemTable(style, logical: system, context: .chinese)
     super.init()
     table.setTableIdentifier(style.identifiers.application)
     systemTable.setTableIdentifier(style.identifiers.system)
@@ -90,12 +107,15 @@ final class RoutingTrafficList: NSObject {
     wire(systemTable, logical: { [systemLogical] in systemLogical[$0] })
   }
 
-  private static func makeApplicationTable(_ style: Style, logical: [Int]) -> PaxDataTable {
+  private static func makeApplicationTable(
+    _ style: Style, logical: [Int], context: PresentationContext = .chinese
+  ) -> PaxDataTable {
     PaxDataTable(
       columns: logical.map { index in
-        let title = titles[index]
+        let title = titles(context: context)[index]
         return .init(
-          title, width: columnWidth(title, style: style), growth: PaxTheme.Routing.columns[index],
+          title, width: columnWidth(index, style: style, context: context, system: false),
+          growth: PaxTheme.Routing.columns[index],
           alignment: (2...4).contains(index) ? .center : .left, symbol: symbols[index],
           inset: style.scrollMode == .page
             ? PaxTheme.Dashboard.cellInset
@@ -106,14 +126,17 @@ final class RoutingTrafficList: NSObject {
       selection: style.selection, scrollMode: style.scrollMode)
   }
 
-  private static func makeSystemTable(_ style: Style, logical: [Int]) -> PaxDataTable {
+  private static func makeSystemTable(
+    _ style: Style, logical: [Int], context: PresentationContext = .chinese
+  ) -> PaxDataTable {
     let widths = PaxTheme.Routing.columns
     return PaxDataTable(
       columns: logical.map { column in
         let index = systemColumns.firstIndex(of: column) ?? 0
-        let title = systemTitles[index]
+        let title = systemTitles(context: context)[index]
         return .init(
-          title, width: columnWidth(title, style: style), growth: widths[index],
+          title, width: columnWidth(index, style: style, context: context, system: true),
+          growth: widths[index],
           alignment: (2...4).contains(index) ? .center : .left,
           symbol: systemSymbols[index],
           inset: style.scrollMode == .page ? PaxTheme.Dashboard.cellInset : PaxTheme.Table.inset,
@@ -124,36 +147,81 @@ final class RoutingTrafficList: NSObject {
       selection: style.selection, scrollMode: style.scrollMode)
   }
 
-  /// 概览六列先保留完整表头和一致的内边距，再按共享权重分配余量。
-  /// 对象标题按最长的「系统与进程」预留，切换维度不改变列位置。
-  private static func columnWidth(_ title: String, style: Style) -> CGFloat {
-    guard style.scrollMode == .page else { return 0 }
-    let title = titles.firstIndex(of: title).map { systemTitles[$0] } ?? title
-    let text = (title as NSString).size(withAttributes: [.font: PaxTheme.Typography.caption()])
-    return ceil(text.width) + PaxTheme.Control.navigationIcon + PaxTheme.Spacing.xs
-      + 2 * PaxTheme.Dashboard.cellInset
+  /// 概览共用列位置。流量页按实际表头留宽，给窄窗的传输数值保留空间。
+  private static func columnWidth(
+    _ index: Int, style: Style, context: PresentationContext, system: Bool
+  ) -> CGFloat {
+    let isDashboard = style.scrollMode == .page
+    var labels: [String] = []
+    if isDashboard || system { labels.append(systemTitles(context: context)[index]) }
+    if isDashboard || !system {
+      labels.append(titles(context: context)[index])
+      if index == 0 {
+        labels.append(RoutingWorkbenchStore.Dimension.domain.title(context: context))
+      }
+    }
+    let attributes: [NSAttributedString.Key: Any] = [.font: PaxTheme.Typography.caption()]
+    let width = labels.map { ($0 as NSString).size(withAttributes: attributes).width }.max() ?? 0
+    let inset =
+      isDashboard
+      ? PaxTheme.Dashboard.cellInset
+      : system
+        ? PaxTheme.Table.inset
+        : index == 0 || index == 5 ? PaxTheme.Dashboard.inset : PaxTheme.Dashboard.cellInset
+    let padding = (2...4).contains(index) ? PaxTheme.Spacing.xs * 2 : inset + PaxTheme.Spacing.xs
+    return ceil(width) + PaxTheme.Control.navigationIcon + PaxTheme.Spacing.xs + padding
   }
 
+  func applyLanguage(_ context: PresentationContext) {
+    self.context = context
+    let app = Self.titles(context: context)
+    let system = Self.systemTitles(context: context)
+    for (index, logical) in applicationLogical.enumerated() {
+      table.setColumnTitle(app[logical], at: index)
+      table.setColumnWidth(
+        Self.columnWidth(logical, style: style, context: context, system: false), at: index)
+    }
+    for (index, logical) in systemLogical.enumerated() {
+      systemTable.setColumnTitle(system[logical], at: index)
+      systemTable.setColumnWidth(
+        Self.columnWidth(logical, style: style, context: context, system: true), at: index)
+    }
+    syncHeaders()
+    let label = context.text("traffic.table_ax")
+    table.setTableAccessibilityLabel(label)
+    systemTable.setTableAccessibilityLabel(label)
+    table.refreshVisibleCopy()
+    systemTable.refreshVisibleCopy()
+  }
   func syncHeaders() {
     table.setColumnTitle(
-      store.dimension.title, at: 0,
+      store.dimension.title(context: context), at: 0,
       symbol: store.dimension == .application
         ? "app" : store.dimension == .domain ? "globe" : "gearshape")
-    if let count = applicationIndex(4) { table.setColumnTitle("连接数", at: count, symbol: "number") }
+    if let count = applicationIndex(4) {
+      table.setColumnTitle(context.text("traffic_details.3669d1a3f0"), at: count, symbol: "number")
+    }
   }
 
   var collecting: (() -> Bool)?
   func emptyMessage(unknownSourceBelow: Bool) -> String {
-    if let message = store.dataMessage { return message }
-    if store.telemetry == nil { return store.search.isEmpty ? "此时间窗暂无流量" : "没有匹配的目标" }
-    if !store.search.isEmpty || store.direction != .all { return "此时间窗没有符合筛选的流量" }
-    if collecting?() == false { return "当前未采集；开启代理后记录网络活动，已保存历史仍可查看" }
-    if collecting?() == true && store.livePage.items.isEmpty { return "等待网络活动；打开平时访问的网站后查看" }
-    if store.dimension == .system { return "当前时间与搜索范围暂无系统或进程连接" }
-    if store.dimension == .application, unknownSourceBelow, store.livePage.unknownSource != nil {
-      return "暂无已识别应用，未识别来源见下方"
+    if let message = store.dataMessage(context: context) { return message }
+    if store.telemetry == nil {
+      return store.search.isEmpty
+        ? context.text("traffic_details.6bb8763839") : context.text("traffic_details.38ada0128c")
     }
-    return "此时间窗暂无流量"
+    if !store.search.isEmpty || store.direction != .all {
+      return context.text("traffic_details.d219ed51b5")
+    }
+    if collecting?() == false { return context.text("traffic_details.796e394e76") }
+    if collecting?() == true && store.livePage.items.isEmpty {
+      return context.text("traffic_details.00a9c305c7")
+    }
+    if store.dimension == .system { return context.text("traffic_details.ae4865a8fb") }
+    if store.dimension == .application, unknownSourceBelow, store.livePage.unknownSource != nil {
+      return context.text("traffic_details.7b7794e932")
+    }
+    return context.text("traffic_details.6bb8763839")
   }
 
   /// 提交 Store 的当前结果；返回是否需要准备表格结构。
@@ -241,7 +309,7 @@ final class RoutingTrafficList: NSObject {
     if id.hasPrefix("placeholder-") { return NSView() }
     return makeRoutingTrafficCell(
       id, column: column, key: key ?? cellKey(id, column: column), store: store,
-      icons: icons, tooltip: tooltip
+      icons: icons, tooltip: tooltip, context: context
     ) {
       [weak self] in self?.onOpen?(id)
     }
@@ -249,7 +317,9 @@ final class RoutingTrafficList: NSObject {
 
   private func slots(_ ids: [String], hasMore: Bool, minimum: Int) -> [PaxDataTable.Row] {
     var rows = ids.map { PaxDataTable.Row(id: $0, values: []) }
-    if hasMore { rows.append(.init(id: "load-more", values: ["加载更多"])) }
+    if hasMore {
+      rows.append(.init(id: "load-more", values: [context.text("traffic_details.af90a08fec")]))
+    }
     for index in rows.count..<max(rows.count, minimum) {
       rows.append(.init(id: "placeholder-\(index)", values: []))
     }
@@ -264,16 +334,18 @@ final class RoutingTrafficList: NSObject {
       guard let content = self.cell(id, column: column, key: key) else { return nil }
       // Empty slots must rebuild their cell constraints when a real row arrives.
       guard let key else { return content }
-      return PaxDataTable.reusableContent(content, reuseKey: key)
+      return PaxDataTable.reusableContent(
+        content, reuseKey: DisplayKey(revision: self.context.revision, fact: key))
     }
     table.cellUpdater = { [weak self] existing, id, column in
       guard let self else { return false }
       let column = logical(column)
       guard let key = self.cellKey(id, column: column) else { return false }
       return PaxDataTable.updateContent(
-        existing, reusing: key,
+        existing, reusing: DisplayKey(revision: self.context.revision, fact: key),
         updating: {
-          updateRoutingTrafficCell($0, key: key, store: self.store, tooltip: self.tooltip)
+          updateRoutingTrafficCell(
+            $0, key: key, store: self.store, tooltip: self.tooltip, context: self.context)
         },
         makeContent: { self.cell(id, column: column, key: key) ?? NSView() })
     }
@@ -290,11 +362,12 @@ final class RoutingTrafficList: NSObject {
       }
     }
     table.menuForRow = { [weak self] id in
-      guard id != "load-more", !id.hasPrefix("placeholder-") else {
+      guard let self, id != "load-more", !id.hasPrefix("placeholder-") else {
         return nil
       }
       let item = NSMenuItem(
-        title: "查看详情", action: #selector(RoutingTrafficList.openContextDetail(_:)),
+        title: context.text("traffic_details.a748cc074f"),
+        action: #selector(RoutingTrafficList.openContextDetail(_:)),
         keyEquivalent: "")
       item.target = self
       item.representedObject = id
@@ -304,10 +377,10 @@ final class RoutingTrafficList: NSObject {
     }
     table.heightForRow = { _ in PaxTheme.Table.memberRow }
     table.onActivate = { [weak self] id in
-      guard id != "load-more", !id.hasPrefix("placeholder-") else {
+      guard let self, id != "load-more", !id.hasPrefix("placeholder-") else {
         return
       }
-      self?.onOpen?(id)
+      self.onOpen?(id)
     }
   }
 

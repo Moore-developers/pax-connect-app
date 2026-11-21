@@ -24,13 +24,14 @@ func (s *Session) UpdateRouting(ctx context.Context, l config.RoutingLibrary, ap
 	if err != nil || hello.RuntimeSession != s.rulesRuntimeSession {
 		return errors.New("routing_runtime_unavailable")
 	}
+	loaded := make(map[string]string, len(routes))
 	for id, tag := range routes {
-		if !s.tags[tag] {
-			delete(routes, id)
+		if s.tags[tag] {
+			loaded[id] = tag
 		}
 	}
 	l.WebRTC = s.lastWebRTC
-	compiled, sources, err := config.CompileRoutingEvidence(l, apps, routes, !s.lastIPv4Only)
+	compiled, sources, err := config.CompileRoutingEvidence(l, apps, loaded, !s.lastIPv4Only)
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,7 @@ func (s *Session) UpdateRouting(ctx context.Context, l config.RoutingLibrary, ap
 		return ErrUnavailable
 	}
 	dnsTags := map[string]string{}
-	for id, tag := range routes {
+	for id, tag := range loaded {
 		dnsTags[id] = "dns-route-" + tag
 	}
 	dnsRules, err := config.DNSRoutingRules(l, apps, dnsTags, s.lastDNSMode)
@@ -71,4 +72,18 @@ func (s *Session) UpdateRouting(ctx context.Context, l config.RoutingLibrary, ap
 	s.lastRoutingSources = sources
 	s.applied = sha256.Sum256(raw)
 	return nil
+}
+
+// runtimeOutboundTags reads the private builder output. Catalog candidates
+// omitted by the builder must not become eligible for hot updates or switches.
+func runtimeOutboundTags(profile string) (map[string]bool, error) {
+	var doc struct{ Outbounds []struct{ Tag string } }
+	if json.Unmarshal([]byte(profile), &doc) != nil {
+		return nil, errors.New("config_invalid")
+	}
+	tags := make(map[string]bool, len(doc.Outbounds))
+	for _, out := range doc.Outbounds {
+		tags[out.Tag] = true
+	}
+	return tags, nil
 }

@@ -37,6 +37,32 @@ func TestDNSRoutingUsesActiveDomainRulesAndMode(t *testing.T) {
 		t.Fatal("disabled Geo still resolves direct", string(raw))
 	}
 }
+
+func TestDNSRoutingRejectsQueriesForUnloadedFixedOutbound(t *testing.T) {
+	l := NewRoutingLibrary()
+	l.WebRTC = true
+	l.Packages[0].Rules = []RoutingEntry{
+		{ID: "missing", Method: "domain", Target: "missing.example", Destination: "route:missing", Enabled: true},
+		{ID: "available", Method: "domain", Target: "available.example", Destination: "route:available", Enabled: true},
+		{ID: "deny", Method: "domain", Target: "deny.example", Destination: "block", Enabled: true},
+		{ID: "direct", Method: "domain_suffix", Target: "example.test", Destination: "direct", Enabled: true},
+	}
+	rules, err := CompileDNSRouting(l, nil, map[string]string{"route:available": "dns-available"}, "balanced")
+	if err != nil || len(rules) < 4 {
+		t.Fatal(rules, err)
+	}
+	for i, want := range []struct{ field, value string }{
+		{"action", "reject"}, {"server", "dns-available"}, {"action", "reject"}, {"server", "dns-domestic"},
+	} {
+		if rules[i][want.field] != want.value {
+			t.Fatalf("unexpected DNS rule %d: %v", i, rules[i])
+		}
+	}
+	if rules[0]["no_drop"] != true || rules[0]["server"] != nil {
+		t.Fatal("missing fixed route must refuse DNS without choosing another resolver", rules[0])
+	}
+}
+
 func TestDNSRoutingPreservesFollowDefaultAndRejectsUnknownPredicates(t *testing.T) {
 	l := NewRoutingLibrary()
 	l.Packages[0].Rules = []RoutingEntry{
@@ -52,7 +78,7 @@ func TestDNSRoutingPreservesFollowDefaultAndRejectsUnknownPredicates(t *testing.
 		t.Fatal(string(raw))
 	}
 	mixed := map[string]any{"type": "logical", "mode": "and", "rules": []any{map[string]any{"domain": []string{"secret.example"}}, map[string]any{"ip_cidr": []string{"192.0.2.0/24"}}}}
-	if _, ok := dnsDomainMatch(mixed); ok {
+	if match, _ := dnsQueryMatch(mixed); match != nil {
 		t.Fatal("IP predicate silently dropped")
 	}
 }

@@ -1180,6 +1180,15 @@ public nonisolated struct Pax_V1_ProductLog: @unchecked Sendable {
     set {_uniqueStorage()._categorySymbol = newValue}
   }
 
+  public var messageText: Pax_V1_ProductText {
+    get {_storage._messageText ?? Pax_V1_ProductText()}
+    set {_uniqueStorage()._messageText = newValue}
+  }
+  /// Returns true if `messageText` has been explicitly set.
+  public var hasMessageText: Bool {_storage._messageText != nil}
+  /// Clears the value of `messageText`. Subsequent reads from it will return its default value.
+  public mutating func clearMessageText() {_uniqueStorage()._messageText = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2188,97 +2197,6 @@ public nonisolated struct Pax_V1_RouteUsageResponse: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-public nonisolated struct Pax_V1_EventCategory: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var key: String = String()
-
-  public var name: String = String()
-
-  public var symbol: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_EventField: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var label: String = String()
-
-  public var value: String = String()
-
-  public var before: String = String()
-
-  public var after: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_EventSection: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var kind: String = String()
-
-  public var title: String = String()
-
-  public var fields: [Pax_V1_EventField] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Pax_V1_SystemEvent: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var type: String = String()
-
-  public var name: String = String()
-
-  public var category: Pax_V1_EventCategory {
-    get {_category ?? Pax_V1_EventCategory()}
-    set {_category = newValue}
-  }
-  /// Returns true if `category` has been explicitly set.
-  public var hasCategory: Bool {self._category != nil}
-  /// Clears the value of `category`. Subsequent reads from it will return its default value.
-  public mutating func clearCategory() {self._category = nil}
-
-  public var result: String = String()
-
-  public var errorCode: String = String()
-
-  public var startedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_startedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_startedAt = newValue}
-  }
-  /// Returns true if `startedAt` has been explicitly set.
-  public var hasStartedAt: Bool {self._startedAt != nil}
-  /// Clears the value of `startedAt`. Subsequent reads from it will return its default value.
-  public mutating func clearStartedAt() {self._startedAt = nil}
-
-  public var sections: [Pax_V1_EventSection] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _category: Pax_V1_EventCategory? = nil
-  fileprivate var _startedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-}
-
 public nonisolated struct Pax_V1_LogQuery: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2970,6 +2888,15 @@ public nonisolated struct Pax_V1_LogRecord: @unchecked Sendable {
     set {_uniqueStorage()._categorySymbol = newValue}
   }
 
+  public var titleText: Pax_V1_ProductText {
+    get {_storage._titleText ?? Pax_V1_ProductText()}
+    set {_uniqueStorage()._titleText = newValue}
+  }
+  /// Returns true if `titleText` has been explicitly set.
+  public var hasTitleText: Bool {_storage._titleText != nil}
+  /// Clears the value of `titleText`. Subsequent reads from it will return its default value.
+  public mutating func clearTitleText() {_uniqueStorage()._titleText = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3123,9 +3050,20 @@ public nonisolated struct Pax_V1_RoutingPackage: Sendable {
 
   public var updatedUnix: Int64 = 0
 
+  public var updateText: Pax_V1_ProductText {
+    get {_updateText ?? Pax_V1_ProductText()}
+    set {_updateText = newValue}
+  }
+  /// Returns true if `updateText` has been explicitly set.
+  public var hasUpdateText: Bool {self._updateText != nil}
+  /// Clears the value of `updateText`. Subsequent reads from it will return its default value.
+  public mutating func clearUpdateText() {self._updateText = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _updateText: Pax_V1_ProductText? = nil
 }
 
 public nonisolated struct Pax_V1_RoutingApplication: Sendable {
@@ -3196,9 +3134,20 @@ public nonisolated struct Pax_V1_RoutingLibrarySnapshot: Sendable {
 
   public var message: String = String()
 
+  public var messageText: Pax_V1_ProductText {
+    get {_messageText ?? Pax_V1_ProductText()}
+    set {_messageText = newValue}
+  }
+  /// Returns true if `messageText` has been explicitly set.
+  public var hasMessageText: Bool {self._messageText != nil}
+  /// Clears the value of `messageText`. Subsequent reads from it will return its default value.
+  public mutating func clearMessageText() {self._messageText = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _messageText: Pax_V1_ProductText? = nil
 }
 
 public nonisolated struct Pax_V1_RoutingMutationRequest: @unchecked Sendable {
@@ -3358,32 +3307,6 @@ public nonisolated struct Pax_V1_StartEnvironmentSourcesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var sessionID: String = String()
-
-  public var context: Pax_V1_OperationContext {
-    get {_context ?? Pax_V1_OperationContext()}
-    set {_context = newValue}
-  }
-  /// Returns true if `context` has been explicitly set.
-  public var hasContext: Bool {self._context != nil}
-  /// Clears the value of `context`. Subsequent reads from it will return its default value.
-  public mutating func clearContext() {self._context = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _context: Pax_V1_OperationContext? = nil
-}
-
-public nonisolated struct Pax_V1_EnvironmentDiagnosticRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// start, read, cancel, sources
-  public var action: String = String()
 
   public var sessionID: String = String()
 
@@ -4903,7 +4826,7 @@ nonisolated extension Pax_V1_TrafficSnapshot: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProductLog"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}level\0\u{1}message\0\u{3}operation_id\0\u{3}snapshot_version\0\u{1}connection\0\u{3}event_id\0\u{3}event_kind\0\u{1}source\0\u{3}connection_key\0\u{3}application_id\0\u{1}application\0\u{1}domain\0\u{1}ip\0\u{3}route_id\0\u{3}route_name\0\u{1}direction\0\u{1}result\0\u{1}flow\0\u{3}record_id\0\u{3}problem_id\0\u{1}occurrences\0\u{3}related_connections\0\u{3}first_at\0\u{3}last_at\0\u{1}category\0\u{3}operation_from\0\u{3}operation_to\0\u{3}system_category\0\u{3}system_event\0\u{3}category_name\0\u{3}category_symbol\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}level\0\u{1}message\0\u{3}operation_id\0\u{3}snapshot_version\0\u{1}connection\0\u{3}event_id\0\u{3}event_kind\0\u{1}source\0\u{3}connection_key\0\u{3}application_id\0\u{1}application\0\u{1}domain\0\u{1}ip\0\u{3}route_id\0\u{3}route_name\0\u{1}direction\0\u{1}result\0\u{1}flow\0\u{3}record_id\0\u{3}problem_id\0\u{1}occurrences\0\u{3}related_connections\0\u{3}first_at\0\u{3}last_at\0\u{1}category\0\u{3}operation_from\0\u{3}operation_to\0\u{3}system_category\0\u{3}system_event\0\u{3}category_name\0\u{3}category_symbol\0\u{3}message_text\0")
 
   fileprivate class _StorageClass {
     var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
@@ -4938,6 +4861,7 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
     var _systemEvent: Pax_V1_SystemEvent? = nil
     var _categoryName: String = String()
     var _categorySymbol: String = String()
+    var _messageText: Pax_V1_ProductText? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4980,6 +4904,7 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
       _systemEvent = source._systemEvent
       _categoryName = source._categoryName
       _categorySymbol = source._categorySymbol
+      _messageText = source._messageText
     }
   }
 
@@ -5030,6 +4955,7 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
         case 30: try { try decoder.decodeSingularMessageField(value: &_storage._systemEvent) }()
         case 31: try { try decoder.decodeSingularStringField(value: &_storage._categoryName) }()
         case 32: try { try decoder.decodeSingularStringField(value: &_storage._categorySymbol) }()
+        case 33: try { try decoder.decodeSingularMessageField(value: &_storage._messageText) }()
         default: break
         }
       }
@@ -5138,6 +5064,9 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
       if !_storage._categorySymbol.isEmpty {
         try visitor.visitSingularStringField(value: _storage._categorySymbol, fieldNumber: 32)
       }
+      try { if let v = _storage._messageText {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5179,6 +5108,7 @@ nonisolated extension Pax_V1_ProductLog: SwiftProtobuf.Message, SwiftProtobuf._M
         if _storage._systemEvent != rhs_storage._systemEvent {return false}
         if _storage._categoryName != rhs_storage._categoryName {return false}
         if _storage._categorySymbol != rhs_storage._categorySymbol {return false}
+        if _storage._messageText != rhs_storage._messageText {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -7074,195 +7004,6 @@ nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-nonisolated extension Pax_V1_EventCategory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EventCategory"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0\u{1}name\0\u{1}symbol\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.symbol) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.key.isEmpty {
-      try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
-    }
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
-    }
-    if !self.symbol.isEmpty {
-      try visitor.visitSingularStringField(value: self.symbol, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_EventCategory, rhs: Pax_V1_EventCategory) -> Bool {
-    if lhs.key != rhs.key {return false}
-    if lhs.name != rhs.name {return false}
-    if lhs.symbol != rhs.symbol {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_EventField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EventField"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}label\0\u{1}value\0\u{1}before\0\u{1}after\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.label) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.value) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.before) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.after) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.label.isEmpty {
-      try visitor.visitSingularStringField(value: self.label, fieldNumber: 1)
-    }
-    if !self.value.isEmpty {
-      try visitor.visitSingularStringField(value: self.value, fieldNumber: 2)
-    }
-    if !self.before.isEmpty {
-      try visitor.visitSingularStringField(value: self.before, fieldNumber: 3)
-    }
-    if !self.after.isEmpty {
-      try visitor.visitSingularStringField(value: self.after, fieldNumber: 4)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_EventField, rhs: Pax_V1_EventField) -> Bool {
-    if lhs.label != rhs.label {return false}
-    if lhs.value != rhs.value {return false}
-    if lhs.before != rhs.before {return false}
-    if lhs.after != rhs.after {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_EventSection: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EventSection"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}title\0\u{1}fields\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.kind) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.title) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.kind.isEmpty {
-      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 1)
-    }
-    if !self.title.isEmpty {
-      try visitor.visitSingularStringField(value: self.title, fieldNumber: 2)
-    }
-    if !self.fields.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.fields, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_EventSection, rhs: Pax_V1_EventSection) -> Bool {
-    if lhs.kind != rhs.kind {return false}
-    if lhs.title != rhs.title {return false}
-    if lhs.fields != rhs.fields {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_SystemEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SystemEvent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{1}name\0\u{1}category\0\u{1}result\0\u{3}error_code\0\u{3}started_at\0\u{1}sections\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.type) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._category) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.result) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.errorCode) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._startedAt) }()
-      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.sections) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.type.isEmpty {
-      try visitor.visitSingularStringField(value: self.type, fieldNumber: 1)
-    }
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
-    }
-    try { if let v = self._category {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    if !self.result.isEmpty {
-      try visitor.visitSingularStringField(value: self.result, fieldNumber: 4)
-    }
-    if !self.errorCode.isEmpty {
-      try visitor.visitSingularStringField(value: self.errorCode, fieldNumber: 5)
-    }
-    try { if let v = self._startedAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    if !self.sections.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.sections, fieldNumber: 7)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_SystemEvent, rhs: Pax_V1_SystemEvent) -> Bool {
-    if lhs.type != rhs.type {return false}
-    if lhs.name != rhs.name {return false}
-    if lhs._category != rhs._category {return false}
-    if lhs.result != rhs.result {return false}
-    if lhs.errorCode != rhs.errorCode {return false}
-    if lhs._startedAt != rhs._startedAt {return false}
-    if lhs.sections != rhs.sections {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Pax_V1_LogQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogQuery"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dimension\0\u{3}object_id\0\u{1}search\0\u{1}level\0\u{3}route_id\0\u{1}from\0\u{1}until\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{1}view\0\u{3}problem_id\0\u{3}connection_key\0\u{3}include_dns\0\u{1}quick\0\u{1}criteria\0\u{1}scope\0\u{3}application_workbench_page\0\u{3}recovery_offset\0")
@@ -8226,7 +7967,7 @@ nonisolated extension Pax_V1_ConnectionMetrics: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogRecord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{3}record_id\0\u{3}event_id\0\u{1}level\0\u{1}title\0\u{1}source\0\u{1}flow\0\u{1}metrics\0\u{3}first_at\0\u{3}last_at\0\u{3}event_count\0\u{3}as_of\0\u{3}operation_from\0\u{3}operation_to\0\u{3}system_category\0\u{3}system_event\0\u{3}category_name\0\u{3}category_symbol\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{3}record_id\0\u{3}event_id\0\u{1}level\0\u{1}title\0\u{1}source\0\u{1}flow\0\u{1}metrics\0\u{3}first_at\0\u{3}last_at\0\u{3}event_count\0\u{3}as_of\0\u{3}operation_from\0\u{3}operation_to\0\u{3}system_category\0\u{3}system_event\0\u{3}category_name\0\u{3}category_symbol\0\u{3}title_text\0")
 
   fileprivate class _StorageClass {
     var _kind: String = String()
@@ -8247,6 +7988,7 @@ nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _systemEvent: Pax_V1_SystemEvent? = nil
     var _categoryName: String = String()
     var _categorySymbol: String = String()
+    var _titleText: Pax_V1_ProductText? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -8275,6 +8017,7 @@ nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
       _systemEvent = source._systemEvent
       _categoryName = source._categoryName
       _categorySymbol = source._categorySymbol
+      _titleText = source._titleText
     }
   }
 
@@ -8311,6 +8054,7 @@ nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._systemEvent) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._categoryName) }()
         case 18: try { try decoder.decodeSingularStringField(value: &_storage._categorySymbol) }()
+        case 19: try { try decoder.decodeSingularMessageField(value: &_storage._titleText) }()
         default: break
         }
       }
@@ -8377,6 +8121,9 @@ nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
       if !_storage._categorySymbol.isEmpty {
         try visitor.visitSingularStringField(value: _storage._categorySymbol, fieldNumber: 18)
       }
+      try { if let v = _storage._titleText {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -8404,6 +8151,7 @@ nonisolated extension Pax_V1_LogRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._systemEvent != rhs_storage._systemEvent {return false}
         if _storage._categoryName != rhs_storage._categoryName {return false}
         if _storage._categorySymbol != rhs_storage._categorySymbol {return false}
+        if _storage._titleText != rhs_storage._titleText {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -8658,7 +8406,7 @@ nonisolated extension Pax_V1_RoutingEntry: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pax_V1_RoutingPackage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RoutingPackage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}kind\0\u{1}destination\0\u{1}enabled\0\u{1}rules\0\u{1}source\0\u{1}version\0\u{3}previous_version\0\u{1}automatic\0\u{3}update_message\0\u{3}updated_unix\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}kind\0\u{1}destination\0\u{1}enabled\0\u{1}rules\0\u{1}source\0\u{1}version\0\u{3}previous_version\0\u{1}automatic\0\u{3}update_message\0\u{3}updated_unix\0\u{3}update_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8678,12 +8426,17 @@ nonisolated extension Pax_V1_RoutingPackage: SwiftProtobuf.Message, SwiftProtobu
       case 10: try { try decoder.decodeSingularBoolField(value: &self.automatic) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self.updateMessage) }()
       case 12: try { try decoder.decodeSingularInt64Field(value: &self.updatedUnix) }()
+      case 13: try { try decoder.decodeSingularMessageField(value: &self._updateText) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -8720,6 +8473,9 @@ nonisolated extension Pax_V1_RoutingPackage: SwiftProtobuf.Message, SwiftProtobu
     if self.updatedUnix != 0 {
       try visitor.visitSingularInt64Field(value: self.updatedUnix, fieldNumber: 12)
     }
+    try { if let v = self._updateText {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8736,6 +8492,7 @@ nonisolated extension Pax_V1_RoutingPackage: SwiftProtobuf.Message, SwiftProtobu
     if lhs.automatic != rhs.automatic {return false}
     if lhs.updateMessage != rhs.updateMessage {return false}
     if lhs.updatedUnix != rhs.updatedUnix {return false}
+    if lhs._updateText != rhs._updateText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -8863,7 +8620,7 @@ nonisolated extension Pax_V1_RoutingCandidateTraffic: SwiftProtobuf.Message, Swi
 
 nonisolated extension Pax_V1_RoutingLibrarySnapshot: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RoutingLibrarySnapshot"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{1}packages\0\u{1}applications\0\u{1}routes\0\u{1}state\0\u{1}message\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{1}packages\0\u{1}applications\0\u{1}routes\0\u{1}state\0\u{1}message\0\u{3}message_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8877,12 +8634,17 @@ nonisolated extension Pax_V1_RoutingLibrarySnapshot: SwiftProtobuf.Message, Swif
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.routes) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.state) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.message) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._messageText) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.revision != 0 {
       try visitor.visitSingularUInt64Field(value: self.revision, fieldNumber: 1)
     }
@@ -8901,6 +8663,9 @@ nonisolated extension Pax_V1_RoutingLibrarySnapshot: SwiftProtobuf.Message, Swif
     if !self.message.isEmpty {
       try visitor.visitSingularStringField(value: self.message, fieldNumber: 6)
     }
+    try { if let v = self._messageText {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8911,6 +8676,7 @@ nonisolated extension Pax_V1_RoutingLibrarySnapshot: SwiftProtobuf.Message, Swif
     if lhs.routes != rhs.routes {return false}
     if lhs.state != rhs.state {return false}
     if lhs.message != rhs.message {return false}
+    if lhs._messageText != rhs._messageText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -9249,50 +9015,6 @@ nonisolated extension Pax_V1_StartEnvironmentSourcesRequest: SwiftProtobuf.Messa
   }
 
   public static func ==(lhs: Pax_V1_StartEnvironmentSourcesRequest, rhs: Pax_V1_StartEnvironmentSourcesRequest) -> Bool {
-    if lhs.sessionID != rhs.sessionID {return false}
-    if lhs._context != rhs._context {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pax_V1_EnvironmentDiagnosticRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EnvironmentDiagnosticRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{3}session_id\0\u{1}context\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.action) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.sessionID) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._context) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.action.isEmpty {
-      try visitor.visitSingularStringField(value: self.action, fieldNumber: 1)
-    }
-    if !self.sessionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sessionID, fieldNumber: 2)
-    }
-    try { if let v = self._context {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pax_V1_EnvironmentDiagnosticRequest, rhs: Pax_V1_EnvironmentDiagnosticRequest) -> Bool {
-    if lhs.action != rhs.action {return false}
     if lhs.sessionID != rhs.sessionID {return false}
     if lhs._context != rhs._context {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

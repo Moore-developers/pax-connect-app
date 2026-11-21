@@ -4,6 +4,9 @@ import PaxUI
 
 @MainActor
 final class RouteChainController: RouteModalController {
+  override var localizedTitleKey: String? { "modal.route.chain" }
+  override var localizedSubtitleKey: String? { "modal.route.chain_note" }
+
   private let store: RouteWorkbenchStore
   private let finalID: String
   private let completed: (String) -> Void
@@ -23,7 +26,7 @@ final class RouteChainController: RouteModalController {
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
-    fronts.addItem(withTitle: "选择已有线路…")
+    fronts.addItem(withTitle: self.interfaceCopy.text("interface_detail.6b8d3face3"))
     choices = store.eligibleFronts(final: finalID)
     frozenFinal = store.node(finalID)
     fronts.addItems(withTitles: choices.map(\.name))
@@ -31,21 +34,27 @@ final class RouteChainController: RouteModalController {
     fronts.action = #selector(changed)
     fronts.font = PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont)
     let final = NSStackView(views: [
-      PaxRouteIcon.view("server.rack"), PaxRouteText.label(store.node(finalID)?.name ?? "不可用"),
+      PaxRouteIcon.view("server.rack"),
+      PaxRouteText.label(
+        store.node(finalID)?.name ?? self.interfaceCopy.text("interface_detail.460b3574e4")),
       PaxFeatureTag(store.node(finalID)?.protocolName.uppercased() ?? "", style: .protocolLabel),
     ])
     pane.add(
       PaxFormGrid(
         rows: [
           [
-            PaxRouteText.label("前置线路", font: PaxTheme.Typography.caption(), secondary: true),
+            self.interfaceCopy.routeLabel(
+              "action.routes.front_route", font: PaxTheme.Typography.caption(), secondary: true),
             fronts,
           ],
           [
-            PaxRouteText.label("最终线路", font: PaxTheme.Typography.caption(), secondary: true), final,
+            self.interfaceCopy.routeLabel(
+              "action.routes.final_route", font: PaxTheme.Typography.caption(), secondary: true),
+            final,
           ],
           [
-            PaxRouteText.label("组合线路名称", font: PaxTheme.Typography.caption(), secondary: true),
+            self.interfaceCopy.routeLabel(
+              "action.routes.chain_name_ax", font: PaxTheme.Typography.caption(), secondary: true),
             name,
           ],
         ], style: .labelled))
@@ -53,11 +62,12 @@ final class RouteChainController: RouteModalController {
     preview.alignment = .leading
     pane.add(preview)
     pane.add(
-      PaxRouteText.label(
-        "创建一条组合线路，保留原线路。创建后不会切换当前线路。", font: PaxTheme.Typography.caption(), secondary: true,
+      self.interfaceCopy.routeLabel(
+        "action.routes.chain_note", font: PaxTheme.Typography.caption(), secondary: true,
         wrapping: true))
     pane.setActions([
-      button("取消", #selector(close)), button("创建", #selector(create), primary: true),
+      button(self.interfaceCopy.text("common.cancel"), #selector(close)),
+      button(self.interfaceCopy.text("action.common.create"), #selector(create), primary: true),
     ])
   }
   @objc private func changed() {
@@ -73,7 +83,8 @@ final class RouteChainController: RouteModalController {
       preview.removeArrangedSubview(child)
       child.removeFromSuperview()
     }
-    let view = PaxConnectionPath(nodes: store.path(frontID: front.id, finalID: finalID))
+    let view = PaxConnectionPath(
+      nodes: store.path(frontID: front.id, finalID: finalID, context: self.interfaceCopy.context))
     preview.addArrangedSubview(view)
     view.widthAnchor.constraint(equalTo: preview.widthAnchor).isActive = true
     pane.invalidateContentSize()
@@ -83,12 +94,13 @@ final class RouteChainController: RouteModalController {
     let routes = choices
     let index = fronts.indexOfSelectedItem - 1
     guard routes.indices.contains(index) else {
-      showError(RouteWorkbenchStore.EditError("请选择前置线路"))
+      showError(
+        RouteWorkbenchStore.EditError(self.interfaceCopy.text("interface_detail.be52e9d5f1")))
       return
     }
     if store.isLive {
       saving = true
-      pane.status.stringValue = "正在创建…"
+      pane.status.stringValue = self.interfaceCopy.text("interface_detail.7c0305bc0c")
       Task { [weak self] in
         guard let self else { return }
         do {

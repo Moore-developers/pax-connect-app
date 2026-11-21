@@ -68,6 +68,9 @@ public struct AISessionLimitRow: Equatable, Sendable {
   public let model: String
   public let effort: String
   public let note: String
+  public let sessionCount: Int?
+  public let titleSource: String
+  public let rawTitle: String
   public let emphasized: Bool
   public let bands: [AISessionLimitBand]
   public let lines: AISessionModelLimit?
@@ -83,7 +86,10 @@ public struct AISessionLimitRow: Equatable, Sendable {
     title = p.title
     model = p.model
     effort = p.effort
+    titleSource = p.titleSource
+    rawTitle = p.rawTitle
     note = p.note
+    sessionCount = p.hasSessionCount ? Int(p.sessionCount) : nil
     emphasized = p.emphasized
     bands = p.bands.map(AISessionLimitBand.init)
     lines = p.hasLines ? AISessionModelLimit(p.lines) : nil

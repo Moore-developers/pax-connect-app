@@ -7,7 +7,7 @@ import PaxCore
   private(set) var workspace = CFWorkspace()
   private(set) var busy = false
   private(set) var loading = false
-  private(set) var error = ""
+  private(set) var failure: ProductFailure?
   var search = "" { didSet { if search != oldValue { resetPage() } } }
   private(set) var sortColumn = 1
   private(set) var sortAscending = true
@@ -93,19 +93,23 @@ import PaxCore
     !workspace.operationID.isEmpty
       && ["scan", "discovery", "precision", "scan_saving"].contains(workspace.phase)
   }
-  var emptyMessage: String {
+  func emptyMessage(context: PresentationContext) -> String {
     if !workspace.network.isEmpty && workspace.network != workspace.currentNetwork {
-      return "网络已变化，请重新扫描"
+      return context.text("cf.workspace.empty.network_changed")
     }
     if !workspace.records.isEmpty && !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       && matchingRecords().isEmpty
     {
-      return "没有匹配的 IP 或网段"
+      return context.text("cf.workspace.empty.no_match")
     }
-    if scanRunning { return "正在扫描，等待可用入口…" }
-    if workspace.phase == "scan_incomplete" { return "扫描未完成，请重新扫描" }
-    if workspace.phase == "scan_complete" { return "本次未发现可用入口" }
-    return "暂无 IP。点击扫描网段查找可用入口。"
+    if scanRunning { return context.text("cf.workspace.empty.scanning") }
+    if workspace.phase == "scan_incomplete" {
+      return context.text("cf.workspace.empty.scan_incomplete")
+    }
+    if workspace.phase == "scan_complete" {
+      return context.text("cf.workspace.empty.scan_complete")
+    }
+    return context.text("cf.workspace.empty.initial")
   }
   private func updateScanRows() {
     let values = matchingRecords()
@@ -210,15 +214,12 @@ import PaxCore
         visibleRows = visibleRows.map { updated[$0.ip] ?? $0 }
       }
       if !ownedOperation.isEmpty && value.operationID != ownedOperation { testingIPs = [] }
-      error =
-        value.error.flatMap {
-          $0.code == "operation_cancelled" ? nil : ProductErrorPresentation.message($0)
-        } ?? ""
+      failure = value.error.flatMap { $0.code == "operation_cancelled" ? nil : .product($0) }
     } catch {
       guard token == generation, requestSequence == refreshSequence,
         !Task.isCancelled
       else { return }
-      self.error = ProductErrorPresentation.display(error)
+      failure = ProductFailure(error)
       // A failed read cannot prove the last observed task is still running.
       // Retain its cancel identity, but never keep stale cell progress alive.
       if !workspace.operationID.isEmpty {
@@ -262,7 +263,7 @@ import PaxCore
       displayCount = 0
       hasDisplayedSnapshot = false
     }
-    error = ""
+    failure = nil
     let token = generation
     defer {
       if token == generation {
@@ -288,11 +289,11 @@ import PaxCore
         await refresh()
       }
       guard token == generation, !Task.isCancelled else { return false }
-      if error.isEmpty { ownedOperation = "" }
-      return workspace.error == nil && error.isEmpty
+      if failure == nil { ownedOperation = "" }
+      return workspace.error == nil && failure == nil
     } catch {
       if token == generation, !Task.isCancelled {
-        self.error = ProductErrorPresentation.display(error)
+        failure = ProductFailure(error)
       }
       return false
     }
@@ -338,7 +339,7 @@ import PaxCore
     do {
       try await cancel(id)
       await refresh()
-    } catch { self.error = ProductErrorPresentation.display(error) }
+    } catch { failure = ProductFailure(error) }
   }
   func dismiss() {
     generation &+= 1

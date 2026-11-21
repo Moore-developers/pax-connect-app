@@ -4,14 +4,14 @@ import PaxUI
 
 extension AIUsageViewController {
   func renderProfiles() {
-    let tools = AIUsageLayout.stack(
-      [
-        actions.button("添加 Profile", primary: true, enabled: store.configuration.available) {
-          [weak self] in
-          guard let self else { return }
-          self.presentWorkbenchModal(AIProfileEditor(store: self.store))
-        }
-      ], vertical: false)
+    let addProfile = actions.button(
+      "", primary: true, enabled: store.configuration.available, id: "ai-add-profile"
+    ) { [weak self] in
+      guard let self else { return }
+      self.presentWorkbenchModal(AIProfileEditor(store: self.store))
+    }
+    interfaceCopy.button(addProfile, key: "ai_usage.add_profile")
+    let tools = AIUsageLayout.stack([addProfile], vertical: false)
     let count = AIUsageLayout.label("", secondary: true)
     let header = AIUsageLayout.stack(
       [
@@ -21,7 +21,12 @@ extension AIUsageViewController {
     let update: () -> Void = { [weak self, weak count] in
       guard let self else { return }
       count?.stringValue =
-        "\(self.store.profiles.count) 个配置 · 可应用到 \(self.store.configurableClients.count) 个 CLI"
+        self.interfaceCopy.text(
+          "interface_detail.e06e69085b",
+          [
+            "arg0": String(describing: self.store.profiles.count),
+            "arg1": String(describing: self.store.configurableClients.count),
+          ])
     }
     contentRefreshers.append(update)
     update()
@@ -35,29 +40,34 @@ extension AIUsageViewController {
   func profileMenu(_ p: AIProfile) -> NSMenu {
     let menu = NSMenu()
     menu.autoenablesItems = false
-    let edit = NSMenuItem(title: "编辑", action: #selector(editProfileMenu(_:)), keyEquivalent: "")
+    let edit = NSMenuItem(
+      title: self.interfaceCopy.text("ai_usage.edit"), action: #selector(editProfileMenu(_:)),
+      keyEquivalent: "")
     edit.target = self
     edit.representedObject = p.id
     menu.addItem(edit)
     let reprice = NSMenuItem(
-      title: "重算历史费用…", action: #selector(repriceProfileMenu(_:)), keyEquivalent: "")
+      title: self.interfaceCopy.text("ai_usage.reprice"), action: #selector(repriceProfileMenu(_:)),
+      keyEquivalent: "")
     reprice.target = self
     reprice.representedObject = p.id
     menu.addItem(reprice)
     let folder = NSMenuItem(
-      title: "打开 Profile 文件夹", action: #selector(openProfileFolder(_:)), keyEquivalent: "")
+      title: self.interfaceCopy.text("ai_usage.open_profile_folder"),
+      action: #selector(openProfileFolder(_:)), keyEquivalent: "")
     folder.target = self
     folder.representedObject = p.id
     folder.isEnabled = !store.preview
     menu.addItem(folder)
     let remove = NSMenuItem(
-      title: "删除 Profile…", action: #selector(deleteProfileMenu(_:)), keyEquivalent: "")
+      title: self.interfaceCopy.text("ai_usage.delete_profile"),
+      action: #selector(deleteProfileMenu(_:)), keyEquivalent: "")
     remove.target = self
     remove.representedObject = p.id
     if store.isBound(p.id) {
       remove.isEnabled = false
-      remove.toolTip = "先切换使用此 Profile 的 CLI"
-      remove.subtitle = "先切换使用此 Profile 的 CLI"
+      remove.toolTip = self.interfaceCopy.text("ai_usage.switch_bound_cli")
+      remove.subtitle = self.interfaceCopy.text("ai_usage.switch_bound_cli")
     }
     menu.addItem(remove)
     return menu
@@ -92,17 +102,23 @@ extension AIUsageViewController {
   }
   private func confirmDelete(_ p: AIProfile) {
     guard let window = view.window else { return }
+    let context = interfaceCopy.context
     let alert = NSAlert()
-    alert.messageText = "删除 \(p.name)？"
-    alert.informativeText = "保留历史用量；正在绑定的 Profile 需要先切换 CLI。"
-    alert.addButton(withTitle: "取消")
-    alert.addButton(withTitle: "删除")
+    alert.messageText = self.interfaceCopy.text(
+      "interface_detail.24cbabea63", ["arg0": String(describing: p.name)])
+    alert.informativeText = self.interfaceCopy.text("ai_usage.preserve_profile_history")
+    alert.addButton(withTitle: self.interfaceCopy.text("ai_usage.cancel"))
+    alert.addButton(withTitle: self.interfaceCopy.text("ai_usage.delete"))
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard response == .alertSecondButtonReturn else { return }
-      self?.store.perform(.remove(p.id))
-      if let text = self?.store.error {
+      guard response == .alertSecondButtonReturn, let self else { return }
+      self.store.perform(.remove(p.id))
+      if let text = self.store.error {
         let error = NSAlert()
-        error.messageText = text
+        error.messageText =
+          self.store.isBound(p.id)
+          ? context.text("profile_error.ai_profile_in_use")
+          : self.store.configuration.error(context: context) ?? text
+        error.addButton(withTitle: context.text("common.ok"))
         error.beginSheetModal(for: window)
       }
     }

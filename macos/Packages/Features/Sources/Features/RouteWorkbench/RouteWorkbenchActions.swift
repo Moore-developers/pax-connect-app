@@ -9,19 +9,36 @@ extension RouteWorkbenchViewController {
     menu.delegate = destructiveTitles
     for (title, symbol, command) in [
       (
-        store.isCurrent(id) ? "当前线路" : store.isSelected(id) ? "已选线路" : "使用此线路",
+        store.isCurrent(id)
+          ? self.interfaceCopy.text("routes.current")
+          : store.isSelected(id)
+            ? self.interfaceCopy.text("routes.selected")
+            : self.interfaceCopy.text("interface_detail.805482461e"),
         "arrow.left.arrow.right", "use"
       ),
-      ("查看详情", "info.circle", "details"),
-      (store.isTestingLatency(id) ? "停止测试延迟" : "测试延迟", "waveform.path.ecg", "test"),
-      (store.isQueryingExit(id) ? "停止查询 IP 地区" : "查询 IP 地区", "globe", "exit"),
+      (self.interfaceCopy.text("interface_detail.a748cc074f"), "info.circle", "details"),
       (
-        store.isDownloading(id) ? (store.isDownloadQueued(id) ? "取消排队" : "停止测速") : "测试下载速度",
+        store.isTestingLatency(id)
+          ? self.interfaceCopy.text("interface_detail.e61a02b556")
+          : self.interfaceCopy.text("action.routes.test_latency"), "waveform.path.ecg", "test"
+      ),
+      (
+        store.isQueryingExit(id)
+          ? self.interfaceCopy.text("interface_detail.9a3898b764")
+          : self.interfaceCopy.text("action.routes.lookup_exit"), "globe", "exit"
+      ),
+      (
+        store.isDownloading(id)
+          ? (store.isDownloadQueued(id)
+            ? self.interfaceCopy.text("interface_detail.16c1f9b337")
+            : self.interfaceCopy.text("interface_detail.4a372f90da"))
+          : self.interfaceCopy.text("action.routes.test_download"),
         "arrow.down", "speed"
       ),
-      ("分享二维码…", "qrcode", "share"),
-      ("编辑配置", "pencil", "edit"), ("创建链式代理…", "network", "chain"),
-      ("删除线路…", "trash", "remove"),
+      (self.interfaceCopy.text("interface_detail.9397f2ba6f"), "qrcode", "share"),
+      (self.interfaceCopy.text("interface_detail.b2b5b9fafa"), "pencil", "edit"),
+      (self.interfaceCopy.text("interface_detail.ea3ab3e97a"), "network", "chain"),
+      (self.interfaceCopy.text("interface_detail.e7d3d4b526"), "trash", "remove"),
     ] {
       if command == "test" || command == "edit" { menu.addItem(.separator()) }
       let item = NSMenuItem(title: title, action: #selector(menuAction(_:)), keyEquivalent: "")
@@ -31,7 +48,7 @@ extension RouteWorkbenchViewController {
       item.representedObject = [id, command]
       item.isEnabled =
         !(command == "use" && (store.isCurrent(id) || store.isSelected(id)))
-        && !(command == "chain" && store.info(id).chain != nil)
+        && !(command == "chain" && store.info(id, context: self.interfaceCopy.context).chain != nil)
         && !(command == "remove" && store.isCurrent(id))
       if command == "use" { item.isEnabled = item.isEnabled && store.canSelectRoute }
       if command == "edit" || command == "remove" {
@@ -45,7 +62,7 @@ extension RouteWorkbenchViewController {
         && command != "remove" && command != "speed" && command != "exit" && command != "share"
       {
         item.isEnabled = false
-        item.toolTip = "此功能尚未接入后台"
+        item.toolTip = self.interfaceCopy.text("interface_detail.081d60fb80")
       }
       if command == "remove" { destructiveTitles.mark(item) }
       menu.addItem(item)
@@ -89,10 +106,10 @@ extension RouteWorkbenchViewController {
     case "remove":
       guard let window = view.window else { return }
       let alert = NSAlert()
-      alert.messageText = "删除这条线路？"
-      alert.informativeText = "不会删除分组中的其它线路。"
-      alert.addButton(withTitle: "取消")
-      alert.addButton(withTitle: "删除")
+      alert.messageText = self.interfaceCopy.text("interface_detail.4ab782b36d")
+      alert.informativeText = self.interfaceCopy.text("interface_detail.77e28591dc")
+      alert.addButton(withTitle: self.interfaceCopy.text("common.cancel"))
+      alert.addButton(withTitle: self.interfaceCopy.text("ai_usage.delete"))
       alert.beginSheetModal(for: window) { [weak self] result in
         if result == .alertSecondButtonReturn { self?.store.perform(.remove(id)) }
       }
@@ -101,19 +118,24 @@ extension RouteWorkbenchViewController {
   }
   @objc func resetSorting() { store.perform(.sort(.source)) }
   @objc func refresh() {
-    SubscriptionRefreshMenu.present(store: store, groupID: store.selectedGroup, from: refreshButton)
+    SubscriptionRefreshMenu.present(
+      store: store, groupID: store.selectedGroup, from: refreshButton,
+      context: self.interfaceCopy.context)
   }
   @objc func testVisible() {
     let menu = NSMenu()
     menu.autoenablesItems = false
     let scope = NSMenuItem(
-      title: "当前分组 · \(store.visible.count) 条匹配线路", action: nil, keyEquivalent: "")
+      title: self.interfaceCopy.text(
+        "interface_detail.d38b2d02d3", ["arg0": String(describing: store.visible.count)]),
+      action: nil, keyEquivalent: "")
     scope.isEnabled = false
     menu.addItem(scope)
     menu.addItem(.separator())
     for (title, kind, symbol) in [
-      ("查询 IP 地区", "exit", "globe"), ("测试延迟", "latency", "timer"),
-      ("测试下载速度", "speed", "arrow.down"),
+      (self.interfaceCopy.text("action.routes.lookup_exit"), "exit", "globe"),
+      (self.interfaceCopy.text("action.routes.test_latency"), "latency", "timer"),
+      (self.interfaceCopy.text("action.routes.test_download"), "speed", "arrow.down"),
     ] {
       let item = NSMenuItem(title: title, action: #selector(testScope(_:)), keyEquivalent: "")
       item.target = self
@@ -129,19 +151,24 @@ extension RouteWorkbenchViewController {
     }
     if store.hasLatencyTests {
       menu.addItem(.separator())
-      let stop = NSMenuItem(title: "停止延迟测试", action: #selector(stopTests), keyEquivalent: "")
+      let stop = NSMenuItem(
+        title: self.interfaceCopy.text("action.routes.stop_latency"), action: #selector(stopTests),
+        keyEquivalent: "")
       stop.target = self
       menu.addItem(stop)
     }
     if store.hasExitQueries {
       let stop = NSMenuItem(
-        title: "停止 IP 地区查询", action: #selector(stopExitQueries), keyEquivalent: "")
+        title: self.interfaceCopy.text("action.routes.stop_exit"),
+        action: #selector(stopExitQueries), keyEquivalent: "")
       stop.target = self
       menu.addItem(stop)
     }
     if store.hasDownload {
       menu.addItem(.separator())
-      let stop = NSMenuItem(title: "停止下载测速", action: #selector(stopDownloads), keyEquivalent: "")
+      let stop = NSMenuItem(
+        title: self.interfaceCopy.text("action.routes.stop_download"),
+        action: #selector(stopDownloads), keyEquivalent: "")
       stop.target = self
       menu.addItem(stop)
     }

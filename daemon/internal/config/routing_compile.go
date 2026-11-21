@@ -3,18 +3,20 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"regexp"
+	"strings"
 )
 
 // CompileRouting builds new-connection match rules; no network or upstream types enter this layer.
 func CompileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[string]string, ipv6 bool) ([]map[string]any, error) {
-	return compileRouting(l, apps, routes, ipv6, func(RoutingMatchEvidence, bool) {})
+	return compileTrafficRouting(l, apps, routes, ipv6, nil)
 }
 
 // CompileRoutingEvidence returns labels aligned with the very same compiled rule table.
 func CompileRoutingEvidence(l RoutingLibrary, apps []RoutingApplication, routes map[string]string, ipv6 bool) ([]map[string]any, []string, error) {
 	labels := []string{}
-	rules, err := compileRouting(l, apps, routes, ipv6, func(e RoutingMatchEvidence, _ bool) {
+	rules, err := compileTrafficRouting(l, apps, routes, ipv6, func(e RoutingMatchEvidence) {
 		if len([]rune(e.Target)) > 256 {
 			e.Target = string([]rune(e.Target)[:256]) + "…"
 		}
@@ -23,24 +25,57 @@ func CompileRoutingEvidence(l RoutingLibrary, apps []RoutingApplication, routes 
 	})
 	return rules, labels, err
 }
-func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[string]string, ipv6 bool, record func(RoutingMatchEvidence, bool)) ([]map[string]any, error) {
+
+type compiledRoutingRule struct {
+	rule     map[string]any
+	evidence RoutingMatchEvidence
+	user     bool
+	fixed    bool
+}
+
+func compileTrafficRouting(l RoutingLibrary, apps []RoutingApplication, routes map[string]string, ipv6 bool, record func(RoutingMatchEvidence)) ([]map[string]any, error) {
+	compiled, err := compileRouting(l, apps, routes, ipv6)
+	if err != nil {
+		return nil, err
+	}
+	if l.WebRTC {
+		compiled = applyWebRTCGuard(compiled)
+	}
+	rules := make([]map[string]any, len(compiled))
+	for i, item := range compiled {
+		rules[i] = item.rule
+		if record != nil {
+			record(item.evidence)
+		}
+	}
+	return rules, nil
+}
+
+func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[string]string, ipv6 bool) ([]compiledRoutingRule, error) {
 	if err := l.Validate(); err != nil {
 		return nil, err
 	}
 	policy := RoutingPolicy(ipv6)
-	out := []map[string]any{}
+	out := []compiledRoutingRule{}
+	add := func(rule map[string]any, pack, method, target, destination string) {
+		evidence := RoutingMatchEvidence{Package: pack, Method: method, Target: target}
+		if destination != "" {
+			evidence.UnavailableRoute = routingAction(rule, destination, routes, l.RouteNames)
+			if strings.HasPrefix(destination, "route:") {
+				evidence.FixedRouteName = l.RouteNames[destination]
+				if evidence.FixedRouteName == "" {
+					evidence.FixedRouteName = strings.TrimPrefix(destination, "route:")
+				}
+			}
+		}
+		out = append(out, compiledRoutingRule{rule: rule, evidence: evidence, user: destination != "", fixed: strings.HasPrefix(destination, "route:")})
+	}
 	for _, r := range policy {
 		if r.Action == "sniff" || r.Action == "hijack-dns" || r.IPVersion == 6 {
 			raw, _ := json.Marshal(r)
 			var v map[string]any
 			_ = json.Unmarshal(raw, &v)
-			out = append(out, v)
-			record(RoutingMatchEvidence{Package: "Pax 内置规则", Method: "builtin", Target: r.View.Match}, false)
-			if r.Action == "sniff" && l.WebRTC {
-				out = append(out, map[string]any{"type": "logical", "mode": "and", "rules": []any{map[string]any{"protocol": "stun"}, map[string]any{"ip_is_private": true, "invert": true}}, "outbound": "proxy"})
-				record(RoutingMatchEvidence{Package: "WebRTC出口限制", Method: "builtin", Target: "公网STUN经代理，不回退直连"}, false)
-			}
-
+			add(v, "Pax 内置规则", "builtin", r.View.Match, "")
 		}
 	}
 	priority := l.Packages[0]
@@ -62,27 +97,20 @@ func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[stri
 			exclude := map[string]any{"type": "logical", "mode": "or", "rules": append([]any(nil), skipped...), "invert": true}
 			m = map[string]any{"type": "logical", "mode": "and", "rules": []any{m, exclude}}
 		}
-		if err := routingAction(m, r.Destination, routes); err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-		record(RoutingMatchEvidence{Package: priority.Name, Method: r.Method, Target: r.Target}, true)
+		add(m, priority.Name, r.Method, r.Target, r.Destination)
 	}
 	for _, p := range l.Packages[1:] {
-
 		if !p.Enabled {
 			continue
 		}
 		if p.Kind == "geo" && len(p.GeoContent) > 0 {
-			out = append(out, map[string]any{"ip_is_private": true, "outbound": "direct"})
-			record(RoutingMatchEvidence{Package: "Geo 基础包", Method: "builtin", Target: "局域网与私有网络地址"}, false)
+			add(map[string]any{"ip_is_private": true, "outbound": "direct"}, "Geo 基础包", "builtin", "局域网与私有网络地址", "")
 			google := false
 			for _, entry := range p.GeoContent {
 				google = google || entry.Target == "geosite-google"
 			}
 			if !google {
-				out = append(out, map[string]any{"rule_set": []string{"geosite-google"}, "outbound": "proxy"})
-				record(RoutingMatchEvidence{Package: "geosite-google", Method: "builtin", Target: "Google 服务经代理"}, false)
+				add(map[string]any{"rule_set": []string{"geosite-google"}, "outbound": "proxy"}, "geosite-google", "builtin", "Google 服务经代理", "")
 			}
 			// Downloaded order is not routing precedence: Google must precede CN.
 			for _, tag := range []string{"geosite-google", "geosite-cn", "geoip-cn"} {
@@ -99,8 +127,7 @@ func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[stri
 						outbound, description = "proxy", "Google 服务经代理"
 					}
 					m["outbound"] = outbound
-					out = append(out, m)
-					record(RoutingMatchEvidence{Package: tag, Method: "source", Target: description}, false)
+					add(m, tag, "source", description, "")
 				}
 			}
 			continue
@@ -111,17 +138,16 @@ func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[stri
 					raw, _ := json.Marshal(r)
 					var v map[string]any
 					_ = json.Unmarshal(raw, &v)
-					out = append(out, v)
 					pack := "Geo 基础包"
 					if len(r.RuleSet) == 1 {
 						pack = r.RuleSet[0]
 					}
-					record(RoutingMatchEvidence{Package: pack, Method: "builtin", Target: r.View.Match}, false)
+					add(v, pack, "builtin", r.View.Match, "")
 				}
 			}
 			continue
 		}
-		for _, r := range p.Rules {
+		for _, r := range p.RulesForMatching() {
 			if !r.Enabled {
 				continue
 			}
@@ -129,16 +155,13 @@ func compileRouting(l RoutingLibrary, apps []RoutingApplication, routes map[stri
 			if err != nil {
 				return nil, err
 			}
-			if err := routingAction(m, p.Destination, routes); err != nil {
-				return nil, err
-			}
-			out = append(out, m)
-			record(RoutingMatchEvidence{Package: p.Name, Method: r.Method, Target: r.Target}, true)
+			add(m, p.Name, r.Method, r.Target, p.Destination)
 		}
 	}
 	return out, nil
 }
-func routingAction(m map[string]any, d string, routes map[string]string) error {
+
+func routingAction(m map[string]any, d string, routes, names map[string]string) string {
 	switch d {
 	case "block":
 		m["action"] = "reject"
@@ -147,14 +170,67 @@ func routingAction(m map[string]any, d string, routes map[string]string) error {
 	case "global":
 		m["outbound"] = "proxy"
 	default:
-		tag, ok := routes[d]
-		if !ok {
-			return fmt.Errorf("routing_route_unavailable")
+		if tag := routes[d]; tag != "" {
+			m["outbound"] = tag
+			break
 		}
-		m["outbound"] = tag
+		m["action"] = "reject"
+		m["no_drop"] = true // Keep returning a rejection even after repeated attempts.
+		if name := names[d]; name != "" {
+			return name
+		}
+		return strings.TrimPrefix(d, "route:")
 	}
-	return nil
+	return ""
 }
+
+// applyWebRTCGuard keeps unmatched public STUN on the selector while allowing
+// the first matching ordinary action to bind its fixed route, including failure.
+// Compile one guard for each preceding run of ordinary actions, preserving
+// their STUN precedence without adding copies of intervening rejections.
+func applyWebRTCGuard(rules []compiledRoutingRule) []compiledRoutingRule {
+	through := 1 // Keep the original guard directly after sniff when all routes are usable.
+	for i, item := range rules {
+		if item.fixed {
+			through = i + 1
+		}
+	}
+	out := make([]compiledRoutingRule, 0, len(rules)+1)
+	out = append(out, rules[0])
+	start := 1
+	for i := start; i < through; i++ {
+		if !rules[i].fixed {
+			continue
+		}
+		if start < i {
+			out = append(out, webRTCGuard(rules[start:i]))
+			out = append(out, rules[start:i]...)
+		}
+		out = append(out, rules[i])
+		start = i + 1
+	}
+	out = append(out, webRTCGuard(nil))
+	return append(out, rules[through:]...)
+}
+
+func webRTCGuard(preceding []compiledRoutingRule) compiledRoutingRule {
+	conditions := []any{map[string]any{"protocol": "stun"}, map[string]any{"ip_is_private": true, "invert": true}}
+	if len(preceding) > 0 {
+		matches := make([]any, 0, len(preceding))
+		for _, item := range preceding {
+			match := maps.Clone(item.rule)
+			delete(match, "action")
+			delete(match, "outbound")
+			matches = append(matches, match)
+		}
+		conditions = append(conditions, map[string]any{"type": "logical", "mode": "or", "rules": matches})
+	}
+	return compiledRoutingRule{
+		rule:     map[string]any{"type": "logical", "mode": "and", "rules": conditions, "outbound": "proxy"},
+		evidence: RoutingMatchEvidence{Package: "WebRTC出口限制", Method: "builtin", Target: "公网STUN经代理，不回退直连"},
+	}
+}
+
 func routingMatch(r RoutingEntry, apps []RoutingApplication) (map[string]any, error) {
 	m := map[string]any{}
 	switch r.Method {

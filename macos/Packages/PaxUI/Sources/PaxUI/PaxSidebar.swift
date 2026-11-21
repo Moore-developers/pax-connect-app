@@ -78,5 +78,16 @@ public final class PaxSidebar: NSView {
   public func select(_ pageIndex: Int) {
     for button in buttons { button.isSelected = button.tag == pageIndex }
   }
+  public func apply(
+    titles: [Int: String], selectedLabel: String = "已选中", unselectedLabel: String = "未选中"
+  ) {
+    for button in buttons {
+      button.applyAccessibility(selected: selectedLabel, unselected: unselectedLabel)
+      if let title = titles[button.tag] {
+        button.title = title
+        button.setAccessibilityLabel(title)
+      }
+    }
+  }
   @objc private func navigate(_ sender: NSButton) { onSelect?(sender.tag) }
 }

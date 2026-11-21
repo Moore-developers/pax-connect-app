@@ -19,6 +19,20 @@ func limitTitle(g agentGraph, k SessionKey) string {
 	}
 	return "未命名会话 · " + id
 }
+func limitSessionRow(g agentGraph, k SessionKey, facts []limitFact) LimitRow {
+	row := limitRow("s:"+sessionLimitID(k), k.CLI, k.Session, limitTitle(g, k), facts)
+	catalog := g.Catalog[k]
+	row.TitleSource, row.RawTitle = catalog.TitleSource, catalog.Title
+	if catalog.Title == "" {
+		row.TitleSource = "pax.unnamed"
+		row.RawTitle = k.Session
+		if len(row.RawTitle) > 12 {
+			row.RawTitle = row.RawTitle[:12]
+		}
+	}
+	return row
+}
+
 func limitModelRows(facts []limitFact, prefix string) []LimitRow {
 	groups := map[string][]limitFact{}
 	sessions := map[string]map[SessionKey]bool{}
@@ -35,6 +49,8 @@ func limitModelRows(facts []limitFact, prefix string) []LimitRow {
 		v := limitRow(prefix+k, fs[0].row.CLI, "", fs[0].row.Model, fs)
 		if prefix == "m:" {
 			v.Note = fmt.Sprintf("%d 个会话", len(sessions[k]))
+			count := int64(len(sessions[k]))
+			v.SessionCount = &count
 		}
 		rows = append(rows, v)
 	}
@@ -111,11 +127,11 @@ func assembleLimits(facts []limitFact, g agentGraph, active map[agentKey]bool, s
 	out.Summary.Sessions = int64(len(sessions))
 	var totalRows []LimitRow
 	for k, fs := range sessions {
-		v := limitRow("s:"+sessionLimitID(k), k.CLI, k.Session, limitTitle(g, k), fs)
+		v := limitSessionRow(g, k, fs)
 		totalRows = append(totalRows, v)
 	}
 	if selected != nil {
-		totalRows = []LimitRow{limitRow("s:"+sessionLimitID(*selected), selected.CLI, selected.Session, limitTitle(g, *selected), scoped)}
+		totalRows = []LimitRow{limitSessionRow(g, *selected, scoped)}
 		if len(scoped) > 0 {
 			out.Summary.Sessions = 1
 		}

@@ -118,6 +118,11 @@ func (g *logViewGroupState) product(key, view string, related uint64) *pb.Produc
 	}
 	if view == "problems" {
 		row.Message = logProblemTitle(g.category)
+		if g.event.Flow != nil {
+			if message := config.UnavailableRoutingMessage(*g.event.Flow); message != "" {
+				row.Message = message
+			}
+		}
 	}
 	return row
 }

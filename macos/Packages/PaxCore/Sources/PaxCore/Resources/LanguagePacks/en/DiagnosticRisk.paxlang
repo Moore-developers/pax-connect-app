@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "diagnostic.risk.open_ports": "Public records list open ports",
+    "diagnostic.risk.known_vulnerabilities": "Public records associate vulnerabilities; they have not been actively verified",
+    "diagnostic.risk.self_signed_certificate": "Public records list a self-signed certificate",
+    "diagnostic.risk.low_human_traffic": "The source estimates human traffic below 50%",
+    "diagnostic.risk.proxy_risk": "The source’s risk value reaches 67",
+    "diagnostic.risk.marked": "The source marked {label}",
+    "diagnostic.risk.not_listed": "This item is absent from the source’s indexed records",
+    "diagnostic.risk.not_marked": "The source did not mark this item",
+    "diagnostic.risk.unconfigured": "The source is not configured; no check was run",
+    "diagnostic.risk.unknown": "Insufficient independent evidence; no conclusion",
+    "diagnostic.risk.missing": "Risk evidence is missing; no conclusion",
+    "diagnostic.risk.no_judgment": "The sources have no valid assessment yet",
+    "diagnostic.risk.no_flags": "No flags in the returned assessments",
+    "diagnostic.risk.marked_list": "Source flags: {labels}",
+    "diagnostic.risk.pending": "{count} items need confirmation",
+    "diagnostic.risk.not_scan": "Not a live scan or an account risk assessment"
+  }
+}

@@ -20,7 +20,14 @@ func (c *Controller) InspectEnvironment(ctx context.Context, req *pb.Environment
 		return nil, status.FromContextError(err).Err()
 	}
 	if req.Action == "start" {
-		admit := func() (*pb.OperationAck, error) { return c.startEnvironment() }
+		var presentation *environment.Presentation
+		if req.Presentation != nil {
+			presentation = &environment.Presentation{Locale: req.Presentation.Locale, Messages: req.Presentation.Messages}
+			if err := environment.ValidatePresentation(presentation); err != nil {
+				return nil, status.Error(codes.InvalidArgument, "browser_presentation_invalid")
+			}
+		}
+		admit := func() (*pb.OperationAck, error) { return c.startEnvironment(presentation) }
 		var ack *pb.OperationAck
 		var err error
 		if req.Context != nil {
@@ -75,7 +82,7 @@ func (c *Controller) environmentReportLocked() *pb.EnvironmentDiagnosticReport {
 	result.ExpiresAt = timestamppb.New(value.At.Add(45 * time.Second))
 	return result
 }
-func (c *Controller) startEnvironment() (*pb.OperationAck, error) {
+func (c *Controller) startEnvironment(presentation *environment.Presentation) (*pb.OperationAck, error) {
 	c.environmentMu.Lock()
 	defer c.environmentMu.Unlock()
 	if c.tests == nil {
@@ -84,7 +91,7 @@ func (c *Controller) startEnvironment() (*pb.OperationAck, error) {
 	if c.environmentSources != "" || c.environmentSession != nil && !c.environmentSession.Read().Complete {
 		return nil, c.environmentBusyLocked()
 	}
-	session, err := environment.Start(c.tests.lifetime, c.exits, environmentEvidence{c})
+	session, err := environment.StartWithPresentation(c.tests.lifetime, c.exits, environmentEvidence{c}, presentation)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "environment_listener_failed")
 	}

@@ -49,10 +49,12 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
       title: profile?.name ?? "添加 Profile",
       size: PaxTheme.Routes.dialog, style: .detail, symbol: "key.horizontal")
   }
+  override var localizedTitleKey: String? { profile == nil ? "profile_editor.add" : nil }
   override var maximumPresentationWidth: CGFloat? { PaxTheme.Routes.dialog.width }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
+    rates.context = interfaceCopy.context
     pane.identity.addArrangedSubview(headerTags)
     headerTags.spacing = PaxTheme.Spacing.tight
     pane.header.addArrangedSubview(tabs)
@@ -106,11 +108,15 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
     }
   }
   private func buildForm() {
-    let name = field("名称", value: profile?.name ?? "", identifier: "ai-profile-name")
+    let name = field(
+      self.interfaceCopy.text("profile_editor.name"), value: profile?.name ?? "",
+      identifier: "ai-profile-name")
     let endpoint = field(
-      "API 地址", value: profile?.endpoint ?? "https://", identifier: "ai-profile-endpoint")
+      self.interfaceCopy.text("profile_editor.endpoint"), value: profile?.endpoint ?? "https://",
+      identifier: "ai-profile-endpoint")
     let rate = field(
-      "计费倍率", value: AIUsageFormatting.multiplierInput(editBaseline?.multiplier ?? 1),
+      self.interfaceCopy.text("profile_editor.multiplier"),
+      value: AIUsageFormatting.multiplierInput(editBaseline?.multiplier ?? 1),
       identifier: "ai-profile-rate")
     self.name = name.1
     self.endpoint = endpoint.1
@@ -128,7 +134,9 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
     rates.onEdit = { [weak self] in self?.draftChanged() }
     rates.onLayoutChange = { [weak self] in self?.pane.invalidateContentSize() }
     let key = PaxRouteSecureField(
-      placeholder: profile?.hasKey == true ? "已保存，留空保持不变" : "输入 API Key")
+      placeholder: profile?.hasKey == true
+        ? self.interfaceCopy.text("profile_editor.key_saved")
+        : self.interfaceCopy.text("profile_editor.key_input"))
     key.setAccessibilityIdentifier("ai-profile-key")
     key.delegate = self
     key.target = self
@@ -156,16 +164,20 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
     } else {
       fields.addArrangedSubview(
         AIUsageLayout.label(
-          "此 Profile 保留原生账号配置，仅供 " + (profile?.nativeCLI?.rawValue ?? "对应 CLI") + " 使用。",
+          self.interfaceCopy.text("profile_editor.native_prefix")
+            + (profile?.nativeCLI?.rawValue
+              ?? self.interfaceCopy.text("profile_editor.native_client"))
+            + self.interfaceCopy.text("profile_editor.native_suffix"),
           secondary: true))
     }
     form = profileSection(
-      "连接配置", symbol: "network",
+      self.interfaceCopy.text("profile_editor.connection"), symbol: "network",
       views: native
         ? [fields]
         : [
           fields,
-          AIUsageLayout.label("保存仅写入 Pax；应用到客户端后才切换。模型目录仅保存在 Pax。", secondary: true),
+          AIUsageLayout.label(
+            self.interfaceCopy.text("profile_editor.save_detail"), secondary: true),
         ])
   }
   private func renderHeader() {
@@ -173,7 +185,9 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
       headerTags.removeArrangedSubview(v)
       v.removeFromSuperview()
     }
-    let kind = profile?.kind == "native" ? "原生账号配置" : "API Profile"
+    let kind =
+      profile?.kind == "native"
+      ? self.interfaceCopy.text("profile_editor.native_configuration") : "API Profile"
     headerTags.addArrangedSubview(
       PaxText.label(kind, font: PaxTheme.Typography.caption(), secondary: true))
     if let p = current {
@@ -193,11 +207,17 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
     billingViews = current.map(profileRateSections) ?? []
     for view in setupViews + billingViews { pane.add(view) }
     applyTab()
-    let save = actions.button(saving ? "正在保存…" : "保存 Profile", primary: true, enabled: !saving) {
+    let save = actions.button(
+      saving
+        ? self.interfaceCopy.text("profile_editor.saving")
+        : self.interfaceCopy.text("profile_editor.save"), primary: true, enabled: !saving
+    ) {
       [weak self] in self?.save()
     }
     saveButton = save
-    let close = actions.button("关闭") { [weak self] in self?.cancelOperation(nil) }
+    let close = actions.button(self.interfaceCopy.text("profile_editor.close")) { [weak self] in
+      self?.cancelOperation(nil)
+    }
     close.widthAnchor.constraint(
       greaterThanOrEqualToConstant: ceil(close.intrinsicContentSize.width) + PaxTheme.Spacing.xs
     ).isActive = true
@@ -209,7 +229,13 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
   func applyTab() {
     tabs.isHidden = current == nil
     tabs.apply(
-      [.init(id: Tab.setup.rawValue, title: "配置"), .init(id: Tab.billing.rawValue, title: "计费倍率")],
+      [
+        .init(
+          id: Tab.setup.rawValue, title: self.interfaceCopy.text("profile_editor.configuration_tab")
+        ),
+        .init(
+          id: Tab.billing.rawValue, title: self.interfaceCopy.text("profile_editor.multiplier")),
+      ],
       selected: tab.rawValue)
     pane.performContentUpdates {
       for view in setupViews { view.isHidden = tab != .setup && current != nil }
@@ -255,7 +281,10 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
         modified = false
         superClose()
       } else {
-        pane.status.stringValue = store.configuration.error ?? "保存失败"
+        multiplierErrorShown = false
+        pane.status.stringValue =
+          store.configuration.error(context: interfaceCopy.context)
+          ?? self.interfaceCopy.text("profile_editor.save_failed")
         render()
       }
     }
@@ -276,13 +305,14 @@ final class AIProfileEditor: WorkbenchModalController, NSTextFieldDelegate {
       super.close()
       return
     }
-    pane.status.stringValue = "有未保存的更改。"
+    multiplierErrorShown = false
+    pane.status.stringValue = self.interfaceCopy.text("profile_editor.unsaved")
     pane.setActions([
-      actions.button("继续编辑") { [weak self] in
+      actions.button(self.interfaceCopy.text("profile_editor.keep_editing")) { [weak self] in
         self?.pane.status.stringValue = ""
         self?.render()
       },
-      actions.button("放弃更改") { [weak self] in
+      actions.button(self.interfaceCopy.text("profile_editor.discard")) { [weak self] in
         self?.apiKey?.stringValue = ""
         self?.superClose()
       },

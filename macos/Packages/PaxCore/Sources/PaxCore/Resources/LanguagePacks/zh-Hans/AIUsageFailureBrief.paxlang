@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "usage.failure.auth": " 认证",
+    "usage.failure.quota": "402 额度",
+    "usage.failure.limit": "429 限流",
+    "usage.failure.upstream": " 上游",
+    "usage.failure.error": " 错误",
+    "usage.failure.timeout": "超时",
+    "usage.failure.connection": "连接失败",
+    "usage.failure.failed": "失败"
+  }
+}

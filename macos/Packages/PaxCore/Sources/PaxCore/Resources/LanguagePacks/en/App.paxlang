@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "navigation.overview": "Overview",
+    "navigation.routes": "Proxies",
+    "navigation.traffic": "Traffic",
+    "navigation.logs": "Logs",
+    "navigation.usage": "Usage",
+    "navigation.settings": "Settings",
+    "navigation.about": "About",
+    "app.about": "About Pax Connect",
+    "app.quit": "Quit Pax Connect",
+    "app.edit": "Edit",
+    "app.undo": "Undo",
+    "app.cut": "Cut",
+    "app.copy": "Copy",
+    "app.paste": "Paste",
+    "app.select_all": "Select All",
+    "app.view": "View",
+    "app.search": "Search Current Page",
+    "app.components": "Components",
+    "app.minimum_window": "Minimum Window · 1000×680",
+    "app.design_window": "Design Window · 1280×860",
+    "app.help": "Help",
+    "app.getting_started": "Getting Started"
+  }
+}

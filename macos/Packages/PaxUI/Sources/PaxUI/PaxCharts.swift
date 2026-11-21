@@ -104,7 +104,22 @@ public final class PaxStackedChart: NSView {
       needsDisplay = true
     }
   }
-  let seriesLabels: [String]
+  public nonisolated static func defaultSummary(
+    _ unit: String, _ secondary: String, _ samples: String
+  )
+    -> String
+  {
+    "时间流量图，单位 " + unit + "，" + secondary + samples
+  }
+  public var summarize: @Sendable (String, String, String) -> String = PaxStackedChart
+    .defaultSummary
+  {
+    didSet {
+      updateSummary()
+      updateSelection()
+    }
+  }
+  var seriesLabels: [String]
   private var selectionDamage = NSRect.zero
   private var mouseTrackingArea: NSTrackingArea?
   var hoverIndex: Int?
@@ -139,10 +154,11 @@ public final class PaxStackedChart: NSView {
   }
   private func updateSummary() {
     setAccessibilityLabel(
-      "时间流量图，单位 \(unit)，" + (valueLine.map { "\($0.name)，单位\($0.unit)，" } ?? "")
-        + samples.map {
-          "\($0.label)：\($0.values.reduce(0, +).formatted(.number.precision(.fractionLength(2))))"
-        }.joined(separator: "；"))
+      summarize(
+        unit, valueLine.map { "\($0.name) (\($0.unit)), " } ?? "",
+        samples.map {
+          "\($0.label): \($0.values.reduce(0, +).formatted(.number.precision(.fractionLength(2))))"
+        }.joined(separator: " · ")))
   }
   public override func updateTrackingAreas() {
     super.updateTrackingAreas()

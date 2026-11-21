@@ -1,0 +1,22 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "calendar.apply": "应用",
+    "calendar.hint": "点选一天后可直接应用，或再选一天组成区间",
+    "calendar.select": "选择",
+    "calendar.span": "（含首尾最多{count}天）",
+    "calendar.previous_year": "上一年",
+    "calendar.next_year": "下一年",
+    "calendar.previous_month": "上个月",
+    "calendar.next_month": "下个月",
+    "calendar.month": "{year}年 {month}月",
+    "calendar.weekday.0": "日",
+    "calendar.weekday.1": "一",
+    "calendar.weekday.2": "二",
+    "calendar.weekday.3": "三",
+    "calendar.weekday.4": "四",
+    "calendar.weekday.5": "五",
+    "calendar.weekday.6": "六"
+  }
+}

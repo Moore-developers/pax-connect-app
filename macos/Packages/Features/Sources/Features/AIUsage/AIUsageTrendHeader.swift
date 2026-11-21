@@ -5,7 +5,7 @@ import PaxUI
 @MainActor
 final class AIUsageTrendHeader: NSView {
   private let tile = PaxIconTile("chart.bar")
-  private let title = AIUsageLayout.heading("用量趋势")
+  private let title: NSTextField
   private let meta: NSTextField
   private let legend: NSView
   private let picker: PaxRoutePicker
@@ -13,7 +13,10 @@ final class AIUsageTrendHeader: NSView {
   private var height: NSLayoutConstraint?
   override var isFlipped: Bool { true }
 
-  init(meta: NSTextField, legend: NSView, picker: PaxRoutePicker, measure: PaxTabs) {
+  init(
+    title: NSTextField, meta: NSTextField, legend: NSView, picker: PaxRoutePicker, measure: PaxTabs
+  ) {
+    self.title = title
     self.meta = meta
     self.legend = legend
     self.picker = picker

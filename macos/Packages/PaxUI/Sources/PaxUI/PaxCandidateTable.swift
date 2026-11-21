@@ -23,12 +23,19 @@ public final class PaxCandidateTable: NSView {
   private let data: PaxDataTable
   private let titles: [String]
   private let choices: Bool
+  private let configuredTitle: String
+  private let choiceTitle: (String) -> String
   private var rows: [Row] = []
   private var selected: String?
   private var configured: String?
-  public init(titles: [String], choices: Bool = false) {
+  public init(
+    titles: [String], choices: Bool = false, configuredTitle: String = "当前配置",
+    choiceTitle: @escaping (String) -> String = { "选择 " + $0 }
+  ) {
     self.titles = titles
     self.choices = choices
+    self.configuredTitle = configuredTitle
+    self.choiceTitle = choiceTitle
     var columns: [PaxDataTable.Column] = []
     if choices {
       columns.append(
@@ -81,7 +88,7 @@ public final class PaxCandidateTable: NSView {
       radio.identifier = .init(id)
       radio.state = id == selected ? .on : .off
       radio.focusRingType = .none
-      radio.setAccessibilityLabel("选择 " + id)
+      radio.setAccessibilityLabel(choiceTitle(id))
       return radio
     }
     let index = column - (choices ? 1 : 0)
@@ -95,7 +102,7 @@ public final class PaxCandidateTable: NSView {
     label.textColor = index == titles.count - 1 ? row.statusColor : PaxTheme.Table.text
     label.alignment = choices && index == 1 ? .right : .left
     if choices && index == 0 && id == configured {
-      let stack = NSStackView(views: [label, PaxFeatureTag("当前配置", style: .protocolLabel)])
+      let stack = NSStackView(views: [label, PaxFeatureTag(configuredTitle, style: .protocolLabel)])
       stack.spacing = PaxTheme.Spacing.tight
       label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
       return stack

@@ -128,8 +128,8 @@ import Testing
     #expect(row?.tone == .pending)
     #expect(row?.value.contains("缺少同地址族") == true)
   }
-  @Test("环境差异只对照双方已取得的项目，导出冻结并脱敏")
-  func differencesAndExport() async {
+  @Test("环境差异只对照双方已取得的项目")
+  func differences() {
     let raw = Pax_V1_EnvironmentDiagnosticReport.with {
       $0.sessionID = "report-fixture"
       $0.browserURL = "http://127.0.0.1:1234/fixture/"
@@ -153,17 +153,6 @@ import Testing
       timezone: "Asia/Shanghai", languages: ["zh-Hans"], region: "zh_CN", at: raw.at.date)
     #expect(
       EnvironmentDiagnosticPresentation.differences(report, local: local) == Set(["语言", "时区"]))
-    let store = EnvironmentDiagnosticStore(request: { _, _ in report }, openBrowser: { _ in true })
-    store.start()
-    for _ in 0..<100 where store.report == nil { await Task.yield() }
-    let first = EnvironmentDiagnosticPresentation.markdown(store)
-    #expect(first.contains("### 环境结果"))
-    #expect(first.contains("Mac：IPv4 [已脱敏]"))
-    #expect(!first.contains("8.8.8.8"))
-    #expect(!first.contains("127.0.0.1"))
-    #expect(!first.contains("report-fixture"))
-    #expect(first == EnvironmentDiagnosticPresentation.markdown(store))
-    store.cancel()
   }
   @Test("取消后迟到的启动响应不能打开浏览器或覆盖新一轮", arguments: [false, true])
   func cancelLateSample(restart: Bool) async {

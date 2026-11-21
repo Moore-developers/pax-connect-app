@@ -15,18 +15,27 @@ final class RouteWorkbenchStore {
     var historical = false
     var time: String?
     var running = false
+    var queued = false
     var samples: [Double] = []
-    var text: String {
-      if historical && !running { return "历史测量，待更新" }
+    var text: String { text(context: .chinese) }
+    func text(context: PresentationContext) -> String {
+      if historical && !running { return context.text("model_copy.4b9de3393d") }
       return running
-        ? (time == "排队等待" ? "排队等待" : "测试中…")
+        ? (queued ? context.text("model_copy.fe0aaa98b9") : context.text("model_copy.105a9082c3"))
         : failure ?? value.map(MeasurementFormatting.number) ?? "—"
     }
-    var caption: String {
-      if historical && !running { return (time.map { $0 + " · " } ?? "") + "历史测量，待更新" }
+    var caption: String { caption(context: .chinese) }
+    func caption(context: PresentationContext) -> String {
+      if historical && !running {
+        return (time.map { $0 + " · " } ?? "") + context.text("model_copy.4b9de3393d")
+      }
       return running
-        ? (time == "排队等待" ? "排队等待" : "等待结果")
-        : time.map { $0 + (failure == nil ? " · 测试" : " · 失败") } ?? "未测试"
+        ? (queued ? context.text("model_copy.fe0aaa98b9") : context.text("model_copy.33037aadf0"))
+        : time.map {
+          $0
+            + (failure == nil
+              ? context.text("model_copy.ec1a014d5b") : context.text("model_copy.627005de77"))
+        } ?? context.text("model_copy.092b520558")
     }
   }
   struct Presentation: Equatable {
@@ -156,7 +165,7 @@ final class RouteWorkbenchStore {
   var hasCFSingleTests: Bool { routes?.capabilities.contains("routes.cf.single") == true }
   var hasCFWorkspace: Bool { routes?.capabilities.contains("routes.cf.workspace") == true }
   func cfRequest(_ request: MeasurementRequest) async throws -> MeasurementReply {
-    guard let routes else { throw EditError("CF 工作台尚未连接后台") }
+    guard let routes else { throw EditError(code: "model_copy.b82a89751c") }
     return try await routes.measurement(request)
   }
   func cancelCFOperation(_ id: String) async throws {
@@ -166,27 +175,6 @@ final class RouteWorkbenchStore {
   func refreshPhysical() async {
     guard let routes else { return }
     _ = try? await routes.measurement(.refreshEgress)
-  }
-  var physicalCaption: String {
-    guard let value = routes?.physicalEgress else { return "本机公网出口尚未获取" }
-    return value.phase == "ready"
-      ? "本机出口 IP · \(MeasurementTimestamp.text(value.at))"
-      : "本机出口 IP · \(value.phase=="loading" ? "检测中" : "未获取")"
-  }
-  func downloadCaption(_ id: String) -> String {
-    guard let value = node(id)?.downloadSummary else { return "" }
-    guard value.method == "window6s-v2" else { return "下载记录来自旧测量口径" }
-    return
-      "下载正文平均值 · \(value.parallel) 路并发 · 已接收 \(TrafficFormatting.bytes(value.bytes)) · 采样 \(MeasurementFormatting.latency(Double(value.durationMS))?.text ?? "—") · 准备 \(MeasurementFormatting.latency(Double(value.setupMS))?.text ?? "—")"
-  }
-  func measurementCaption(_ id: String) -> String {
-    guard let summary = node(id)?.testSummary else { return "首次包含线路与目标HTTPS连接建立；稳定延迟为同会话三次请求的中位数。" }
-    guard summary.method == "https204-median-v3" else { return "历史延迟采用旧口径，重新测试后分别记录首次连接与稳定延迟。" }
-    let target = summary.testTarget == "gstatic" ? "Google gstatic" : "Google"
-    let samples =
-      summary.stableSamples == 3 && summary.stableError.isEmpty
-      ? "同会话3次 · 中位数" : "稳定样本不足（\(summary.stableSamples)/3），首次结果单独保留"
-    return "\(target) HTTPS 首响应 · \(samples)；包含到测试网站的路径，不是服务器IP的ping。"
   }
   var currentRouteID: String? { connectionStore?.currentRoute?.id ?? session?.currentRouteID }
   var isRunning: Bool {
@@ -397,24 +385,6 @@ final class RouteWorkbenchStore {
   var canEditSubscriptionSource: Bool {
     routes?.capabilities.contains("subscriptions.source.edit") == true
   }
-  func subscriptionStatus(_ groupID: String) -> String {
-    guard let source = subscription(groupID) else { return "" }
-    if routes?.isRefreshing(source.id) == true { return "正在后台刷新…" }
-    var text = source.lastError.map(ProductErrorPresentation.message) ?? "刷新仅更新此订阅；本地覆盖与隐藏记录保留"
-    if let attempt = source.lastAttempt {
-      let phase =
-        [
-          "dns": "DNS", "connect": "连接", "tls": "TLS", "headers": "等待响应", "body": "下载正文",
-          "response": "服务器响应", "parse": "解析", "complete": "完成",
-        ][attempt.phase] ?? "请求"
-      text +=
-        " · " + MeasurementTimestamp.text(attempt.at) + " · "
-        + (attempt.channel == "route" ? "指定线路" : "系统网络") + " · " + phase
-      if attempt.status > 0 { text += " HTTP " + String(attempt.status) }
-      text += " · " + (MeasurementFormatting.latency(Double(attempt.totalMS))?.text ?? "—")
-    }
-    return text
-  }
   let cfEntryTests = RouteCFEntryTests()
   private var refreshTask: Task<Void, Never>?
   private var tasks: [String: Task<Void, Never>] = [:]
@@ -510,7 +480,7 @@ final class RouteWorkbenchStore {
   func deleteSubscriptionGroup(_ id: String, expectedRevision: UInt64) async throws -> UInt64 {
     guard let routes,
       let source = routes.subscriptions.first(where: { "subscription:" + $0.id == id })
-    else { throw EditError("订阅分组已变化，请重新打开") }
+    else { throw EditError(code: "model_copy.f75ac3b4d3") }
     let committedRevision = try await routes.deleteSubscription(
       source, expectedCatalogRevision: expectedRevision)
     if selectedGroup == id { selectedGroup = "all" }
@@ -579,16 +549,16 @@ final class RouteWorkbenchStore {
     return result
   }
   func node(_ id: String) -> NodeProfile? { nodes.first { $0.id == id } }
-  func certificateWarning(_ id: String) -> String? {
+  func certificateWarning(_ id: String, context: PresentationContext = .chinese) -> String? {
     if let active = connectionStore?.activeTLS, active.routeID == id, active.skipped {
-      return "未校验证书"
+      return context.text("route_readouts.a8ebd80652")
     }
     guard let node = node(id), node.security == "tls" else { return nil }
-    return node.tlsPolicy?.mode == .skipVerify ? "未校验证书" : nil
+    return node.tlsPolicy?.mode == .skipVerify ? context.text("route_readouts.a8ebd80652") : nil
   }
-  func certificateExplanation(_ id: String) -> String {
+  func certificateExplanation(_ id: String, context: PresentationContext = .chinese) -> String {
     if let active = connectionStore?.activeTLS, active.routeID == id, active.skipped {
-      return "当前连接未校验证书，连接仍加密，但服务器身份未验证。"
+      return context.text("route_readouts.e1ed7e06e7")
     }
     guard let node = node(id), node.security == "tls", let policy = node.tlsPolicy else {
       return ""
@@ -596,14 +566,17 @@ final class RouteWorkbenchStore {
     if isCurrent(id), let active = connectionStore?.activeTLS, active.routeID == id,
       !active.skipped, policy.mode == .skipVerify
     {
-      return "当前连接仍按默认校验策略运行。已保存跳过证书校验设置，下次使用生效；届时连接仍加密，但服务器身份未验证。"
+      return context.text("route_readouts.141cf4a482")
     }
     if policy.mode == .skipVerify {
-      return (policy.userOverride ? "用户设置了" : "来源设置了") + "跳过证书校验。连接仍加密，但服务器身份未验证。"
+      return
+        (policy.userOverride
+        ? context.text("route_readouts.d7145b50fc") : context.text("route_readouts.d48c4b3f8b"))
+        + context.text("route_readouts.66c8471d5a")
     }
-    return "默认校验证书；校验失败会显示原因，不会自动跳过。"
+    return context.text("route_readouts.645033c1f0")
   }
-  func info(_ id: String) -> Presentation {
+  func info(_ id: String, context: PresentationContext = .chinese) -> Presentation {
     guard let routes else { return presentations[id] ?? Presentation() }
     guard let node = node(id) else { return Presentation() }
     var value = Presentation()
@@ -636,7 +609,8 @@ final class RouteWorkbenchStore {
       value.transferSamples = routeUsageSeries(usage)
     }
     if node.cfEntry { value.cfIP = node.server }
-    return withCFEntry(Self.measurementPresentation(node, routes: routes, initial: value), id: id)
+    return withCFEntry(
+      Self.measurementPresentation(node, routes: routes, initial: value, context: context), id: id)
   }
 
   func canQueryExit(_ id: String) -> Bool {
@@ -655,23 +629,25 @@ final class RouteWorkbenchStore {
   func isMeasuring(_ id: String) -> Bool {
     routes?.isTesting(id) == true || routes?.downloadingRouteIDs.contains(id) == true
   }
-  func measurementProgressCaption(_ id: String) -> String {
-    routes?.routeMeasurementProgress[id]?.phase.caption ?? "正在测量延迟"
+  func measurementProgressCaption(_ id: String, context: PresentationContext = .chinese) -> String {
+    routes?.routeMeasurementProgress[id]?.phase.caption(context: context)
+      ?? context.text("route_readouts.9e7b1ab19c")
   }
-  func exitRegion(_ id: String) -> String {
+  func exitRegion(_ id: String, context: PresentationContext = .chinese) -> String {
     guard let value = info(id).exitLocation else { return "" }
-    return ExitLocationPresentation.region(value)
+    return ExitLocationPresentation.region(value, context: context)
   }
-  func exitDetails(_ id: String) -> String {
+  func exitDetails(_ id: String, context: PresentationContext = .chinese) -> String {
     let p = info(id)
     if let value = p.exitLocation {
-      return value.ip + "\n" + ExitLocationPresentation.details(value)
+      return value.ip + "\n" + ExitLocationPresentation.details(value, context: context)
     }
     if let old = p.lastExitLocation {
-      return (p.exitMessage ?? "本次出口未获取") + "\n上次结果（历史）：" + old.ip + "\n"
+      return (p.exitMessage ?? context.text("route_readouts.d919bc11a4"))
+        + context.text("route_readouts.5f6a46f845") + old.ip + "\n"
         + ExitLocationPresentation.details(old)
     }
-    return p.exitMessage ?? "尚未获取出口信息"
+    return p.exitMessage ?? context.text("route_readouts.4d16cc80e0")
   }
   func isSelected(_ id: String) -> Bool {
     (routes?.selectedRouteID ?? session?.selectedRouteID) == id
@@ -765,13 +741,13 @@ final class RouteWorkbenchStore {
   }
   func loadDraft(_ id: String) async throws -> Draft {
     guard let routes else {
-      guard let draft = draft(id) else { throw EditError("线路不存在") }
+      guard let draft = draft(id) else { throw EditError(code: "model_copy.9235faf934") }
       return draft
     }
-    guard canEdit else { throw EditError("当前无法编辑线路") }
+    guard canEdit else { throw EditError(code: "model_copy.b228dcbf05") }
     if node(id)?.chain != nil, let value = draft(id) { return value }
     let edit = try await routes.loadEditor(id)
-    guard routes.connected else { throw EditError("与后台连接已断开") }
+    guard routes.connected else { throw EditError(code: "model_copy.e3a071a049") }
     let formatted = try encode(parse(edit.documentJSON))
     return Draft(
       id: id, revision: edit.revision, name: edit.name, server: edit.server,
@@ -785,7 +761,7 @@ final class RouteWorkbenchStore {
       try save(draft)
       return
     }
-    guard canEdit else { throw EditError("当前无法保存，草稿仍保留") }
+    guard canEdit else { throw EditError(code: "model_copy.9e8ae476c2") }
     if let chain = node(draft.id)?.chain, let frontID = draft.frontID,
       let front = draft.frozenFront ?? node(frontID),
       let final = draft.frozenFinal ?? node(chain.finalID), let current = node(draft.id)
@@ -855,12 +831,12 @@ final class RouteWorkbenchStore {
     return lhs == rhs
   }
   func save(_ draft: Draft) throws {
-    guard !isLive else { throw EditError("此功能尚未接入后台") }
+    guard !isLive else { throw EditError(code: "model_copy.081d60fb80") }
     guard let old = node(draft.id),
       !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    else { throw EditError("请填写线路名称") }
+    else { throw EditError(code: "model_copy.e5c5273039") }
     if var chain = info(draft.id).chain {
-      guard let front = draft.frontID else { throw EditError("请选择前置线路") }
+      guard let front = draft.frontID else { throw EditError(code: "model_copy.be52e9d5f1") }
       try validateChain(front: front, final: chain.final)
       chain.front = front
       var presentation = Presentation(chain: chain)
@@ -874,7 +850,7 @@ final class RouteWorkbenchStore {
           (object["transport"] as? [String: Any])?["type"] as? String ?? "")
           || !Self.validIP(draft.server))
       {
-        throw EditError("CF 入口需要有效 IP 和支持的传输方式")
+        throw EditError(code: "model_copy.e4b586ac75")
       }
       if old.origin == "subscription", originals[old.id] == nil {
         originals[old.id] = old
@@ -951,13 +927,13 @@ final class RouteWorkbenchStore {
     guard !name.isEmpty, name.unicodeScalars.count <= 24, name != "全部", !existing.contains(name),
       name.rangeOfCharacter(from: .controlCharacters) == nil
     else {
-      throw EditError("分组名称需为 1–24 个字，且不能重复")
+      throw EditError(code: "model_copy.f7e7f0ae6a")
     }
     return name
   }
   func group(_ id: String, name: String, members: Set<String>) throws {
-    guard !isLive else { throw EditError("此功能尚未接入后台") }
-    guard !id.hasPrefix("subscription:") else { throw EditError("订阅分组由来源自动维护") }
+    guard !isLive else { throw EditError(code: "model_copy.081d60fb80") }
+    guard !id.hasPrefix("subscription:") else { throw EditError(code: "model_copy.c9f7b08dcb") }
     let name = try Self.validatedGroupName(
       name, existing: Set(groups.filter { $0.id != id }.map(\.name)))
     let value = Group(id: id, name: name, members: members.intersection(Set(nodes.map(\.id))))
@@ -972,8 +948,10 @@ final class RouteWorkbenchStore {
       try replaceGroups(value)
       return
     }
-    guard canManageGroups else { throw EditError("当前无法保存分组，草稿仍保留") }
-    guard value.allSatisfy({ $0.kind == .custom }) else { throw EditError("订阅分组由来源自动维护") }
+    guard canManageGroups else { throw EditError(code: "model_copy.0039fb02aa") }
+    guard value.allSatisfy({ $0.kind == .custom }) else {
+      throw EditError(code: "model_copy.c9f7b08dcb")
+    }
     let edit = RouteGroupsEdit(
       groups: value.map {
         RouteGroup(id: $0.id, name: $0.name, memberIDs: $0.members.sorted())
@@ -986,9 +964,9 @@ final class RouteWorkbenchStore {
     }
   }
   func replaceGroups(_ value: [Group]) throws {
-    guard !isLive else { throw EditError("此功能尚未接入后台") }
+    guard !isLive else { throw EditError(code: "model_copy.081d60fb80") }
     guard value.allSatisfy({ $0.kind == .custom && !$0.id.hasPrefix("subscription:") }) else {
-      throw EditError("订阅分组由来源自动维护")
+      throw EditError(code: "model_copy.c9f7b08dcb")
     }
     var seen: Set<String> = []
     let names = try value.map { group in
@@ -1052,22 +1030,28 @@ final class RouteWorkbenchStore {
     let failed: Bool
     let stale: Bool
   }
-  func historyRows(_ id: String) -> [HistoryRow] {
+  func historyRows(_ id: String, context: PresentationContext = .chinese) -> [HistoryRow] {
     guard let node = node(id) else { return [] }
     return (routes?.history[id] ?? []).enumerated().map { offset, sample in
       let metric =
         sample.metric == "connect"
-        ? "首次连接"
+        ? context.text("route_readouts.7edb843c83")
         : sample.metric == "latency"
-          ? (sample.method == "https204-median-v3" ? "稳定延迟" : "历史延迟")
-          : sample.metric == "download" ? "下载速度" : "出口 IP"
+          ? (sample.method == "https204-median-v3"
+            ? context.text("route_readouts.31421eb9bd") : context.text("route_readouts.c5a571f36f"))
+          : sample.metric == "download"
+            ? context.text("route_readouts.56f0864c08") : context.text("route_readouts.4ebb761ac3")
       let result: String
       if !sample.success {
-        result = sample.error.map(ProductErrorPresentation.message) ?? "测试失败"
+        result =
+          sample.error.map { ProductErrorPresentation.message($0, context: context) }
+          ?? context.text("route_readouts.77c9e582e8")
       } else if sample.metric == "exit" {
         result =
           sample.exitIP
-          + (sample.exitLocation.map { " · " + ExitLocationPresentation.region($0) } ?? "")
+          + (sample.exitLocation.map {
+            " · " + ExitLocationPresentation.region($0, context: context)
+          } ?? "")
       } else if sample.metric == "download" {
         result = MeasurementFormatting.speed(bytesPerSecond: sample.value)?.text ?? "—"
       } else {
@@ -1079,8 +1063,15 @@ final class RouteWorkbenchStore {
       let stale = configChanged || networkChanged || networkUnknown
       let status =
         !sample.success
-        ? (configChanged || networkChanged ? "失败 · 已过期" : "失败")
-        : configChanged ? "旧配置" : networkChanged ? "其它网络" : networkUnknown ? "历史" : "成功"
+        ? (configChanged || networkChanged
+          ? context.text("route_readouts.b7c40bcf96") : context.text("route_readouts.28384d7afd"))
+        : configChanged
+          ? context.text("route_readouts.4342037a32")
+          : networkChanged
+            ? context.text("route_readouts.0b1ee693c3")
+            : networkUnknown
+              ? context.text("route_readouts.b0385cfe4b")
+              : context.text("route_readouts.053461ce86")
       return HistoryRow(
         id: "\(sample.metric)/\(sample.at.timeIntervalSince1970)/\(offset)",
         time: MeasurementTimestamp.text(sample.at), metric: metric, result: result, status: status,
@@ -1091,9 +1082,9 @@ final class RouteWorkbenchStore {
   func loadMeasurementHistory(_ id: String, more: Bool = false) async {
     await routes?.loadMeasurementHistory(id, more: more)
   }
-  func measurementHistoryCaption(_ id: String) -> String {
+  func measurementHistoryCaption(_ id: String, context: PresentationContext = .chinese) -> String {
     if let error = routes?.historyError(id) { return error }
-    return "按测试时间记录，保留失败及旧配置结果"
+    return context.text("route_readouts.d6cfc02a77")
   }
   func loadRouteData(_ id: String, more: Bool = false) async {
     await routes?.loadRouteData(id, more: more)
@@ -1107,26 +1098,30 @@ final class RouteWorkbenchStore {
   }
   func hasMoreHistory(_ id: String) -> Bool { !(routes?.historyCursors[id] ?? "").isEmpty }
   func hasMoreUsage(_ id: String) -> Bool { !(routes?.usageCursors[id] ?? "").isEmpty }
-  func dataCaption(_ id: String) -> String {
-    guard let routes, routes.capabilities.contains("routes.usage") else { return "当前后台未提供使用记录" }
+  func dataCaption(_ id: String, context: PresentationContext = .chinese) -> String {
+    guard let routes, routes.capabilities.contains("routes.usage") else {
+      return context.text("route_readouts.66bd15cf5e")
+    }
     if let error = routes.usageError(id) { return error }
     guard let usage = routes.usage[id] else {
-      return routes.connected ? "正在读取使用记录…" : "后台未连接，暂时无法读取使用记录"
+      return routes.connected
+        ? context.text("route_readouts.349b198940") : context.text("route_readouts.905f3e3aa7")
     }
     if usage.todayUpload == 0 && usage.todayDownload == 0
       && !usage.items.contains(where: { Calendar.current.isDateInToday($0.at) })
     {
-      if !usage.items.isEmpty { return "今日尚无用量记录，已有历史流量可按时间范围查看" }
-      return "这条线路尚无使用记录；开启代理并产生流量后开始统计，测速流量不计入。"
+      if !usage.items.isEmpty { return context.text("route_readouts.e8583d5c28") }
+      return context.text("route_readouts.962c32e67b")
     }
-    if usage.basis == "legacy_selected_route" { return "包含升级前按所选线路记录的用量；旧出口和对象归属无法恢复" }
-    return usage.partial ? "仅显示已记录用量，未采集的历史时段无法补算" : "今日累计 · 按实际采样时间"
+    if usage.basis == "legacy_selected_route" { return context.text("route_readouts.a4af6045f9") }
+    return usage.partial
+      ? context.text("route_readouts.f948d939b6") : context.text("route_readouts.e21772d9f1")
   }
   func createChain(front: String, final: String, name: String) throws -> String {
-    guard !isLive else { throw EditError("此功能尚未接入后台") }
+    guard !isLive else { throw EditError(code: "model_copy.081d60fb80") }
     try validateChain(front: front, final: final)
     guard let n = node(final), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw EditError("请填写组合线路名称")
+      throw EditError(code: "model_copy.3f927f75dd")
     }
     let id = UUID().uuidString
     nodes.append(
@@ -1139,33 +1134,46 @@ final class RouteWorkbenchStore {
     message = "已创建链式代理"
     return id
   }
-  func path(_ id: String, frontID: String? = nil) -> [PaxConnectionPath.Node] {
+  func path(_ id: String, frontID: String? = nil, context: PresentationContext = .chinese)
+    -> [PaxConnectionPath.Node]
+  {
     var chain = info(id).chain
     if let frontID { chain?.front = frontID }
     var value = connectionPath(
       ids: chain.map { [$0.front, $0.final] } ?? [id], chained: chain != nil,
-      current: isCurrent(id) && isRunning)
+      current: isCurrent(id) && isRunning, context: context)
     if chain != nil, let exit = info(id).exitIP {
-      value.append(.init("出口 IP", address: exit + "\n" + exitRegion(id), symbol: "globe"))
+      value.append(
+        .init(
+          context.text("route_readouts.4ebb761ac3"),
+          address: exit + "\n" + exitRegion(id, context: context), symbol: "globe"))
     }
     return value
   }
-  func path(frontID: String, finalID: String) -> [PaxConnectionPath.Node] {
-    connectionPath(ids: [frontID, finalID], chained: true, current: false)
+  func path(frontID: String, finalID: String, context: PresentationContext = .chinese)
+    -> [PaxConnectionPath.Node]
+  {
+    connectionPath(ids: [frontID, finalID], chained: true, current: false, context: context)
   }
-  private func connectionPath(ids: [String], chained: Bool, current: Bool)
+  private func connectionPath(
+    ids: [String], chained: Bool, current: Bool, context: PresentationContext = .chinese
+  )
     -> [PaxConnectionPath.Node]
   {
     var result = [
       PaxConnectionPath.Node(
-        "本机出口 IP",
+        context.text("route_readouts.545aab0d2a"),
         address: routes.map { store in
-          guard store.connected else { return "后台断开" }
-          guard let egress = store.physicalEgress else { return "未检测" }
-          if egress.phase == "loading" { return "检测中…" }
-          guard egress.phase == "ready" else { return "未获取" }
-          return !egress.ipv4.isEmpty ? egress.ipv4 : !egress.ipv6.isEmpty ? egress.ipv6 : "未获取"
-        } ?? (current ? "192.0.2.10" : "未检测"),
+          guard store.connected else { return context.text("route_readouts.fa7560e583") }
+          guard let egress = store.physicalEgress else {
+            return context.text("route_readouts.3acaa83343")
+          }
+          if egress.phase == "loading" { return context.text("route_readouts.3a1abf3422") }
+          guard egress.phase == "ready" else { return context.text("route_readouts.c9c37a1eba") }
+          return !egress.ipv4.isEmpty
+            ? egress.ipv4
+            : !egress.ipv6.isEmpty ? egress.ipv6 : context.text("route_readouts.c9c37a1eba")
+        } ?? (current ? "192.0.2.10" : context.text("route_readouts.3acaa83343")),
         symbol: "desktopcomputer")
     ]
     for (index, id) in ids.enumerated() {
@@ -1177,19 +1185,22 @@ final class RouteWorkbenchStore {
       }
       result.append(
         .init(
-          chained ? n.name : "出口 IP",
+          chained ? n.name : context.text("route_readouts.4ebb761ac3"),
           address: chained
-            ? (info(id).cfIP == nil && !n.server.isEmpty ? n.server : "未获取")
-            : ((info(id).exitIP ?? "未获取") + (exitRegion(id).isEmpty ? "" : "\n" + exitRegion(id))),
+            ? (info(id).cfIP == nil && !n.server.isEmpty
+              ? n.server : context.text("route_readouts.c9c37a1eba"))
+            : ((info(id).exitIP ?? context.text("route_readouts.c9c37a1eba"))
+              + (exitRegion(id, context: context).isEmpty
+                ? "" : "\n" + exitRegion(id, context: context))),
           symbol: chained && index == 0 ? "network" : "server.rack",
           tone: chained && index == 0 ? .purple : .neutral))
     }
     return result
   }
   func importPreview(_ text: String) throws -> [NodeProfile] {
-    guard !isLive else { throw EditError("此功能尚未接入后台") }
+    guard !isLive else { throw EditError(code: "model_copy.081d60fb80") }
     let lines = text.split(whereSeparator: \.isNewline).map(String.init)
-    guard !lines.isEmpty else { throw EditError("请粘贴分享链接或订阅地址") }
+    guard !lines.isEmpty else { throw EditError(code: "model_copy.c5bd8a3004") }
     if lines.count == 1, let url = URL(string: lines[0]),
       ["http", "https"].contains(url.scheme ?? ""), url.host != nil
     {
@@ -1213,11 +1224,11 @@ final class RouteWorkbenchStore {
         guard let data = Data(base64Encoded: payload),
           let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
           let server = object["add"] as? String, !server.isEmpty
-        else { throw EditError("VMess 分享链接格式无效") }
+        else { throw EditError(code: "model_copy.1fdb9996d0") }
         let port =
           (object["port"] as? String).flatMap(UInt32.init) ?? (object["port"] as? NSNumber)?
           .uint32Value ?? 443
-        guard (1...65535).contains(port) else { throw EditError("VMess 端口无效") }
+        guard (1...65535).contains(port) else { throw EditError(code: "model_copy.38a465a350") }
         return NodeProfile(
           id: UUID().uuidString, name: object["ps"] as? String ?? "VMess 线路", protocolName: "vmess",
           server: server, port: port, group: "本地线路", serverName: object["sni"] as? String ?? "",
@@ -1228,12 +1239,14 @@ final class RouteWorkbenchStore {
         ["vless", "trojan", "hysteria2", "hy2", "ss", "anytls"].contains(scheme),
         let host = url.host,
         !host.isEmpty, url.user?.isEmpty == false
-      else { throw EditError("分享链接格式无效；支持 VLESS、VMess、Trojan、Hysteria2、SS 链接") }
+      else { throw EditError(code: "model_copy.1c71f8330e") }
       let proto = scheme == "hy2" ? "hysteria2" : scheme == "ss" ? "shadowsocks" : scheme
       let parameters = Dictionary(
         url.queryItems?.map { ($0.name, $0.value ?? "") } ?? [],
         uniquingKeysWith: { _, last in last })
-      guard (1...65535).contains(url.port ?? 443) else { throw EditError("分享链接端口无效") }
+      guard (1...65535).contains(url.port ?? 443) else {
+        throw EditError(code: "model_copy.fe5c70e31c")
+      }
       return NodeProfile(
         id: UUID().uuidString, name: url.fragment ?? "导入线路", protocolName: proto, server: host,
         port: UInt32(url.port ?? 443), group: "本地线路", serverName: parameters["sni"] ?? "",
@@ -1259,7 +1272,7 @@ final class RouteWorkbenchStore {
   private func validateChain(front: String, final: String) throws {
     guard front != final, let a = node(front), let b = node(final), !a.hidden, !b.hidden,
       info(front).chain == nil, info(final).chain == nil
-    else { throw EditError("前置与最终线路必须是不同的有效普通线路") }
+    else { throw EditError(code: "model_copy.405456b253") }
   }
   private func replaceNode(
     _ old: NodeProfile, name: String, server: String, port: UInt32, sni: String,
@@ -1369,9 +1382,11 @@ final class RouteWorkbenchStore {
       var syntax = RouteDocumentSyntax(json)
       try syntax.validate()
       guard let result = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
-      else { throw EditError("请输入一个节点配置对象") }
+      else { throw EditError(code: "model_copy.d5c106bc1e") }
       return result
-    } catch let error as EditError { throw error } catch { throw EditError("JSON 格式无效，请检查括号与逗号") }
+    } catch let error as EditError { throw error } catch {
+      throw EditError(code: "model_copy.381c28b62f")
+    }
   }
   private func encode(_ object: [String: Any]) throws -> String {
     String(
@@ -1382,14 +1397,14 @@ final class RouteWorkbenchStore {
   private func validated(_ draft: Draft) throws -> [String: Any] {
     let o = try parse(draft.json)
     guard let n = node(draft.id), o["type"] as? String == n.protocolName else {
-      throw EditError("请保留当前节点的协议类型")
+      throw EditError(code: "model_copy.3c830c6af5")
     }
     guard let server = o["server"] as? String, !server.trimmingCharacters(in: .whitespaces).isEmpty,
       let port = o["server_port"] as? NSNumber, CFGetTypeID(port) != CFBooleanGetTypeID(),
       port.doubleValue.rounded() == port.doubleValue, (1...65535).contains(port.intValue)
-    else { throw EditError("地址不能为空；端口须为 1–65535 的整数") }
+    else { throw EditError(code: "model_copy.917f7786a8") }
     guard !["outbounds", "inbounds", "dns", "route", "detour"].contains(where: { o[$0] != nil })
-    else { throw EditError("这里只接受单节点配置，链式代理在组合设置中编辑") }
+    else { throw EditError(code: "model_copy.5d52caf032") }
     if ["socks", "http"].contains(n.protocolName) {
       let proxy = try ProxyRouteDraft(document: draft.json, name: draft.name)
       _ = try proxy.document()
@@ -1397,15 +1412,16 @@ final class RouteWorkbenchStore {
     }
     let credential = ["vless", "vmess"].contains(n.protocolName) ? "uuid" : "password"
     guard (o[credential] as? String)?.isEmpty == false else {
-      throw EditError("\(credential) 不能为空")
+      throw EditError(
+        code: "model_copy.c6b26c8f22", params: ["arg0": String(describing: credential)])
     }
     if n.protocolName == "hysteria2" {
       guard (o["tls"] as? [String: Any])?["enabled"] as? Bool == true, o["transport"] == nil else {
-        throw EditError("Hysteria2 必须启用 TLS，不使用 WS/gRPC")
+        throw EditError(code: "model_copy.5e7acedebd")
       }
     }
     if n.protocolName == "shadowsocks", (o["method"] as? String)?.isEmpty != false {
-      throw EditError("请填写 Shadowsocks 加密方法")
+      throw EditError(code: "model_copy.1788e0be9d")
     }
     return o
   }
@@ -1416,9 +1432,5 @@ final class RouteWorkbenchStore {
       inet_pton(AF_INET, $0, &v4) == 1 || inet_pton(AF_INET6, $0, &v6) == 1
     }
   }
-  struct EditError: LocalizedError {
-    let message: String
-    init(_ message: String) { self.message = message }
-    var errorDescription: String? { message }
-  }
+
 }

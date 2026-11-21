@@ -14,142 +14,237 @@ public struct LogDetailPresentation: Sendable {
   public let source: String
 
   public static func application(_ record: LogRecord) -> String {
+    application(record, context: .chinese)
+  }
+  public static func application(_ record: LogRecord, context: PresentationContext) -> String {
     guard let flow = record.flow else { return record.categoryName }
-    return record.categoryName.isEmpty ? FlowPresentation.application(flow) : record.categoryName
+    return record.categoryName.isEmpty
+      ? FlowPresentation.application(flow, context: context) : record.categoryName
   }
 
-  public init(detail: HistoryLogDetail, perspective: Perspective) {
+  public init(
+    detail: HistoryLogDetail, perspective: Perspective, context: PresentationContext = .chinese
+  ) {
     let record = detail.record
     let flow = record?.flow ?? detail.flow
     let savedSource = record?.source ?? detail.event?.source ?? ""
-    source = savedSource.isEmpty ? "来源未记录" : savedSource
+    source = savedSource.isEmpty ? context.text("log_detail.source_missing") : savedSource
     status = FlowPresentation.recordedStatus(
-      flow, fallback: record?.title ?? detail.event?.message ?? "结果未确认")
+      flow,
+      fallback: record.map { ProductTextPresentation.recordTitle($0, context: context) } ?? detail
+        .event?.message ?? context.text("log_detail.result_unknown"))
     var blocks: [Section] = []
     var missing: [String] = []
     if let f = flow {
       let dns = f.purpose == "dns"
-      let application = record.map(Self.application) ?? FlowPresentation.application(f)
+      let application =
+        record.map { Self.application($0, context: context) }
+        ?? FlowPresentation.application(f, context: context)
       title =
         dns
-        ? f.domain + " · DNS " + (f.dns?.queryType ?? "查询")
+        ? f.domain + " · DNS " + (f.dns?.queryType ?? context.text("log_detail.query"))
         : perspective == .domain
-          ? FlowPresentation.domain(f) + " → " + FlowPresentation.ip(f)
-          : application + " → " + FlowPresentation.target(f)
+          ? FlowPresentation.domain(f, context: context) + " → "
+            + FlowPresentation.ip(f, context: context)
+          : application + " → " + FlowPresentation.target(f, context: context)
       if dns {
         var rows = [
-          ("查询域名", FlowPresentation.domain(f)), ("查询类型", f.dns?.queryType ?? "未保存"),
-          ("来源", application),
+          (context.text("log_detail.query_domain"), FlowPresentation.domain(f, context: context)),
+          (
+            context.text("log_detail.query_type"),
+            f.dns?.queryType ?? context.text("log_detail.not_saved")
+          ),
+          (context.text("log_detail.source"), application),
         ]
         if let result = f.dns {
-          rows.append(("解析结果", result.result.isEmpty ? "尚无结果" : result.result))
           rows.append(
-            ("解析答案", result.answers.isEmpty ? "未返回地址或别名" : result.answers.joined(separator: "\n")))
+            (
+              context.text("log_detail.resolution_result"),
+              result.result.isEmpty ? context.text("log_detail.no_result") : result.result
+            ))
+          rows.append(
+            (
+              context.text("log_detail.answers"),
+              result.answers.isEmpty
+                ? context.text("log_detail.no_answers") : result.answers.joined(separator: "\n")
+            ))
         }
-        rows.append(("解析耗时", TrafficFormatting.milliseconds(TrafficFormatting.responseLatency(f))))
-        blocks.append(.init(title: "DNS 查询", rows: rows))
+        rows.append(
+          (
+            context.text("log_detail.resolution_latency"),
+            TrafficFormatting.milliseconds(TrafficFormatting.responseLatency(f))
+          ))
+        blocks.append(.init(title: context.text("log_detail.dns_query"), rows: rows))
       } else {
         var identity: [(String, String)] = []
         if perspective == .domain {
-          identity.append(("所属网站", f.primaryDomain.isEmpty ? f.domain : f.primaryDomain))
+          identity.append(
+            (
+              context.text("log_detail.website"),
+              f.primaryDomain.isEmpty ? f.domain : f.primaryDomain
+            ))
         }
         identity += [
-          ("应用", application),
-          ("完整域名", f.domain.isEmpty ? (f.ip.isEmpty ? "—" : "直接访问 IP") : f.domain),
-          ("目标 IP", f.ip.isEmpty ? (f.ipSource == "proxy_domain" ? "代理未提供" : "—") : f.ip),
+          (context.text("log_detail.application"), application),
+          (
+            context.text("log_detail.full_domain"),
+            f.domain.isEmpty
+              ? (f.ip.isEmpty ? "—" : context.text("log_detail.direct_ip")) : f.domain
+          ),
+          (
+            context.text("log_detail.target_ip"),
+            f.ip.isEmpty
+              ? (f.ipSource == "proxy_domain"
+                ? context.text("log_detail.proxy_ip_unavailable") : "—") : f.ip
+          ),
         ]
-        if f.port > 0 { identity.append(("端口", String(f.port))) }
-        if !f.transport.isEmpty { identity.append(("传输协议", f.transport.uppercased())) }
-        if !f.application.isEmpty && f.application != application {
-          identity.append(("记录的应用名", f.application))
+        if f.port > 0 { identity.append((context.text("log_detail.port"), String(f.port))) }
+        if !f.transport.isEmpty {
+          identity.append((context.text("log_detail.transport"), f.transport.uppercased()))
         }
-        if !f.process.isEmpty { identity.append(("进程路径", f.process)) }
-        blocks.append(.init(title: perspective == .domain ? "访问对象" : "应用与目标", rows: identity))
+        if !f.application.isEmpty && f.application != application {
+          identity.append((context.text("log_detail.recorded_application"), f.application))
+        }
+        if !f.process.isEmpty {
+          identity.append((context.text("log_detail.process_path"), f.process))
+        }
+        blocks.append(
+          .init(
+            title: perspective == .domain
+              ? context.text("log_detail.access_target")
+              : context.text("log_detail.application_target"), rows: identity))
         if FlowPresentation.isIPv6Limited(f) {
           blocks.append(
-            .init(title: "连接限制", rows: [("IPv6 未启用", TrafficRuleFormatting.ipv6Limitation)]))
+            .init(
+              title: context.text("log_detail.connection_limit"),
+              rows: [
+                (context.text("log_detail.ipv6_disabled"), TrafficRuleFormatting.ipv6Limitation)
+              ]))
         }
-        var connection = [("实际连接", FlowPresentation.actualConnection(f))]
+        var connection = [
+          (
+            context.text("log_detail.actual_connection"),
+            FlowPresentation.actualConnection(f, context: context)
+          )
+        ]
         if !f.rule.isEmpty {
           connection.append(
-            ("规则包", TrafficRuleFormatting.package(rule: f.rule, source: f.ruleSource)))
+            (
+              context.text("log_detail.rule_package"),
+              TrafficRuleFormatting.package(rule: f.rule, source: f.ruleSource)
+            ))
           connection.append(
-            ("触发条件", TrafficRuleFormatting.condition(rule: f.rule, source: f.ruleSource)))
+            (
+              context.text("log_detail.matching_condition"),
+              TrafficRuleFormatting.condition(rule: f.rule, source: f.ruleSource)
+            ))
         } else {
-          missing.append("未保存当时命中的规则。")
+          missing.append(context.text("log_detail.rule_not_recorded"))
         }
         if FlowPresentation.isIPv6Limited(f) {
-          connection += [("原始去向", f.direction), ("原始规则", f.rule), ("原始来源", f.ruleSource)]
+          connection += [
+            (context.text("log_detail.original_direction"), f.direction),
+            (context.text("log_detail.original_rule"), f.rule),
+            (context.text("log_detail.original_source"), f.ruleSource),
+          ]
         }
-        blocks.append(.init(title: "实际连接与规则", rows: connection))
+        blocks.append(.init(title: context.text("log_detail.connection_rules"), rows: connection))
         var metrics = [
-          ("响应延迟", TrafficFormatting.milliseconds(TrafficFormatting.responseLatency(f)))
+          (
+            context.text("log_detail.response_latency"),
+            TrafficFormatting.milliseconds(TrafficFormatting.responseLatency(f))
+          )
         ]
         if let m = record?.metrics {
           metrics += [
-            ("连接存续时长", TrafficFormatting.connectionDuration(m)),
-            ("上传／下载", TrafficFormatting.connectionBytes(m)),
+            (
+              context.text("log_detail.connection_duration"),
+              TrafficFormatting.connectionDuration(m)
+            ),
+            (context.text("log_detail.transfer"), TrafficFormatting.connectionBytes(m)),
           ]
           if m.bytesState != "complete" {
             missing.append(
               TrafficFormatting.connectionMetricsNote(m).replacingOccurrences(
-                of: "仅为已观测下界，存在缺口", with: "数据不完整，仅统计已记录部分"))
+                of: "仅为已观测下界，存在缺口", with: context.text("log_detail.incomplete_data")))
           }
         }
-        blocks.append(.init(title: "连接指标", rows: metrics))
+        blocks.append(.init(title: context.text("log_detail.connection_metrics"), rows: metrics))
       }
-      if f.purpose.isEmpty { missing.append("这条旧记录的部分字段当时未保存，现有数据无法补回。") }
-      if f.application.isEmpty { missing.append(FlowPresentation.application(f)) }
-      if f.ip.isEmpty && !dns { missing.append(FlowPresentation.ip(f)) }
+      if f.purpose.isEmpty { missing.append(context.text("log_detail.legacy_missing")) }
+      if f.application.isEmpty { missing.append(FlowPresentation.application(f, context: context)) }
+      if f.ip.isEmpty && !dns { missing.append(FlowPresentation.ip(f, context: context)) }
       if TrafficFormatting.responseLatency(f) == nil {
-        missing.append(FlowPresentation.latencyReason(f))
+        missing.append(FlowPresentation.latencyReason(f, context: context))
       }
-      if f.process.hasSuffix("/mDNSResponder") { missing.append("查询由系统 DNS 服务发出，不能确认最初调用它的应用。") }
+      if f.process.hasSuffix("/mDNSResponder") {
+        missing.append(context.text("log_detail.system_dns"))
+      }
     } else {
-      title = record?.systemEvent?.name ?? String(status.split(separator: "：").first ?? "系统事件")
+      title =
+        record?.systemEvent.map { ProductTextPresentation.eventName($0, context: context) }
+        ?? (status.split(separator: "：").first.map(String.init)
+          ?? context.text("log_detail.system_event"))
       if let event = record?.systemEvent {
         for s in event.sections {
           let rows = s.fields.map { f in
             (
-              f.label,
+              ProductTextPresentation.staticEventLabel(
+                f.labelText, original: f.label, context: context),
               !f.before.isEmpty || !f.after.isEmpty
-                ? (f.before.isEmpty ? "未保存旧值" : f.before) + " → "
-                  + (f.after.isEmpty ? "未保存新值" : f.after) : f.value
+                ? (f.before.isEmpty
+                  ? context.text("log_detail.before_missing")
+                  : ProductTextPresentation.text(f.beforeText, original: f.before, context: context))
+                  + " → "
+                  + (f.after.isEmpty
+                    ? context.text("log_detail.after_missing")
+                    : ProductTextPresentation.text(f.afterText, original: f.after, context: context))
+                : ProductTextPresentation.text(f.valueText, original: f.value, context: context)
             )
           }
           if !rows.isEmpty {
-            blocks.append(.init(title: s.title.isEmpty ? "事件事实" : s.title, rows: rows))
+            blocks.append(
+              .init(
+                title: s.title.isEmpty
+                  ? context.text("log_detail.event_facts")
+                  : ProductTextPresentation.staticEventLabel(
+                    s.titleText, original: s.title, context: context), rows: rows))
           }
         }
         if let started = event.startedAt, let ended = record?.lastAt, ended >= started {
           blocks.append(
             .init(
-              title: "操作时间",
+              title: context.text("log_detail.operation_time"),
               rows: [
-                ("开始", TrafficFormatting.dateMinute(started)),
-                ("完成", TrafficFormatting.dateMinute(ended)),
-                ("操作耗时", TrafficFormatting.milliseconds(ended.timeIntervalSince(started) * 1000)),
+                (context.text("log_detail.started"), TrafficFormatting.dateMinute(started)),
+                (context.text("log_detail.completed"), TrafficFormatting.dateMinute(ended)),
+                (
+                  context.text("log_detail.operation_duration"),
+                  TrafficFormatting.milliseconds(ended.timeIntervalSince(started) * 1000)
+                ),
               ]))
         }
         if !event.errorCode.isEmpty {
           missing.append(
-            "错误类别：" + event.errorCode)
+            context.text("log_detail.error_category") + event.errorCode)
         }
-        if event.sections.isEmpty { missing.append("这次事件只保存了结果，没有保存更多上下文。") }
+        if event.sections.isEmpty { missing.append(context.text("log_detail.event_no_context")) }
       } else {
         if let r = record, !r.operationFrom.isEmpty || !r.operationTo.isEmpty {
           blocks.append(
             .init(
-              title: "线路变化",
+              title: context.text("log_detail.route_change"),
               rows: [
                 (
-                  "线路",
-                  (r.operationFrom.isEmpty ? "旧线路未保存" : r.operationFrom) + " → "
-                    + (r.operationTo.isEmpty ? "新线路未保存" : r.operationTo)
+                  context.text("log_detail.route"),
+                  (r.operationFrom.isEmpty
+                    ? context.text("log_detail.old_route_missing") : r.operationFrom) + " → "
+                    + (r.operationTo.isEmpty
+                      ? context.text("log_detail.new_route_missing") : r.operationTo)
                 )
               ]))
         }
-        missing.append("这条历史事件未保存结构化详情，仅展示已有结果。")
+        missing.append(context.text("log_detail.legacy_event"))
       }
     }
     sections = blocks

@@ -47,13 +47,16 @@ public final class PaxInlineStatus: NSView {
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public func apply(
     _ state: State, text: String, action title: String? = nil,
-    additionalCount: Int = 0, dismissible: Bool = false, detail: String? = nil
+    additionalCount: Int = 0, dismissible: Bool = false, detail: String? = nil,
+    moreTitle: String? = nil, dismissTitle: String = "关闭提示", dismissHelp: String = "仅关闭提示，不改变连接状态"
   ) {
     label.stringValue = text
     toolTip = detail ?? text
     action.title = title.map { $0 + " ›" } ?? ""
     action.isHidden = title == nil
-    more.title = "查看 \(additionalCount) 项"
+    more.title = moreTitle ?? "查看 \(additionalCount) 项"
+    close.setAccessibilityLabel(dismissTitle)
+    close.toolTip = dismissHelp
     more.isHidden = additionalCount == 0
     close.isHidden = !dismissible
     spinner.isHidden = state != .working

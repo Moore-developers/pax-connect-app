@@ -15,8 +15,8 @@ const (
 	logsVacuumPages      = 64
 )
 
-// maintain prunes by retention, evicts past the capacity cap and, only when the backlog is
-// clear, returns free pages and truncates the WAL (HS-R1, HS-R2). One pass is bounded by
+// maintain prunes by retention and, only when the backlog is clear, returns free
+// pages and truncates the WAL (HS-R1, HS-R2). One pass is bounded by
 // logsMaintainRows or logsMaintainDuration; Pruned.More postpones the rest to the next pass.
 func (l *historyLogs) maintain(ctx context.Context) time.Duration {
 	now := l.now()
@@ -43,21 +43,6 @@ func (l *historyLogs) maintain(ctx context.Context) time.Duration {
 	}
 	if state == "building" {
 		return 0
-	}
-	live, err := l.logs.CapacityBytes(ctx)
-	if err != nil {
-		return l.fail(ctx, "history_logs_maintain_failed")
-	}
-	if live > l.capBytes {
-		evicted, evictErr := l.logs.EvictOldest(ctx, l.capBytes, limits)
-		if evictErr != nil {
-			return l.fail(ctx, "history_logs_maintain_failed")
-		}
-		if evicted {
-			if err = l.bumpDeletion(ctx); err != nil {
-				return l.fail(ctx, "history_logs_maintain_failed")
-			}
-		}
 	}
 	l.idleMaintenance(ctx)
 	return 0

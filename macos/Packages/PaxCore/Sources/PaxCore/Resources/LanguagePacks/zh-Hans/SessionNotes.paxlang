@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "session_note.sessions": {
+      "other": "{count} 个会话"
+    },
+    "session_note.more_models": {
+      "other": "另 {count} 个模型"
+    },
+    "session_title.unavailable": "会话名称暂不可读",
+    "session_title.missing": "源记录已移除",
+    "session_title.unsupported": "暂不支持的会话格式",
+    "session_title.indexing": "会话名称索引中",
+    "session_title.unnamed": "客户端尚未命名",
+    "session_title.recent_message": "最近消息：",
+    "session_chart.context_title": "上下文 token",
+    "session_chart.cost_title": "单次输入费用",
+    "session_chart.empty": "没有已记录的请求数据",
+    "session_title.unnamed_id": "未命名会话 · {id}",
+    "session_title.recent_with_title": "最近消息：{title}"
+  }
+}

@@ -73,7 +73,7 @@ public final class ComponentGalleryViewController: NSViewController {
       .init(
         id: "one", name: "洛杉矶 · 首选", connection: "VMess · WS · TLS", cf: "CF", current: true,
         address: "198.51.100.24", latency: "198 ms", speed: "4.1 MB/s"),
-      .init(id: "two", name: "香港 → 东京", connection: "VLESS · TCP · TLS", chained: true),
+      .init(id: "two", name: "香港 → 东京", connection: "VLESS · TCP · TLS", chainLabel: "链式代理"),
       .init(id: "three", name: "台北 · 新增", connection: "VLESS · WS · TLS"),
     ])
     directory.heightAnchor.constraint(

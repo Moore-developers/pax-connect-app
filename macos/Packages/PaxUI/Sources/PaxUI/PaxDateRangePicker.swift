@@ -16,6 +16,7 @@ public final class PaxDateRangePicker: NSViewController {
   public var onApply: ((Range) -> String?)?
   public var onCancel: (() -> Void)?
 
+  private let copy: PaxDateRangeCopy
   private let calendar: Calendar
   private let now: Date
   private let options: PaxDateRangeOptions
@@ -28,13 +29,14 @@ public final class PaxDateRangePicker: NSViewController {
   private let titles = [PaxText.label(""), PaxText.label("")]
   private let errorLabel = PaxText.label("", font: PaxTheme.Typography.caption())
   private lazy var apply = PaxCompactButton(
-    "应用", style: .primary, target: self, action: #selector(applyTapped))
+    copy.apply, style: .primary, target: self, action: #selector(applyTapped))
   private var presetButtons: [(PaxDatePreset, PaxCompactButton)] = []
 
   public init(
     start: Date, end: Date, calendar: Calendar = .current, now: Date = Date(),
-    options: PaxDateRangeOptions = .init()
+    options: PaxDateRangeOptions = .init(), copy: PaxDateRangeCopy = .init()
   ) {
+    self.copy = copy
     self.calendar = calendar
     self.now = now
     self.options = options
@@ -58,9 +60,9 @@ public final class PaxDateRangePicker: NSViewController {
     footer.alignment = .centerY
     footer.spacing = PaxTheme.Spacing.tight
 
-    let spanHint = options.maxSpanDays.map { "（含首尾最多\($0)天）" } ?? ""
+    let spanHint = options.maxSpanDays.map(copy.spanHint) ?? ""
     let hint = PaxText.label(
-      "点选一天后可直接应用，或再选一天组成区间" + spanHint, font: PaxTheme.Typography.caption(), secondary: true)
+      copy.hint + spanHint, font: PaxTheme.Typography.caption(), secondary: true)
     let content = NSStackView(views: [monthHost, hint, errorLabel, footer])
     content.orientation = .vertical
     content.alignment = .leading
@@ -89,9 +91,10 @@ public final class PaxDateRangePicker: NSViewController {
     row.spacing = PaxTheme.Spacing.xs
     for (index, preset) in options.presets.enumerated() {
       let button = PaxCompactButton(
-        preset.title, style: .text, target: self, action: #selector(presetTapped(_:)))
+        (copy.presetTitles[preset] ?? preset.title), style: .text, target: self,
+        action: #selector(presetTapped(_:)))
       button.tag = index
-      button.setAccessibilityLabel("选择" + preset.title)
+      button.setAccessibilityLabel(copy.selectPrefix + (copy.presetTitles[preset] ?? preset.title))
       presetButtons.append((preset, button))
       row.addArrangedSubview(button)
     }
@@ -99,7 +102,8 @@ public final class PaxDateRangePicker: NSViewController {
   }
 
   private func actionRow() -> NSView {
-    let cancel = PaxCompactButton("取消", style: .text, target: self, action: #selector(cancelTapped))
+    let cancel = PaxCompactButton(
+      copy.cancel, style: .text, target: self, action: #selector(cancelTapped))
     let row = NSStackView(views: [cancel, apply])
     row.orientation = .horizontal
     row.alignment = .centerY
@@ -116,7 +120,7 @@ public final class PaxDateRangePicker: NSViewController {
       button.contentTintColor = PaxTheme.Color.textSecondary
       button.tag = step
       button.setAccessibilityLabel(
-        abs(step) == 12 ? (step < 0 ? "上一年" : "下一年") : (step < 0 ? "上个月" : "下个月"))
+        copy.navigation[step] ?? "")
       return button
     }
     let row = NSStackView(views: buttons)
@@ -127,9 +131,8 @@ public final class PaxDateRangePicker: NSViewController {
   private func monthColumn(_ month: PaxCalendarMonthView, title: NSTextField, left: Bool)
     -> NSView
   {
-    title.stringValue =
-      "\(calendar.component(.year, from: month.month))年 "
-      + "\(calendar.component(.month, from: month.month))月"
+    title.stringValue = copy.monthTitle(
+      calendar.component(.year, from: month.month), calendar.component(.month, from: month.month))
     title.font = PaxTheme.Typography.label(weight: .semibold)
     let nav =
       left
@@ -170,7 +173,9 @@ public final class PaxDateRangePicker: NSViewController {
   private func rebuildMonths() {
     for item in monthHost.arrangedSubviews { item.removeFromSuperview() }
     let right = calendar.date(byAdding: .month, value: 1, to: leftMonth) ?? leftMonth
-    months = [leftMonth, right].map { PaxCalendarMonthView(month: $0, calendar: calendar) }
+    months = [leftMonth, right].map {
+      PaxCalendarMonthView(month: $0, calendar: calendar, weekdaySymbols: copy.weekdays)
+    }
     for (index, month) in months.enumerated() {
       month.onTap = { [weak self] in self?.tap($0) }
       month.onHover = { [weak self] in

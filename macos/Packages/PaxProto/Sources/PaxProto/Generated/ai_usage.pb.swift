@@ -1289,6 +1289,27 @@ public nonisolated struct Pax_V1_AIUsageLimitRow: @unchecked Sendable {
     set {_uniqueStorage()._unpriced = newValue}
   }
 
+  /// Distinct sessions in an all-session model row; absent in legacy replies and other row kinds.
+  public var sessionCount: Int64 {
+    get {_storage._sessionCount ?? 0}
+    set {_uniqueStorage()._sessionCount = newValue}
+  }
+  /// Returns true if `sessionCount` has been explicitly set.
+  public var hasSessionCount: Bool {_storage._sessionCount != nil}
+  /// Clears the value of `sessionCount`. Subsequent reads from it will return its default value.
+  public mutating func clearSessionCount() {_uniqueStorage()._sessionCount = nil}
+
+  /// Raw catalog title and provenance; title remains the legacy display fallback.
+  public var titleSource: String {
+    get {_storage._titleSource}
+    set {_uniqueStorage()._titleSource = newValue}
+  }
+
+  public var rawTitle: String {
+    get {_storage._rawTitle}
+    set {_uniqueStorage()._rawTitle = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3786,7 +3807,7 @@ nonisolated extension Pax_V1_AIUsageLimitFlat: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageLimitRow"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}cli\0\u{3}session_id\0\u{1}title\0\u{1}model\0\u{1}effort\0\u{1}emphasized\0\u{1}note\0\u{1}bands\0\u{1}lines\0\u{3}model_lines\0\u{1}multiple\0\u{3}over_spend\0\u{1}flat\0\u{1}unpriced\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}cli\0\u{3}session_id\0\u{1}title\0\u{1}model\0\u{1}effort\0\u{1}emphasized\0\u{1}note\0\u{1}bands\0\u{1}lines\0\u{3}model_lines\0\u{1}multiple\0\u{3}over_spend\0\u{1}flat\0\u{1}unpriced\0\u{3}session_count\0\u{3}title_source\0\u{3}raw_title\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -3804,6 +3825,9 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
     var _overSpend: Pax_V1_AIUsageLimitMoney? = nil
     var _flat: Pax_V1_AIUsageLimitFlat? = nil
     var _unpriced: Int64 = 0
+    var _sessionCount: Int64? = nil
+    var _titleSource: String = String()
+    var _rawTitle: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -3829,6 +3853,9 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
       _overSpend = source._overSpend
       _flat = source._flat
       _unpriced = source._unpriced
+      _sessionCount = source._sessionCount
+      _titleSource = source._titleSource
+      _rawTitle = source._rawTitle
     }
   }
 
@@ -3862,6 +3889,9 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
         case 13: try { try decoder.decodeSingularMessageField(value: &_storage._overSpend) }()
         case 14: try { try decoder.decodeSingularMessageField(value: &_storage._flat) }()
         case 15: try { try decoder.decodeSingularInt64Field(value: &_storage._unpriced) }()
+        case 16: try { try decoder.decodeSingularInt64Field(value: &_storage._sessionCount) }()
+        case 17: try { try decoder.decodeSingularStringField(value: &_storage._titleSource) }()
+        case 18: try { try decoder.decodeSingularStringField(value: &_storage._rawTitle) }()
         default: break
         }
       }
@@ -3919,6 +3949,15 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
       if _storage._unpriced != 0 {
         try visitor.visitSingularInt64Field(value: _storage._unpriced, fieldNumber: 15)
       }
+      try { if let v = _storage._sessionCount {
+        try visitor.visitSingularInt64Field(value: v, fieldNumber: 16)
+      } }()
+      if !_storage._titleSource.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._titleSource, fieldNumber: 17)
+      }
+      if !_storage._rawTitle.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._rawTitle, fieldNumber: 18)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3943,6 +3982,9 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
         if _storage._overSpend != rhs_storage._overSpend {return false}
         if _storage._flat != rhs_storage._flat {return false}
         if _storage._unpriced != rhs_storage._unpriced {return false}
+        if _storage._sessionCount != rhs_storage._sessionCount {return false}
+        if _storage._titleSource != rhs_storage._titleSource {return false}
+        if _storage._rawTitle != rhs_storage._rawTitle {return false}
         return true
       }
       if !storagesAreEqual {return false}

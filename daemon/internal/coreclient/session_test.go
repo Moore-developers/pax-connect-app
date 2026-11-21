@@ -2,9 +2,12 @@ package coreclient
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
+	"slices"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -26,6 +29,8 @@ type fixtureCore struct {
 	applyErr   error
 	selectMode string
 	powers     []uint64
+	sources    []string
+	update     *pb.ApplyProfileRequest
 }
 
 func (f *fixtureCore) Hello(context.Context, *emptypb.Empty) (*pb.HelloResponse, error) {
@@ -37,8 +42,65 @@ func (f *fixtureCore) ApplyProfile(_ context.Context, r *pb.ApplyProfileRequest)
 		return nil, f.applyErr
 	}
 	f.profiles = append(f.profiles, r.ProfileJson)
+	f.sources = r.RoutingSources
 	f.hello.ServiceStatus = "STARTED"
 	return &pb.ApplyProfileResponse{Revision: r.Revision}, nil
+}
+
+func (f *fixtureCore) UpdateRouting(_ context.Context, req *pb.ApplyProfileRequest) (*pb.ApplyProfileResponse, error) {
+	f.update = req
+	return &pb.ApplyProfileResponse{Revision: req.Revision}, nil
+}
+
+func TestSessionUsesAdmittedOutboundsForUnavailableRouteLabelsAndHotUpdate(t *testing.T) {
+	ctx := context.Background()
+	f := &fixtureCore{hello: &pb.HelloResponse{
+		ProtocolVersion: 6, Fingerprint: "fixture", OwnerPid: 123, ServiceStatus: "IDLE",
+	}}
+	s := fixtureSession(t, f)
+	library := config.NewRoutingLibrary()
+	library.RouteNames = map[string]string{"route:a": "A"}
+	claude := config.NewClaudeRoutingPackage()
+	claude.Destination, claude.Enabled = "route:a", true
+	library.Packages = slices.Insert(library.Packages, library.BuiltInStart(), claude)
+	a := config.RouteConfig{NodeProfile: config.NodeProfile{ID: "a"}}
+	b := config.RouteConfig{NodeProfile: config.NodeProfile{ID: "b"}, Routing: &library}
+	s.ConfigureCatalogBuilder(func(context.Context, []config.RouteConfig, config.RouteConfig) (string, error) {
+		return "{\"outbounds\":[{\"tag\":\"" + config.RuntimeTag(b) + "\"}],\"route\":{},\"dns\":{}}", nil
+	})
+	if err := s.ApplyCatalog(ctx, []config.RouteConfig{a, b}, b); err != nil {
+		t.Fatal(err)
+	}
+	expectedLabel := func(label string) bool {
+		evidence, ok := config.RecordedRoutingEvidence(label)
+		return ok && evidence.Package == config.ClaudePackageName && evidence.UnavailableRoute == "A"
+	}
+	if !slices.ContainsFunc(f.sources, expectedLabel) || s.tags[config.RuntimeTag(a)] {
+		t.Fatal("startup labeled an omitted route as available", f.sources)
+	}
+	routes := map[string]string{"route:a": config.RuntimeTag(a), "route:b": config.RuntimeTag(b)}
+	if err := s.UpdateRouting(ctx, library, nil, routes); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(f.update.RoutingSources, expectedLabel) ||
+		!strings.Contains(f.update.ProfileJson, "\"no_drop\":true") ||
+		strings.Contains(f.update.ProfileJson, config.RuntimeTag(a)) || routes["route:a"] == "" {
+		t.Fatal("hot update used an omitted outbound or lost the caller's route map", f.update)
+	}
+	type dnsRule struct {
+		DomainSuffix []string `json:"domain_suffix"`
+		Action       string   `json:"action"`
+		NoDrop       bool     `json:"no_drop"`
+	}
+	var document struct{ DNS struct{ Rules []dnsRule } }
+	if err := json.Unmarshal([]byte(f.update.ProfileJson), &document); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(document.DNS.Rules, func(rule dnsRule) bool {
+		return slices.Contains(rule.DomainSuffix, "claude.ai") && rule.Action == "reject" && rule.NoDrop
+	}) {
+		t.Fatal("hot update must refuse Claude DNS on the omitted outbound", document.DNS.Rules)
+	}
 }
 
 func TestSessionPreservesScrubbedCoreStartFailureDetail(t *testing.T) {

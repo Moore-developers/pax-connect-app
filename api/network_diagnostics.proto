@@ -2,6 +2,7 @@ syntax = "proto3";
 package pax.v1;
 import "google/protobuf/timestamp.proto";
 import "route_exit.proto";
+import "presentation.proto";
 option go_package = "pax-connect/daemon/gen/proto/paxv1";
 
 // Bounded, read-only measurements. Cancelling the RPC cancels all probes.
@@ -26,6 +27,8 @@ message NetworkDiagnosticFact {
   string group = 1; string label = 2; string value = 3; string source = 4;
   string state = 5; // information, hit, clear, unknown
   string provider_id = 6;
+  string kind = 7;
+  ProductText label_text = 8; ProductText value_text = 9; ProductText source_text = 10;
 }
 // One bounded exact-IP request, including skipped/failed attempts and fallback provenance.
 message NetworkDiagnosticProvider {

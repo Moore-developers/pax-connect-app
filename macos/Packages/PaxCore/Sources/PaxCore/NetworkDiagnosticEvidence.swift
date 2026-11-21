@@ -2,77 +2,117 @@ import Foundation
 import PaxClient
 
 extension NetworkDiagnosticPresentation {
-  public static func channel(_ id: String?) -> String {
-    guard let id, !id.isEmpty else { return "旧记录 · 获取渠道未记录" }
-    return id == "ipx.al" ? "补充 · 经 ipx.al" : "直接查询 · " + id
+  public static func channel(_ id: String?, context: PresentationContext = .chinese) -> String {
+    guard let id, !id.isEmpty else { return context.text("diagnostic_evidence.dac5117cf5") }
+    return id == "ipx.al"
+      ? context.text("diagnostic_evidence.2853d2265f")
+      : context.text("diagnostic_evidence.9c783c56dc") + id
   }
 
-  public static func capabilityName(_ value: String) -> String {
+  public static func capabilityName(_ value: String, context: PresentationContext = .chinese)
+    -> String
+  {
     [
-      "geo.country": "国家", "geo.asn": "ASN", "risk.proxy": "代理", "risk.vpn": "VPN",
-      "risk.tor": "Tor", "risk.datacenter": "机房 IP", "risk.mobile": "移动网络",
-      "exposure.ports": "开放端口", "exposure.vulns": "已知漏洞", "exposure.tags": "Shodan 标签",
-      "risk.relay": "iCloud 中继", "risk.anonymous": "匿名出口", "risk.abuse": "滥用标记",
-      "risk.proxy_score": "代理风险（ipx.al阈值）", "risk.crawler": "爬虫", "risk.threat": "威胁情报名单",
-      "risk.scanner": "恶意扫描", "risk.dnsbl": "邮件 DNSBL", "exposure.certificate": "自签证书",
-      "risk.residential": "伪家宽", "risk.human": "人类流量比例", "risk.broadcast": "广播 IP",
+      "geo.country": context.text("diagnostic_evidence.0cc659a9f5"), "geo.asn": "ASN",
+      "risk.proxy": context.text("diagnostic_evidence.5e84ea61e8"), "risk.vpn": "VPN",
+      "risk.tor": "Tor", "risk.datacenter": context.text("diagnostic_evidence.37727441a2"),
+      "risk.mobile": context.text("diagnostic_evidence.a5c27195f9"),
+      "exposure.ports": context.text("diagnostic_evidence.b4de56b75b"),
+      "exposure.vulns": context.text("diagnostic_evidence.c2771a9f31"),
+      "exposure.tags": context.text("diagnostic_evidence.fbfc455154"),
+      "risk.relay": context.text("diagnostic_evidence.8f827a1a74"),
+      "risk.anonymous": context.text("diagnostic_evidence.47858034c7"),
+      "risk.abuse": context.text("diagnostic_evidence.7ae2f9ea88"),
+      "risk.proxy_score": context.text("diagnostic_evidence.7b4fc92bc7"),
+      "risk.crawler": context.text("diagnostic_evidence.4c480479f7"),
+      "risk.threat": context.text("diagnostic_evidence.89748218e6"),
+      "risk.scanner": context.text("diagnostic_evidence.8b1a92ecd3"),
+      "risk.dnsbl": context.text("diagnostic_evidence.2588a90b8a"),
+      "exposure.certificate": context.text("diagnostic_evidence.84c85aec1b"),
+      "risk.residential": context.text("diagnostic_evidence.8ad0c5026e"),
+      "risk.human": context.text("diagnostic_evidence.db382141d6"),
+      "risk.broadcast": context.text("diagnostic_evidence.4fae07c642"),
     ][value] ?? value
   }
 
-  public static func providerState(_ provider: NetworkDiagnosticReport.Provider) -> String {
+  public static func providerState(
+    _ provider: NetworkDiagnosticReport.Provider, context: PresentationContext = .chinese
+  ) -> String {
     switch provider.state {
-    case "observed": return "已返回资料"
-    case "partial": return "部分字段未提供"
-    case "not_indexed": return "该源未收录，不代表没有暴露记录"
-    case "unsupported": return "该来源本次地址族未支持"
-    case "not_configured": return "未配置来源"
-    default: return problem(provider.errorCode)
+    case "observed": return context.text("diagnostic_evidence.388de336c0")
+    case "partial": return context.text("diagnostic_evidence.69400e86b5")
+    case "not_indexed": return context.text("diagnostic_evidence.fc0ba14b5e")
+    case "unsupported": return context.text("diagnostic_evidence.41ade02db3")
+    case "not_configured": return context.text("diagnostic_evidence.d2cdeb54eb")
+    default: return problem(provider.errorCode, context: context)
     }
   }
 
   @MainActor public static func providerDetails(
-    _ report: NetworkDiagnosticReport?, id: String?
+    _ report: NetworkDiagnosticReport?, id: String?, context: PresentationContext = .chinese
   ) -> String {
     guard let provider = report?.providers?.first(where: { $0.id == id }) else {
-      return id == nil ? "未记录逐源请求证据；未知项目不作安全判断" : "尚无该来源请求证据"
+      return id == nil
+        ? context.text("diagnostic_evidence.c6836a4151")
+        : context.text("diagnostic_evidence.0737a77900")
     }
     var lines = [
-      "获取渠道：" + channel(provider.id),
-      "查询地址：" + provider.queryIP + " · " + provider.family,
-      "查询时间：" + (provider.at.map { MeasurementTimestamp.secondsText($0) } ?? "未记录"),
-      "请求结果：" + providerState(provider) + " · \(provider.durationMS) ms",
+      context.text("diagnostic_evidence.b326e8192b") + channel(provider.id, context: context),
+      context.text("diagnostic_evidence.dc4a9daa70") + provider.queryIP + " · " + provider.family,
+      context.text("diagnostic_evidence.732f16436c")
+        + (provider.at.map { MeasurementTimestamp.secondsText($0) }
+          ?? context.text("diagnostic_evidence.7450cc5b16")),
+      context.text("diagnostic_evidence.e25c88e513") + providerState(provider, context: context)
+        + " · \(provider.durationMS) ms",
     ]
     if provider.httpStatus > 0 { lines.append("HTTP：\(provider.httpStatus)") }
     if !provider.capabilities.isEmpty {
-      lines.append("已返回能力：" + provider.capabilities.map(capabilityName).joined(separator: "、"))
+      lines.append(
+        context.text("diagnostic_evidence.de7fb4b798")
+          + provider.capabilities.map { capabilityName($0, context: context) }.joined(
+            separator: "、"))
     }
     if !provider.fallbackFor.isEmpty {
       lines.append(
         provider.fallbackReason == "independent_coverage_missing"
-          ? "补充原因：独立来源未覆盖或未取得该项资料"
-          : "备用原因：对应能力的独立来源失败或缺有效字段")
-      lines.append("仅补缺：" + provider.fallbackFor.map(capabilityName).joined(separator: "、"))
+          ? context.text("diagnostic_evidence.e0cca5c68a")
+          : context.text("diagnostic_evidence.f698d2d2ba"))
+      lines.append(
+        context.text("diagnostic_evidence.03134622e3")
+          + provider.fallbackFor.map { capabilityName($0, context: context) }.joined(separator: "、")
+      )
     }
     return lines.joined(separator: "\n")
   }
 
-  public static func acquisitionSummary(_ report: NetworkDiagnosticReport?) -> String {
-    guard let providers = report?.providers else { return "旧记录未采集逐源请求；请按需重新检测" }
+  public static func acquisitionSummary(
+    _ report: NetworkDiagnosticReport?, context: PresentationContext = .chinese
+  ) -> String {
+    guard let providers = report?.providers else {
+      return context.text("diagnostic_evidence.9325ec09e6")
+    }
     let direct = providers.filter { $0.id != "ipx.al" }
     let answered = direct.filter { ["observed", "partial", "not_indexed"].contains($0.state) }.count
     if let fallback = providers.first(where: { $0.id == "ipx.al" }) {
-      return "独立来源 \(answered)/\(direct.count) 返回；ipx.al 补充：" + providerState(fallback)
+      return context.text(
+        "diagnostic_evidence.6c686d7b7c",
+        ["arg0": String(describing: answered), "arg1": String(describing: direct.count)])
+        + providerState(fallback, context: context)
     }
-    return "独立来源 \(answered)/\(direct.count) 返回；未请求 ipx.al"
+    return context.text(
+      "diagnostic_evidence.dedda3b38d",
+      ["arg0": String(describing: answered), "arg1": String(describing: direct.count)])
   }
 
-  public static func nativeAssessment(_ report: NetworkDiagnosticReport?) -> Assessment {
+  public static func nativeAssessment(
+    _ report: NetworkDiagnosticReport?, context: PresentationContext = .chinese
+  ) -> Assessment {
     let fact = report?.facts.first { $0.group == "registration" && $0.label == "原生 / 广播" }
     let name: String
     switch fact?.value {
-    case "native": name = "原生 IP"
-    case "broadcast": name = "广播 IP"
-    default: return Assessment(text: "未确认", tone: .pending)
+    case "native": name = context.text("diagnostic_evidence.d8750d60af")
+    case "broadcast": name = context.text("diagnostic_evidence.4fae07c642")
+    default: return Assessment(text: context.text("diagnostic_evidence.c098e854e6"), tone: .pending)
     }
     return Assessment(text: name, tone: .information)
   }
@@ -88,13 +128,15 @@ extension NetworkDiagnosticPresentation {
   }
 
   @MainActor public static func factDetails(
-    _ fact: NetworkDiagnosticFact?, report: NetworkDiagnosticReport?
+    _ fact: NetworkDiagnosticFact?, report: NetworkDiagnosticReport?,
+    context: PresentationContext = .chinese
   )
     -> String
   {
-    guard let fact else { return "本阶段未取得独立来源资料，未作判断" }
+    guard let fact else { return context.text("diagnostic_evidence.adae7def03") }
     if fact.providerID == nil, report?.providers != nil {
-      return "资料来源：" + fact.source + "\n本阶段未取得该项有效证据；以各来源实际响应为准。"
+      return context.text("diagnostic_evidence.17e6171763") + fact.source
+        + context.text("diagnostic_evidence.7c4fe31b9d")
     }
     let records =
       report?.facts.filter {
@@ -103,18 +145,19 @@ extension NetworkDiagnosticPresentation {
     let lists =
       fact.label == "邮件 DNSBL"
       ? (report?.facts.filter { $0.group == "dnsbl" && $0.providerID == fact.providerID }
-        .map { $0.label + "：" + factState($0.state) } ?? []) : []
+        .map { $0.label + "：" + factState($0.state, context: context) } ?? []) : []
     let numbers =
       report?.facts.filter {
         $0.group == "raw_risk" && $0.providerID == fact.providerID
-      }.map { $0.label + "：" + $0.value + "（供应方策略值，不是概率或总体安全分）" } ?? []
+      }.map { $0.label + "：" + $0.value + context.text("diagnostic_evidence.cfd800000c") } ?? []
     return
       ([
-        "资料来源：" + fact.source, "供应方判断：" + factState(fact.state),
-        providerDetails(report, id: fact.providerID),
+        context.text("diagnostic_evidence.17e6171763") + fact.source,
+        context.text("diagnostic_evidence.0fc5a5c889") + factState(fact.state, context: context),
+        providerDetails(report, id: fact.providerID, context: context),
       ] + records + lists + numbers + [
-        fact.providerID == "internetdb" ? "InternetDB 每周更新；未提供本条扫描时间。" : "",
-        "供应方资料，不是本机实时扫描；未标记不等于安全。",
+        fact.providerID == "internetdb" ? context.text("diagnostic_evidence.d55371c8c4") : "",
+        context.text("diagnostic_evidence.8fe100bd59"),
       ])
       .joined(separator: "\n")
   }

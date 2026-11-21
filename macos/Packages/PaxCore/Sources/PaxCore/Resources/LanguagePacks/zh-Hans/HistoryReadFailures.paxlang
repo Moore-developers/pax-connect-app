@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "logs_read.backend_update": "后台未提供连接摘要，请更新后台",
+    "logs_read.directory_failed": "读取应用目录失败 · {error}",
+    "logs_read.failed": "读取失败 · {error}",
+    "logs_read.failed_retained": "读取失败，保留上次快照 · {error}",
+    "logs_read.recovered": "旧快照已失效，已重新读取最新记录",
+    "traffic_read.snapshot_changed": "流量快照已变化，请重新读取"
+  }
+}

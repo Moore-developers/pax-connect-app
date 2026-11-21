@@ -30,15 +30,7 @@ func TestHistorySurvivesFailureNetworkAndReload(t *testing.T) {
 		t.Fatal("another network inherited result")
 	}
 }
-func TestDownloadUsesOneSample(t *testing.T) {
-	calls := 0
-	var got Record
-	p := Probe{Download: func(context.Context, string) (float64, error) { calls++; return 2500, nil }, Now: func() time.Time { return time.Unix(42, 0) }}
-	err := Download(context.Background(), "A", []string{"104.16.0.1"}, 1, p, func(r Record) { got = r }, func(Progress) {})
-	if err != nil || got.Download.Value != 2500 || got.Download.Rounds != 1 || calls != 1 {
-		t.Fatal(got, err, calls)
-	}
-}
+
 func TestPreciseTCPNeedsTwoSuccessesAndTakesMedian(t *testing.T) {
 	calls := 0
 	var got Record
@@ -51,14 +43,6 @@ func TestPreciseTCPNeedsTwoSuccessesAndTakesMedian(t *testing.T) {
 	}}, func(r Record) { got = r }, func(Progress) {})
 	if err != nil || got.TCP.Value != 200 || !got.Reachable {
 		t.Fatal(got)
-	}
-}
-
-func TestBindingFailurePausesWithoutReplacingHistory(t *testing.T) {
-	emitted := 0
-	err := MeasureTCP(context.Background(), []string{"104.16.0.1", "104.16.0.2"}, "A", 3, 2, Probe{TCP: func(context.Context, string) (time.Duration, error) { return 0, ErrEnvironment }}, func(Record) { emitted++ }, func(Progress) {})
-	if !errors.Is(err, ErrEnvironment) || emitted != 0 {
-		t.Fatal("binding failure blamed remote IPs", emitted, err)
 	}
 }
 

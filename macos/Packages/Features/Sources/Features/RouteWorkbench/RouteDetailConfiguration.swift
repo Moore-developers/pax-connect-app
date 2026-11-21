@@ -9,17 +9,23 @@ extension RouteDetailController {
     if let node = store.node(id), ["socks", "http"].contains(node.protocolName) {
       do {
         let form = RouteProxyForm(
-          try ProxyRouteDraft(document: draft.json, name: draft.name), editing: true)
+          try ProxyRouteDraft(document: draft.json, name: draft.name), editing: true,
+          context: self.interfaceCopy.context)
         form.onResize = { [weak self] in self?.pane.invalidateContentSize() }
         proxyForm = form
-        section("代理设置", symbol: "slider.horizontal.3", views: [form])
+        section(
+          self.interfaceCopy.text("interface_detail.48b970b568"), symbol: "slider.horizontal.3",
+          views: [form])
       } catch { showError(error) }
       return
     }
     section(
-      "线路信息", symbol: "info.circle",
-      views: [configurationField("线路名称", "name", draft.name)])
-    if let chain = store.info(id).chain {
+      self.interfaceCopy.text("interface_detail.328fb2fbfd"), symbol: "info.circle",
+      views: [
+        configurationField(
+          self.interfaceCopy.text("interface_detail.2035432e8a"), "name", draft.name)
+      ])
+    if let chain = store.info(id, context: self.interfaceCopy.context).chain {
       let popup = PaxRoutePicker()
       popup.addItems(withTitles: frontChoices.map(\.name))
       popup.identifier = NSUserInterfaceItemIdentifier("chain-front")
@@ -30,20 +36,27 @@ extension RouteDetailController {
       popup.target = self
       popup.action = #selector(frontChanged(_:))
       section(
-        "连接路径", symbol: "point.3.connected.trianglepath.dotted",
+        self.interfaceCopy.text("action.traffic.connection_path"),
+        symbol: "point.3.connected.trianglepath.dotted",
         views: [
-          PaxSectionHeader("前置线路"), popup,
-          PaxRouteText.label("最终线路：" + (store.node(chain.final)?.name ?? "不可用")),
-          PaxConnectionPath(nodes: store.path(id, frontID: draft.frontID)),
+          PaxSectionHeader(self.interfaceCopy.text("action.routes.front_route")), popup,
+          PaxRouteText.label(
+            self.interfaceCopy.text("interface_detail.d51deefa0d")
+              + (store.node(chain.final)?.name
+                ?? self.interfaceCopy.text("interface_detail.460b3574e4"))),
+          PaxConnectionPath(
+            nodes: store.path(id, frontID: draft.frontID, context: self.interfaceCopy.context)),
         ])
       return
     }
-    let server = field("服务器地址", value: draft.server, identifier: "server")
+    let server = field(
+      self.interfaceCopy.text("action.routes.server_address"), value: draft.server,
+      identifier: "server")
     inputs["server"] = server.1
     server.1.delegate = self
     var serverView: NSView = server.0
     if connection.supportsCF {
-      let choose = button("选择 CF IP…", #selector(chooseCF))
+      let choose = button(self.interfaceCopy.text("action.cf.choose_ip"), #selector(chooseCF))
       choose.isEnabled = !store.isLive || store.hasCFCandidates
       choose.setAccessibilityIdentifier("choose-cf-ip")
       choose.image = PaxRouteIcon.image("cloud")
@@ -66,32 +79,37 @@ extension RouteDetailController {
       vertical.addArrangedSubview(line)
       line.widthAnchor.constraint(equalTo: vertical.widthAnchor).isActive = true
       let enabled = NSButton(
-        checkboxWithTitle: "作为 CF 入口", target: self, action: #selector(cfEnabled(_:)))
+        checkboxWithTitle: self.interfaceCopy.text("action.cf.use_entry"), target: self,
+        action: #selector(cfEnabled(_:)))
       enabled.state = draft.cf ? .on : .off
       enabled.font = PaxTheme.Typography.caption()
       vertical.addArrangedSubview(enabled)
       serverView = vertical
     }
-    let port = configurationField("端口", "port", draft.port)
+    let port = configurationField(self.interfaceCopy.text("log_detail.port"), "port", draft.port)
     var rows: [[NSView]] = [
       [serverView],
       [
         port,
         ["ws", "httpupgrade"].contains(connection.transport)
-          ? configurationField("请求域名 · Host", "host", draft.host) : NSView(),
+          ? configurationField(
+            self.interfaceCopy.text("interface_detail.01d9ab0ecc"), "host", draft.host) : NSView(),
       ],
     ]
     var spanning: Set<Int> = [0]
     if connection.security != "none" {
       spanning.insert(rows.count)
-      rows.append([configurationField("服务器名称 · SNI", "sni", draft.sni)])
+      rows.append([
+        configurationField(self.interfaceCopy.text("interface_detail.87280a55d5"), "sni", draft.sni)
+      ])
     }
     if connection.security == "tls" {
       let fragment = NSButton(
-        checkboxWithTitle: "TLS 记录分片", target: self, action: #selector(recordFragmentChanged(_:)))
+        checkboxWithTitle: self.interfaceCopy.text("action.routes.tls_fragment"), target: self,
+        action: #selector(recordFragmentChanged(_:)))
       fragment.state = draft.recordFragment ? .on : .off
       fragment.font = PaxTheme.Typography.caption()
-      fragment.toolTip = "拆分 TLS 握手记录以改善部分网络的连接兼容性，保留证书校验。"
+      fragment.toolTip = self.interfaceCopy.text("interface_detail.43c3caed45")
       fragment.setAccessibilityIdentifier("route-tls-record-fragment")
       spanning.insert(rows.count)
       rows.append([fragment])
@@ -102,11 +120,11 @@ extension RouteDetailController {
       PaxFeatureTag(connection.security.uppercased(), style: .protocolLabel),
     ])
     section(
-      "连接设置", symbol: "slider.horizontal.3",
+      self.interfaceCopy.text("interface_detail.8d07216266"), symbol: "slider.horizontal.3",
       views: [
         PaxFormGrid(rows: rows, spanning: spanning),
-        PaxRouteText.label(
-          "服务器地址决定连接位置；Host 与 SNI 保留服务端要求的域名。", font: PaxTheme.Typography.caption(),
+        self.interfaceCopy.routeLabel(
+          "action.routes.server_note", font: PaxTheme.Typography.caption(),
           secondary: true, wrapping: true), labels,
       ])
   }

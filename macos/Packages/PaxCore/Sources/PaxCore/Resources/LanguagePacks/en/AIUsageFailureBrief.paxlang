@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "usage.failure.auth": " auth",
+    "usage.failure.quota": "402 quota",
+    "usage.failure.limit": "429 rate limit",
+    "usage.failure.upstream": " upstream",
+    "usage.failure.error": " error",
+    "usage.failure.timeout": "Timeout",
+    "usage.failure.connection": "Connection failed",
+    "usage.failure.failed": "Failed"
+  }
+}

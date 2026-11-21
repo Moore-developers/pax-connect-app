@@ -2,11 +2,57 @@ package controller
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	pb "pax-connect/daemon/gen/proto/paxv1"
 	"pax-connect/daemon/internal/config"
 )
+
+func TestClaudePackageIsDisabledOnUpgradeAndUsesExistingPackageCommands(t *testing.T) {
+	ctx := context.Background()
+	c := New("fixture", "")
+	repo := &memoryRouting{value: config.NewRoutingLibrary()}
+	c.ConfigureRoutingLibrary(repo, nil)
+	if err := c.ConfigureClaudeRules(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.routingLibrarySnapshot("").Packages[1]; got.Id != config.ClaudePackageID || got.Enabled || len(got.Rules) == 0 {
+		t.Fatal(got)
+	}
+	library := repo.value.Clone()
+	for _, q := range []*pb.RoutingMutationRequest{
+		{Action: "save_package", Package: &pb.RoutingPackage{Id: "mine", Kind: "local", Name: "Claude", Destination: "direct"}},
+		{Action: "destination", PackageId: config.ClaudePackageID, Destination: "route:fixed"},
+		{Action: "enable_package", PackageId: config.ClaudePackageID, Enabled: true},
+	} {
+		if err := mutateRouting(&library, q, nil, "", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if library.Packages[1].ID != "mine" || library.Validate() != nil {
+		t.Fatal("custom package must precede the builtin")
+	}
+	for _, action := range []string{"delete_package", "replace_rules", "save_rule", "update"} {
+		if err := mutateRouting(&library, &pb.RoutingMutationRequest{Action: action, PackageId: config.ClaudePackageID}, nil, "", nil); err == nil {
+			t.Fatal("read-only package accepted", action)
+		}
+	}
+	if err := mutateRouting(&library, &pb.RoutingMutationRequest{Action: "move", PackageId: "mine", Delta: 1}, nil, "", nil); err == nil {
+		t.Fatal("custom package moved across builtin")
+	}
+	library.Revision++
+	repo.value = library
+	c.ConfigureRoutingLibrary(repo, nil)
+	if err := c.ConfigureClaudeRules(ctx); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := c.routingLibrarySnapshot("")
+	i := slices.IndexFunc(snapshot.Packages, func(p *pb.RoutingPackage) bool { return p.Id == config.ClaudePackageID })
+	if i != 2 || snapshot.Revision != library.Revision || !snapshot.Packages[i].Enabled || snapshot.Packages[i].Destination != "route:fixed" {
+		t.Fatal(snapshot)
+	}
+}
 
 func TestAdblockBaselinePersistsOnceAndKeepsUserChoices(t *testing.T) {
 	c := New("fixture", "")

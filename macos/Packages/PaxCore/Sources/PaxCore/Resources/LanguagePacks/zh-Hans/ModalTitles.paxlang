@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "modal.share.qr": "分享二维码",
+    "modal.cf.choose": "选择 CF IP",
+    "modal.route.detail": "线路详情",
+    "modal.route.import_note": "分享链接、HTTPS 订阅地址、Clash YAML 或 sing-box JSON",
+    "modal.route.tls_failed": "证书校验失败",
+    "modal.route.tls_skip_note": "仅对列出的线路跳过并重新测量",
+    "modal.route.groups": "管理分组",
+    "modal.route.groups_note": "一条线路可加入多个分组；保存后应用。",
+    "modal.route.chain": "创建链式代理",
+    "modal.route.chain_note": "前置连接 → 最终出口",
+    "modal.cf.workspace": "CF 优选列表",
+    "modal.cf.workspace_note": "选择入口 IP，保留当前线路的 Host 与 SNI",
+    "modal.network.environment_note": "检测当前 Mac 与浏览器的网络环境"
+  }
+}

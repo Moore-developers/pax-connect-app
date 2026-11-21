@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "logs_read.backend_update": "Backend did not provide connection summaries; update the backend",
+    "logs_read.directory_failed": "Unable to read app catalog · {error}",
+    "logs_read.failed": "Read failed · {error}",
+    "logs_read.failed_retained": "Read failed; previous snapshot retained · {error}",
+    "logs_read.recovered": "Previous snapshot expired; latest records reloaded",
+    "traffic_read.snapshot_changed": "Traffic snapshot changed. Reload it"
+  }
+}

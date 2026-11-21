@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "navigation.overview": "网络概览",
+    "navigation.routes": "线路管理",
+    "navigation.traffic": "流量监控",
+    "navigation.logs": "运行日志",
+    "navigation.usage": "模型用量",
+    "navigation.settings": "系统设置",
+    "navigation.about": "关于应用",
+    "app.about": "关于 Pax Connect",
+    "app.quit": "退出 Pax Connect",
+    "app.edit": "编辑",
+    "app.undo": "撤销",
+    "app.cut": "剪切",
+    "app.copy": "复制",
+    "app.paste": "粘贴",
+    "app.select_all": "全选",
+    "app.view": "显示",
+    "app.search": "搜索当前页面",
+    "app.components": "组件目录",
+    "app.minimum_window": "最小窗口 · 1000×680",
+    "app.design_window": "设计窗口 · 1280×860",
+    "app.help": "帮助",
+    "app.getting_started": "开始使用"
+  }
+}

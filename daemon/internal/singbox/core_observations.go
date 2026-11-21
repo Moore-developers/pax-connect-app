@@ -17,9 +17,10 @@ import (
 const byteBucket = 5 * time.Second
 
 type observedFlow struct {
-	fact     config.FlowFact
-	at       time.Time
-	up, down uint64
+	fact          config.FlowFact
+	rejectionRule string
+	at            time.Time
+	up, down      uint64
 }
 type coreObservations struct {
 	probes               map[string]*currentPathLease
@@ -55,7 +56,11 @@ func (o *coreObservations) append(e config.Observation) {
 
 func observationSize(e config.Observation) int {
 	size := len(e.Raw) + 1024
-	if e.Flow != nil && e.Flow.DNS != nil {
+	if e.Flow == nil {
+		return size
+	}
+	size += len(e.Flow.Rule)
+	if e.Flow.DNS != nil {
 		for _, answer := range e.Flow.DNS.Answers {
 			size += len(answer) + 16
 		}
@@ -135,7 +140,10 @@ func (o *coreObservations) capture(e paxobs.Event) {
 		return
 	}
 	if e.Stage == "matched" {
-		recordFlowRule(&f.fact, e.Rule, e.At)
+		f.rejectionRule = ""
+		if recordFlowRule(&f.fact, e.Rule, e.At) {
+			f.rejectionRule = e.Rule
+		}
 		if e.Process != "" {
 			f.fact.Process, f.fact.ProcessStatus = e.Process, "identified"
 		}
@@ -148,6 +156,7 @@ func (o *coreObservations) capture(e paxobs.Event) {
 		return
 	}
 	if e.Stage == "routed" {
+		f.rejectionRule = ""
 		f.fact.Transport = e.Network
 		f.fact.Domain = e.Domain
 		f.fact.IP = validObservedIP(e.IP)
@@ -244,6 +253,9 @@ func (o *coreObservations) capture(e paxobs.Event) {
 		f.fact.Direction = "blocked"
 		f.fact.EstablishmentState = "failed"
 		f.fact.Failure = "rule_rejected"
+		if f.rejectionRule != "" {
+			f.fact.Rule = f.rejectionRule
+		}
 	}
 	if e.Stage == "failed" {
 		f.fact.EstablishmentState = "failed"
@@ -315,7 +327,7 @@ func (r *CoreRuntime) ReadObservations(ctx context.Context, session string, afte
 		if ctx.Err() != nil {
 			break
 		}
-		bytes += 1024 + len(e.Raw)
+		bytes += observationSize(e)
 		if bytes > 1<<20 || len(b.Records) >= limit {
 			break
 		}
@@ -324,7 +336,9 @@ func (r *CoreRuntime) ReadObservations(ctx context.Context, session string, afte
 	return b
 }
 
-func recordFlowRule(f *config.FlowFact, raw string, at time.Time) {
+// recordFlowRule keeps the normal rule identity and reports whether a rejection
+// would carry an unavailable-route reason.
+func recordFlowRule(f *config.FlowFact, raw string, at time.Time) bool {
 	previous := f.Rule + "\x00" + f.RuleSource
 	defer func() {
 		if raw != "" && (f.RoutingMatchedAt.IsZero() || previous != f.Rule+"\x00"+f.RuleSource) {
@@ -334,8 +348,9 @@ func recordFlowRule(f *config.FlowFact, raw string, at time.Time) {
 	if evidence, ok := config.RecordedRoutingEvidence(raw); ok {
 		f.Rule = evidence.Method + "=" + evidence.Target
 		f.RuleSource = "Pax 包：" + evidence.Package
-		return
+		return evidence.UnavailableRoute != ""
 	}
 	f.Rule = raw
 	f.RuleSource = "内核规则"
+	return false
 }

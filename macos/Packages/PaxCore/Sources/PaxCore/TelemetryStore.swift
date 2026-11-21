@@ -42,7 +42,11 @@ public final class TelemetryStore {
   public private(set) var recentLogs: [ProductLog] = []
   public private(set) var settings = DaemonSettings(autoConnect: false)
   public private(set) var logPage = HistoryLogPage()
-  public private(set) var message = ""
+  private var retainedMessage = RetainedProductMessage()
+  public var message: String { retainedMessage.original }
+  public func message(context: PresentationContext) -> String {
+    retainedMessage.text(context: context)
+  }
   public private(set) var busy = false
   private var generation: UInt64 = 0
   private let logsQuery: @Sendable (LogFilter) async throws -> HistoryLogPage
@@ -128,13 +132,13 @@ public final class TelemetryStore {
     if self.connected != connected {
       queries.invalidate(logs: true, traffic: true)
       sessionGeneration &+= 1
-      if connected { message = "" }
+      if connected { retainedMessage = RetainedProductMessage() }
     }
     self.connected = connected
     self.capabilities = capabilities
     if !connected {
       generation &+= 1
-      message = "与后台断开，保留最后记录"
+      retainedMessage = RetainedProductMessage(key: "history_quality.disconnected")
     }
   }
   public func consume(_ update: ConnectionUpdate) {
@@ -215,15 +219,6 @@ public final class TelemetryStore {
   }
   public var available: Bool { connected && capabilities.contains("history.logs.v1") }
   public var trafficAvailable: Bool { connected && capabilities.contains("history.traffic.v1") }
-  public var qualityMessage: String {
-    if !connected { return "与后台断开，保留最后记录" }
-    if !history.errorCode.isEmpty {
-      return ProductErrorPresentation.message(.init(code: history.errorCode))
-    }
-    if history.capacityEvicted { return "容量已满，较早记录已淘汰；保存范围不足" }
-    if history.collectionState == "idle" { return "当前未采集，正在查看本地历史" }
-    return ""
-  }
   public func loadLogs(_ q: LogFilter) async {
     generation &+= 1
     let token = generation
@@ -231,8 +226,12 @@ public final class TelemetryStore {
       let page = try await logs(q)
       guard token == generation else { return }
       logPage = page
-      message = ""
-    } catch { if token == generation { message = ProductErrorPresentation.display(error) } }
+      retainedMessage = RetainedProductMessage()
+    } catch {
+      if token == generation {
+        retainedMessage = RetainedProductMessage(failure: ProductFailure(error))
+      }
+    }
   }
   public func logs(_ q: LogFilter, force: Bool = false) async throws -> HistoryLogPage {
     guard available else { throw ClientError.unavailable }
@@ -341,10 +340,10 @@ public final class TelemetryStore {
       invalidationGeneration &+= 1
       logPage = HistoryLogPage()
       recentLogs = []
-      message = "日志已清除，新事件继续记录"
+      retainedMessage = RetainedProductMessage(key: "settings.logs.cleared")
       return true
     } catch {
-      message = ProductErrorPresentation.display(error)
+      retainedMessage = RetainedProductMessage(failure: ProductFailure(error))
       return false
     }
   }
@@ -354,10 +353,10 @@ public final class TelemetryStore {
     defer { busy = false }
     do {
       _ = try await retentionCommand(hours, settings.revision, UUID().uuidString, Date())
-      message = "日志保留时间已保存"
+      retainedMessage = RetainedProductMessage(key: "settings.logs.retention_saved")
       return true
     } catch {
-      message = ProductErrorPresentation.display(error)
+      retainedMessage = RetainedProductMessage(failure: ProductFailure(error))
       return false
     }
   }

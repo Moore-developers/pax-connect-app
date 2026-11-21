@@ -7,11 +7,12 @@ extension RoutingPackagesController {
   func packageCell(_ id: String) -> NSView? {
     guard let pack = store.package(id) else { return nil }
     let title = PaxText.label(
-      pack.name, font: PaxTheme.Typography.label(size: PaxTheme.Table.font, weight: .medium))
+      pack.displayName(context: interfaceCopy.context),
+      font: PaxTheme.Typography.label(size: PaxTheme.Table.font, weight: .medium))
     title.lineBreakMode = .byTruncatingTail
-    title.toolTip = pack.name
+    title.toolTip = pack.displayName(context: interfaceCopy.context)
     title.textColor = store.selectedPackageID == id ? PaxTheme.Routes.blue : PaxTheme.Color.text
-    let summary = pack.kindPresentation.summary
+    let summary = pack.kindPresentation(context: interfaceCopy.context).summary
     let sub = PaxText.label(summary, font: PaxTheme.Typography.time, secondary: true)
     let labels = NSStackView(views: [title, sub])
     labels.orientation = .vertical
@@ -19,13 +20,15 @@ extension RoutingPackagesController {
     labels.spacing = PaxTheme.Routing.packageTextGap
     if [.local, .subscription].contains(pack.kind) {
       let destination = PaxText.label(
-        store.destinationName(pack.destination) + (pack.enabled ? "" : " · 已停用"),
+        store.destinationName(pack.destination, context: self.interfaceCopy.context)
+          + (pack.enabled ? "" : self.interfaceCopy.text("interface_detail.55c21d34de")),
         font: PaxTheme.Typography.time, secondary: true)
       if !pack.enabled {
         let text = NSMutableAttributedString(string: destination.stringValue)
         text.addAttribute(
           .foregroundColor, value: PaxTheme.Color.error,
-          range: (destination.stringValue as NSString).range(of: "已停用"))
+          range: (destination.stringValue as NSString).range(
+            of: self.interfaceCopy.text("interface_detail.a8c3698b5b")))
         destination.attributedStringValue = text
       }
       destination.lineBreakMode = .byTruncatingTail
@@ -49,7 +52,8 @@ extension RoutingPackagesController {
       arrows.widthAnchor.constraint(equalToConstant: PaxTheme.Routing.moveSize).isActive = true
       arrows.spacing = PaxTheme.Routing.arrowPadding
       for (symbol, delta, text) in [
-        ("chevron.up", -1, "上移，提高匹配优先级"), ("chevron.down", 1, "下移，降低匹配优先级"),
+        ("chevron.up", -1, self.interfaceCopy.text("interface_detail.e396f85bbb")),
+        ("chevron.down", 1, self.interfaceCopy.text("interface_detail.1d82db518e")),
       ] {
         let button = NSButton(
           image: PaxIcon.image(symbol) ?? NSImage(), target: self,
@@ -58,7 +62,8 @@ extension RoutingPackagesController {
         button.identifier = .init(id)
         button.tag = delta
         button.toolTip = text
-        button.setAccessibilityLabel(pack.name + " · " + text)
+        button.setAccessibilityLabel(
+          pack.displayName(context: interfaceCopy.context) + " · " + text)
         let next = index + delta
         button.isEnabled =
           store.canEdit && store.packages.indices.contains(next)
@@ -95,24 +100,29 @@ extension RoutingPackagesController {
     }
     if column == 1 {
       let label = PaxText.label(
-        (rule.enabled ? "" : "已停用 · ") + rule.method.rawValue,
+        (rule.enabled ? "" : self.interfaceCopy.text("interface_detail.191605f814"))
+          + rule.method.label(context: interfaceCopy.context),
         font: PaxTheme.Typography.caption(), secondary: true)
       if !rule.enabled {
         let text = NSMutableAttributedString(string: label.stringValue)
         text.addAttribute(
           .foregroundColor, value: PaxTheme.Color.error,
-          range: (label.stringValue as NSString).range(of: "已停用"))
+          range: (label.stringValue as NSString).range(
+            of: self.interfaceCopy.text("interface_detail.a8c3698b5b")))
         label.attributedStringValue = text
       }
       return label
     }
     if column == 2 && pack.kind == .priority {
       return PaxText.label(
-        store.destinationName(rule.destination), font: PaxTheme.Typography.caption())
+        store.destinationName(rule.destination, context: self.interfaceCopy.context),
+        font: PaxTheme.Typography.caption())
     }
     guard [.local, .priority].contains(pack.kind) else {
       return PaxText.label(
-        store.destinationName(pack.kind == .geo ? rule.destination : pack.destination),
+        store.destinationName(
+          pack.kind == .geo ? rule.destination : pack.destination,
+          context: self.interfaceCopy.context),
         font: PaxTheme.Typography.caption())
     }
     let row = NSStackView()
@@ -121,11 +131,15 @@ extension RoutingPackagesController {
       let check = NSButton(checkboxWithTitle: "", target: self, action: #selector(enableRule(_:)))
       check.identifier = .init(id)
       check.state = rule.enabled ? .on : .off
-      check.setAccessibilityLabel("启用 " + store.ruleName(rule))
+      check.setAccessibilityLabel(
+        self.interfaceCopy.text("interface_detail.99d63ea414") + store.ruleName(rule))
       check.isEnabled = store.canEdit
       row.addArrangedSubview(check)
     }
-    for (title, action) in [("编辑", #selector(edit(_:))), ("移除", #selector(remove(_:)))] {
+    for (title, action) in [
+      (self.interfaceCopy.text("app.edit"), #selector(edit(_:))),
+      (self.interfaceCopy.text("rules_ui.remove_rule_action"), #selector(remove(_:))),
+    ] {
       let button = PaxRouteButton(title, style: .quiet, target: self, action: action)
       button.identifier = .init(id)
       button.isEnabled = store.canEdit

@@ -6,6 +6,9 @@ import PaxCore
 class RouteModalController: WorkbenchModalController {
   override func showError(_ error: Error) {
     super.showError(error)
-    pane.status.stringValue = ProductErrorPresentation.display(error)
+    pane.status.stringValue =
+      (error as? ProxyRouteDraft.Validation)?.message(context: interfaceCopy.context)
+      ?? (error as? RouteWorkbenchStore.EditError)?.message(context: interfaceCopy.context)
+      ?? ProductErrorPresentation.display(error, context: interfaceCopy.context)
   }
 }

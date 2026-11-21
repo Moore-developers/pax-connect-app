@@ -12,7 +12,12 @@ extension RouteDetailController {
     view.samples = result.samples.enumerated().map {
       .init(
         value: $0.element,
-        label: "第 \($0.offset + 1) 次 · \(MeasurementFormatting.latency($0.element)?.text ?? "—")")
+        label: self.interfaceCopy.text(
+          "interface_detail.79650ba1fa",
+          [
+            "arg0": String(describing: $0.offset + 1),
+            "arg1": String(describing: MeasurementFormatting.latency($0.element)?.text ?? "—"),
+          ]))
     }
     view.tooltipCoordinator = tooltip
     view.heightAnchor.constraint(equalToConstant: height).isActive = true

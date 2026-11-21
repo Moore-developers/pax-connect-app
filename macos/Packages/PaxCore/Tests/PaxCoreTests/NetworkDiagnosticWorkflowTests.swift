@@ -154,9 +154,8 @@ import Testing
     #expect(family.contains("旧记录未采集"))
   }
 
-  @Test("预算未执行不冒充 HTTP0，浏览器证据脱敏并保留终止原因")
-  func evidenceAndExport() async throws {
-    let report = route("full")
+  @Test("预算未执行不冒充 HTTP 0")
+  func probeEvidence() {
     let emptyProbe = NetworkDiagnosticReport(
       .with {
         $0.probes = [
@@ -170,40 +169,5 @@ import Testing
     ).probes[0]
     #expect(NetworkDiagnosticPresentation.probeResult(emptyProbe).contains("未发起请求"))
     #expect(!NetworkDiagnosticPresentation.probeResult(emptyProbe).contains("HTTP 0"))
-    let raw = EnvironmentDiagnosticReport(
-      .with {
-        $0.complete = true
-        $0.mac = .with {
-          $0.complete = true
-          $0.ipv4 = "8.8.8.8"
-        }
-        $0.browser = .with {
-          $0.complete = true
-          $0.rtcState = "empty"
-          $0.checks = [
-            .with {
-              $0.kind = "echo_cf"
-              $0.target = "www.cloudflare.com"
-              $0.state = "observed"
-              $0.value = "1.1.1.1 · LAX"
-            },
-            .with {
-              $0.kind = "rtc_cf"
-              $0.target = "stun.cloudflare.com:3478"
-              $0.state = "timeout"
-              $0.errorCode = "rtc_server_701"
-            },
-          ]
-        }
-      })
-    let store = EnvironmentDiagnosticStore(request: { _, _ in raw }, openBrowser: { _ in false })
-    store.start()
-    for _ in 0..<100 where store.busy { try await Task.sleep(for: .milliseconds(15)) }
-    let text = EnvironmentDiagnosticPresentation.markdown(store)
-    #expect(text.contains("STUN 错误 701"))
-    #expect(!text.contains("1.1.1.1"))
-    #expect(!text.contains("8.8.8.8"))
-    #expect(report.mode == "full")
-    store.clear()
   }
 }

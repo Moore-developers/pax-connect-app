@@ -5,28 +5,28 @@ import PaxUI
 
 /// 工作台窗口：生产模式使用 AppDelegate 注入的共享状态，演示模式使用独立离线工厂。
 @MainActor
-final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
+final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSMenuItemValidation {
   private var liveTelemetry: TelemetryStore?
   private var liveRefresh: PaxRefresh?
   private let store: WorkbenchDemoStore?
   private let shell: WorkbenchShellViewController
   private var workbenchRoot: NSViewController?
 
-  convenience init() {
+  convenience init(language: InterfaceLanguageStore? = nil) {
     let demo = WorkbenchDemoStore()
-    self.init(shell: WorkbenchShellViewController(store: demo), store: demo)
+    self.init(shell: WorkbenchShellViewController(store: demo, language: language), store: demo)
   }
   convenience init(
     routes: RoutesStore, connection: ConnectionStore, telemetry: TelemetryStore? = nil,
     aiProfiles: AIProfilesStore? = nil, aiUsage: AIUsageDataStore? = nil,
     dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil,
-    mcpAccess: MCPAccessActions? = nil
+    mcpAccess: MCPAccessActions? = nil, language: InterfaceLanguageStore? = nil
   ) {
     self.init(
       shell: WorkbenchShellViewController(
         routes: routes, connection: connection, telemetry: telemetry, aiProfiles: aiProfiles,
         aiUsage: aiUsage, dashboardSources: dashboardSources, refresh: refresh,
-        mcpAccess: mcpAccess),
+        mcpAccess: mcpAccess, language: language),
       store: nil)
     liveTelemetry = telemetry
     liveRefresh = refresh
@@ -55,8 +55,21 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
     shell.view.frame = root.view.bounds
     shell.view.autoresizingMask = [.width, .height]
     root.view.addSubview(shell.view)
+    if let content = shell.splitViewItems.last?.viewController.view {
+      let dragArea = WorkbenchTitlebarDragArea()
+      dragArea.translatesAutoresizingMaskIntoConstraints = false
+      root.view.addSubview(dragArea)
+      NSLayoutConstraint.activate([
+        dragArea.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+        dragArea.trailingAnchor.constraint(equalTo: root.view.trailingAnchor),
+        dragArea.topAnchor.constraint(equalTo: root.view.topAnchor),
+        dragArea.bottomAnchor.constraint(
+          equalTo: root.view.safeAreaLayoutGuide.topAnchor, constant: PaxTheme.Spacing.pageTop),
+      ])
+    }
     workbenchRoot = root
     contentViewController = root
+    fitOversizedWindow()
     let environment = ProcessInfo.processInfo.environment
     if let name = environment["PAX_DEMO_SCENARIO"],
       let preset = WorkbenchDemoStore.Scenario(rawValue: name)
@@ -71,6 +84,8 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
     if environment["PAX_DEMO_SETTINGS"] == "1" { shell.showSettings() }
     if environment["PAX_START_PAGE"] == "ai-usage" { shell.showAIUsage() }
     installMenu()
+    shell.onPresentationChange = { [weak self] context in self?.applyLanguage(context) }
+    if let context = shell.language?.context { applyLanguage(context) }
   }
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("代码构建") }
@@ -87,6 +102,30 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
   func windowDidChangeOcclusionState(_ notification: Notification) {
     liveRefresh?.setWindowVisible(window?.occlusionState.contains(.visible) ?? false)
   }
+  func windowDidChangeScreen(_ notification: Notification) {
+    fitOversizedWindow()
+  }
+  func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+    guard !sender.styleMask.contains(.fullScreen), let visible = sender.screen?.visibleFrame
+    else { return frameSize }
+    return NSSize(
+      width: min(frameSize.width, visible.width), height: min(frameSize.height, visible.height))
+  }
+  func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame: NSRect) -> NSRect {
+    window.screen?.visibleFrame ?? defaultFrame
+  }
+  private func fitOversizedWindow() {
+    guard let window, !window.styleMask.contains(.fullScreen),
+      let screen = window.screen ?? NSScreen.main
+    else { return }
+    let visible = screen.visibleFrame
+    var frame = window.frame
+    guard frame.width > visible.width || frame.height > visible.height else { return }
+    frame.size = windowWillResize(window, to: frame.size)
+    frame.origin.x = min(max(frame.minX, visible.minX), visible.maxX - frame.width)
+    frame.origin.y = min(max(frame.minY, visible.minY), visible.maxY - frame.height)
+    window.setFrame(frame, display: true)
+  }
   @objc private func showAbout() {
     window?.deminiaturize(nil)
     showWindow(nil)
@@ -96,8 +135,19 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
   @objc private func showGallery() { shell.showComponents() }
   @objc private func showGettingStarted() { shell.showGettingStarted() }
   @objc private func find() { shell.focusSearch() }
+  // AppKit rewrites the title of undo: using the system language.
+  @objc private func undoEdit() { NSApp.keyWindow?.firstResponder?.undoManager?.undo() }
+  func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+    if menuItem.action == #selector(undoEdit) {
+      return NSApp.keyWindow?.firstResponder?.undoManager?.canUndo == true
+    }
+    return true
+  }
   @objc private func minimumSize() { window?.setContentSize(PaxTheme.Layout.minimumWindow) }
-  @objc private func designSize() { window?.setContentSize(PaxTheme.Layout.defaultWindow) }
+  @objc private func designSize() {
+    window?.setContentSize(PaxTheme.Layout.defaultWindow)
+    fitOversizedWindow()
+  }
   var menuDemoStore: WorkbenchDemoStore? { store }
   func openMenuDestination(_ destination: MenuBarMenuController.Destination) {
     guard let window else { return }
@@ -146,7 +196,8 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
     main.addItem(editItem)
     let edit = NSMenu(title: "编辑")
     editItem.submenu = edit
-    edit.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
+    let undo = edit.addItem(withTitle: "撤销", action: #selector(undoEdit), keyEquivalent: "z")
+    undo.target = self
     edit.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
     edit.addItem(withTitle: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
     edit.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
@@ -207,10 +258,53 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate {
     }
     NSApp.mainMenu = main
   }
+  private func applyLanguage(_ context: PresentationContext) {
+    guard let main = NSApp.mainMenu else { return }
+    let keys: [Selector: String] = [
+      #selector(showAbout): "app.about", #selector(NSApplication.terminate(_:)): "app.quit",
+      #selector(undoEdit): "app.undo", #selector(NSText.cut(_:)): "app.cut",
+      #selector(NSText.copy(_:)): "app.copy", #selector(NSText.paste(_:)): "app.paste",
+      #selector(NSText.selectAll(_:)): "app.select_all", #selector(find): "app.search",
+      #selector(showGallery): "app.components", #selector(minimumSize): "app.minimum_window",
+      #selector(designSize): "app.design_window",
+      #selector(showGettingStarted): "app.getting_started",
+    ]
+    for item in main.items {
+      if item.submenu === NSApp.helpMenu { item.title = context.text("app.help") }
+      if item.submenu?.items.contains(where: { $0.action == #selector(NSText.copy(_:)) }) == true {
+        item.title = context.text("app.edit")
+      }
+      if item.submenu?.items.contains(where: { $0.action == #selector(find) }) == true {
+        item.title = context.text("app.view")
+      }
+      item.submenu?.title = item.title
+      for child in item.submenu?.items ?? [] {
+        if let action = child.action, let key = keys[action] { child.title = context.text(key) }
+      }
+    }
+  }
   @objc private func previewLogs(_ sender: NSMenuItem) {
     if let scene = sender.representedObject as? String { shell.previewLogs(scene) }
   }
   @objc private func previewRouting(_ sender: NSMenuItem) {
     if let scene = sender.representedObject as? String { shell.previewRouting(scene) }
+  }
+}
+
+/// Extends the transparent title bar over the workspace's empty top inset.
+private final class WorkbenchTitlebarDragArea: NSView {
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+  override func mouseDown(with event: NSEvent) {
+    guard let window, !window.styleMask.contains(.fullScreen) else { return }
+    if event.clickCount == 1 {
+      window.performDrag(with: event)
+    } else if event.clickCount == 2 {
+      switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+      case "Minimize": window.miniaturize(nil)
+      case "Maximize", "Zoom", nil: window.zoom(nil)
+      default: break
+      }
+    }
   }
 }

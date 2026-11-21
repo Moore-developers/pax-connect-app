@@ -5,10 +5,12 @@ import PaxUI
 /// Colours, formats and labels shared by the limits cards. Colours reuse existing tokens; the
 /// three bands are safe (green) / warning (orange) / over the limit (Coral).
 enum AILimitStyle {
-  static let multipleExplanation =
-    "超限请求相对安全基准的输入费用倍数。\n例如 ×2：安全每次 $1，超限每次 $2。\nDeepSeek按同模型、同峰谷时段比较。"
-  static let spendExplanation =
-    "以安全区间单次均费为参照，估计超限请求多花的部分。\n已含在输入费用内，未扣开新会话的成本。\nDeepSeek只使用同模型、同峰谷时段的基准。"
+  static func multipleExplanation(context: PresentationContext = .chinese) -> String {
+    context.text("session_limits.bfd0d27ed2")
+  }
+  static func spendExplanation(context: PresentationContext = .chinese) -> String {
+    context.text("session_limits.cea6e9728e")
+  }
   static let neutral = PaxTheme.Routes.muted
   /// Limit line and over-limit tint; the flat-case limit uses a darker Coral.
   static let warnLine = PaxTheme.Chart.inputSeries
@@ -27,7 +29,12 @@ enum AILimitStyle {
     PaxTheme.DashboardColor.greenLabel, PaxTheme.DashboardColor.uploadLabel,
     PaxTheme.DashboardColor.redLabel,
   ]
-  static let bandNames = ["安全", "预警", "超限"]
+  static func bandNames(context: PresentationContext = .chinese) -> [String] {
+    [
+      context.text("session_limits.afb63a620b"), context.text("session_limits.75d5781e08"),
+      context.text("session_limits.314600a8ae"),
+    ]
+  }
   /// Cost sticks of the trend by band: green / orange / Coral.
   static let bandColors: [NSColor] = [
     PaxTheme.DashboardColor.green, PaxTheme.Chart.inputSeries, PaxTheme.DashboardColor.red,
@@ -84,17 +91,23 @@ enum AILimitStyle {
     value.map { ($0 < 0 ? "−" : "+") + money(abs($0), precision: precision) } ?? "—"
   }
   /// "官方 $1.20 · 渠道 $0.42".
-  static func both(_ value: AILimitMoney, precision: Int = 2, plus: Bool = false) -> String {
+  static func both(
+    _ value: AILimitMoney, precision: Int = 2, plus: Bool = false,
+    context: PresentationContext = .chinese
+  ) -> String {
     let sign = plus ? "+" : ""
     if value.channelUnknown {
-      return "API 等值估算 " + sign + money(value.official, precision: precision)
+      return context.text("session_limits.83b6c5ab43") + sign
+        + money(value.official, precision: precision)
     }
-    return "官方 " + sign + money(value.official, precision: precision) + " · 渠道 " + sign
+    return context.text("session_limits.5aee18ffc3") + sign
+      + money(value.official, precision: precision) + context.text("session_limits.ff5c6db295")
+      + sign
       + money(value.channelUnknown ? nil : value.channel, precision: precision)
   }
   /// Band edge labels of one model, e.g. "≤150k", "150k–200k", ">200k".
-  static func edges(_ lines: AIModelLimit?) -> [String] {
-    guard let lines else { return ["未设上限"] }
+  static func edges(_ lines: AIModelLimit?, context: PresentationContext = .chinese) -> [String] {
+    guard let lines else { return [context.text("session_limits.0c2315db3a")] }
     return [
       "≤" + k(lines.warn), k(lines.warn) + "–" + k(lines.limit), ">" + k(lines.limit),
     ]

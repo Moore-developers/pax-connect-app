@@ -4,6 +4,8 @@ import PaxUI
 
 /// Pages actual Geo members; it never expands an entire database on the UI thread.
 @MainActor final class RoutingGeoRulesController: RoutingModalController {
+  override var localizedTitleKey: String? { "rules_ui.geo_title" }
+  override var localizedSubtitleKey: String? { "rules_ui.geo_note" }
   private let telemetry: TelemetryStore
   private let search = PaxRouteSearchField()
   private let table = PaxDataTable(
@@ -25,13 +27,19 @@ import PaxUI
   }
   override func loadView() {
     super.loadView()
-    search.placeholderString = "搜索域名、IP 或规则包"
+    for (index, key) in ["log_detail.rule_package", "rules_ui.match_target", "rules_ui.range"]
+      .enumerated()
+    { table.setColumnTitle(interfaceCopy.text(key), at: index) }
+    previous.title = interfaceCopy.text("logs.previous")
+    next.title = interfaceCopy.text("logs.next")
+    search.placeholderString = self.interfaceCopy.text("interface_detail.5519ce2c50")
     search.sendsSearchStringImmediately = true
     search.target = self
     search.action = #selector(filterChanged)
     search.setAccessibilityIdentifier("geo-rule-search")
     pane.add(search)
     table.setTableIdentifier("geo-rules-members")
+    table.setTableAccessibilityLabel(interfaceCopy.text("rules_ui.geo_title"))
     pane.add(table)
     pane.add(status)
     previous.target = self
@@ -39,7 +47,7 @@ import PaxUI
     next.target = self
     next.action = #selector(nextPage)
     pane.add(NSStackView(views: [previous, NSView(), next]))
-    pane.setActions([button("完成", #selector(close))])
+    pane.setActions([button(self.interfaceCopy.text("log_detail.completed"), #selector(close))])
     reload()
   }
   @objc private func filterChanged() {
@@ -73,17 +81,29 @@ import PaxUI
               values: [
                 r.destination, r.target,
                 r.method == "domain_suffix"
-                  ? "域名及子域"
-                  : r.method == "domain" ? "精确域名" : r.method == "domain_regex" ? "域名模式" : "IP 网段",
+                  ? self.interfaceCopy.text("interface_detail.d970428baf")
+                  : r.method == "domain"
+                    ? self.interfaceCopy.text("interface_detail.3d1aa10e58")
+                    : r.method == "domain_regex"
+                      ? self.interfaceCopy.text("interface_detail.26940c5e57")
+                      : self.interfaceCopy.text("interface_detail.7e49735747"),
               ])
-          }, emptyMessage: "没有匹配的规则")
+          }, emptyMessage: self.interfaceCopy.text("interface_detail.c224df852c"))
+        let version = result.version.replacingOccurrences(
+          of: " / Google 内置 ", with: self.interfaceCopy.text("rules_ui.geo_google_version"))
         status.stringValue =
-          "共 \(result.total) 条 · 版本 \(result.version) · "
-          + (result.updatedAt.map { TrafficFormatting.dateMinute($0) } ?? "内置基线 2026-09-30")
+          self.interfaceCopy.text(
+            "interface_detail.8e03a51fc3",
+            ["arg0": String(describing: result.total), "arg1": version])
+          + (result.updatedAt.map { TrafficFormatting.dateMinute($0) }
+            ?? self.interfaceCopy.text("interface_detail.bbc83f8430"))
         previous.isEnabled = offset > 0
         next.isEnabled = result.nextOffset > 0
       } catch {
-        if !Task.isCancelled { self?.status.stringValue = ProductErrorPresentation.display(error) }
+        if !Task.isCancelled, let self {
+          self.status.stringValue = ProductErrorPresentation.display(
+            error, context: self.interfaceCopy.context)
+        }
       }
     }
   }

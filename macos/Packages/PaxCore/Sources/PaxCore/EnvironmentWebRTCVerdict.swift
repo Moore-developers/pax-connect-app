@@ -30,7 +30,10 @@ extension EnvironmentDiagnosticPresentation {
     var restricted: Bool { source.contains("WebRTC出口限制") }
   }
 
-  public static func webRTCVerdict(_ sample: EnvironmentDiagnosticReport.Sample?, pending: Bool)
+  public static func webRTCVerdict(
+    _ sample: EnvironmentDiagnosticReport.Sample?, pending: Bool,
+    context: PresentationContext = .chinese
+  )
     -> WebRTCVerdict
   {
     let checks = sample?.checks ?? []
@@ -38,15 +41,16 @@ extension EnvironmentDiagnosticPresentation {
     let physical = checks.first { $0.kind == "egress_physical" && $0.state == "observed" }
     let physicalValues = physicalEgress(physical)
     let collecting = pending && stun.isEmpty
-    let (route, routeDetails) = routeEvidence(stun, collecting: collecting)
+    let (route, routeDetails) = routeEvidence(stun, collecting: collecting, context: context)
     var physicalDetail: String?
     if let check = checks.first(where: { $0.kind == "egress_physical" }) {
       physicalDetail =
         check.state == "observed"
-        ? "物理出口："
+        ? context.text("environment_evidence.422fd1f856")
           + [physicalValues.v4, physicalValues.v6].filter { !$0.isEmpty }.joined(
-            separator: " / ") + (check.at.map { " · 测量于 " + timeText($0) } ?? "")
-        : "物理出口：未取得"
+            separator: " / ")
+          + (check.at.map { context.text("environment_evidence.e026a44250") + timeText($0) } ?? "")
+        : context.text("environment_evidence.99dc5aaa4a")
     }
     func verdict(_ text: String, _ tone: Tone) -> WebRTCVerdict {
       WebRTCVerdict(
@@ -54,18 +58,27 @@ extension EnvironmentDiagnosticPresentation {
         physicalDetail: physicalDetail)
     }
     guard let sample else {
-      return verdict(pending ? "正在检测 WebRTC 地址" : "泄露风险待确认 · 浏览器未返回候选地址", .pending)
+      return verdict(
+        pending
+          ? context.text("environment_evidence.c83f2bf886")
+          : context.text("environment_evidence.c0c079662d"), .pending)
     }
-    if sample.rtcState == "unsupported" { return verdict("泄露风险待确认 · 浏览器不支持 WebRTC，无法检测", .pending) }
+    if sample.rtcState == "unsupported" {
+      return verdict(context.text("environment_evidence.7898adb2b8"), .pending)
+    }
     let publics = sample.rtcAddresses.filter(isPublicAddress)
     if !publics.isEmpty {
       if collecting && !checks.contains(where: { $0.kind == "egress_physical" }) {
-        return verdict("已取得 \(publics.count) 个公网候选，正在核对出口", .pending)
+        return verdict(
+          context.text(
+            "environment_evidence.2356bb2b86", ["arg0": String(describing: publics.count)]),
+          .pending)
       }
-      let result = compare(publics, web: (sample.ipv4, sample.ipv6), physical: physicalValues)
+      let result = compare(
+        publics, web: (sample.ipv4, sample.ipv6), physical: physicalValues, context: context)
       return verdict(result.0, result.1)
     }
-    if pending { return verdict("正在采集浏览器候选地址", .pending) }
+    if pending { return verdict(context.text("environment_evidence.284be5ff65"), .pending) }
     let rtcChecks = checks.filter { $0.kind.hasPrefix("rtc_") }
     let broken =
       rtcChecks.contains { $0.state == "timeout" || $0.state == "failed" || !$0.errorCode.isEmpty }
@@ -73,20 +86,20 @@ extension EnvironmentDiagnosticPresentation {
     if stun.contains(where: { $0.state == "blocked" })
       && !stun.contains(where: { $0.state == "proxy" })
     {
-      return verdict("泄露风险待确认 · 探测被规则阻断，未取得公网地址", .pending)
+      return verdict(context.text("environment_evidence.661a67f342"), .pending)
     }
     if broken && stun.contains(where: { $0.state == "proxy" }) {
-      return verdict("泄露风险待确认 · 探测经代理但未返回地址（代理可能不支持 UDP）", .pending)
+      return verdict(context.text("environment_evidence.c244987ba2"), .pending)
     }
-    if broken { return verdict("泄露风险待确认 · 探测失败或到期，无法核对公网地址", .failure) }
+    if broken { return verdict(context.text("environment_evidence.be6d3493fd"), .failure) }
     if !sample.rtcState.isEmpty {
       return verdict(
         sample.rtcAddresses.isEmpty
-          ? "泄露风险待确认 · 未取得候选地址，不能据此确认防泄露"
-          : "泄露风险待确认 · 仅取得局域网 / mDNS 候选，未取得公网地址",
+          ? context.text("environment_evidence.292055cffb")
+          : context.text("environment_evidence.5b2707f29b"),
         .pending)
     }
-    return verdict("泄露风险待确认 · 浏览器未返回候选地址", .pending)
+    return verdict(context.text("environment_evidence.c0c079662d"), .pending)
   }
 
   private static func physicalEgress(_ check: EnvironmentDiagnosticReport.Check?) -> (
@@ -102,7 +115,8 @@ extension EnvironmentDiagnosticPresentation {
   }
 
   private static func compare(
-    _ publics: [String], web: (v4: String, v6: String), physical: (v4: String, v6: String)
+    _ publics: [String], web: (v4: String, v6: String), physical: (v4: String, v6: String),
+    context: PresentationContext = .chinese
   ) -> (String, Tone) {
     enum Kind: Int { case exposed, differs, differsWeb, direct, missing, matching }
     let kinds = publics.map { address -> Kind in
@@ -118,38 +132,50 @@ extension EnvironmentDiagnosticPresentation {
       return address == web ? .matching : .differsWeb
     }
     switch kinds.min(by: { $0.rawValue < $1.rawValue }) ?? .missing {
-    case .exposed: return ("已发现公网地址泄露 · WebRTC 暴露本机真实 IP", .difference)
-    case .differs: return ("存在潜在风险 · 与网页、物理出口都不同，需核对", .difference)
-    case .differsWeb: return ("存在潜在风险 · 公网地址与网页出口不同，需核对保护策略", .difference)
-    case .direct: return ("当前未经代理，WebRTC 与网页同为本机出口", .information)
-    case .missing: return ("泄露风险待确认 · 缺少同地址族网页出口，无法对照公网地址", .pending)
-    case .matching: return ("本次未发现公网地址泄露 · 与网页出口一致", .matching)
+    case .exposed: return (context.text("environment_evidence.7b0dd5e95f"), .difference)
+    case .differs: return (context.text("environment_evidence.3d2d92b9c5"), .difference)
+    case .differsWeb: return (context.text("environment_evidence.d310bbb488"), .difference)
+    case .direct: return (context.text("environment_evidence.cf943558d7"), .information)
+    case .missing: return (context.text("environment_evidence.1358862289"), .pending)
+    case .matching: return (context.text("environment_evidence.18bba4f6b7"), .matching)
     }
   }
 
-  private static func routeEvidence(_ stun: [StunRoute], collecting: Bool) -> (String, [String]) {
-    guard !stun.isEmpty else { return (collecting ? "正在采集线路证据" : "旧记录未采集线路证据", []) }
+  private static func routeEvidence(
+    _ stun: [StunRoute], collecting: Bool, context: PresentationContext = .chinese
+  ) -> (String, [String]) {
+    guard !stun.isEmpty else {
+      return (
+        collecting
+          ? context.text("environment_evidence.b800649cdb")
+          : context.text("environment_evidence.0b14cb55fa"), []
+      )
+    }
     var sentences: [String] = []
     func add(_ text: String) { if !sentences.contains(text) { sentences.append(text) } }
     for item in stun {
       switch item.state {
       case "proxy":
         add(
-          "STUN 经 " + (item.route.isEmpty ? "代理" : item.route)
-            + (item.restricted ? "（WebRTC 出口限制生效）" : ""))
-      case "direct": add("STUN 直连")
-      case "blocked": add("STUN 被阻断")
-      case "unobserved": add("未观察到 STUN 连接")
-      case "unavailable": add("Pax 未接管，无线路证据")
-      default: add("STUN 方向未知")
+          context.text("environment_evidence.65056867fd")
+            + (item.route.isEmpty ? context.text("environment_evidence.5e84ea61e8") : item.route)
+            + (item.restricted ? context.text("environment_evidence.657ae6e7b8") : ""))
+      case "direct": add(context.text("environment_evidence.33624cb33d"))
+      case "blocked": add(context.text("environment_evidence.70cce55728"))
+      case "unobserved": add(context.text("environment_evidence.781901bb36"))
+      case "unavailable": add(context.text("environment_evidence.5619715e64"))
+      default: add(context.text("environment_evidence.0d696bafc0"))
       }
     }
     let details = stun.map { item -> String in
       let direction =
         [
-          "proxy": "经代理", "direct": "直连", "blocked": "被阻断", "unobserved": "未观察到连接",
-          "unavailable": "无线路证据",
-        ][item.state] ?? "方向未知"
+          "proxy": context.text("environment_evidence.c49b87cc96"),
+          "direct": context.text("environment_evidence.b06325c566"),
+          "blocked": context.text("environment_evidence.c9a7fb33f3"),
+          "unobserved": context.text("environment_evidence.10c2a89724"),
+          "unavailable": context.text("environment_evidence.7da664f560"),
+        ][item.state] ?? context.text("environment_evidence.195f984a5c")
       return
         ([item.target + " → " + direction]
         + [item.route, item.source, item.process].filter { !$0.isEmpty }).joined(separator: " · ")

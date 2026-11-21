@@ -4,7 +4,7 @@ import PaxUI
 
 extension NetworkDiagnosticView {
   func diagnosticRow(
-    title: String, subtitle: String, symbol: String, detail: String = "",
+    title: String, kind: String? = nil, subtitle: String, symbol: String, detail: String = "",
     tone: E.Tone = .information
   ) -> NSView {
     let icon = PaxIcon.view(symbol, size: PaxTheme.NetworkDiagnostics.environmentIcon)
@@ -23,9 +23,13 @@ extension NetworkDiagnosticView {
     summary.maximumNumberOfLines = 1
     summary.lineBreakMode = .byTruncatingTail
     summary.textColor = assessmentColor(tone)
-    let key = "diagnostic-row-" + title
+    let key = "diagnostic-row-" + (kind ?? title)
     let expanded = store.expanded.contains(key)
-    let toggle = action(expanded ? "收起" : "详情") { [weak self] in
+    let toggle = action(
+      expanded
+        ? context.text("native_diagnostic.afd4b78353")
+        : context.text("native_diagnostic.979a332955")
+    ) { [weak self] in
       guard let self else { return }
       if store.expanded.contains(key) {
         store.expanded.remove(key)
@@ -35,7 +39,11 @@ extension NetworkDiagnosticView {
     }
     toggle.controlSize = .small
     toggle.setAccessibilityIdentifier(key)
-    toggle.setAccessibilityLabel(title + (expanded ? "收起详情" : "展开详情"))
+    toggle.setAccessibilityLabel(
+      title
+        + (expanded
+          ? context.text("native_diagnostic.0ae7312510")
+          : context.text("native_diagnostic.4bf0fb2140")))
     let line = padded(
       horizontal([icon, name, summary, toggle], spacing: PaxTheme.Spacing.tight),
       vertical: PaxTheme.NetworkDiagnostics.environmentRowInset)
@@ -52,7 +60,10 @@ extension NetworkDiagnosticView {
 
   /// Row evidence uses the existing inset surface.
   func diagnosticDetailCard(_ detail: String, omitting summary: String = "") -> NSView {
-    let sections = ["Mac全部解析器：", "浏览器全部解析器：", "WebRTC 候选（含局域网 / mDNS）：", "采样证据"]
+    let sections = [
+      context.text("native_diagnostic.ae4d388f24"), context.text("native_diagnostic.f20d58c484"),
+      context.text("native_diagnostic.5614081437"), context.text("native_diagnostic.d46cb91a2d"),
+    ]
     var lines = detail.components(separatedBy: .newlines).map {
       $0.trimmingCharacters(in: .whitespaces)
     }.filter { !$0.isEmpty && $0 != summary }
@@ -67,10 +78,15 @@ extension NetworkDiagnosticView {
     for (index, line) in lines.enumerated() {
       let title =
         sections.contains(line)
-        || ["公网 IP", "语言", "时区", "DNS", "WebRTC", "完整读值"].contains(where: {
+        || [
+          context.text("native_diagnostic.946d1e4eb0"),
+          context.text("native_diagnostic.9f6fee1aba"),
+          context.text("native_diagnostic.b5d72c5c00"), "DNS", "WebRTC",
+          context.text("native_diagnostic.8afecdeb38"),
+        ].contains(where: {
           line.hasSuffix(" · " + $0)
         })
-        || line.hasPrefix("上次环境成功读值（历史）")
+        || line.hasPrefix(context.text("native_diagnostic.a7a79ba0d3"))
       let style = paragraph.mutableCopy() as? NSMutableParagraphStyle ?? paragraph
       if title && index > 0 { style.paragraphSpacingBefore = PaxTheme.Spacing.medium }
       let attributed = NSMutableAttributedString(

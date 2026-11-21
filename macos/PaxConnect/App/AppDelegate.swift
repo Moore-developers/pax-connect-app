@@ -100,7 +100,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
           currentEnvironment: EnvironmentDiagnosticStore(
             history: history,
             request: { try await connection.inspectEnvironment(action: $0, sessionID: $1) },
-            openBrowser: { await diagnosticBrowser.open($0) }),
+            openBrowser: { await diagnosticBrowser.open($0) },
+            browserPresentation: { [weak self] in
+              guard
+                self?.routesStore.capabilities.contains("network.browser_presentation.v1") == true
+              else { return nil }
+              return self?.language?.context.browserPresentation()
+            },
+            requestWithPresentation: {
+              try await connection.inspectEnvironment(action: $0, sessionID: $1, presentation: $2)
+            }),
           history: history,
           readProgress: { try await connection.networkDiagnosticProgress(operationID: $0) },
           run: { try await connection.diagnoseNetwork(mode: $0, operationID: $1) }),
@@ -146,6 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     return socket.isEmpty ? nil : socket
   }
   private var menuBar: MenuBarController?
+  private var language: InterfaceLanguageStore?
   var windowController: WorkbenchWindowController?
   private var workbenchWindow: WorkbenchWindowController?
   /// Demo and external sockets are explicit development entry points.
@@ -156,14 +166,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   var automaticBackendRecoveryAvailable = true
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    do {
+      let catalog = try LanguageCatalog.bundled()
+      let directory = try FileManager.default.url(
+        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+      )
+      .appendingPathComponent("Pax Connect/LanguagePacks", isDirectory: true)
+      let repository = LanguagePackRepository(directory: directory, catalog: catalog)
+      let language = InterfaceLanguageStore(catalog: catalog, repository: repository)
+      self.language = language
+      Task { [weak self] in
+        await language.loadInstalled()
+        self?.finishLaunching()
+      }
+    } catch {
+      let alert = NSAlert()
+      alert.messageText = "语言资源无法读取 / Language resources unavailable"
+      alert.informativeText = error.localizedDescription
+      alert.runModal()
+      NSApp.terminate(nil)
+    }
+  }
+  private func finishLaunching() {
     menuBar = MenuBarController()
     if usesWorkbench {
-      let window = WorkbenchWindowController()
+      let window = WorkbenchWindowController(language: language)
       workbenchWindow = window
       if let demo = window.menuDemoStore {
         menuBar?.attach(
           MenuBarMenuController(
-            demo: demo,
+            demo: demo, language: language,
             onNavigate: { [weak window] in window?.openMenuDestination($0) },
             onQuit: { NSApp.terminate(nil) }))
         let preview = NSMenuItem(
@@ -200,14 +232,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     let mcpAccess = debugSocket == nil ? MCPInstaller.accessActions() : nil
     let window = WorkbenchWindowController(
-      routes: routesStore, connection: store, telemetry: telemetry, aiProfiles: aiProfilesStore,
+      routes: routesStore, connection: store, telemetry: telemetry,
+      aiProfiles: aiProfilesStore,
       aiUsage: aiUsageStore, dashboardSources: DashboardSources(connection: commandConnection),
-      refresh: refresh, mcpAccess: mcpAccess)
+      refresh: refresh, mcpAccess: mcpAccess, language: language)
     window.showWindow(nil)
     windowController = window
     menuBar?.attach(
       MenuBarMenuController(
-        routes: routesStore, connection: store,
+        routes: routesStore, connection: store, language: language,
         onNavigate: { [weak self] destination in
           guard let self else { return }
           if case .toggleProxy = destination, self.store.proxyConfirmationRoute == nil {
@@ -241,6 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       } else {
         let controller = AppSessionAuthorizationController(
           store: self.coreAuthorization,
+          context: self.language?.context ?? .chinese,
           onReady: { [weak self] in
             guard let self else { return }
             self.authorizationController?.dismiss(nil)
@@ -259,6 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationDidBecomeActive(_ notification: Notification) {
+    language?.updateSystemLanguage()
     if windowController != nil && !usesWorkbench { telemetry.setAppActive(true) }
   }
   func applicationDidResignActive(_ notification: Notification) {
@@ -300,9 +335,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sender.reply(toApplicationShouldTerminate: true)
       } catch {
         sender.reply(toApplicationShouldTerminate: false)
+        let context = self.language?.context ?? .chinese
         let alert = NSAlert()
-        alert.messageText = "后台尚未关闭"
-        alert.informativeText = "请重试退出。"
+        alert.messageText = AppSessionFailure.shutdownFailed.message(context: context)
+        alert.addButton(withTitle: context.text("common.ok"))
         alert.runModal()
       }
       self.terminationTask = nil

@@ -62,18 +62,21 @@ import PaxUI
     ["claude.last-prompt", "claude.user-message"].contains(entry.titleSource)
   }
 
-  static func title(_ entry: AISessionCatalogEntry, showIdentity: Bool = true) -> String {
+  static func title(
+    _ entry: AISessionCatalogEntry, showIdentity: Bool = true,
+    context: PresentationContext = .chinese
+  ) -> String {
     let fallback: String
     switch entry.titleStatus {
-    case "source_unavailable": fallback = "会话名称暂不可读"
-    case "source_missing": fallback = "源记录已移除"
-    case "unsupported": fallback = "暂不支持的会话格式"
-    case "indexing": fallback = "会话名称索引中"
-    default: fallback = "客户端尚未命名"
+    case "source_unavailable": fallback = context.text("session_title.unavailable")
+    case "source_missing": fallback = context.text("session_title.missing")
+    case "unsupported": fallback = context.text("session_title.unsupported")
+    case "indexing": fallback = context.text("session_title.indexing")
+    default: fallback = context.text("session_title.unnamed")
     }
     let displayTitle =
       isMessagePreview(entry) && !entry.title.isEmpty
-      ? "最近消息：" + entry.title : entry.title
+      ? context.text("session_title.recent_message") + entry.title : entry.title
     let identity = showIdentity ? " · " + String(entry.key.session.prefix(12)) : ""
     let client = showIdentity ? " · " + AIClientMark.shortName(entry.key.cli) : ""
     return (displayTitle.isEmpty ? fallback + identity : displayTitle) + client

@@ -63,7 +63,8 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
         next.dnsGroups =
           current.dnsGroups
           + next.dnsGroups.filter { group in !current.dnsGroups.contains { $0.id == group.id } }
-        self.snapshot = WorkbenchTrafficDetail(detail: next, dimension: self.snapshot.dimension)
+        self.snapshot = WorkbenchTrafficDetail(
+          detail: next, dimension: self.snapshot.dimension, context: self.interfaceCopy.context)
         self.render()
       } catch {
         if !Task.isCancelled { self?.showReadError(error) }
@@ -82,7 +83,8 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
       do {
         let next = try await telemetry.trafficDetail(query)
         guard let self, !Task.isCancelled else { return }
-        self.snapshot = WorkbenchTrafficDetail(detail: next, dimension: self.snapshot.dimension)
+        self.snapshot = WorkbenchTrafficDetail(
+          detail: next, dimension: self.snapshot.dimension, context: self.interfaceCopy.context)
         self.selectedTab = "connections"
         self.render()
       } catch {
@@ -94,6 +96,12 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   }
   override func loadView() {
     super.loadView()
+    if let detail = snapshot.aggregate {
+      snapshot = WorkbenchTrafficDetail(
+        detail: detail, dimension: snapshot.dimension, context: interfaceCopy.context)
+    } else {
+      snapshot.context = interfaceCopy.context
+    }
     pane.setAccessibilityIdentifier("traffic-detail")
     if let icons {
       let object = snapshot.iconObject
@@ -120,7 +128,7 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     withObservationTracking {
       if session != telemetry.sessionGeneration {
         detailTask?.cancel()
-        pagingUnavailable = "后台连接已变化，无法继续加载；已加载内容仍可阅读"
+        pagingUnavailable = self.interfaceCopy.text("interface_detail.701e08d7ec")
         updateActions()
         return
       }
@@ -132,10 +140,11 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     if let product = error as? ProductError,
       ["history_cursor_expired", "history_expired", "history_cleared"].contains(product.code)
     {
-      pagingUnavailable = "读取快照已过期，无法继续加载；已加载内容仍可阅读"
+      pagingUnavailable = self.interfaceCopy.text("interface_detail.bdd9bd695f")
       updateActions()
     } else {
-      pane.status.stringValue = ProductErrorPresentation.display(error)
+      pane.status.stringValue = ProductErrorPresentation.display(
+        error, context: self.interfaceCopy.context)
     }
   }
   func selectTab(_ tab: String) {
@@ -161,9 +170,12 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     tooltip.close()
     pane.clear()
     let items = [
-      PaxTabBar.Item(id: "overview", title: "概览"),
+      PaxTabBar.Item(id: "overview", title: self.interfaceCopy.text("ai_page.overview")),
       .init(
-        id: "connections", title: snapshot.aggregate?.summary.kind == "dns" ? "查询明细" : "连接明细",
+        id: "connections",
+        title: snapshot.aggregate?.summary.kind == "dns"
+          ? self.interfaceCopy.text("interface_detail.66966ac9ee")
+          : self.interfaceCopy.text("interface_detail.2b39320577"),
         count: snapshot.aggregate?.summary.kind == "dns"
           ? snapshot.connectionCount : snapshot.retainedConnectionCount),
     ]
@@ -177,10 +189,14 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     if let summary = snapshot.aggregate?.summary, TrafficFormatting.isIPv6LimitedPath(summary) {
       pane.add(
         PaxNotice(
-          title: "连接限制 · IPv6 未启用", detail: TrafficRuleFormatting.ipv6Limitation, tone: .neutral))
+          title: self.interfaceCopy.text("action.traffic.ipv6_limit"),
+          detail: TrafficRuleFormatting.ipv6Limitation, tone: .neutral))
     }
     if !snapshot.quality.isEmpty {
-      pane.add(PaxNotice(title: "记录状态", detail: snapshot.quality, tone: .warning))
+      pane.add(
+        PaxNotice(
+          title: self.interfaceCopy.text("action.logs.recorded_status"), detail: snapshot.quality,
+          tone: .warning))
     }
     if snapshot.aggregate?.summary.kind == "dns" {
       pane.add(
@@ -197,13 +213,17 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   private func updateActions() {
     pane.status.stringValue =
       pagingUnavailable
-      ?? "截至 " + TrafficFormatting.dateMinute(snapshot.capturedAt) + " · 打开时快照"
-    var actions = [button("完成", #selector(close))]
+      ?? self.interfaceCopy.text("dashboard_value.as_of")
+      + TrafficFormatting.dateMinute(snapshot.capturedAt)
+      + self.interfaceCopy.text("interface_detail.61167ae318")
+    var actions = [button(self.interfaceCopy.text("reprice.finish"), #selector(close))]
     if snapshot.aggregate?.nextCursor.isEmpty == false
       && (snapshot.aggregate?.summary.kind != "dns" || selectedTab == "connections")
     {
       let more = button(
-        snapshot.aggregate?.summary.kind == "dns" ? "加载更多查询" : "加载更多连接",
+        snapshot.aggregate?.summary.kind == "dns"
+          ? self.interfaceCopy.text("interface_detail.4afd712c66")
+          : self.interfaceCopy.text("interface_detail.0824383726"),
         #selector(loadMoreConnections))
       more.isEnabled = pagingUnavailable == nil
       actions.insert(more, at: 0)
@@ -217,16 +237,21 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     }
     let metrics = PaxRouteMetricRow([
       byteMetric(
-        "上传", symbol: "arrow.up.right", bytes: snapshot.upload, color: PaxTheme.DashboardColor.amber
+        self.interfaceCopy.text("dashboard.upload"), symbol: "arrow.up.right",
+        bytes: snapshot.upload, color: PaxTheme.DashboardColor.amber
       ),
       byteMetric(
-        "下载", symbol: "arrow.down.left", bytes: snapshot.download,
+        self.interfaceCopy.text("dashboard.download"), symbol: "arrow.down.left",
+        bytes: snapshot.download,
         color: PaxTheme.DashboardColor.green),
       PaxRouteMetric(
         title: snapshot.aggregate?.aggregateOnly == true
-          || ["hour", "day"].contains(snapshot.aggregate?.window ?? "") ? "新建连接" : "窗口内连接",
+          || ["hour", "day"].contains(snapshot.aggregate?.window ?? "")
+          ? self.interfaceCopy.text("interface_detail.2cb204a578")
+          : self.interfaceCopy.text("interface_detail.80a532ef96"),
         symbol: "network",
-        value: String(snapshot.connectionCount), unit: "条",
+        value: String(snapshot.connectionCount),
+        unit: self.interfaceCopy.text("interface_detail.f004f1d84c"),
         color: PaxTheme.Color.textSecondary, style: .usage),
     ])
     let divider = NSBox()
@@ -234,7 +259,9 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     let summary = vertical([metrics, divider])
     summary.addArrangedSubview(
       PaxRouteSectionHeading(
-        snapshot.aggregate?.summary.kind == "dns" ? "解析耗时" : "响应延迟", symbol: "timer",
+        snapshot.aggregate?.summary.kind == "dns"
+          ? self.interfaceCopy.text("log_detail.resolution_latency")
+          : self.interfaceCopy.text("log_detail.response_latency"), symbol: "timer",
         detail: snapshot.latencyRangeText))
     let latency = snapshot.latencyView(tooltip: tooltip)
     summary.addArrangedSubview(latency)
@@ -265,9 +292,15 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   }
   private func related() {
     let entries = snapshot.related
-    let title = snapshot.dimension == .application ? "访问目标" : "访问应用"
+    let title =
+      snapshot.dimension == .application
+      ? self.interfaceCopy.text("interface_detail.4fb87823fc")
+      : self.interfaceCopy.text("interface_detail.f3716a751b")
     let table = makeTable(
-      titles: [title, "连接数", "下载"], fractions: PaxTheme.TrafficDetail.relatedColumns,
+      titles: [
+        title, self.interfaceCopy.text("interface_detail.3669d1a3f0"),
+        self.interfaceCopy.text("dashboard.download"),
+      ], fractions: PaxTheme.TrafficDetail.relatedColumns,
       count: entries.count, limit: PaxTheme.TrafficDetail.visibleRelated,
       identifier: "traffic-detail-related")
     table.cellProvider = { [weak self] id, column in
@@ -277,7 +310,9 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
       let button = PaxTrafficCells.objectButton(entry.name) { [weak self] in
         self?.selectRelated(entry.id)
       }
-      button.setAccessibilityLabel("查看 " + entry.name + " 的连接")
+      button.setAccessibilityLabel(
+        self.interfaceCopy.text("interface_detail.9ae8f7e304") + entry.name
+          + self.interfaceCopy.text("interface_detail.6abcf44f14"))
       return button
     }
     table.onActivate = { [weak self] in self?.selectRelated($0) }
@@ -291,10 +326,17 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   }
   private func basis() {
     pane.add(
-      PaxRouteSectionHeading("分流规则", symbol: "arrow.triangle.branch", detail: "按当时的命中记录；计数仅为新建连接"))
+      PaxRouteSectionHeading(
+        self.interfaceCopy.text("event.category.routing"), symbol: "arrow.triangle.branch",
+        detail: self.interfaceCopy.text("action.routing.matches_note")))
     let entries = snapshot.basis
     let table = makeTable(
-      titles: ["规则包", "触发规则与目标", "实际线路", "新建连接"], fractions: PaxTheme.TrafficDetail.basisColumns,
+      titles: [
+        self.interfaceCopy.text("log_detail.rule_package"),
+        self.interfaceCopy.text("interface_detail.5e4232dd76"),
+        self.interfaceCopy.text("interface_detail.65371c7f8c"),
+        self.interfaceCopy.text("interface_detail.2cb204a578"),
+      ], fractions: PaxTheme.TrafficDetail.basisColumns,
       count: entries.count, limit: PaxTheme.TrafficDetail.visibleBasis,
       identifier: "traffic-detail-basis", rowHeight: PaxTheme.TrafficDetail.ruleRowHeight)
 
@@ -305,21 +347,26 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
       let raw = entry.rawEvidence.joined(separator: "\n\n")
       if column == 0 {
         let label = PaxText.label(
-          TrafficRuleFormatting.package(rule: hit.condition, source: hit.source),
+          TrafficRuleFormatting.package(
+            rule: hit.condition, source: hit.source, context: self.interfaceCopy.context),
           font: PaxTheme.Typography.caption())
         label.toolTip = raw
         return label
       }
       if column == 1 {
         let view = self.twoLines(
-          TrafficRuleFormatting.condition(rule: hit.condition, source: hit.source), entry.target)
+          TrafficRuleFormatting.condition(
+            rule: hit.condition, source: hit.source, context: self.interfaceCopy.context),
+          entry.target)
         view.toolTip = raw
         for label in view.subviews.compactMap({ $0 as? NSTextField }) { label.toolTip = raw }
         return view
       }
       if column == 3 {
         let label = PaxText.label(String(entry.count), font: PaxTheme.Typography.caption())
-        label.toolTip = "新建连接 \(entry.count) 条；阻断次数见上方说明。\n" + raw
+        label.toolTip =
+          self.interfaceCopy.text(
+            "interface_detail.d5a23a72fd", ["arg0": String(describing: entry.count)]) + raw
         return label
       }
       if column == 2 {
@@ -344,7 +391,8 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     let rows = visibleConnections
     if let selected = snapshot.related.first(where: { $0.id == relatedID }) {
       let heading = NSStackView(views: [
-        PaxText.label(selected.name), NSView(), button("显示全部", #selector(clearFilter)),
+        PaxText.label(selected.name), NSView(),
+        button(self.interfaceCopy.text("action.common.show_all"), #selector(clearFilter)),
       ])
       pane.add(heading)
     }
@@ -354,10 +402,11 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
         loadedTotal: snapshot.connections.count,
         state: connectionListState, onChange: { [weak self] in self?.connectionListState = $0 },
         onSelect: { [weak self] in self?.selectedConnectionID = $0 },
-        onResize: { [weak self] in self?.pane.invalidateContentSize() }))
+        onResize: { [weak self] in self?.pane.invalidateContentSize() },
+        context: interfaceCopy.context))
     pane.add(
-      PaxText.label(
-        "延迟为开始拨号至首个返回字节的观测时长，包含连接建立和应用等待；不是 HTTP 请求耗时或往返 RTT。旧记录缺少首次响应证据时显示 —。",
+      self.interfaceCopy.label(
+        "action.traffic.latency_note",
         font: PaxTheme.Typography.caption(), secondary: true, wrapping: true))
   }
   private func makeTable(
@@ -415,7 +464,7 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     if let error = onLocate(key) {
       pane.status.stringValue = error
       pane.status.textColor = PaxTheme.Color.warning
-      pane.setActions([button("完成", #selector(close))])
+      pane.setActions([button(self.interfaceCopy.text("reprice.finish"), #selector(close))])
     } else {
       close()
     }

@@ -14,6 +14,7 @@ final class MenuBarSession {
     let latency: String
     let detail: String
   }
+  var context = PresentationContext.chinese
   let routes: RoutesStore
   let connection: ConnectionStore
   let demo: WorkbenchDemoStore?
@@ -32,15 +33,19 @@ final class MenuBarSession {
     routes.selectedRoute
   }
   var status: String {
-    if !routes.connected || connection.connection != .connected { return "后台不可用" }
+    if !routes.connected || connection.connection != .connected {
+      return context.text("network_controls.740f2b372e")
+    }
     if connection.proxyStarting || connection.connectionTransitioning || routes.selecting {
-      return connection.proxyProgressText
+      return connection.proxyProgressText(context: context)
     }
     if connection.proxyEnabled {
-      if hasProblem { return "连接异常" }
-      return connection.currentPathSupported ? connection.currentPathSummary : "代理已开启"
+      if hasProblem { return context.text("network_controls.e0d53046f3") }
+      return connection.currentPathSupported
+        ? connection.currentPathSummary(context: context)
+        : context.text("network_controls.94dcb4778e")
     }
-    return "直连"
+    return context.text("network_controls.b06325c566")
   }
   var hasProblem: Bool {
     connection.operationError != nil || connection.currentPathCheck.state == "failed"
@@ -62,8 +67,12 @@ final class MenuBarSession {
   }
   var canToggle: Bool { demo?.canOperate ?? connection.canRequestProxy(!connection.proxyEnabled) }
   var feedback: String? {
-    if let error = routes.selectionError { return ProductErrorPresentation.message(error) }
-    if let error = connection.operationError { return ProductErrorPresentation.message(error) }
+    if let error = routes.selectionError {
+      return ProductErrorPresentation.message(error, context: context)
+    }
+    if let error = connection.operationError {
+      return ProductErrorPresentation.message(error, context: context)
+    }
     return nil
   }
 
@@ -107,13 +116,13 @@ final class MenuBarSession {
         let unchanged = live.map { matches($0, frozenRoute) } ?? false
         let checked = current?.id == frozenRoute.id
         let route = live ?? frozenRoute
-        let presentation = MenuBarLatencyPresentation(route: route)
+        let presentation = MenuBarLatencyPresentation(route: route, context: context)
         let duplicate = checked && selected != nil && index > 0
         let latency =
           !unchanged
-          ? "配置已变更"
+          ? context.text("network_controls.d261c58f51")
           : duplicate
-            ? "当前线路"
+            ? context.text("network_controls.1466c1f26f")
             : presentation.text
         return Row(
           route: frozenRoute, checked: checked && !duplicate,

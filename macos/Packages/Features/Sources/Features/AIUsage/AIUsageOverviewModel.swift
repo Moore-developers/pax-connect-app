@@ -14,15 +14,17 @@ struct AIChangePill: Equatable {
   /// A missing or zero base reads "—"; `previousText` is the formatted previous value for the tooltip.
   static func make(
     current: Double, previous: Double?, previousText: String, periodName: String,
-    points: Bool = false
+    points: Bool = false, context: PresentationContext = .chinese
   ) -> AIChangePill {
     guard let previous, points || previous > 0 else {
-      return .init(text: "—", tone: .none, tooltip: "上一时段无数据")
+      return .init(text: "—", tone: .none, tooltip: context.text("ai_projection.cb54f74ee9"))
     }
     let delta = points ? (current - previous) * 100 : (current - previous) / previous * 100
     let rounded = Int(delta.rounded())
-    let tip = "较" + periodName + " " + previousText
-    guard rounded != 0 else { return .init(text: "持平", tone: .flat, tooltip: tip) }
+    let tip = context.text("ai_projection.3c09e00162") + periodName + " " + previousText
+    guard rounded != 0 else {
+      return .init(text: context.text("ai_projection.a9105fc058"), tone: .flat, tooltip: tip)
+    }
     return .init(
       text: (rounded > 0 ? "↑" : "↓") + "\(abs(rounded))" + (points ? "pt" : "%"),
       tone: rounded > 0 ? .up : .down, tooltip: tip)
@@ -42,23 +44,27 @@ struct AIOverviewSegment: Equatable {
   let legend: [String]
   let pill: AIChangePill
   /// Name per legend item for the layered bars (cost, Token); empty for single-meaning legends.
-  var legendNames: [String] {
-    kind == .cost || kind == .tokens ? ["输入", "输出", "缓存"] : []
-  }
+  var legendNames: [String] = []
   /// Legend items with their names, e.g. "输入 14%"; the full form for tooltips and wide cards.
   var namedLegend: [String] {
     legendNames.isEmpty ? legend : zip(legendNames, legend).map { $0 + " " + $1 }
   }
-  var accessibilityID: String { "ai-summary-" + (kind == .tokens ? "Token 用量" : title) }
+  var accessibilityID: String {
+    "ai-summary-"
+      + [Kind.cost: "估算费用", .tokens: "Token 用量", .requests: "请求数", .cache: "缓存命中率"][
+        kind, default: kind.rawValue]
+  }
 }
 
 struct AIClientUsageRow: Equatable {
   let client: AIClient
   let serviceSource: AIServiceSource
-  var configurationText: String {
+  var configurationText: String { configurationText(context: .chinese) }
+  func configurationText(context: PresentationContext) -> String {
     profileName
       + ([AIServiceSource.officialAPI, .relayAPI].contains(serviceSource)
-        && profileName != serviceSource.label ? " · " + serviceSource.label : "")
+        && profileName != serviceSource.label(context: context)
+        ? " · " + serviceSource.label(context: context) : "")
       + (multiplier.map { " · " + $0 } ?? "")
   }
   let profileName: String
@@ -66,6 +72,7 @@ struct AIClientUsageRow: Equatable {
   /// stateLabel of any binding that is not 配置已写入; nil when applied or the service is unavailable.
   let state: String?
   /// stateLabel for the strip (always present while the service is available).
+  var stateCode = ""
   let stateText: String
   /// True for the states that need action (see `AIUsageStore.bindingIssues`).
   let needsAction: Bool
@@ -107,20 +114,27 @@ extension AIUsageStore {
   }
   var hasUsage: Bool { summary.count > 0 }
   /// Why there is nothing to chart or list; nil when usage exists.
-  var usageEmptyReason: String? {
+  var usageEmptyReason: String? { usageEmptyReason(context: .chinese) }
+  func usageEmptyReason(context: PresentationContext) -> String? {
     if hasUsage { return nil }
-    return preview ? "该时段无请求" : "该时段没有本地请求记录"
+    return preview
+      ? context.text("ai_projection.f2061fcf00") : context.text("ai_projection.390d0608f8")
   }
   var isSingleDay: Bool {
     calendar.isDate(interval.lowerBound, inSameDayAs: interval.upperBound.addingTimeInterval(-1))
   }
-  var trendMeta: String {
-    let unit = trendComponent == .month ? "按月" : trendComponent == .hour ? "按小时" : "按天"
-    return period.rawValue + " · " + unit
+  var trendMeta: String { trendMeta(context: .chinese) }
+  func trendMeta(context: PresentationContext) -> String {
+    let unit =
+      trendComponent == .month
+      ? context.text("ai_projection.ca3c684d88")
+      : trendComponent == .hour
+        ? context.text("ai_projection.24eb5e379e") : context.text("ai_projection.e12978bbcb")
+    return period.label(context: context) + " · " + unit
   }
 
   /// Current-period Profile / model groups; a retained selection stays available after its requests roll out.
-  var trendGroups: [PaxUsageFilterGroup] {
+  func trendGroups(context: PresentationContext) -> [PaxUsageFilterGroup] {
     let rows: [AIUsageTrendFilter.Row] =
       preview
       ? selected.map {
@@ -138,23 +152,26 @@ extension AIUsageStore {
     let named = Dictionary(
       profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     return AIUsageTrendFilter.groups(
-      rows: rows, selection: trendFilter, profileName: { named[$0] },
+      rows: rows, selection: trendFilter, context: context, profileName: { named[$0] },
       modelName: { [self] in model($0) })
   }
 
-  var trendEmptyReason: String? {
+  var trendEmptyReason: String? { trendEmptyReason(context: .chinese) }
+  func trendEmptyReason(context: PresentationContext) -> String? {
     if trendFilter != .all, trendBuckets(filter: trendFilter).allSatisfy({ $0.1.count == 0 }) {
-      return trendFilter.modelID == nil ? "该 Profile 在此时段无请求" : "该模型在此时段无请求"
+      return trendFilter.modelID == nil
+        ? context.text("ai_projection.b3e35aa89a") : context.text("ai_projection.74f03d203a")
     }
-    return usageEmptyReason
+    return usageEmptyReason(context: context)
   }
 
-  var overviewSegments: [AIOverviewSegment] {
+  var overviewSegments: [AIOverviewSegment] { overviewSegments(context: .chinese) }
+  func overviewSegments(context: PresentationContext) -> [AIOverviewSegment] {
     let s = summary
     let usage = hasUsage
     let none = "—"
     let before = previousSummary
-    let name = period.previousName
+    let name = period.previousName(context: context)
     func pill(
       _ now: Double, _ old: (AIUsageSummary) -> Double?, _ text: (Double) -> String,
       points: Bool = false
@@ -163,7 +180,7 @@ extension AIUsageStore {
       let previous = before.flatMap(old)
       return .make(
         current: now, previous: previous, previousText: previous.map(text) ?? "",
-        periodName: name, points: points)
+        periodName: name, points: points, context: context)
     }
     func split(_ text: String) -> (String, String) {
       guard let last = text.last, last.isLetter || last == "%" else { return (text, "") }
@@ -178,9 +195,9 @@ extension AIUsageStore {
     let tokenParts = [s.ordinary, s.output, s.read].map(Double.init)
     let tokenValue = split(AIUsageFormatting.tokens(s.tokens))
     let cacheValue = split(AIUsageFormatting.percent(s.cache))
-    return [
+    var segments: [AIOverviewSegment] = [
       .init(
-        kind: .cost, title: "估算费用", symbol: "dollarsign.circle",
+        kind: .cost, title: context.text("ai_projection.dd4e402aba"), symbol: "dollarsign.circle",
         value: usage ? s.officialCostLabel : none, unit: "", bar: costBar,
         legend: costBar.map { String(format: "%.0f%%", $0 * 100) },
         pill: pill(s.originalCost, { $0.originalCost }, { AIUsageFormatting.cost($0) })),
@@ -192,40 +209,63 @@ extension AIUsageStore {
         pill: pill(
           Double(s.tokens), { Double($0.tokens) }, { AIUsageFormatting.tokens(Int($0)) })),
       .init(
-        kind: .requests, title: "请求数", symbol: "arrow.up.arrow.down",
+        kind: .requests, title: context.text("ai_projection.855754c132"),
+        symbol: "arrow.up.arrow.down",
         value: usage ? String(s.count) : none, unit: "",
         bar: usage ? shares([Double(s.success), Double(s.failed)]) : [],
-        legend: usage ? ["成功 \(s.success) · 失败 \(s.failed)"] : [],
+        legend: usage
+          ? [
+            context.text(
+              "ai_projection.f2d046a515",
+              ["arg0": String(describing: s.success), "arg1": String(describing: s.failed)])
+          ] : [],
         pill: pill(Double(s.count), { Double($0.count) }, { String(Int($0)) })),
       .init(
-        kind: .cache, title: "缓存命中率", symbol: "internaldrive",
+        kind: .cache, title: context.text("ai_projection.13b61c5f69"), symbol: "internaldrive",
         value: usage ? cacheValue.0 : none, unit: usage ? cacheValue.1 : "",
         bar: usage ? [s.cache ?? 0] : [],
         legend: usage
-          ? ["读取 \(AIUsageFormatting.tokens(s.read)) / 输入 \(AIUsageFormatting.tokens(s.input))"]
+          ? [
+            context.text(
+              "ai_projection.b413ebc7d2",
+              [
+                "arg0": String(describing: AIUsageFormatting.tokens(s.read)),
+                "arg1": String(describing: AIUsageFormatting.tokens(s.input)),
+              ])
+          ]
           : [],
         pill: pill(
           s.cache ?? 0, { $0.cache }, { AIUsageFormatting.percent($0) }, points: true)),
     ]
+    for index in segments.indices where [.cost, .tokens].contains(segments[index].kind) {
+      segments[index].legendNames = ["input", "output", "cache"].map {
+        context.text("usage.legend." + $0)
+      }
+    }
+    return segments
   }
 
   /// Labels of states that need user action; every other non-applied label is only informational.
-  static let actionLabels: Set<String> = ["配置需检查", "需要恢复"]
+  static let actionStates: Set<String> = ["invalid", "recovery_required"]
   /// Non-applied state label per CLI; empty while the configuration service is unavailable.
-  var bindingStates: [AIClient: String] {
+  var bindingStates: [AIClient: String] { bindingStates(context: .chinese) }
+  func bindingStates(context: PresentationContext) -> [AIClient: String] {
     guard configuration.available else { return [:] }
     var result: [AIClient: String] = [:]
     for client in configurableClients {
-      let label = AIProfilesStore.stateLabel(bindings[client])
-      if label != "配置已写入" { result[client] = label }
+      let label = AIProfilesStore.stateLabel(bindings[client], context: context)
+      if bindings[client]?.state != "applied" { result[client] = label }
     }
     return result
   }
   /// Only broken or interrupted configuration needs action; absent Profiles are informational.
-  var bindingIssues: [(client: AIClient, label: String)] {
-    let states = bindingStates
+  var bindingIssues: [(client: AIClient, label: String)] { bindingIssues(context: .chinese) }
+  func bindingIssues(context: PresentationContext) -> [(client: AIClient, label: String)] {
+    let states = bindingStates(context: context)
     return AIClient.allCases.compactMap { client in
-      states[client].flatMap { Self.actionLabels.contains($0) ? (client, $0) : nil }
+      states[client].flatMap {
+        Self.actionStates.contains(bindings[client]?.state ?? "") ? (client, $0) : nil
+      }
     }
   }
 
@@ -234,17 +274,19 @@ extension AIUsageStore {
     preview
       ? previewRequests.filter { $0.client == client }.map(\.at).max() : data?.lastUsed[client]
   }
-  static func idleText(lastUsed: Date?) -> String {
-    "本时段无请求" + (lastUsed.map { " · 最近使用 " + AIUsageFormatting.monthDay($0) } ?? "")
+  static func idleText(lastUsed: Date?, context: PresentationContext = .chinese) -> String {
+    context.text("ai_projection.c41b0972aa")
+      + (lastUsed.map { context.text("ai_projection.3219f9714d") + AIUsageFormatting.monthDay($0) }
+        ?? "")
   }
 
-  func clientRows(cost: Bool) -> [AIClientUsageRow] {
+  func clientRows(cost: Bool, context: PresentationContext = .chinese) -> [AIClientUsageRow] {
     let sums = AIClient.allCases.map { client in
       (client, usageSummary(client: client))
     }
     let amounts = sums.map { cost ? $0.1.originalCost : Double($0.1.tokens) }
     let total = amounts.reduce(0, +)
-    let states = bindingStates
+    let states = bindingStates(context: context)
     return zip(sums, amounts).map { pair, amount in
       let (client, sum) = pair
       let binding = bindings[client]
@@ -256,37 +298,47 @@ extension AIUsageStore {
       return AIClientUsageRow(
         client: client, serviceSource: source,
         profileName: client == .harness
-          ? "只读用量"
+          ? context.text("ai_projection.2736dc3b8c")
           : source == .officialAccount
-            ? "官方账号"
-            : profile?.name ?? source.label,
+            ? context.text("ai_projection.57adc05c18")
+            : profile?.name ?? source.label(context: context),
         multiplier: source == .officialAccount
           ? nil
           : client == .harness
             ? AIUsageFormatting.multiplier(1)
             : profile.map { AIUsageFormatting.multiplier($0.multiplier) },
         state: states[client],
+        stateCode: binding?.state ?? "",
         stateText: client == .harness
-          ? "只读" : configuration.available ? AIProfilesStore.stateLabel(binding) : "配置服务不可用",
-        needsAction: states[client].map(Self.actionLabels.contains) ?? false,
+          ? context.text("ai_projection.3b5ec3533b")
+          : configuration.available
+            ? AIProfilesStore.stateLabel(binding, context: context)
+            : context.text("ai_projection.2c72fe1c46"),
+        needsAction: Self.actionStates.contains(binding?.state ?? ""),
         unconfigured: client != .harness
           && binding?.state == "missing",
         value: used
           ? (cost
-            ? (sum.officialCostLabel + (sum.accountOnly ? "（API 等值）" : "（官方）"))
+            ? (sum.officialCostLabel
+              + (sum.accountOnly
+                ? context.text("ai_projection.3bfc15f873")
+                : context.text("ai_projection.4fef922940")))
             : AIUsageFormatting.tokens(sum.tokens)) : "—",
         billedCostText: used ? sum.costLabel : "—",
         shareText: used && total > 0 ? AIUsageFormatting.percent(amount / total) : "",
         requestsText: used
-          ? "\(sum.count) 请求 · " + AIUsageFormatting.percent(sum.successRate)
-          : Self.idleText(lastUsed: lastUsed(client)),
+          ? context.text("ai_projection.2f1240019d", ["arg0": String(describing: sum.count)])
+            + AIUsageFormatting.percent(sum.successRate)
+          : Self.idleText(lastUsed: lastUsed(client), context: context),
         amount: used ? amount : 0)
     }
   }
 
   /// Input / output / cache layers per bucket, in the legend's order. Cache is read + write.
   /// Tokens are scaled to K or M so the shared chart's two-decimal readout stays legible.
-  func trendSeries(cost: Bool) -> (samples: [PaxChartSample], unit: String) {
+  func trendSeries(cost: Bool, context: PresentationContext = .chinese) -> (
+    samples: [PaxChartSample], unit: String
+  ) {
     let rows = trendBuckets(filter: trendFilter)
     func layers(_ sum: AIUsageSummary) -> [Double] {
       if cost {
@@ -309,7 +361,9 @@ extension AIUsageStore {
         : AIUsageFormatting.date(date)
       var sample = PaxChartSample(
         period == .year
-          ? "\(calendar.component(.month, from: date))月"
+          ? context.text(
+            "ai_projection.9b0d52d667",
+            ["arg0": String(describing: calendar.component(.month, from: date))])
           : trendComponent == .hour
             ? String(format: "%02d:00", calendar.component(.hour, from: date))
             : dateLabel,
@@ -319,16 +373,31 @@ extension AIUsageStore {
         let last = min(range.upperBound, interval.upperBound).addingTimeInterval(-1)
         let dates =
           range.lowerBound >= interval.upperBound
-          ? "尚未开始"
+          ? context.text("ai_projection.541e655330")
           : AIUsageFormatting.date(date) + "–" + AIUsageFormatting.date(last)
-        sample.readout = ["\(calendar.component(.year, from: date))年\(sample.label) · \(dates)"]
+        sample.readout = [
+          context.text(
+            "ai_projection.550a92c1a0",
+            [
+              "arg0": String(describing: calendar.component(.year, from: date)),
+              "arg1": String(describing: sample.label), "arg2": String(describing: dates),
+            ])
+        ]
       } else {
         sample.readout = [trendComponent == .day ? AIUsageFormatting.date(date) : sample.label]
       }
       let values = sample.values.map { $0.formatted(.number.precision(.fractionLength(2))) }
-      sample.readout? += zip(["输入", "输出", "缓存"], values).map { "\($0.0) \($0.1) \(unit)" }
+      sample.readout? += zip(
+        [
+          context.text("ai_projection.2087c777c0"), context.text("ai_projection.fb04addb4c"),
+          context.text("ai_projection.e3ca04a9cb"),
+        ], values
+      ).map { "\($0.0) \($0.1) \(unit)" }
       let total = sample.values.reduce(0, +).formatted(.number.precision(.fractionLength(2)))
-      sample.readout?.append("合计 \(total) \(unit)")
+      sample.readout?.append(
+        context.text(
+          "ai_projection.82a0bc6125",
+          ["arg0": String(describing: total), "arg1": String(describing: unit)]))
       return sample
     }
     return (samples, unit)

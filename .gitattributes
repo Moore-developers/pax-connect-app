@@ -4,6 +4,8 @@ patches/sing-box/observations-quality.patch whitespace=-blank-at-eol,-space-befo
 patches/sing-box/observations.patch whitespace=-blank-at-eol,-space-before-tab
 patches/sing-box/routing-update.patch whitespace=-blank-at-eol,-space-before-tab
 patches/sing-box/dns-update.patch whitespace=-blank-at-eol,-space-before-tab
+patches/sing-box/connection-gate.patch whitespace=-blank-at-eol,-space-before-tab
+patches/sing-box/dns-packet-owner.patch whitespace=-blank-at-eol,-space-before-tab
 
 # Generated protobuf goldens; source and regeneration recorded alongside fixtures.
 daemon/internal/controller/testdata/history-legacy/**/*.pb binary

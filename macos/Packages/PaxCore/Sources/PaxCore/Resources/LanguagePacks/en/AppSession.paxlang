@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "app_session.title": "Authorize Proxy Access",
+    "app_session.detail": "Pax Connect needs administrator permission to change network settings. Enter the login password for your Mac administrator account. Pax Connect uses it once and does not save it.",
+    "app_session.password": "Mac account login password",
+    "app_session.submit": "Authorize and Enable",
+    "app_session.starting": "Starting background service…",
+    "app_session.retry": "Retry Startup",
+    "app_session.failure.password_required": "Starting the background service requires administrator authorization.",
+    "app_session.failure.authentication_failed": "The password was rejected or this account lacks administrator privileges.",
+    "app_session.failure.invalid_bundle": "App verification failed. Reinstall Pax Connect.",
+    "app_session.failure.legacy_service": "Disable the registered legacy background service and try again.",
+    "app_session.failure.another_session": "Quit the other Pax Connect instance that is using the background service.",
+    "app_session.failure.residue_unknown": "Startup paused because the owner of existing Pax resources could not be verified. Try again or check diagnostics.",
+    "app_session.failure.cleanup_failed": "Startup paused while previous Pax processes or network resources are still in use. Try again shortly.",
+    "app_session.failure.recovery_storage_unavailable": "Startup paused because recovery storage is unavailable. Update Pax Connect before trying again.",
+    "app_session.failure.launch_failed": "The background service could not start. Try again.",
+    "app_session.failure.shutdown_failed": "Pax Connect is still running because the background service did not shut down. Try quitting again."
+  }
+}

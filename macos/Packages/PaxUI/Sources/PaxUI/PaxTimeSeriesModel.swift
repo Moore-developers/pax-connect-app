@@ -38,12 +38,15 @@ public struct PaxTimeDomain: Equatable, Sendable {
   var span: TimeInterval { end.timeIntervalSince(start) }
 
   /// "自 MM-DD HH:mm 起有记录" when the axis starts later than the query window.
-  public func coverageNote(calendar: Calendar = .current) -> String? {
+  public func coverageNote(
+    calendar: Calendar = .current, format: (String) -> String = { "自 " + $0 + " 起有记录" }
+  ) -> String? {
     guard start > windowStart else { return nil }
     let parts = calendar.dateComponents([.month, .day, .hour, .minute], from: start)
-    return String(
-      format: "自 %02d-%02d %02d:%02d 起有记录", parts.month ?? 0, parts.day ?? 0, parts.hour ?? 0,
-      parts.minute ?? 0)
+    return format(
+      String(
+        format: "%02d-%02d %02d:%02d", parts.month ?? 0, parts.day ?? 0, parts.hour ?? 0,
+        parts.minute ?? 0))
   }
 }
 

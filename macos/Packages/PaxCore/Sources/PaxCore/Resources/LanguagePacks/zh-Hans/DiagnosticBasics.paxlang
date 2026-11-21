@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "diagnostic_basic.type.hosting": "机房 / 数据中心",
+    "diagnostic_basic.type.isp": "住宅网络",
+    "diagnostic_basic.type.mobile": "移动网络",
+    "diagnostic_basic.type.business": "企业网络",
+    "diagnostic_basic.type.edu": "教育网络",
+    "diagnostic_basic.type.pseudo": "疑似伪家宽",
+    "diagnostic_basic.type.native": "注册国与推定使用国一致（供应方判断）",
+    "diagnostic_basic.type.broadcast": "注册国与推定使用国不同（供应方判断）",
+    "diagnostic_basic.missing": "未提供",
+    "diagnostic_basic.state.hit": "命中",
+    "diagnostic_basic.state.clear": "未命中",
+    "diagnostic_basic.state.information": "资料",
+    "diagnostic_basic.state.unknown": "未知"
+  }
+}

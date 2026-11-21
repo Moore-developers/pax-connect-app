@@ -61,6 +61,9 @@ func ScrubRaw(raw string) (string, bool, string) {
 
 // ProductEvent translates only explicit stages; a start never implies success.
 func ProductEvent(o config.Observation) *config.HistoryEvent {
+	if o.Kind == "route_protection" {
+		return fixedRouteEvent(o)
+	}
 	if o.Kind == "sample" || o.Flow == nil && o.Kind != "diagnostic" || o.Kind == "diagnostic" && o.Level != "error" && o.Level != "warn" {
 		return nil
 	}
@@ -68,6 +71,11 @@ func ProductEvent(o config.Observation) *config.HistoryEvent {
 	title := titles[o.Kind]
 	if title == "" {
 		return nil
+	}
+	if o.Kind == "rejected" && o.Flow != nil {
+		if message := config.UnavailableRoutingMessage(*o.Flow); message != "" {
+			title = message
+		}
 	}
 	if o.Flow != nil && config.IsDNSControl(*o.Flow) {
 		switch o.Kind {

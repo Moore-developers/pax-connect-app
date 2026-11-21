@@ -11,7 +11,9 @@ let package = Package(
     .package(path: "../PaxClient")
   ],
   targets: [
-    .target(name: "PaxCore", dependencies: ["PaxClient"]),
+    .target(
+      name: "PaxCore", dependencies: ["PaxClient"],
+      resources: [.copy("Resources/LanguagePacks")]),
     .testTarget(name: "PaxCoreTests", dependencies: ["PaxCore"]),
   ]
 )

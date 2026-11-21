@@ -569,8 +569,8 @@
 				<string>NO</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
 				<string>YES</string>
-				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
-				<string>Pax Connect</string>
+				<key>INFOPLIST_FILE</key>
+				<string>PaxConnect/Info.plist</string>
 				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
 				<string>public.app-category.utilities</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>
@@ -632,8 +632,8 @@
 				<string>NO</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
 				<string>YES</string>
-				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
-				<string>Pax Connect</string>
+				<key>INFOPLIST_FILE</key>
+				<string>PaxConnect/Info.plist</string>
 				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
 				<string>public.app-category.utilities</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>

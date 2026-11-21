@@ -1,0 +1,22 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "calendar.apply": "Apply",
+    "calendar.hint": "Select a day and apply, or select another day to form a range",
+    "calendar.select": "Select ",
+    "calendar.span": " (up to {count} days, inclusive)",
+    "calendar.previous_year": "Previous year",
+    "calendar.next_year": "Next year",
+    "calendar.previous_month": "Previous month",
+    "calendar.next_month": "Next month",
+    "calendar.month": "{month}/{year}",
+    "calendar.weekday.0": "Sun",
+    "calendar.weekday.1": "Mon",
+    "calendar.weekday.2": "Tue",
+    "calendar.weekday.3": "Wed",
+    "calendar.weekday.4": "Thu",
+    "calendar.weekday.5": "Fri",
+    "calendar.weekday.6": "Sat"
+  }
+}

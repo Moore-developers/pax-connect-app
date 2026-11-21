@@ -4,38 +4,45 @@ import PaxUI
 
 @MainActor final class RoutingDNSSummary: NSStackView {
   private let heading = PaxText.label(
-    "域名解析", font: PaxTheme.Typography.label(size: PaxTheme.Table.font))
+    "", font: PaxTheme.Typography.label(size: PaxTheme.Table.font))
   private let value = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
-  private let scope = PaxText.label(
-    "全部解析记录，不受连接去向筛选", font: PaxTheme.Typography.caption(), secondary: true)
   private lazy var open = PaxRouteButton(
-    "查看查询", style: .quiet, target: self, action: #selector(show))
+    "", style: .quiet, target: self, action: #selector(show))
   var onOpen: (() -> Void)?
   override init(frame: NSRect) {
     super.init(frame: frame)
     orientation = .horizontal
-    spacing = PaxTheme.Spacing.medium
+    spacing = PaxTheme.Spacing.tight
     alignment = .centerY
-    let words = NSStackView(views: [heading, value, scope])
-    words.orientation = .vertical
-    words.alignment = .leading
-    words.spacing = PaxTheme.Spacing.xs
-    addArrangedSubview(words)
-    addArrangedSubview(NSView())
+    value.lineBreakMode = .byTruncatingTail
+    value.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    addArrangedSubview(heading)
+    addArrangedSubview(value)
     addArrangedSubview(open)
+    open.setAccessibilityIdentifier("routing-dns-queries")
     setAccessibilityIdentifier("routing-dns-summary")
   }
   required init?(coder: NSCoder) { fatalError("代码构建") }
-  func update(_ row: TrafficRow?, unavailable: String? = nil) {
+  func update(_ row: TrafficRow?, unavailable: String?, context: PresentationContext) {
+    heading.stringValue = context.text("traffic_details.dns_summary_title")
+    let scope = context.text("traffic_details.dns_summary_scope")
+    let title = context.text("traffic_details.dns_summary_open")
+    if open.title != title { open.title = title }
     let text: String
     if let row {
-      text =
-        "查询 \(row.connections) 次 · 失败 \(row.failedCount) 次 · 最近解析耗时 "
-        + TrafficFormatting.milliseconds(TrafficFormatting.latestLatency(row))
+      text = context.text(
+        "traffic_details.dns_summary_value",
+        [
+          "queries": String(row.connections), "failed": String(row.failedCount),
+          "time": TrafficFormatting.milliseconds(TrafficFormatting.latestLatency(row)),
+        ])
     } else {
-      text = unavailable ?? "当前时间与搜索范围未记录DNS查询"
+      text = unavailable ?? context.text("traffic_details.dns_summary_empty")
     }
     if value.stringValue != text { value.stringValue = text }
+    value.toolTip = [text, scope].joined(separator: "\n")
+    open.toolTip = scope
+    open.setAccessibilityHelp(scope)
     if open.isEnabled != (row != nil) { open.isEnabled = row != nil }
   }
   @objc private func show() { onOpen?() }

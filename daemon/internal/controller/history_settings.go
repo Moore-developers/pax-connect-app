@@ -45,7 +45,7 @@ func (c *Controller) clearLogs(ctx context.Context, q *pb.ClearLogsRequest, outc
 	c.current.RecentLogs = nil
 	c.mu.Unlock()
 	if outcome == nil {
-		c.completeOperationEvidence(q.OperationId, "日志设置", "", "", "", &config.SystemEvent{Type: "settings.clear_history", Name: "清除日志历史", Category: config.EventCategory{Key: "settings", Name: "设置与数据", Symbol: "gearshape"}, Sections: []config.EventSection{{Kind: "facts", Title: "清除结果", Fields: []config.EventField{{Label: "范围", Value: "日志及原文；不保存被删除内容"}}}}})
+		c.completeOperationEvidence(q.OperationId, "日志设置", "", "", "", &config.SystemEvent{Type: "settings.clear_history", Name: "清除日志历史", Category: config.EventCategory{Key: "settings", Name: "设置与数据", Symbol: "gearshape"}, Sections: []config.EventSection{{Kind: "facts", Title: "清除结果", Fields: []config.EventField{{Label: "范围", Value: "日志及原文；不保存被删除内容", ValueText: &config.ProductText{Code: "event.value.logs_cleared"}}}}}})
 	}
 	if outcome != nil {
 		outcome.Value = &pb.SettingsOperationResult_Clear{Clear: &pb.LogsClearResult{RequestedAt: q.RequestedAt, ClearGeneration: result.clearGeneration, LogsRevision: result.logsRevision}}
@@ -87,7 +87,7 @@ func (c *Controller) updateLogSettings(ctx context.Context, q *pb.UpdateSettings
 	}
 	c.syncLogSnapshot()
 	if outcome == nil {
-		c.completeOperationEvidence(q.OperationId, "日志设置", "", "", "", &config.SystemEvent{Type: "settings.log_retention", Name: "修改日志保留期", Category: config.EventCategory{Key: "settings", Name: "设置与数据", Symbol: "gearshape"}, Sections: []config.EventSection{{Kind: "facts", Title: "新设置", Fields: []config.EventField{{Label: "保留期", Value: fmt.Sprintf("%d 小时", hours)}}}}})
+		c.completeOperationEvidence(q.OperationId, "日志设置", "", "", "", &config.SystemEvent{Type: "settings.log_retention", Name: "修改日志保留期", Category: config.EventCategory{Key: "settings", Name: "设置与数据", Symbol: "gearshape"}, Sections: []config.EventSection{{Kind: "facts", Title: "新设置", Fields: []config.EventField{{Label: "保留期", Value: fmt.Sprintf("%d 小时", hours), ValueText: &config.ProductText{Code: "event.value.hours", Params: map[string]string{"count": fmt.Sprint(hours)}}}}}}})
 	}
 	if outcome != nil {
 		outcome.Value = &pb.SettingsOperationResult_Retention{Retention: &pb.LogRetentionResult{Revision: result.settingsRevision, RetentionHours: uint32(hours), CleanupState: "completed"}}

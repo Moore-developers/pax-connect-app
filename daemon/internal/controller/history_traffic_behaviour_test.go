@@ -142,7 +142,7 @@ func TestTrafficFlowMarkLifecycle(t *testing.T) {
 	}
 }
 
-func TestTrafficRetentionAndCapacity(t *testing.T) {
+func TestTrafficRetention(t *testing.T) {
 	h := newTrafficHarness(t)
 	f := markedFlow("s/1/r")
 	h.clock = trafficEpoch.Add(10 * time.Minute)
@@ -164,23 +164,21 @@ func TestTrafficRetentionAndCapacity(t *testing.T) {
 	if n := len(h.rows("traffic_5m")); n != 0 {
 		t.Fatalf("traffic_5m kept %d rows past 30 days", n)
 	}
-	// Capacity: past the cap the oldest buckets go and the flag is set, but writes are never refused.
+	// New retained data survives subsequent maintenance and continues accumulating.
 	h.clock = trafficEpoch.Add(time.Minute)
 	h.append(trafficEpoch.Add(time.Minute), true, h.obs(time.Minute, "sample", f, 9, 9))
 	h.settle()
-	h.tr.capBytes = 1
 	h.settle()
-	if n := len(h.rows("traffic_5m")); n != 0 {
-		t.Fatalf("eviction left %d rows", n)
+	if n := len(h.rows("traffic_5m")); n == 0 {
+		t.Fatal("maintenance removed recent traffic")
 	}
-	if trafficMeta(t, h.store.Traffic, historystore.MetaCapacityEvicted) != "1" || trafficMeta(t, h.store.Traffic, historystore.MetaPartial) != "1" {
-		t.Fatal("capacity_evicted and partial must be set")
+	if trafficMeta(t, h.store.Traffic, historystore.MetaCapacityEvicted) == "1" {
+		t.Fatal("maintenance reported a new capacity loss")
 	}
-	h.tr.capBytes = trafficCapacityBytes
 	h.append(trafficEpoch.Add(2*time.Minute), true, h.obs(2*time.Minute, "sample", f, 3, 3))
 	h.settle()
-	if up, _, _, _ := h.counters("application"); up != 3 {
-		t.Fatalf("a write after eviction was refused or lost: %d", up)
+	if up, _, _, _ := h.counters("application"); up != 12 {
+		t.Fatalf("a recent write was refused or lost: %d", up)
 	}
 }
 

@@ -6,8 +6,8 @@ import PaxCore
 extension RouteWorkbenchStore {
   /// Read the saved effective node, including subscription overrides. Credentials stay in this call.
   func loadShareLink(_ id: String) async throws -> String {
-    guard let frozen = node(id) else { throw EditError("线路不存在") }
-    guard frozen.chain == nil else { throw EditError("组合线路不能导出为单节点分享链接") }
+    guard let frozen = node(id) else { throw EditError(code: "route_readouts.9235faf934") }
+    guard frozen.chain == nil else { throw EditError(code: "route_readouts.9b367deade") }
     guard let routes else {
       // Fixed fictional data makes the isolated demo explicit; never invent the real node's credentials.
       return
@@ -17,7 +17,7 @@ extension RouteWorkbenchStore {
     guard routes.connected, let current = node(id),
       current.revision == frozen.revision, current.configRevision == frozen.configRevision,
       current.tlsPolicy == frozen.tlsPolicy
-    else { throw EditError("线路配置已变化，请重新打开分享") }
+    else { throw EditError(code: "route_readouts.573be18cad") }
     return try RouteShareLink.make(edit: edit, node: current)
   }
 }
@@ -26,18 +26,18 @@ extension RouteWorkbenchStore {
 /// Unknown connection options fail closed instead of silently producing a different connection.
 enum RouteShareLink {
   static func make(edit: RouteEdit, node: NodeProfile) throws -> String {
-    guard node.chain == nil else { throw invalid("组合线路不能导出为单节点分享链接") }
+    guard node.chain == nil else { throw invalid(code: "route_readouts.9b367deade") }
     // configRevision is an opaque connection version (including resolved TLS), not a schema number.
     guard edit.routeID == node.id, edit.revision == node.revision,
       edit.configRevision != 0, edit.configRevision == node.configRevision,
       edit.name == node.name, edit.server == node.server, edit.port == node.port,
       edit.protocolName == node.protocolName, edit.transport == node.transport,
       edit.security == node.security, edit.serverName == node.serverName
-    else { throw invalid("后台返回的线路版本不一致，请重新打开分享") }
+    else { throw invalid(code: "route_readouts.698bd69b69") }
     let mode: TLSMode
     if node.security == "tls" {
       guard let policy = node.tlsPolicy, policy.mode != .unknown, !policy.needsConfirmation else {
-        throw invalid("线路的 TLS 验证策略尚未确认，暂时不能分享")
+        throw invalid(code: "route_readouts.62275876e3")
       }
       mode = policy.mode
     } else {
@@ -54,7 +54,7 @@ enum RouteShareLink {
     guard
       let object = try JSONSerialization.jsonObject(with: Data(documentJSON.utf8))
         as? [String: Any]
-    else { throw invalid("节点配置格式无效") }
+    else { throw invalid(code: "route_readouts.1177ea6836") }
     let document = Object(object)
     let protocolName = try document.string("type", required: true)
     let credentials: Set<String>
@@ -64,7 +64,7 @@ enum RouteShareLink {
     case "trojan", "anytls": credentials = ["password"]
     case "hysteria2": credentials = ["password", "obfs"]
     case "shadowsocks": credentials = ["password", "method"]
-    default: throw invalid("此协议暂不支持生成标准分享链接")
+    default: throw invalid(code: "route_readouts.19d9707771")
     }
     try document.allow(
       Set(["type", "tag", "server", "server_port", "tls", "transport"]).union(credentials))
@@ -74,7 +74,7 @@ enum RouteShareLink {
     guard !name.isEmpty, name.utf8.count <= 128, !server.isEmpty, server.utf8.count <= 253,
       server.utf8.allSatisfy({ $0 < 128 }),
       !server.contains(where: { $0.isWhitespace || "/?#@[]".contains($0) })
-    else { throw invalid("线路名称或服务器地址无法导出") }
+    else { throw invalid(code: "route_readouts.8f3be797c1") }
     if server.contains(":") {
       var address = in6_addr()
       guard server.withCString({ inet_pton(AF_INET6, $0, &address) }) == 1 else {
@@ -90,17 +90,21 @@ enum RouteShareLink {
         expected.serverName == tls.serverName
           || (protocolName == "vmess" && tls.kind == "none" && expected.serverName == server),
         expected.transport == (protocolName == "hysteria2" ? "quic" : transport.kind)
-      else { throw invalid("后台返回的节点配置与线路状态不一致，请重新打开分享") }
+      else { throw invalid(code: "route_readouts.4785ec615a") }
     }
     var user = ""
     var scheme = protocolName
     switch protocolName {
     case "vless", "vmess":
       user = try document.string("uuid", required: true)
-      guard UUID(uuidString: user) != nil, user.count == 36 else { throw invalid("节点 UUID 无效") }
+      guard UUID(uuidString: user) != nil, user.count == 36 else {
+        throw invalid(code: "route_readouts.39d34f022a")
+      }
     default:
       user = try document.string("password", required: true)
-      guard !user.isEmpty, user.utf8.count <= 4096 else { throw invalid("节点密码无效") }
+      guard !user.isEmpty, user.utf8.count <= 4096 else {
+        throw invalid(code: "route_readouts.5c8e676c52")
+      }
     }
     switch protocolName {
     case "vless":
@@ -181,7 +185,7 @@ enum RouteShareLink {
         password.split(separator: ":", omittingEmptySubsequences: false).allSatisfy({
           Data(base64Encoded: String($0))?.count == size
         })
-      else { throw invalid("Shadowsocks 2022 密钥格式无效") }
+      else { throw invalid(code: "route_readouts.168872fdca") }
     default: throw unsupported
     }
   }
@@ -197,14 +201,14 @@ enum RouteShareLink {
     }.joined()
   }
   private static func bounded(_ link: String) throws -> String {
-    guard link.utf8.count <= 32 * 1024 else { throw invalid("分享链接超过导入器的 32 KiB 限制") }
+    guard link.utf8.count <= 32 * 1024 else { throw invalid(code: "route_readouts.d716d88839") }
     return link
   }
   fileprivate static var unsupported: RouteWorkbenchStore.EditError {
-    invalid("此节点含标准链接无法完整表达的连接选项，暂时不能分享")
+    invalid(code: "route_readouts.b2e25c2f9a")
   }
-  fileprivate static func invalid(_ message: String) -> RouteWorkbenchStore.EditError {
-    RouteWorkbenchStore.EditError(message)
+  fileprivate static func invalid(code: String) -> RouteWorkbenchStore.EditError {
+    RouteWorkbenchStore.EditError(code: code)
   }
 
   private struct Transport {
@@ -289,7 +293,7 @@ enum RouteShareLink {
         }
       }
       if kind == "tls" {
-        guard mode != .unknown else { throw invalid("无法确定线路的 TLS 验证策略") }
+        guard mode != .unknown else { throw invalid(code: "route_readouts.7378254c98") }
         if mode == .skipVerify { query.append(("insecure", "1")) }
       } else if mode == .skipVerify {
         throw unsupported

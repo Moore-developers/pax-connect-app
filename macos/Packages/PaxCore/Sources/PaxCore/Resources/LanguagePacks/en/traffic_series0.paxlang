@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "traffic_series.6f5b222e4a": "Query start time",
+    "traffic_series.e338cc5ec0": "Connection start time",
+    "traffic_series.d824870c1d": "Resolution time",
+    "traffic_series.1e5a9cdaa7": "valid responses",
+    "traffic_series.cd55966db0": "Loading recent {arg0}",
+    "traffic_series.4620f3143c": "Unable to read recent {arg0}",
+    "traffic_series.1e25f84df0": "Latest {arg0} {arg1} · Incomplete records",
+    "traffic_series.be5e37abf3": "No {arg0} yet",
+    "traffic_series.9af9a941b7": "Latest {arg0} {arg1}",
+    "traffic_series.39b4c35a48": "Recent {arg0} temporarily unavailable",
+    "traffic_series.569af1a47d": "Latest",
+    "traffic_series.abe05d4485": "Response latency",
+    "traffic_series.96d388c1b2": "IPv6 disabled",
+    "traffic_series.340e2ffc30": "Rule not recorded",
+    "traffic_series.858717dc95": "Blocked",
+    "traffic_series.93e474c68e": "State unknown",
+    "traffic_series.d79b1d0e5c": "Ended",
+    "traffic_series.3c01089ea0": "Active"
+  }
+}

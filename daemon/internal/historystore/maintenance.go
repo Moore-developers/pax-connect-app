@@ -3,9 +3,7 @@ package historystore
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 )
@@ -111,82 +109,6 @@ func (s *store) LiveBytes(ctx context.Context) (int64, error) {
 		}
 	}
 	return (pages - free) * size, nil
-}
-
-// evictSpec names the time-ordered primary table that decides how far each pass reaches,
-// and the targets (cutoff filled in per pass) cleared up to that point.
-type evictSpec struct {
-	primaryTable, primaryColumn string
-	targets                     []pruneTarget
-}
-
-// evictOldest deletes the oldest data in batches until LiveBytes is at most
-// capBytes (HS-R1). It never refuses a write; it reports whether anything was
-// evicted and stamps meta capacity_evicted. It stops when a pass frees nothing.
-func (s *store) evictOldest(ctx context.Context, capBytes int64, limits Limits, spec evictSpec) (bool, error) {
-	if err := limits.validate(); err != nil {
-		return false, err
-	}
-	evicted := false
-	for {
-		live, err := s.LiveBytes(ctx)
-		if err != nil || live <= capBytes {
-			return s.stampEvicted(ctx, evicted, err)
-		}
-		before, err := s.passCutoff(ctx, spec, limits.Rows)
-		if err != nil {
-			return evicted, err
-		}
-		if spec.primaryTable == "traffic_5m" {
-			if err = s.update(ctx, func(tx *sql.Tx) error { return setMeta(ctx, tx, "evicted_before", strconv.FormatInt(before, 10)) }); err != nil {
-				return evicted, err
-			}
-		}
-		targets := make([]pruneTarget, len(spec.targets))
-		for i, t := range spec.targets {
-			t.before = before
-			targets[i] = t
-		}
-		// Clear every table up to the pass cutoff in bounded transactions, so no table keeps
-		// data older than another's frontier; stop if a transaction makes no progress.
-		for more := true; more; {
-			pruned, err := s.prune(ctx, targets, limits)
-			if err != nil {
-				return evicted, err
-			}
-			if pruned.Deleted == 0 {
-				return s.stampEvicted(ctx, evicted, nil)
-			}
-			evicted, more = true, pruned.More
-		}
-	}
-}
-
-func (s *store) stampEvicted(ctx context.Context, evicted bool, err error) (bool, error) {
-	if err != nil || !evicted {
-		return evicted, err
-	}
-	return true, s.update(ctx, func(tx *sql.Tx) error { return setMeta(ctx, tx, "capacity_evicted", "1") })
-}
-
-// passCutoff returns the exclusive time bound covering roughly the oldest `rows` primary rows.
-func (s *store) passCutoff(ctx context.Context, spec evictSpec, rows int) (int64, error) {
-	var edge sql.NullInt64
-	query := fmt.Sprintf("SELECT %[2]s FROM %[1]s ORDER BY %[2]s LIMIT 1 OFFSET ?", spec.primaryTable, spec.primaryColumn)
-	err := s.w.QueryRowContext(ctx, query, rows-1).Scan(&edge)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return 0, fmt.Errorf("historystore: evict: %w", err)
-	}
-	if !edge.Valid {
-		if err = s.w.QueryRowContext(ctx, fmt.Sprintf("SELECT max(%s) FROM %s", spec.primaryColumn, spec.primaryTable)).Scan(&edge); err != nil {
-			return 0, err
-		}
-		if !edge.Valid {
-			return math.MaxInt64, nil
-		}
-		return edge.Int64 + 1, nil
-	}
-	return edge.Int64 + 1, nil
 }
 
 // IncrementalVacuum returns up to pages free pages to the file system; call it while the writer is idle.

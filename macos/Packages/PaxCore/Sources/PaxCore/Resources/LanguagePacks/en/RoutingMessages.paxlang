@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "routing_message.changes_new_connections": "Rule changes affect new connections only. Existing connections are preserved.",
+    "routing_message.offline_saved": "Local rules are saved. The proxy is off; rules apply when it is enabled.",
+    "routing_message.saved_offline": "Saved. The proxy is off; rules apply when it is enabled.",
+    "routing_message.saved_active": "Saved and applied to new connections only. Existing connections are preserved.",
+    "routing_message.geo_updated": "The Geo base package was updated. Existing connections are preserved; new connections use the updated rules.",
+    "routing_message.auto_failed": "The automatic update did not finish. The previous valid version is preserved."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "modal.share.qr": "Share QR Code",
+    "modal.cf.choose": "Choose CF IP",
+    "modal.route.detail": "Route Details",
+    "modal.route.import_note": "Share links, HTTPS subscriptions, Clash YAML, or sing-box JSON",
+    "modal.route.tls_failed": "Certificate Verification Failed",
+    "modal.route.tls_skip_note": "Skip verification and retest only the listed routes",
+    "modal.route.groups": "Manage Groups",
+    "modal.route.groups_note": "A route can belong to multiple groups. Save to apply changes.",
+    "modal.route.chain": "Create Chained Proxy",
+    "modal.route.chain_note": "First Connection → Final Exit",
+    "modal.cf.workspace": "Cloudflare IPs",
+    "modal.cf.workspace_note": "Choose an entry IP. Host and SNI stay the same.",
+    "modal.network.environment_note": "Check the current Mac and browser network environment"
+  }
+}

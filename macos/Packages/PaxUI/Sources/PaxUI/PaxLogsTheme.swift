@@ -17,6 +17,8 @@ extension PaxTheme {
     public static let stateColumn: CGFloat = 150
     public static let connectionColumn: CGFloat = 150
     public static let transferColumn: CGFloat = 224
+    public static let englishAccessColumns: [CGFloat] = [100, 111, 143, 67, 73, 100]
+    public static let englishSystemColumns: [CGFloat] = [104, 180, 146, 145]
     public static let eventColumn: CGFloat = 250
     public static let targetColumn: CGFloat = 166
     public static let eventGrowth: CGFloat = 0.3

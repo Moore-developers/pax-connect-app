@@ -49,7 +49,7 @@ mkdir -p "${GO_OUT}"
 protoc -I "${PROTO_DIR}" -I "${WELL_KNOWN_INCLUDE}" \
   --go_out="${GO_OUT}" --go_opt=module="${GO_MODULE}" \
   --go-grpc_out="${GO_OUT}" --go-grpc_opt=module="${GO_MODULE}" \
-  "${PROTO}" "${PROTO_DIR}/route_edit.proto" "${PROTO_DIR}/operation.proto" "${PROTO_DIR}/operation_context.proto" "${PROTO_DIR}/traffic.proto" "${PROTO_DIR}/privacy.proto" "${PROTO_DIR}/route_exit.proto" "${PROTO_DIR}/route_usage.proto" "${PROTO_DIR}/ai_profile_state.proto" "${PROTO_DIR}/ai_profiles.proto" "${PROTO_DIR}/ai_usage.proto" "${PROTO_DIR}/network_diagnostics.proto"
+  "${PROTO}" "${PROTO_DIR}/presentation.proto" "${PROTO_DIR}/route_edit.proto" "${PROTO_DIR}/operation.proto" "${PROTO_DIR}/operation_context.proto" "${PROTO_DIR}/traffic.proto" "${PROTO_DIR}/privacy.proto" "${PROTO_DIR}/route_exit.proto" "${PROTO_DIR}/route_usage.proto" "${PROTO_DIR}/ai_profile_state.proto" "${PROTO_DIR}/ai_profiles.proto" "${PROTO_DIR}/ai_usage.proto" "${PROTO_DIR}/network_diagnostics.proto"
 find "${GO_OUT}" -name '*.go' | sort | sed 's/^/  /'
 
 echo "--- Go（internal paxd/core only）---"
@@ -66,7 +66,7 @@ protoc -I "${PROTO_DIR}" -I "${WELL_KNOWN_INCLUDE}" \
   --grpc-swift-2_opt=Visibility=Public \
   --grpc-swift-2_opt=Client=true \
   --grpc-swift-2_opt=Server=false \
-  "${PROTO}" "${PROTO_DIR}/route_edit.proto" "${PROTO_DIR}/operation.proto" "${PROTO_DIR}/operation_context.proto" "${PROTO_DIR}/traffic.proto" "${PROTO_DIR}/privacy.proto" "${PROTO_DIR}/route_exit.proto" "${PROTO_DIR}/route_usage.proto" "${PROTO_DIR}/ai_profile_state.proto" "${PROTO_DIR}/ai_profiles.proto" "${PROTO_DIR}/ai_usage.proto" "${PROTO_DIR}/network_diagnostics.proto"
+  "${PROTO}" "${PROTO_DIR}/presentation.proto" "${PROTO_DIR}/route_edit.proto" "${PROTO_DIR}/operation.proto" "${PROTO_DIR}/operation_context.proto" "${PROTO_DIR}/traffic.proto" "${PROTO_DIR}/privacy.proto" "${PROTO_DIR}/route_exit.proto" "${PROTO_DIR}/route_usage.proto" "${PROTO_DIR}/ai_profile_state.proto" "${PROTO_DIR}/ai_profiles.proto" "${PROTO_DIR}/ai_usage.proto" "${PROTO_DIR}/network_diagnostics.proto"
 find "${SWIFT_OUT}" -name '*.swift' | sort | sed 's/^/  /'
 
 echo "--- 版本 ---"

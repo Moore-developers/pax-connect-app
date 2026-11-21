@@ -12,7 +12,9 @@ extension EnvironmentDiagnosticPresentation {
     public let comparison: String
   }
 
-  public static func overview(_ report: EnvironmentDiagnosticReport?) -> Overview {
+  public static func overview(
+    _ report: EnvironmentDiagnosticReport?, context: PresentationContext = .chinese
+  ) -> Overview {
     let mac = report?.mac
     let browser = report?.browser
     let browserAddress = primaryAddress(browser)
@@ -32,25 +34,37 @@ extension EnvironmentDiagnosticPresentation {
     let other = address.contains(":") ? secondary?.ipv6 ?? "" : secondary?.ipv4 ?? ""
     var comparison: String
     if address.isEmpty {
-      comparison = "尚未取得公网出口"
+      comparison = context.text("environment_evidence.32df071b4d")
     } else if equal {
-      comparison = "Mac 与浏览器 " + (address.contains(":") ? "IPv6" : "IPv4") + " 出口相同"
+      comparison =
+        context.text("environment_evidence.3cc000bd7d") + (address.contains(":") ? "IPv6" : "IPv4")
+        + context.text("environment_evidence.ef06b69dfa")
     } else if !other.isEmpty {
-      comparison = (useBrowser ? "Mac：" : "浏览器：") + other
+      comparison = (useBrowser ? "Mac：" : context.text("environment_evidence.f18bb04f28")) + other
     } else {
-      comparison = (useBrowser ? "Mac" : "浏览器") + "同地址族出口未取得"
+      comparison =
+        (useBrowser ? "Mac" : context.text("environment_evidence.e19c3b9e26"))
+        + context.text("environment_evidence.d4025b7ef7")
     }
     if let error = primaryIntel?.providerError, !error.isEmpty {
       comparison +=
-        "；" + (useBrowser ? "浏览器" : "Mac") + "资料请求："
-        + NetworkDiagnosticPresentation.problem(error)
+        "；" + (useBrowser ? context.text("environment_evidence.e19c3b9e26") : "Mac")
+        + context.text("environment_evidence.c134ff3fbe")
+        + NetworkDiagnosticPresentation.problem(error, context: context)
       if fallback, secondaryIntel?.providerError.isEmpty == true {
-        comparison += "；采用 " + (useBrowser ? "Mac" : "浏览器") + " 同 IP 资料"
+        comparison +=
+          context.text("environment_evidence.ca841aeee1")
+          + (useBrowser ? "Mac" : context.text("environment_evidence.e19c3b9e26"))
+          + context.text("environment_evidence.9d7321425a")
       }
     }
     return Overview(
       sample: primary, intelligence: intel, address: address,
-      source: useBrowser ? "浏览器出口" : address.isEmpty ? "当前出口" : "Mac 出口",
+      source: useBrowser
+        ? context.text("environment_evidence.7b8cea54d1")
+        : address.isEmpty
+          ? context.text("environment_evidence.8c50920fd6")
+          : context.text("environment_evidence.b317191e55"),
       comparison: comparison)
   }
 
@@ -60,49 +74,62 @@ extension EnvironmentDiagnosticPresentation {
 
   private static func brief(
     _ row: Row, sample: EnvironmentDiagnosticReport.Sample?,
-    local: NetworkDiagnosticEnvironment? = nil, at: Date
+    local: NetworkDiagnosticEnvironment? = nil, at: Date, context: PresentationContext = .chinese
   ) -> String {
-    switch row.title {
-    case "公网 IP":
+    switch row.kind {
+    case "public_ip":
       guard !primaryAddress(sample).isEmpty else { return row.value }
-      return "IPv4 " + (familyValue(sample, v6: false))
-        + " · IPv6 " + (familyValue(sample, v6: true))
-    case "语言":
+      return "IPv4 " + (familyValue(sample, v6: false, context: context))
+        + " · IPv6 " + (familyValue(sample, v6: true, context: context))
+    case "language":
       let languages = local?.languages ?? sample?.languages ?? []
       guard !languages.isEmpty else { return row.value }
       let region = local?.region ?? sample?.region ?? ""
-      return languages.joined(separator: " → ") + (region.isEmpty ? "" : " · 地区 " + region)
-    case "时区":
+      return languages.joined(separator: " → ")
+        + (region.isEmpty ? "" : context.text("environment_evidence.1235aaead5") + region)
+    case "timezone":
       let zone = local?.timezone ?? sample?.timezone ?? ""
       guard !zone.isEmpty else { return row.value }
-      return zone + " · " + NetworkDiagnosticPresentation.utcOffset(zone, at: at)
-    case "DNS":
+      return zone + " · " + NetworkDiagnosticPresentation.utcOffset(zone, at: at, context: context)
+    case "dns":
       guard let sample, let first = sample.resolvers.first else { return row.value }
       let countries = Set(sample.resolvers.map(\.country))
       let country =
-        NetworkDiagnosticPresentation.countryName(first.country)
-        + (countries.count > 1 ? "等\(countries.count)国" : "")
-      return "\(country) \(sample.resolvers.count)个 · \(first.ip)"
+        NetworkDiagnosticPresentation.countryName(first.country, context: context)
+        + (countries.count > 1
+          ? context.text(
+            "environment_evidence.9c06196905", ["arg0": String(describing: countries.count)]) : "")
+      return context.text(
+        "environment_evidence.cdca82acc0",
+        [
+          "arg0": String(describing: country), "arg1": String(describing: sample.resolvers.count),
+          "arg2": String(describing: first.ip),
+        ])
     default: return row.value
     }
   }
 
   /// Combine presentation only: no sample or resolver is mixed into the other.
   public static func mergedRows(
-    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool
+    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool,
+    context: PresentationContext = .chinese
   ) -> [Row] {
     let mac = report?.mac
     let browser = report?.browser
-    let macRows = rows(mac, local: local, browser: false, waiting: waiting, at: report?.at)
-    let webRows = rows(browser, browser: true, waiting: waiting, at: report?.at)
-    let browserName = browser?.browser.isEmpty == false ? browser?.browser ?? "浏览器" : "浏览器"
+    let macRows = rows(
+      mac, local: local, browser: false, waiting: waiting, at: report?.at, context: context)
+    let webRows = rows(browser, browser: true, waiting: waiting, at: report?.at, context: context)
+    let browserName =
+      browser?.browser.isEmpty == false
+      ? browser?.browser ?? context.text("environment_evidence.e19c3b9e26")
+      : context.text("environment_evidence.e19c3b9e26")
     var result: [Row] = []
     for (macRow, webRow) in zip(macRows, webRows) {
       let macPresent: Bool
       let webPresent: Bool
       let same: Bool
-      switch macRow.title {
-      case "公网 IP":
+      switch macRow.kind {
+      case "public_ip":
         macPresent = !primaryAddress(mac).isEmpty
         webPresent = !primaryAddress(browser).isEmpty
         let pairs = [
@@ -110,7 +137,7 @@ extension EnvironmentDiagnosticPresentation {
           ("IPv6", mac?.ipv6 ?? "", browser?.ipv6 ?? ""),
         ].filter { !$0.1.isEmpty && !$0.2.isEmpty }
         same = !pairs.isEmpty && pairs.allSatisfy { $0.1 == $0.2 }
-      case "语言":
+      case "language":
         macPresent = !(local?.languages.isEmpty ?? true)
         webPresent = !(browser?.languages.isEmpty ?? true)
         same =
@@ -119,11 +146,11 @@ extension EnvironmentDiagnosticPresentation {
             == Locale(identifier: browser?.languages.first ?? "").identifier
           && Locale(identifier: local?.region ?? "").region?.identifier
             == Locale(identifier: browser?.region ?? "").region?.identifier
-      case "时区":
+      case "timezone":
         macPresent = !(local?.timezone.isEmpty ?? true)
         webPresent = !(browser?.timezone.isEmpty ?? true)
         same = macPresent && webPresent && local?.timezone == browser?.timezone
-      case "DNS":
+      case "dns":
         macPresent = !(mac?.resolvers.isEmpty ?? true)
         webPresent = !(browser?.resolvers.isEmpty ?? true)
         same =
@@ -131,12 +158,16 @@ extension EnvironmentDiagnosticPresentation {
           && Set(mac?.resolvers.map(\.ip) ?? []) == Set(browser?.resolvers.map(\.ip) ?? [])
       default: continue
       }
-      let macValue = brief(macRow, sample: mac, local: local, at: local?.at ?? report?.at ?? Date())
-      let webValue = brief(webRow, sample: browser, at: report?.at ?? Date())
+      let macValue = brief(
+        macRow, sample: mac, local: local, at: local?.at ?? report?.at ?? Date(), context: context)
+      let webValue = brief(webRow, sample: browser, at: report?.at ?? Date(), context: context)
       let text: String
       let tone: Tone
       if !macPresent && !webPresent && report == nil && local == nil {
-        text = waiting ? "正在检测…" : "尚未检测"
+        text =
+          waiting
+          ? context.text("environment_evidence.e8b970bc3e")
+          : context.text("environment_evidence.4d2966c438")
         tone = .pending
       } else {
         text = "Mac：\(macValue)；\(browserName)：\(webValue)"
@@ -146,21 +177,23 @@ extension EnvironmentDiagnosticPresentation {
       let detail =
         "Mac：\(macRow.value)\n\(macRow.detail)\n\(browserName)：\(webRow.value)\n\(webRow.detail)"
       result.append(
-        Row(title: macRow.title, symbol: macRow.symbol, value: text, detail: detail, tone: tone))
+        Row(
+          title: macRow.kind, symbol: macRow.symbol, value: text, detail: detail, tone: tone,
+          context: context))
     }
     if let rtc = webRows.last {
       let rtcValue: String
       if report == nil && !waiting {
-        rtcValue = "尚未检测"
+        rtcValue = context.text("environment_evidence.4d2966c438")
       } else {
         rtcValue = rtc.value
       }
       result.append(
         Row(
-          title: rtc.title, symbol: rtc.symbol, value: "\(browserName)：" + rtcValue,
-          detail: rtc.detail, tone: rtc.tone))
+          title: rtc.kind, symbol: rtc.symbol, value: "\(browserName)：" + rtcValue,
+          detail: rtc.detail, tone: rtc.tone, context: context))
     }
-    return result + [ipv6Row(report, waiting: waiting)]
-      + locationRows(report, local: local, waiting: waiting)
+    return result + [ipv6Row(report, waiting: waiting, context: context)]
+      + locationRows(report, local: local, waiting: waiting, context: context)
   }
 }

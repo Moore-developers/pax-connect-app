@@ -6,6 +6,7 @@ import PaxUI
 /// 候选测试仅存在此编辑窗口；取消任务不应用 IP，明确使用后返回父编辑草稿。
 @MainActor
 final class RouteCFController: RouteModalController {
+  override var localizedTitleKey: String? { "modal.cf.choose" }
   static func make(
     store: RouteWorkbenchStore, draft: RouteWorkbenchStore.Draft,
     apply: @escaping (RouteWorkbenchStore.Candidate) -> Void
@@ -26,7 +27,15 @@ final class RouteCFController: RouteModalController {
   private var generation = UUID()
   private var busy = false
 
-  private let table = PaxCandidateTable(titles: ["IP 地址", "入口延迟", "测试时间", "状态"], choices: true)
+  private lazy var table = PaxCandidateTable(
+    titles: [
+      "cf.workspace.column.ip", "cf.workspace.column.latency", "interface_detail.07c97746f5",
+      "logs.status",
+    ].map { interfaceCopy.text($0) }, choices: true,
+    configuredTitle: interfaceCopy.text("cf.workspace.row.configured"),
+    choiceTitle: { [context = interfaceCopy.context] ip in
+      context.text("cf.workspace.select_ip", ["ip": ip])
+    })
   private var tableHeight: NSLayoutConstraint?
   private var testButton: PaxRouteButton?
   private var allButton: PaxRouteButton?
@@ -47,10 +56,13 @@ final class RouteCFController: RouteModalController {
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
-    testButton = button("测试所选", #selector(testSelected))
-    allButton = button("优选全部", #selector(testAll))
+    pane.applySubtitle(interfaceCopy.text("cf.workspace.host", ["host": domain]))
+    testButton = button(
+      self.interfaceCopy.text("action.common.test_selected"), #selector(testSelected))
+    allButton = button(self.interfaceCopy.text("action.cf.scan_all"), #selector(testAll))
     let tools = NSStackView(views: [
-      button("添加 IP", #selector(addIP)), testButton ?? NSView(), allButton ?? NSView(),
+      button(self.interfaceCopy.text("action.cf.add_ip"), #selector(addIP)), testButton ?? NSView(),
+      allButton ?? NSView(),
     ])
     tools.spacing = PaxTheme.Spacing.tight
     pane.add(tools)
@@ -62,12 +74,12 @@ final class RouteCFController: RouteModalController {
     tableHeight?.isActive = true
     pane.add(table)
     pane.add(
-      PaxRouteText.label(
-        "测试当前域名与传输的连接结果；使用后填回服务器地址，保存配置才生效。", font: PaxTheme.Typography.caption(), secondary: true,
+      self.interfaceCopy.routeLabel(
+        "action.cf.entry_note", font: PaxTheme.Typography.caption(), secondary: true,
         wrapping: true))
-    let use = button("使用此 IP", #selector(useIP), primary: true)
+    let use = button(self.interfaceCopy.text("action.cf.use_ip"), #selector(useIP), primary: true)
     useButton = use
-    pane.setActions([button("取消", #selector(close)), use])
+    pane.setActions([button(self.interfaceCopy.text("common.cancel"), #selector(close)), use])
     render()
     observeNetwork()
     if store.isLive {
@@ -101,7 +113,10 @@ final class RouteCFController: RouteModalController {
     }
   }
   private func render() {
-    testButton?.title = busy ? "停止测试" : "测试所选"
+    testButton?.title =
+      busy
+      ? self.interfaceCopy.text("interface_detail.d3a18faf18")
+      : self.interfaceCopy.text("action.common.test_selected")
     allButton?.isEnabled = !busy
     table.apply(
       rows: candidates.map { candidate in
@@ -109,8 +124,13 @@ final class RouteCFController: RouteModalController {
         return .init(
           id: candidate.ip,
           values: [
-            candidate.ip, result.display(.cf), result.time ?? "—",
-            result.running ? "测试中…" : result.failure ?? (result.value == nil ? "未测试" : "可连接"),
+            candidate.ip, result.display(.cf, context: interfaceCopy.context), result.time ?? "—",
+            result.running
+              ? self.interfaceCopy.text("interface_detail.105a9082c3")
+              : result.failure
+                ?? (result.value == nil
+                  ? self.interfaceCopy.text("interface_detail.092b520558")
+                  : self.interfaceCopy.text("interface_detail.6043b97c2e")),
           ],
           statusColor: result.failure != nil
             ? PaxTheme.Color.error
@@ -147,7 +167,8 @@ final class RouteCFController: RouteModalController {
         guard let self else { return }
         for i in self.candidates.indices
         where self.candidates[i].network != self.store.physicalNetwork {
-          self.candidates[i].measurement = .init(failure: "网络已变化，请重新测试")
+          self.candidates[i].measurement = .init(
+            failure: self.interfaceCopy.text("interface_detail.8de45f82ef"))
           self.candidates[i].validUntil = nil
         }
         self.render()
@@ -158,21 +179,22 @@ final class RouteCFController: RouteModalController {
   @objc private func addIP() {
     guard let window = view.window else { return }
     let alert = NSAlert()
-    alert.messageText = "添加 CF IP"
-    alert.addButton(withTitle: "添加")
-    alert.addButton(withTitle: "取消")
+    alert.messageText = self.interfaceCopy.text("interface_detail.437d25b72e")
+    alert.addButton(withTitle: self.interfaceCopy.text("interface_detail.7a8a11ead5"))
+    alert.addButton(withTitle: self.interfaceCopy.text("common.cancel"))
     let input = NSTextField(
       frame: NSRect(
         origin: .zero,
         size: NSSize(width: PaxTheme.Workbench.identityColumn, height: PaxTheme.Control.height)))
-    input.placeholderString = "IPv4 或 IPv6"
+    input.placeholderString = self.interfaceCopy.text("interface_detail.d07516c5f6")
     alert.accessoryView = input
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self, response == .alertFirstButtonReturn else { return }
       let ip = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
       guard RouteWorkbenchStore.validIP(ip), !self.candidates.contains(where: { $0.ip == ip })
       else {
-        self.showError(RouteWorkbenchStore.EditError("请输入有效且不重复的 IP"))
+        self.showError(
+          RouteWorkbenchStore.EditError(self.interfaceCopy.text("interface_detail.c2b9e488b2")))
         return
       }
       self.candidates.append(.init(ip: ip, measurement: .init()))
@@ -219,8 +241,9 @@ final class RouteCFController: RouteModalController {
         for index in batch {
           let failed = self.candidates[index].ip == "162.159.36.1"
           self.candidates[index].measurement = .init(
-            value: failed ? nil : Double(30 + index * 13), failure: failed ? "连接超时" : nil,
-            time: "刚刚")
+            value: failed ? nil : Double(30 + index * 13),
+            failure: failed ? self.interfaceCopy.text("flow.connection_timeout") : nil,
+            time: self.interfaceCopy.text("interface_detail.de6785d99e"))
         }
         self.render()
       }
@@ -252,12 +275,17 @@ final class RouteCFController: RouteModalController {
         let targets = indices.map { (index: $0, ip: self.candidates[$0].ip) }
         for i in indices { self.candidates[i].measurement.running = true }
         self.render()
+        let presentation = self.interfaceCopy.context
         await withTaskGroup(of: (Int, RouteWorkbenchStore.Candidate?, String?).self) { group in
           for target in targets {
             group.addTask {
               do {
                 return (target.index, try await store.validateCF(draft, ip: target.ip), nil)
-              } catch { return (target.index, nil, ProductErrorPresentation.display(error)) }
+              } catch {
+                return (
+                  target.index, nil, ProductErrorPresentation.display(error, context: presentation)
+                )
+              }
             }
           }
           for await (index, value, error) in group {
@@ -268,7 +296,8 @@ final class RouteCFController: RouteModalController {
             if let value {
               self.candidates[index] = value
             } else {
-              self.candidates[index].measurement = .init(failure: error ?? "CF 测试失败")
+              self.candidates[index].measurement = .init(
+                failure: error ?? self.interfaceCopy.text("interface_detail.1b4191bc3c"))
             }
             self.render()
           }
@@ -290,7 +319,8 @@ final class RouteCFController: RouteModalController {
   @objc private func useIP() {
     guard !busy, let row = candidates.first(where: { $0.ip == selected }) else { return }
     guard !store.isLive || canUse(row) else {
-      showError(RouteWorkbenchStore.EditError("验证已过期或网络已变化，请重新测试"))
+      showError(
+        RouteWorkbenchStore.EditError(self.interfaceCopy.text("interface_detail.2f4fa10269")))
       return
     }
     let apply = self.apply

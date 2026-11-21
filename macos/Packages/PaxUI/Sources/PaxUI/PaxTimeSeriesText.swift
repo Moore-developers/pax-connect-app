@@ -12,6 +12,7 @@ public struct PaxTimeSeriesSelection: Equatable {
 /// Series naming, colors and number formatting. Colors come from existing PaxTheme tokens.
 @MainActor
 public struct PaxTimeSeriesStyle {
+  public var copy = PaxTimeSeriesCopy()
   public let title: String
   /// One color: a single series. Two colors: first is the base, second is stacked on top.
   public let colors: [NSColor]
@@ -50,12 +51,13 @@ public struct PaxTimeSeriesStyle {
 
   /// Decimal MB per bucket: ticks are plain MB numbers, `unit` names the bucket width.
   public static func traffic(
-    unit: String, formatValue: @escaping (Double) -> String
+    unit: String, title: String = "流量趋势", upload: String = "上传", download: String = "下载",
+    formatValue: @escaping (Double) -> String
   ) -> PaxTimeSeriesStyle {
     .init(
-      title: "流量趋势",
+      title: title,
       colors: [PaxTheme.DashboardColor.amber, PaxTheme.DashboardColor.green],
-      names: ["上传", "下载"], minimumCeiling: PaxTheme.TimeSeries.trafficMinimumCeiling,
+      names: [upload, download], minimumCeiling: PaxTheme.TimeSeries.trafficMinimumCeiling,
       unit: unit,
       formatTick: { $0.formatted(.number.precision(.fractionLength(0...3))) },
       formatValue: formatValue)
@@ -92,7 +94,8 @@ extension PaxTimeSeriesLayout {
     let time = timeText(hit.date)
     guard let index = hit.index, points.indices.contains(index), let total = points[index].total
     else {
-      return PaxTimeSeriesSelection(timeText: time, value: nil, isGap: true, note: "未采集")
+      return PaxTimeSeriesSelection(
+        timeText: time, value: nil, isGap: true, note: style.copy.missing)
     }
     if axis == .samples {
       let milliseconds = total.formatted(.number.grouping(.never).precision(.fractionLength(0...3)))
@@ -101,12 +104,12 @@ extension PaxTimeSeriesLayout {
     }
     let point = points[index]
     var parts = [time]
-    if point.partial { parts.append("部分采集") }
+    if point.partial { parts.append(style.copy.partial) }
     if style.isStacked, let base = point.value {
       let names = style.names
       parts.append(names[0] + " " + style.formatValue(base))
       parts.append((names.count > 1 ? names[1] : "") + " " + style.formatValue(point.stacked ?? 0))
-      parts.append("合计 " + style.formatValue(total))
+      parts.append(style.copy.total + style.formatValue(total))
     } else {
       parts.append(style.formatValue(total))
     }
@@ -120,7 +123,7 @@ extension PaxTimeSeriesLayout {
   @MainActor
   func compactReadout(for hit: Hit, style: PaxTimeSeriesStyle) -> String {
     guard let index = hit.index, points.indices.contains(index), let total = points[index].total
-    else { return "未采集" }
+    else { return style.copy.missing }
     return style.formatValue(total)
   }
 
@@ -129,15 +132,16 @@ extension PaxTimeSeriesLayout {
   func summary(style: PaxTimeSeriesStyle) -> String {
     var parts =
       axis == .samples
-      ? [style.title, "最近 \(points.count) 个有效样本"] : [style.title, "范围 " + domain.rangeText()]
-    if let note = domain.coverageNote() { parts.append(note) }
+      ? [style.title, style.copy.samples(points.count)]
+      : [style.title, style.copy.range + domain.rangeText()]
+    if let note = domain.coverageNote(format: style.copy.coverage) { parts.append(note) }
     guard let latest, let value = latest.total else {
-      return parts.joined(separator: "，") + "，暂无数据"
+      return parts.joined(separator: " · ") + " · " + style.copy.noData
     }
-    parts.append("最新 " + style.formatValue(value))
-    if let peak = maximum { parts.append("最大 " + style.formatValue(peak)) }
-    if gapCount > 0 { parts.append("未采集 \(gapCount) 个时段") }
-    return parts.joined(separator: "，")
+    parts.append(style.copy.latest + style.formatValue(value))
+    if let peak = maximum { parts.append(style.copy.maximum + style.formatValue(peak)) }
+    if gapCount > 0 { parts.append(style.copy.gaps(gapCount)) }
+    return parts.joined(separator: " · ")
   }
 }
 

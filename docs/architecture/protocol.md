@@ -46,17 +46,15 @@ ApplyProfile 的 core 重写合同：`log.disabled` 强制为 false，`log.level
 
 **传输**：grpc-swift 2（`GRPCNIOTransportHTTP2` 的 Posix 传输，UDS target）↔ Go `grpc-go`。
 
-**Socket 与鉴权（旧 root 路径，保留的 Listen 合同；用户 paxd 的 socket 规则见上）**：
-
-- 路径 `/var/run/pax-connect/pax.sock`；目录 `root:admin 0750`，socket `0660`。
-- daemon 在 accept 时用 `LOCAL_PEERCRED` 取对端 uid，只放行已登记的用户 uid。
-- P1：用 `LOCAL_PEERTOKEN` 取 audit token，校验客户端代码签名的 Team ID / bundle ID（需 cgo 调 Security.framework）。
+Socket及身份见[runtime](runtime.md)§17；仅限本机UDS。
 
 **T3 快照同步**：Snapshot追加pending_operation_id（字段8）和degraded_reason（字段9），重连可恢复未完成开关与实际降级原因。ACK只代表命令入队，最终OperationResult与快照决定状态。
 
 **后台服务身份**：`HelloResponse.service_fingerprint`（字段4）提供运行中的已签名daemon字节与bundle plist字节拼接的SHA-256。App用bundle指纹核对实际服务；旧daemon无此字段且版本相同属于身份未知，不自动重注册，要求显式重新登记。具体更新事务与错误行为以T2 spec为准。
 
-**接口形态**：签名与字段见 `api/*.proto`，各族合同见 §4.1。
+跨端呈现语义及会话上限行见[呈现合同](presentation.md)。
+
+**接口形态**：字段见`api/*.proto`；RPC族见§4.1。
 
 - 命令只返回 `OperationAck{operation_id}`，最终结果通过 `Watch` 的 `OperationResult` 回来；UI 永远以 daemon 推送为准。
 - 重连：退避 → `Hello` → `GetSnapshot` → `Watch(from_seq = snapshot.snapshot_version)`；丢弃 已消费的重复 `seq` 与早于快照版本的增量。
@@ -101,7 +99,7 @@ RPC族、能力及字段见[服务索引](rpc-services.md)。
 |---|---|---|---|---|---|
 | 状态与目录 | `Snapshot.snapshot_version`、`catalog_revision` | 无；daemon 新实例从 0 | controller 每次状态 / 目录 / 设置提交（`commitLocked`） | `snapshot` | 全部（ConnectionStore、RoutesStore） |
 | 日志 | `logs_revision`；`log_head_sequence` 是增量游标，不是版本号 | `log_deletion_generation`、`clear_generation`、`journal_generation`、`summary_generation` | logs.db 入库 / 整理事务提交可见行才加；清空、删除、到期清理、重建改代数（`history_logs_*.go`）。空批次不写库、不加号；入库有新行即唤醒日志整理，不等定时 | `history_delta` | `logs`、`dashboard`、`traffic`（近期响应） |
-| 流量 | `traffic_revision`（无 `quality_revision`：字段 13 已 reserved，状态类字段按 R8 随值送达） | `traffic_deletion_generation`（过期清理、容量淘汰时与 revision 同事务加一，`history_traffic_maintenance.go`） | 流量与延迟行入库事务（`history_traffic_apply.go`）；只有存入会改变查询结果的观测才加号，poll / gap 行不加 | `history_delta`（状态字段值变化也推，不变号） | `traffic`、`dashboard` |
+| 流量 | `traffic_revision`（无 `quality_revision`：字段 13 已 reserved，状态类字段按 R8 随值送达） | `traffic_deletion_generation`（过期清理时与 revision 同事务加一，`history_traffic_maintenance.go`） | 流量与延迟行入库事务（`history_traffic_apply.go`）；只有存入会改变查询结果的观测才加号，poll / gap 行不加 | `history_delta`（状态字段值变化也推，不变号） | `traffic`、`dashboard` |
 | 线路历史 | `route_history_revision` | 无：线路历史无清空操作，只有 7 天 / 条数裁剪；`clear_generation` 属 logs.db，不复用 | `config.RouteHistory.Revision`：自动延迟新点（30 s）、测量结果、裁剪都加一，与 `Items` 同文件落盘；映射入 `HistoryState` | `history_delta`；App 版本变化即整窗重拉 | `dashboard`（线路趋势）、线路页 |
 | AI 用量 | `AIUsageState.revision` | `AIUsageState.generation`（93 天清理删行、重建时与 revision 同事务加一，R5） | aiusage 入库 / 重算事务落库；回填、扫描错误、skipped 只走状态字段（R8） | `ai_usage`（版本号、代数或状态字段变化，每秒最多一次）；首帧 `Snapshot.ai_usage` | `ai_overview`、`ai_logs`、`ai_profiles` |
 

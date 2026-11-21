@@ -17,24 +17,35 @@ extension AIProfileEditor {
     return card
   }
   func modelSummary(_ p: AIProfile) -> String {
-    let sync = p.modelsChecked.map { " · 最近同步 " + TrafficFormatting.dateMinute($0) } ?? ""
+    let sync =
+      p.modelsChecked.map {
+        self.interfaceCopy.text("profile_section.last_sync_prefix")
+          + TrafficFormatting.dateMinute($0)
+      } ?? ""
     switch p.modelsState {
-    case "ready": return "已读取 \(p.catalog.count) 个模型" + sync
-    case "partial": return "已读取 \(p.catalog.count) 个模型 · 目录未完整返回" + sync
+    case "ready":
+      return interfaceCopy.text("profile_section.catalog_count", count: p.catalog.count) + sync
+    case "partial":
+      return interfaceCopy.text("profile_section.catalog_partial", count: p.catalog.count) + sync
     case "failed":
       let reason = modelFailure(p.modelsError)
       return p.catalog.isEmpty
-        ? "读取失败 · " + reason : "保留 \(p.catalog.count) 个模型 · 刷新失败 · " + reason + sync
-    default: return "尚未读取模型目录"
+        ? self.interfaceCopy.text("profile_section.read_failed_prefix") + reason
+        : interfaceCopy.text(
+          "profile_section.catalog_preserved",
+          ["count": p.catalog.count.formatted(), "reason": reason, "sync": sync])
+    default: return self.interfaceCopy.text("profile_section.catalog_unread")
     }
   }
   func modelFailure(_ code: String) -> String {
     switch code {
-    case "models_timeout": return "连接超时"
-    case "models_auth_failed": return "凭据未通过认证"
-    case "models_not_found": return "供应商未提供该接口"
-    case "models_invalid_response": return "返回格式无法识别"
-    default: return "暂时无法连接供应商"
+    case "models_timeout": return self.interfaceCopy.text("profile_section.connection_timeout")
+    case "models_auth_failed":
+      return self.interfaceCopy.text("profile_section.authentication_failed")
+    case "models_not_found": return self.interfaceCopy.text("profile_section.endpoint_missing")
+    case "models_invalid_response":
+      return self.interfaceCopy.text("profile_section.invalid_response")
+    default: return self.interfaceCopy.text("profile_section.provider_unavailable")
     }
   }
   func modelRefreshRow(_ p: AIProfile) -> NSView {
@@ -42,7 +53,9 @@ extension AIProfileEditor {
       [
         AIUsageLayout.label(modelSummary(p)), NSView(),
         actions.button(
-          store.configuration.loading ? "读取中…" : "刷新模型",
+          store.configuration.loading
+            ? self.interfaceCopy.text("profile_section.loading")
+            : self.interfaceCopy.text("profile_section.refresh_models"),
           enabled: !store.preview && !store.configuration.loading
         ) { [weak self] in
           guard let self else { return }
@@ -56,7 +69,10 @@ extension AIProfileEditor {
   /// The cards below the connection form; a new Profile only gets a hint.
   func profileDetailViews() -> [NSView] {
     guard let p = current else {
-      return [AIUsageLayout.label("保存后自动读取模型目录。", secondary: true)]
+      return [
+        AIUsageLayout.label(
+          self.interfaceCopy.text("profile_section.catalog_after_save"), secondary: true)
+      ]
     }
     return [applySection(p), usageSection(p), modelsSection(p)]
   }
@@ -65,20 +81,27 @@ extension AIProfileEditor {
       cli -> NSView in
       let b = store.bindings[cli]
       let owns = b?.profileID == p.id
-      let label = owns ? AIProfilesStore.stateLabel(b) : "未应用"
+      let label =
+        owns
+        ? AIProfilesStore.stateLabel(b, context: interfaceCopy.context)
+        : self.interfaceCopy.text("profile_section.not_applied")
       let mark = AIUsageLayout.label(label, secondary: true)
-      if label == "配置已写入" { mark.textColor = AIUsageCostDisplay.channelColor }
+      if owns && b?.state == "applied" { mark.textColor = AIUsageCostDisplay.channelColor }
       return AIUsageLayout.stack(
         [
           AIUsageLayout.label(cli.rawValue), NSView(), mark,
-          actions.button("切换…", enabled: store.configuration.available) { [weak self] in
+          actions.button(
+            self.interfaceCopy.text("profile_section.switch"),
+            enabled: store.configuration.available
+          ) { [weak self] in
             guard let self else { return }
             self.presentWorkbenchModal(
               AIBindingController(store: store, client: cli, targetProfile: p.id))
           },
         ], vertical: false)
     }
-    return profileSection("应用状态", symbol: "terminal", views: rows)
+    return profileSection(
+      self.interfaceCopy.text("profile_section.application_state"), symbol: "terminal", views: rows)
   }
   private func usageSection(_ p: AIProfile) -> NSView {
     let summary = store.usageSummary(profile: p.id, lifetime: true)
@@ -86,13 +109,19 @@ extension AIProfileEditor {
       summary.count > 0
       ? AIUsageLayout.equalRow([
         metric("Token", AIUsageFormatting.tokens(summary.tokens)),
-        metric("官方费用", summary.officialCostLabel, color: AIUsageCostDisplay.officialColor),
-        metric("渠道费用", summary.costLabel, color: AIUsageCostDisplay.channelColor),
-        metric("请求数", String(summary.count)),
+        metric(
+          self.interfaceCopy.text("ai_usage.official_cost"), summary.officialCostLabel,
+          color: AIUsageCostDisplay.officialColor),
+        metric(
+          self.interfaceCopy.text("profile_section.channel_cost"), summary.costLabel,
+          color: AIUsageCostDisplay.channelColor),
+        metric(self.interfaceCopy.text("ai_usage.requests"), String(summary.count)),
       ])
-      : AIUsageLayout.label("暂无已归属请求", secondary: true)
+      : AIUsageLayout.label(
+        self.interfaceCopy.text("profile_section.unattributed_requests"), secondary: true)
     return profileSection(
-      "累计用量", symbol: "chart.bar", views: [body], detail: "全部历史 · 本地估算，非平台账单")
+      self.interfaceCopy.text("profile_section.lifetime_usage"), symbol: "chart.bar", views: [body],
+      detail: self.interfaceCopy.text("profile_section.lifetime_note"))
   }
   private func metric(_ title: String, _ value: String, color: NSColor? = nil) -> NSView {
     let number = AIUsageLayout.label(value, metric: true)
@@ -102,8 +131,11 @@ extension AIProfileEditor {
   private func modelsSection(_ p: AIProfile) -> NSView {
     if p.kind == "native" {
       return profileSection(
-        "模型", symbol: "sparkles",
-        views: [AIUsageLayout.label("原生账号配置不查询 API 模型目录", secondary: true)])
+        self.interfaceCopy.text("ai_usage.model"), symbol: "sparkles",
+        views: [
+          AIUsageLayout.label(
+            self.interfaceCopy.text("profile_section.native_catalog"), secondary: true)
+        ])
     }
     var views: [NSView] = [modelRefreshRow(p)]
     let split = usedModels(p)
@@ -123,10 +155,14 @@ extension AIProfileEditor {
       toggle.compactStyle = .text
       views += [AIUsageLayout.wrap(toggle), table]
     }
-    return profileSection("模型", symbol: "sparkles", views: views)
+    return profileSection(
+      self.interfaceCopy.text("ai_usage.model"), symbol: "sparkles", views: views)
   }
   private func unusedTitle(_ n: Int, hasUsed: Bool) -> String {
-    (showUnusedModels ? "收起 " : "") + (hasUsed ? "其余 \(n) 个未使用" : "\(n) 个模型暂无用量")
+    (showUnusedModels ? self.interfaceCopy.text("profile_section.collapse_prefix") : "")
+      + (hasUsed
+        ? interfaceCopy.text("profile_section.unused_models", count: n)
+        : interfaceCopy.text("profile_section.no_model_usage", count: n))
       + (showUnusedModels ? "" : " ›")
   }
   /// Catalog models only; used ones first, by cost.
@@ -144,16 +180,31 @@ extension AIProfileEditor {
     let showOwner = owners.count > 1 && owners.contains { !$0.isEmpty }
     let showContext = p.catalog.contains { $0.contextWindow > 0 }
     var columns: [PaxDataTable.Column] = [
-      .init("模型 ID", width: 190, growth: 1.6, symbol: "sparkles", sortable: false)
+      .init(
+        self.interfaceCopy.text("profile_section.model_id"), width: 190, growth: 1.6,
+        symbol: "sparkles", sortable: false)
     ]
-    if showOwner { columns.append(.init("提供方", width: 110, growth: 0.3, sortable: false)) }
-    if showContext { columns.append(.init("上下文", width: 100, growth: 0, sortable: false)) }
-    columns.append(.init("Token", width: 96, growth: 0, sortable: false))
+    if showOwner {
+      columns.append(
+        .init(
+          self.interfaceCopy.text("profile_section.provider"), width: 110, growth: 0.3,
+          sortable: false))
+    }
+    if showContext {
+      columns.append(
+        .init(
+          self.interfaceCopy.text("profile_section.context"), width: 100, growth: 0, sortable: false
+        ))
+    }
+    columns.append(
+      .init(
+        self.interfaceCopy.text("ai_usage.column.tokens"), width: 96, growth: 0, sortable: false))
     let costColumn = columns.count
     columns.append(
       .init(
-        "官方 / 渠道费用", width: 190, growth: 0, inset: PaxTheme.Spacing.regular * 1.5,
-        sortable: false))
+        self.interfaceCopy.text("profile_section.official_channel_cost"), width: 190, growth: 0,
+        inset: PaxTheme.Spacing.regular * 1.5,
+        sortable: false, toolTip: AIUsageCostDisplay.explanation(context: interfaceCopy.context)))
     let table = PaxDataTable(
       columns: columns,
       rows: models.map { m in
@@ -176,7 +227,8 @@ extension AIProfileEditor {
       let usage = self.store.usageSummary(model: id, profile: p.id, lifetime: true)
       return AIUsageCostDisplay.label(
         official: usage.count > 0 ? usage.officialCostLabel : "—",
-        channel: usage.count > 0 ? usage.costLabel : "—", stacked: true)
+        channel: usage.count > 0 ? usage.costLabel : "—", stacked: true,
+        context: interfaceCopy.context)
     }
     table.setTableIdentifier("ai-profile-model-catalog")
     return table

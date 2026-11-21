@@ -96,7 +96,7 @@ func (q snapshotQuery) QueryRowContext(ctx context.Context, stmt string, args ..
 }
 func snapshotSQL(stmt string) string {
 	// Longest names first; ReplaceAll only sees trusted package-owned SQL.
-	for _, name := range []string{"col_connections", "col_identities", "col_event_index", "col_sections", "col_answers", "col_members", "col_objects", "col_events", "col_fields", "col_groups", "col_raw"} {
+	for _, name := range []string{"col_connections", "col_identities", "col_event_index", "col_texts", "col_sections", "col_answers", "col_members", "col_objects", "col_events", "col_fields", "col_groups", "col_raw"} {
 		stmt = strings.ReplaceAll(stmt, name, "snap_"+name)
 	}
 	return stmt

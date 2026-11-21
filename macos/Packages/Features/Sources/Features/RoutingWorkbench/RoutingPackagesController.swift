@@ -4,18 +4,22 @@ import PaxCore
 import PaxUI
 
 @MainActor
-final class RoutingPackagesController: NSViewController {
+final class RoutingPackagesController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   let store: RoutingWorkbenchStore
   private let objectIcons: WorkbenchObjectIcons
   private let packages = RoutingPackagesController.packageTable(height: PaxTheme.Routing.packageRow)
   private let priority = RoutingPackagesController.packageTable(
     height: PaxTheme.Routing.fixedPackageRow)
-  private let customSection = NSStackView(views: [
-    PaxText.label("自定义包", font: PaxTheme.Typography.caption(), secondary: true)
+  private lazy var customSection = NSStackView(views: [
+    interfaceCopy.label(
+      "rules_ui.custom_packages", font: PaxTheme.Typography.caption(), secondary: true)
   ])
   private let geo = RoutingPackagesController.packageTable(height: PaxTheme.Routing.fixedPackageRow)
-  private let rules = RoutingPackagesController.ruleTable(priority: false)
-  private let priorityRules = RoutingPackagesController.ruleTable(priority: true)
+  private lazy var rules = RoutingPackagesController.ruleTable(
+    priority: false, context: interfaceCopy.context)
+  private lazy var priorityRules = RoutingPackagesController.ruleTable(
+    priority: true, context: interfaceCopy.context)
   private let ruleArea = NSView()
   private let ruleCount = PaxText.label("", font: PaxTheme.Typography.caption())
   private let browseGeo = PaxRouteButton("查看规则", symbol: "list.bullet")
@@ -54,25 +58,47 @@ final class RoutingPackagesController: NSViewController {
         rowHeight: height, headerHeight: 0, rounded: false, rowSeparators: false,
         selectionInset: 0), selection: .browse)
   }
-  private static func ruleTable(priority: Bool) -> PaxDataTable {
-    let titles = priority ? ["匹配目标", "匹配范围", "去向", ""] : ["匹配目标", "匹配范围", ""]
+  private static func ruleTable(priority: Bool, context: PresentationContext = .chinese)
+    -> PaxDataTable
+  {
+    let titles =
+      priority
+      ? [
+        context.text("rules_ui.match_target"), context.text("interface_detail.0bb202d398"),
+        context.text("rules_ui.destination"), "",
+      ] : [context.text("rules_ui.match_target"), context.text("interface_detail.0bb202d398"), ""]
     let shares = priority ? PaxTheme.Routing.priorityColumns : PaxTheme.Routing.ruleColumns
     return PaxDataTable(
       columns: [
         .init(
-          "序号", width: PaxTheme.Routing.ruleNumberWidth, growth: 0,
+          context.text("rules_ui.index"), width: PaxTheme.Routing.ruleNumberWidth, growth: 0,
           alignment: .center, inset: PaxTheme.Routing.ruleInset, sortable: false)
       ]
         + titles.enumerated().map { index, title in
           .init(
-            title, width: 0, growth: shares[index],
+            title, width: index == titles.count - 1 ? PaxTheme.Routing.ruleActionsWidth : 0,
+            growth: index == titles.count - 1 ? 0 : shares[index],
             inset: PaxTheme.Routing.ruleInset, sortable: false)
         },
       metrics: .init(
         rowHeight: PaxTheme.Table.memberRow, headerHeight: PaxTheme.Routing.ruleHeader,
         rounded: false), selection: .single)
   }
+  private func applyLanguage() {
+    let keys = ["rules_ui.index", "rules_ui.match_target", "interface_detail.0bb202d398"]
+    for (index, key) in keys.enumerated() {
+      rules.setColumnTitle(interfaceCopy.text(key), at: index)
+      priorityRules.setColumnTitle(interfaceCopy.text(key), at: index)
+    }
+    priorityRules.setColumnTitle(interfaceCopy.text("rules_ui.destination"), at: 3)
+    render()
+    for table in [packages, priority, geo, rules, priorityRules] { table.refreshVisibleCopy() }
+  }
   override func loadView() {
+    interfaceCopy.onChange = { [weak self] in self?.applyLanguage() }
+    interfaceCopy.button(browseGeo, key: "rules_ui.view_rules")
+    interfaceCopy.button(checkUpdate, key: "interface_detail.7f68ebad19")
+    interfaceCopy.button(add, key: "rules_ui.add_rule")
     let card = PaxCard(insets: NSEdgeInsets())
     card.clipsContent = true
     card.setAccessibilityIdentifier("routing-rule-library")
@@ -99,15 +125,20 @@ final class RoutingPackagesController: NSViewController {
     let library = NSView()
     card.contentView = library
     library.bottomAnchor.constraint(equalTo: card.bottomAnchor).isActive = true
-    let new = PaxRouteButton("添加包", target: self, action: #selector(newPackage))
+    let new = interfaceCopy.button(
+      PaxRouteButton("", target: self, action: #selector(newPackage)),
+      key: "interface_detail.a9999b0604")
     new.setAccessibilityIdentifier("routing-add-package")
-    let leftHeader = NSStackView(views: [PaxText.label("规则包"), NSView(), new])
+    let leftHeader = NSStackView(views: [
+      interfaceCopy.label("rules_ui.packages"), NSView(), new,
+    ])
     leftHeader.spacing = PaxTheme.Spacing.tight
     leftHeader.edgeInsets = NSEdgeInsets(
       top: 0, left: PaxTheme.Routing.sidebarInset, bottom: 0,
       right: PaxTheme.Routing.sidebarInset)
     let section = NSStackView(views: [
-      PaxText.label("内置包", font: PaxTheme.Typography.caption(), secondary: true)
+      interfaceCopy.label(
+        "interface_detail.4df761e159", font: PaxTheme.Typography.caption(), secondary: true)
     ])
     section.edgeInsets = NSEdgeInsets(
       top: 0, left: PaxTheme.Routing.sidebarInset, bottom: 0,
@@ -182,14 +213,16 @@ final class RoutingPackagesController: NSViewController {
     ).isActive = true
     enabled.target = self
     enabled.action = #selector(togglePackage)
+    interfaceCopy.button(enabled, key: "interface_detail.dfb802238b")
     more.target = self
     more.action = #selector(managePackage)
     more.imagePosition = .imageOnly
-    more.toolTip = "管理规则包"
-    more.setAccessibilityLabel("管理规则包")
+    more.toolTip = interfaceCopy.text("interface_detail.458cac02f8")
+    more.setAccessibilityLabel(interfaceCopy.text("interface_detail.458cac02f8"))
     let routeDescription = NSStackView(views: [
-      PaxText.label("包内目标统一走", font: PaxTheme.Typography.caption()),
-      PaxText.label("匹配到本包的目标使用此去向", font: PaxTheme.Typography.time, secondary: true),
+      interfaceCopy.label("interface_detail.bb8741da97", font: PaxTheme.Typography.caption()),
+      interfaceCopy.label(
+        "interface_detail.3140ffee55", font: PaxTheme.Typography.time, secondary: true),
     ])
     routeDescription.orientation = .vertical
     routeDescription.alignment = .leading
@@ -198,8 +231,8 @@ final class RoutingPackagesController: NSViewController {
     routeRow.spacing = PaxTheme.Spacing.tight
     destination.target = self
     destination.action = #selector(destinationChanged)
-    destination.setAccessibilityLabel("包内目标统一去向")
-    search.placeholderString = "搜索包内规则"
+    destination.setAccessibilityLabel(interfaceCopy.text("interface_detail.bac72ddcff"))
+    search.placeholderString = interfaceCopy.text("interface_detail.45f0b3f09d")
     search.sendsSearchStringImmediately = true
     search.target = self
     search.action = #selector(searchChanged)
@@ -316,35 +349,47 @@ final class RoutingPackagesController: NSViewController {
   }
   func render() {
     let custom = store.packages.filter { [.local, .subscription].contains($0.kind) }
+    let empty = interfaceCopy.text("common.no_data")
     packages.apply(
-      rows: custom.map { .init(id: $0.id, values: []) }, selectedID: store.selectedPackageID
+      rows: custom.map { .init(id: $0.id, values: []) }, emptyMessage: empty,
+      selectedID: store.selectedPackageID
     )
     packages.isHidden = custom.isEmpty
     customSection.isHidden = custom.isEmpty
     packagesHeight?.constant = CGFloat(custom.count) * PaxTheme.Routing.packageRow
     priority.apply(
       rows: store.packages.filter { $0.kind == .priority }.map { .init(id: $0.id, values: []) },
-      selectedID: store.selectedPackageID)
-    let builtins = store.packages.filter { [.adblock, .geo].contains($0.kind) }
+      emptyMessage: empty, selectedID: store.selectedPackageID)
+    let builtins = store.packages.filter { $0.kind.isBuiltIn }
     geo.apply(
-      rows: builtins.map { .init(id: $0.id, values: []) }, selectedID: store.selectedPackageID)
+      rows: builtins.map { .init(id: $0.id, values: []) }, emptyMessage: empty,
+      selectedID: store.selectedPackageID)
     builtinHeight?.constant = CGFloat(builtins.count) * PaxTheme.Routing.fixedPackageRow
-    status.stringValue = store.packageMessage
+    status.stringValue = store.packageMessageDisplay(context: interfaceCopy.context)
     status.isHidden = status.stringValue.isEmpty
-    guard let pack = store.selectedPackage else { return }
+    guard let pack = store.selectedPackage else {
+      rules.setEmptyText(empty)
+      priorityRules.setEmptyText(empty)
+      return
+    }
     if search.currentEditor() == nil { search.stringValue = store.rulesSearch }
-    heading.stringValue = pack.name
-    subtitle.stringValue = RoutingGeoPresentation.subtitle(pack, live: store.telemetry != nil)
+    heading.stringValue = pack.displayName(context: interfaceCopy.context)
+    subtitle.stringValue = RoutingGeoPresentation.subtitle(
+      pack, live: store.telemetry != nil, context: interfaceCopy.context)
     enabled.isHidden = pack.kind == .priority
     enabled.state = pack.enabled ? .on : .off
     enabled.attributedTitle = NSAttributedString(
-      string: pack.enabled ? "已启用" : "已停用",
+      string: pack.enabled
+        ? interfaceCopy.text("interface_detail.dfb802238b")
+        : interfaceCopy.text("interface_detail.a8c3698b5b"),
       attributes: [.foregroundColor: pack.enabled ? PaxTheme.Color.text : PaxTheme.Color.error])
     enabled.isEnabled = store.canEdit && !pack.updating
-    routeRow.superview?.isHidden = [.priority, .geo, .adblock].contains(pack.kind)
+    routeRow.superview?.isHidden = !pack.kind.canChangeDestination
     destination.removeAllItems()
     destination.addItems(
-      withTitles: store.destinationOptions(current: pack.destination).map(store.destinationName))
+      withTitles: store.destinationOptions(current: pack.destination).map {
+        store.destinationName($0, context: interfaceCopy.context)
+      })
     if let index = store.destinationOptions(current: pack.destination).firstIndex(
       of: pack.destination)
     {
@@ -353,35 +398,44 @@ final class RoutingPackagesController: NSViewController {
     destination.isEnabled = store.canEdit && !pack.updating
     add.isHidden = ![.local, .priority].contains(pack.kind)
     add.isEnabled = store.canEdit
-    more.isHidden = [.priority, .geo, .adblock].contains(pack.kind)
+    more.isHidden = pack.kind == .priority || pack.kind.isBuiltIn
     more.isEnabled = store.canEdit && !pack.updating
     let editable = [.local, .priority].contains(pack.kind)
-    checkUpdate.isHidden = editable
+    checkUpdate.isHidden = !pack.kind.canUpdate
     checkUpdate.title =
       store.libraryBusy
-      ? "更新中…" : pack.kind == .geo && store.telemetry != nil ? "更新 Geo 基础包" : "检查更新"
+      ? interfaceCopy.text("interface_detail.a0bacec44f")
+      : pack.kind == .geo && store.telemetry != nil
+        ? interfaceCopy.text("interface_detail.c992c7adb4")
+        : interfaceCopy.text("interface_detail.7f68ebad19")
     checkUpdate.isEnabled = store.canEdit && !pack.updating
     browseGeo.isHidden = pack.kind != .geo || store.telemetry == nil
     browseGeo.isEnabled = store.telemetry?.routingLibraryAvailable == true
     ruleCount.stringValue =
-      "包内规则 · \(pack.rules.count) 条"
-      + ([.subscription, .adblock].contains(pack.kind) ? " · 只读" : "")
-      + (store.rulesSearch.isEmpty ? "" : " · 匹配 \(store.visibleRules.count) 条")
+      interfaceCopy.text(
+        "interface_detail.72aa5340a8", ["arg0": String(describing: pack.rules.count)])
+      + ([.subscription, .adblock, .claude].contains(pack.kind)
+        ? interfaceCopy.text("interface_detail.74139b0130") : "")
+      + (store.rulesSearch.isEmpty
+        ? ""
+        : interfaceCopy.text(
+          "interface_detail.aae9e27403", ["arg0": String(describing: store.visibleRules.count)]))
     rules.isHidden = pack.kind == .priority
     priorityRules.isHidden = pack.kind != .priority
-    rules.setColumnTitle(editable ? "" : "去向", at: 3)
+    rules.setColumnTitle(
+      editable ? "" : interfaceCopy.text("interface_detail.5e16625861"), at: 3)
     let table = pack.kind == .priority ? priorityRules : rules
     table.apply(
       rows: store.visibleRules.map { .init(id: $0.id, values: []) },
-      emptyMessage: store.rulesSearch.isEmpty ? "包内暂无规则，添加第一条规则" : "没有匹配的规则",
+      emptyMessage: store.rulesSearch.isEmpty
+        ? interfaceCopy.text("interface_detail.a9ead74e63")
+        : interfaceCopy.text("interface_detail.c224df852c"),
       selectedID: store.selectedRuleID)
     rulesHeight?.constant =
       PaxTheme.Routing.ruleHeader
       + (store.visibleRules.isEmpty
         ? PaxTheme.Routing.emptyRulesHeight
         : CGFloat(store.visibleRules.count) * PaxTheme.Table.memberRow)
-    status.stringValue = store.packageMessage
-    status.isHidden = status.stringValue.isEmpty
     renderUpdates(pack)
   }
   @objc private func viewGeoRules() {
@@ -433,7 +487,10 @@ final class RoutingPackagesController: NSViewController {
   }
   @objc func remove(_ sender: NSButton) {
     guard let id = sender.identifier?.rawValue else { return }
-    confirm("移除这条规则？", detail: "只影响新连接；当前连接和历史记录保留。") { [weak self] in
+    confirm(
+      interfaceCopy.text("interface_detail.97b1ee6df3"),
+      detail: interfaceCopy.text("interface_detail.51bf1b0e87")
+    ) { [weak self] in
       guard let self else { return }
       self.store.perform(.removeRule(self.store.selectedPackageID, id))
     }
@@ -448,8 +505,8 @@ final class RoutingPackagesController: NSViewController {
     let alert = NSAlert()
     alert.messageText = title
     alert.informativeText = detail
-    alert.addButton(withTitle: "取消")
-    alert.addButton(withTitle: "确认")
+    alert.addButton(withTitle: interfaceCopy.text("common.cancel"))
+    alert.addButton(withTitle: interfaceCopy.text("interface_detail.36f33adaf0"))
     alert.beginSheetModal(for: window) { response in
       if response == .alertSecondButtonReturn { apply() }
     }
@@ -457,7 +514,10 @@ final class RoutingPackagesController: NSViewController {
   @objc private func managePackage(_ sender: NSButton) {
     let menu = NSMenu()
     menu.autoenablesItems = false
-    let values = [("重命名…", #selector(rename)), ("删除规则包…", #selector(deletePackage))]
+    let values = [
+      (interfaceCopy.text("interface_detail.ec4cd05f51"), #selector(rename)),
+      (interfaceCopy.text("interface_detail.6cd5bd7b52"), #selector(deletePackage)),
+    ]
     for (title, action) in values {
       let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
       item.target = self
@@ -465,10 +525,14 @@ final class RoutingPackagesController: NSViewController {
     }
     if store.selectedPackage?.kind == .subscription {
       menu.removeAllItems()
-      let item = NSMenuItem(title: "维护来源…", action: #selector(rename), keyEquivalent: "")
+      let item = NSMenuItem(
+        title: interfaceCopy.text("interface_detail.45de460cb0"), action: #selector(rename),
+        keyEquivalent: "")
       item.target = self
       menu.addItem(item)
-      let remove = NSMenuItem(title: "删除规则包…", action: #selector(deletePackage), keyEquivalent: "")
+      let remove = NSMenuItem(
+        title: interfaceCopy.text("interface_detail.6cd5bd7b52"),
+        action: #selector(deletePackage), keyEquivalent: "")
       remove.target = self
       menu.addItem(remove)
     }
@@ -479,7 +543,12 @@ final class RoutingPackagesController: NSViewController {
   }
   @objc private func deletePackage() {
     guard let pack = store.selectedPackage else { return }
-    confirm("删除「\(pack.name)」？", detail: "同时删除 \(pack.rules.count) 条包内规则；新连接继续匹配其他包和 Geo。") {
+    confirm(
+      interfaceCopy.text(
+        "interface_detail.320b34eb9d", ["arg0": String(describing: pack.name)]),
+      detail: interfaceCopy.text(
+        "interface_detail.31123590ba", ["arg0": String(describing: pack.rules.count)])
+    ) {
       [weak self] in self?.store.perform(.removePackage(pack.id))
     }
   }

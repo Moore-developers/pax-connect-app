@@ -3,7 +3,9 @@ import GRPCCore
 import PaxProto
 
 extension DaemonConnection {
-  public func inspectEnvironment(action: String, sessionID: String) async throws
+  public func inspectEnvironment(
+    action: String, sessionID: String, presentation: BrowserPresentation? = nil
+  ) async throws
     -> EnvironmentDiagnosticReport
   {
     try await withAuthenticatedClient { client in
@@ -14,6 +16,7 @@ extension DaemonConnection {
           .with {
             $0.action = action
             $0.sessionID = sessionID
+            if action == "start", let presentation { $0.presentation = presentation.proto }
           }, options: options)
         return EnvironmentDiagnosticReport(value)
       } catch { throw ClientError.classify(error) }

@@ -1,4 +1,5 @@
 import Foundation
+import PaxCore
 
 extension RoutingWorkbenchStore {
   enum PackageKind: String, CaseIterable {
@@ -7,6 +8,18 @@ extension RoutingWorkbenchStore {
     case subscription = "从链接订阅"
     case geo = "内置"
     case adblock = "内置广告拦截"
+    case claude = "内置 Claude"
+
+    func label(context: PresentationContext) -> String {
+      let names: [Self: String] = [
+        .priority: "priority", .local: "local", .subscription: "subscription", .geo: "geo",
+        .adblock: "adblock", .claude: "claude",
+      ]
+      return context.text("rules.kind." + (names[self] ?? "local"))
+    }
+    var isBuiltIn: Bool { self == .geo || self == .adblock || self == .claude }
+    var canChangeDestination: Bool { self == .local || self == .subscription || self == .claude }
+    var canUpdate: Bool { self == .subscription || self == .geo || self == .adblock }
   }
   enum Method: String, CaseIterable {
     case application = "应用"
@@ -17,7 +30,16 @@ extension RoutingWorkbenchStore {
     case cidr = "IP 网段"
     case builtin = "内置分类"
     case source = "订阅条件"
+    func label(context: PresentationContext) -> String {
+      let keys: [Self: String] = [
+        .application: "application", .process: "process", .domain: "domain",
+        .domainSuffix: "domain_suffix", .ip: "ip", .cidr: "cidr", .builtin: "builtin",
+        .source: "source",
+      ]
+      return context.text("rules.method." + (keys[self] ?? "source"))
+    }
   }
+  // Raw values remain the existing stored rule identity; labels are display only.
   enum Destination: Equatable {
     case followDefault, direct, global
     case route(String)
@@ -45,6 +67,7 @@ extension RoutingWorkbenchStore {
     var automatic = true
     var updating = false
     var updateMessage = ""
+    var updateText: ProductText? = nil
     var updatedAt: Date? = nil
   }
   struct PackageDraft {
@@ -72,7 +95,27 @@ extension RoutingWorkbenchStore {
   }
   struct EditError: Error {
     let message: String
-    init(_ message: String) { self.message = message }
+    private let meaning: ProductText?
+    private let readMessage: RetainedProductMessage?
+    init(_ message: String) {
+      self.message = message
+      meaning = nil
+      readMessage = nil
+    }
+    init(code: String, params: [String: String] = [:]) {
+      readMessage = nil
+      meaning = ProductText(code: code, params: params)
+      message = PresentationContext.chinese.text(code, params)
+    }
+    init(readMessage: RetainedProductMessage) {
+      self.readMessage = readMessage
+      message = readMessage.original
+      meaning = nil
+    }
+    func message(context: PresentationContext) -> String {
+      if let readMessage { return readMessage.text(context: context) }
+      return ProductTextPresentation.text(meaning, original: message, context: context)
+    }
   }
 
 }

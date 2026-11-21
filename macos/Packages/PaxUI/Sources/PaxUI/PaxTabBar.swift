@@ -51,6 +51,11 @@ public final class PaxTabBar: NSView {
     strip.apply(items, selected: selected)
     needsLayout = true
   }
+  public func applyMore(title: String, accessibilityLabel: String) {
+    more.title = title
+    more.setAccessibilityLabel(accessibilityLabel)
+    needsLayout = true
+  }
   public override func layout() {
     super.layout()
     let overflow = (strip.documentView?.frame.width ?? 0) > bounds.width + 1
@@ -110,16 +115,26 @@ private final class PaxTabStrip: NSScrollView {
     stack.orientation = .horizontal
     stack.alignment = .centerY
     stack.spacing = style == .detail ? PaxTheme.Routes.detailTabGap : PaxTheme.Spacing.xs
-    setAccessibilityLabel("横向页签")
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public func apply(_ items: [Item], selected: String) {
     guard self.items != items || self.selected != selected else { return }
-    if self.items == items, let segments {
+    if let segments, self.items.map(\.id) == items.map(\.id),
+      self.items.map(\.symbol) == items.map(\.symbol),
+      self.items.map(\.count) == items.map(\.count)
+    {
+      self.items = items
       self.selected = selected
+      segments.apply(
+        labels: items.map(\.title),
+        accessibilityLabels: items.map { $0.accessibilityLabel ?? $0.displayTitle })
       segments.selectedIndex = items.firstIndex { $0.id == selected } ?? 0
+      segments.setFrameSize(segments.intrinsicContentSize)
       return
     }
+    let existing =
+      self.items.map(\.id) == items.map(\.id)
+      ? stack.arrangedSubviews.compactMap { $0 as? PaxTabButton } : []
     self.items = items
     self.selected = selected
     let origin = contentView.bounds.origin
@@ -141,20 +156,24 @@ private final class PaxTabStrip: NSScrollView {
       reflectScrolledClipView(contentView)
       return
     }
-    for v in stack.arrangedSubviews {
-      stack.removeArrangedSubview(v)
-      v.removeFromSuperview()
-    }
-    for item in items {
-      let button = PaxTabButton(
-        title: item.displayTitle, symbol: item.symbol, target: self,
-        action: #selector(selectTab(_:)))
-      button.identifier = NSUserInterfaceItemIdentifier(item.id)
-      button.state = item.id == selected ? .on : .off
-      button.setAccessibilityLabel(item.accessibilityLabel ?? item.displayTitle)
-      button.setAccessibilityIdentifier("route-tab-" + item.id)
-      button.setAccessibilityValue(item.id == selected ? "已选中" : "未选中")
-      stack.addArrangedSubview(button)
+    if existing.count == items.count && existing.count == stack.arrangedSubviews.count {
+      for (button, item) in zip(existing, items) {
+        button.apply(item, selected: item.id == selected)
+      }
+    } else {
+      for view in stack.arrangedSubviews {
+        stack.removeArrangedSubview(view)
+        view.removeFromSuperview()
+      }
+      for item in items {
+        let button = PaxTabButton(
+          title: item.displayTitle, symbol: item.symbol, target: self,
+          action: #selector(selectTab(_:)))
+        button.identifier = NSUserInterfaceItemIdentifier(item.id)
+        button.setAccessibilityIdentifier("route-tab-" + item.id)
+        button.apply(item, selected: item.id == selected)
+        stack.addArrangedSubview(button)
+      }
     }
     let width =
       stack.arrangedSubviews.reduce(CGFloat(0)) { $0 + $1.intrinsicContentSize.width }
@@ -200,6 +219,15 @@ private final class PaxTabButton: NSButton {
     if let symbol { image = PaxRouteIcon.image(symbol, size: PaxTheme.Routes.detailTabIcon) }
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
+  func apply(_ item: PaxTabBar.Item, selected: Bool) {
+    title = item.displayTitle
+    image = item.symbol.flatMap { PaxRouteIcon.image($0, size: PaxTheme.Routes.detailTabIcon) }
+    state = selected ? .on : .off
+    setAccessibilityLabel(item.accessibilityLabel ?? item.displayTitle)
+    setAccessibilitySelected(selected)
+    invalidateIntrinsicContentSize()
+    needsDisplay = true
+  }
   override var isFlipped: Bool { true }
   override var intrinsicContentSize: NSSize {
     let width = (title as NSString).size(withAttributes: [

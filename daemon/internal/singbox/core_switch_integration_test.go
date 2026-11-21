@@ -135,7 +135,7 @@ func TestCoreSelectorSwitchClosesOnlyOldNodeFlows(t *testing.T) {
 	ap := mustNodePort(t, a)
 	bp := mustNodePort(t, b)
 	in := freeLoopbackPort(t)
-	profile := fmt.Sprintf(`{"experimental":{"clash_api":{},"cache_file":{"path":%q}},"inbounds":[{"type":"mixed","tag":"mixed","listen":"127.0.0.1","listen_port":%d}],"outbounds":[{"type":"selector","tag":"proxy","outbounds":["A","B"],"default":"A"},{"type":"socks","tag":"A","server":"127.0.0.1","server_port":%s},{"type":"socks","tag":"B","server":"127.0.0.1","server_port":%s},{"type":"direct","tag":"direct"}],"route":{"final":"proxy","rules":[{"ip_cidr":["127.0.0.0/8"],"outbound":"direct"}]}}`, filepath.Join(t.TempDir(), "cache.db"), in, ap, bp)
+	profile := fmt.Sprintf(`{"experimental":{"clash_api":{},"cache_file":{"path":%q}},"inbounds":[{"type":"mixed","tag":"mixed","listen":"127.0.0.1","listen_port":%d}],"outbounds":[{"type":"selector","tag":"proxy","outbounds":["A","B"],"default":"A"},{"type":"socks","tag":"A","server":"127.0.0.1","server_port":%s},{"type":"socks","tag":"B","server":"127.0.0.1","server_port":%s},{"type":"direct","tag":"direct"}],"route":{"final":"proxy","rules":[{"ip_cidr":["192.0.2.2/32"],"outbound":"A"},{"ip_cidr":["127.0.0.0/8"],"outbound":"direct"}]}}`, filepath.Join(t.TempDir(), "cache.db"), in, ap, bp)
 	r := NewCoreRuntime(context.Background())
 	defer r.Close()
 	if err := r.Apply(profile); err != nil {
@@ -144,6 +144,8 @@ func TestCoreSelectorSwitchClosesOnlyOldNodeFlows(t *testing.T) {
 	defer func() { _ = r.Clear() }()
 	old := socksFlow(t, in, "192.0.2.1:80")
 	flowReply(t, old, "A")
+	fixed := socksFlow(t, in, "192.0.2.2:80")
+	flowReply(t, fixed, "A")
 	// Direct echo is unrelated to selector traffic and must survive the sweep.
 	echo, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -183,6 +185,9 @@ func TestCoreSelectorSwitchClosesOnlyOldNodeFlows(t *testing.T) {
 	}
 	next := socksFlow(t, in, "192.0.2.1:80")
 	flowReply(t, next, "B")
+	flowReply(t, fixed, "A")
+	r.Maintain(context.Background())
+	flowReply(t, fixed, "A")
 	flowReply(t, direct, "direct")
 }
 func mustNodePort(t *testing.T, address string) string {

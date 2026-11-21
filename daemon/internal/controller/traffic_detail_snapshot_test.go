@@ -16,8 +16,8 @@ import (
 // was not sent to the App before the database records disappeared.
 func TestTrafficDetailSnapshotSurvivesLogRemoval(t *testing.T) {
 	for _, scenario := range []struct{ window, removal string }{
-		{"day", "retention"}, {"day", "clear"}, {"day", "capacity"},
-		{"today", "retention"}, {"today", "clear"}, {"today", "capacity"},
+		{"day", "retention"}, {"day", "clear"},
+		{"today", "retention"}, {"today", "clear"},
 	} {
 		t.Run(scenario.window+"/"+scenario.removal, func(t *testing.T) {
 			ctx := context.Background()
@@ -51,8 +51,6 @@ func TestTrafficDetailSnapshotSurvivesLogRemoval(t *testing.T) {
 				_, err = l.logs.Prune(ctx, time.Now(), historystore.Limits{Rows: 2000, Duration: time.Second})
 			case "clear":
 				err = l.logs.Update(ctx, func(tx *historystore.LogsTx) error { return tx.ClearLogTables(ctx) })
-			case "capacity":
-				_, err = l.logs.EvictOldest(ctx, 1, historystore.Limits{Rows: 2000, Duration: time.Second})
 			}
 			if err != nil {
 				t.Fatal(err)

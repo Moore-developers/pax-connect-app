@@ -52,8 +52,11 @@ final class PaxDataHeaderCell: NSTableHeaderCell {
   }
   @available(*, unavailable) required init(coder: NSCoder) { fatalError("代码构建") }
   override func draw(withFrame rect: NSRect, in view: NSView) {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineBreakMode = .byTruncatingTail
     let attrs: [NSAttributedString.Key: Any] = [
       .font: PaxTheme.Typography.caption(), .foregroundColor: PaxTheme.Table.muted,
+      .paragraphStyle: paragraph,
     ]
     // stringValue retains the direction for accessibility; visual feedback uses
     // an icon instead of an appended arrow character.
@@ -63,7 +66,13 @@ final class PaxDataHeaderCell: NSTableHeaderCell {
     let gap = glyph > 0 ? PaxTheme.Spacing.xs : 0
     let sortGlyph = image == nil ? 0 : PaxTheme.Control.navigationIcon
     let sortGap = sortGlyph > 0 ? PaxTheme.Spacing.xs : 0
-    let width = size.width + glyph + gap + sortGlyph + sortGap
+    let padding =
+      PaxTheme.Spacing.xs
+      + (config.alignment == .center ? PaxTheme.Spacing.xs : config.inset)
+    let decorations = glyph + gap + sortGlyph + sortGap
+    let textWidth = min(ceil(size.width), max(0, rect.width - padding - decorations))
+    let width = textWidth + decorations
+    guard width + padding <= rect.width else { return }
     let x =
       config.alignment == .center
       ? rect.midX - width / 2
@@ -74,12 +83,14 @@ final class PaxDataHeaderCell: NSTableHeaderCell {
         color: PaxTheme.Table.muted)
     }
     (title as NSString).draw(
-      at: NSPoint(x: x + glyph + gap, y: rect.midY - size.height / 2), withAttributes: attrs)
+      in: NSRect(
+        x: x + glyph + gap, y: rect.midY - size.height / 2,
+        width: textWidth, height: ceil(size.height)), withAttributes: attrs)
     if let image {
       PaxRouteDrawing.icon(
         image,
         in: NSRect(
-          x: x + glyph + gap + size.width + sortGap, y: rect.midY - sortGlyph / 2, width: sortGlyph,
+          x: x + glyph + gap + textWidth + sortGap, y: rect.midY - sortGlyph / 2, width: sortGlyph,
           height: sortGlyph),
         color: PaxTheme.Table.muted)
     }

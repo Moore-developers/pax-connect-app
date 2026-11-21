@@ -12,7 +12,9 @@ class RoutingModalController: WorkbenchModalController {
   }
   override func showError(_ error: Error) {
     super.showError(error)
-    pane.status.stringValue = (error as? RoutingWorkbenchStore.EditError)?.message ?? "操作失败，请检查输入。"
+    pane.status.stringValue =
+      (error as? RoutingWorkbenchStore.EditError)?.message(context: interfaceCopy.context)
+      ?? self.interfaceCopy.text("interface_detail.5910b8db90")
   }
   func picker(
     _ title: String, items: [String], selected: Int, action: Selector, section: NSStackView? = nil
@@ -38,6 +40,9 @@ class RoutingModalController: WorkbenchModalController {
 
 @MainActor
 final class RoutingPackageEditor: RoutingModalController {
+  override var localizedTitleKey: String? {
+    draft.id == nil ? "rules_ui.new_package" : "rules_ui.edit_package"
+  }
   private let store: RoutingWorkbenchStore
   private var draft: RoutingWorkbenchStore.PackageDraft
   private var name: NSTextField?
@@ -68,27 +73,39 @@ final class RoutingPackageEditor: RoutingModalController {
     pane.clear()
     if draft.id == nil {
       kind = picker(
-        "规则由谁维护", items: ["自己维护", "从链接订阅"], selected: draft.kind == .local ? 0 : 1,
+        self.interfaceCopy.text("interface_detail.801a1a5ba1"),
+        items: [
+          self.interfaceCopy.text("interface_detail.320e0f7238"),
+          self.interfaceCopy.text("interface_detail.e16d41c1ea"),
+        ], selected: draft.kind == .local ? 0 : 1,
         action: #selector(kindChanged))
     }
-    let (nameView, input) = field("名称", value: draft.name, identifier: "routing-package-name")
+    let (nameView, input) = field(
+      self.interfaceCopy.text("profile_editor.name"), value: draft.name,
+      identifier: "routing-package-name")
     name = input
     pane.add(nameView)
     if draft.kind == .subscription {
       let (sourceView, input) = field(
-        "兼容规则集 HTTPS 地址", value: draft.source, identifier: "routing-source")
+        self.interfaceCopy.text("interface_detail.c0e426e719"), value: draft.source,
+        identifier: "routing-source")
       source = input
       pane.add(sourceView)
     } else {
       source = nil
     }
     destination = picker(
-      "包内目标统一走",
-      items: store.destinationOptions(current: draft.destination).map(store.destinationName),
+      self.interfaceCopy.text("interface_detail.bb8741da97"),
+      items: store.destinationOptions(current: draft.destination).map {
+        store.destinationName($0, context: interfaceCopy.context)
+      },
       selected: store.destinationOptions(current: draft.destination).firstIndex(
         of: draft.destination) ?? 0,
       action: #selector(destinationChanged))
-    pane.setActions([button("取消", #selector(close)), button("保存", #selector(save), primary: true)])
+    pane.setActions([
+      button(self.interfaceCopy.text("common.cancel"), #selector(close)),
+      button(self.interfaceCopy.text("action.common.save"), #selector(save), primary: true),
+    ])
   }
   @objc private func kindChanged() {
     capture()

@@ -54,8 +54,8 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     }
   }
   public struct Column {
-    public let title: String
-    public let width: CGFloat
+    public internal(set) var title: String
+    public internal(set) var width: CGFloat
     public let growth: CGFloat
     public let numeric: Bool
     public let alignment: NSTextAlignment
@@ -118,19 +118,19 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
   /// An owning store may sort raw domain values while the table owns header feedback.
   public var onSort: ((Int, Bool) -> Void)?
   public var contextOnReturn = false
-  private let columns: [Column]
+  var columns: [Column]
   let metrics: Metrics
   private let selection: Selection
   var rows: [Row] = []
   let table = PaxNativeTable()
   let scroll = NSScrollView()
   private var source: PaxTableDataSource?
-  private var sortedColumn: Int?
-  private var ascending = true
+  var sortedColumn: Int?
+  var ascending = true
   private var applying = false
   private var initialScroll = true
   private var revokedViewport: (ids: [String], origin: NSPoint, top: Int, offset: CGFloat)?
-  private let emptyLabel = PaxText.label("暂无数据", secondary: true)
+  let emptyLabel = PaxText.label("暂无数据", secondary: true)
   private let roundedMask = CAShapeLayer()
   public var displayedRowCount: Int { rows.count }
   public init(
@@ -166,7 +166,7 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
       column.isEditable = false
       column.resizingMask = []
       column.headerCell = PaxDataHeaderCell(config)
-      column.headerToolTip = config.toolTip
+      column.headerToolTip = config.toolTip ?? config.title
       table.addTableColumn(column)
     }
     source = PaxTableDataSource(tableView: table) {
@@ -378,15 +378,6 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     }
   }
 
-  public func setColumnTitle(_ title: String, at index: Int, symbol: String? = nil) {
-    guard table.tableColumns.indices.contains(index) else { return }
-    let cell = table.tableColumns[index].headerCell
-    let symbolChanged = symbol.map { (cell as? PaxDataHeaderCell)?.symbol != $0 } ?? false
-    guard cell.stringValue != title || symbolChanged else { return }
-    cell.stringValue = title
-    if let symbol, let header = cell as? PaxDataHeaderCell { header.symbol = symbol }
-    table.headerView?.needsDisplay = true
-  }
   public override func layout() {
     super.layout()
     if scrollMode == .page {
@@ -546,19 +537,6 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     }
     setSortIndicator(column: index, ascending: ascending)
     apply(rows: rows)
-  }
-  public func setSortIndicator(column index: Int?, ascending: Bool = true) {
-    sortedColumn = index
-    self.ascending = ascending
-    for (i, column) in table.tableColumns.enumerated() {
-      column.headerCell.stringValue =
-        columns[i].title + (i == index ? (ascending ? " ↑" : " ↓") : "")
-      column.headerCell.image =
-        i == index
-        ? PaxIcon.image(
-          ascending ? "arrow.up" : "arrow.down", size: PaxTheme.Control.navigationIcon) : nil
-    }
-    table.headerView?.needsDisplay = true
   }
   private func sortRows() {
     guard onSort == nil, let column = sortedColumn else { return }

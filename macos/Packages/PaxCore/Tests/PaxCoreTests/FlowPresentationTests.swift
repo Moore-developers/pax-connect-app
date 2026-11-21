@@ -30,6 +30,25 @@ import Testing
     flow.responseMS = 0
     #expect(TrafficFormatting.responseLatency(flow) == 0)
   }
+  @Test("指定线路拒绝显示线路名及原触发条件")
+  func unavailableRouteAttribution() {
+    var flow = FlowFact()
+    flow.rule =
+      #"{"Package":"Claude","Method":"domain_suffix","Target":"claude.ai","UnavailableRoute":"A"}"#
+    flow.ruleSource = "Pax 包：Claude"
+    #expect(FlowPresentation.recordedStatus(flow, fallback: "未确认") == "未确认")
+
+    flow.direction = "blocked"
+    flow.failure = "rule_rejected"
+    var detail = HistoryLogDetail()
+    detail.flow = flow
+    let view = LogDetailPresentation(detail: detail, perspective: .application)
+    #expect(view.status == "指定线路 A 不可用")
+    #expect(FlowPresentation.failure(flow) == view.status)
+    #expect(FlowPresentation.actualConnection(flow) == "已阻断")
+    #expect(TrafficRuleFormatting.recordedRuleText(flow.rule) == "domain_suffix=claude.ai")
+    #expect(view.sections.flatMap(\.rows).contains { $0 == "规则包" && $1 == "Claude" })
+  }
 }
 
 extension FlowPresentationTests {

@@ -5,8 +5,44 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"testing"
 )
+
+func TestClaudePackagePersistsWhileLegacyReadersKeepExistingPackages(t *testing.T) {
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "routing.json")
+	store := NewRoutingLibraryStore(path, uint32(os.Getuid()))
+	library := NewRoutingLibrary()
+	custom := RoutingPackage{ID: "mine", Name: "Claude", Kind: "local", Destination: "direct", Enabled: true}
+	library.Packages = slices.Insert(library.Packages, 1, custom)
+	claude := NewClaudeRoutingPackage()
+	claude.Enabled, claude.Destination = true, "route:fixed"
+	library.Packages = slices.Insert(library.Packages, library.BuiltInStart(), claude)
+	if err := store.Save(context.Background(), library); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _, err := store.Load()
+	if err != nil || !reflect.DeepEqual(loaded, library) {
+		t.Fatalf("readback: %v, %v", loaded, err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var legacy RoutingLibrary
+	if err := json.Unmarshal(raw, &legacy); err != nil || legacy.Validate() != nil ||
+		len(legacy.Packages) != 3 || !reflect.DeepEqual(legacy.Packages[1], custom) {
+		t.Fatalf("legacy package list: %v, %v", legacy, err)
+	}
+}
 
 func TestRoutingLibraryOfflinePersistenceAndValidation(t *testing.T) {
 	dir, err := filepath.EvalSymlinks(t.TempDir())
@@ -51,7 +87,25 @@ func TestCompileRoutingHonorsPriorityDefaultAndOfflineTargets(t *testing.T) {
 	if rules[2]["type"] != "logical" || rules[3]["outbound"] != "node-tag" {
 		t.Fatal(rules)
 	}
-	if _, err = CompileRouting(l, nil, nil, true); err == nil {
-		t.Fatal("missing route silently fell back")
+	l.RouteNames = map[string]string{"route:node": "线路 A"}
+	for _, tags := range []map[string]string{nil, {"route:node": ""}} {
+		rejected, labels, err := CompileRoutingEvidence(l, nil, tags, true)
+		if err != nil || len(rejected) != len(rules) || len(labels) != len(rules) {
+			t.Fatal("missing route broke the rule table", rejected, labels, err)
+		}
+		want := map[string]any{"domain": []string{"example.com"}, "action": "reject", "no_drop": true}
+		if !reflect.DeepEqual(rejected[3], want) {
+			t.Fatalf("missing route lost its original predicate or terminal reject: %v", rejected[3])
+		}
+		evidence, ok := RecordedRoutingEvidence(labels[3])
+		if !ok || evidence.Package != "mine" || evidence.Target != "example.com" || evidence.UnavailableRoute != "线路 A" {
+			t.Fatalf("expected unavailable route and original rule evidence: %+v", evidence)
+		}
+		if !reflect.DeepEqual(rejected[:3], rules[:3]) || !reflect.DeepEqual(rejected[4:], rules[4:]) {
+			t.Fatal("missing route changed unrelated rules")
+		}
+	}
+	if l.Packages[1].Destination != "route:node" {
+		t.Fatal("rejection changed the saved destination", l.Packages[1].Destination)
 	}
 }

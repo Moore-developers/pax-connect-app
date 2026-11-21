@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "cf.workspace.host": "Host: {host}",
+    "cf.workspace.select_ip": "Select {ip}",
+    "cf.workspace.test": "Test IPs",
+    "cf.workspace.column.ip": "IP Address",
+    "cf.workspace.column.latency": "TCP RTT",
+    "cf.workspace.column.download": "Download",
+    "cf.workspace.column.location": "Location",
+    "cf.workspace.column.actions": "Actions",
+    "cf.workspace.row.configured": "Configured",
+    "cf.workspace.row.actions": "IP Test Actions",
+    "cf.workspace.row.latency": "Test Latency",
+    "cf.workspace.row.download": "Test Download",
+    "cf.workspace.row.both": "Test Latency and Download",
+    "cf.workspace.row.location": "Look Up Location",
+    "cf.workspace.empty.network_changed": "Network changed. Scan again.",
+    "cf.workspace.empty.no_match": "No matching IPs or ranges.",
+    "cf.workspace.empty.scanning": "Scanning for reachable IPs…",
+    "cf.workspace.empty.scan_incomplete": "Scan incomplete. Scan again.",
+    "cf.workspace.empty.scan_complete": "No reachable IPs found.",
+    "cf.workspace.empty.initial": "Scan ranges to find reachable IPs."
+  }
+}

@@ -19,11 +19,11 @@ const (
 	trafficVacuumPages     = 64
 )
 
-// maintain prunes by retention, evicts past the capacity cap and, only when the backlog is clear,
-// returns free pages and truncates the WAL (HS-R1, HS-R2). One pass is bounded by trafficMaintainRows
+// maintain prunes by retention and, only when the backlog is clear, returns free
+// pages and truncates the WAL (HS-R1, HS-R2). One pass is bounded by trafficMaintainRows
 // or trafficMaintainTime; Pruned.More postpones the rest to the next pass.
 //
-// Deleting stored traffic (aggregates past retention, capacity eviction) moves
+// Deleting stored traffic (aggregates past retention) moves
 // traffic_deletion_generation and traffic_revision (R3); the routine pruning of the 5-second tail and
 // of flow marks does not, it never removes anything a window query would have shown.
 //
@@ -54,29 +54,6 @@ func (t *historyTraffic) maintain(ctx context.Context) time.Duration {
 	}
 	if pruned.More {
 		return 0
-	}
-	live, err := t.store.LiveBytes(ctx)
-	if err != nil {
-		return t.fail(ctx, "history_traffic_maintain_failed")
-	}
-	if live > t.capBytes {
-		// EvictOldest stamps capacity_evicted; writes are never refused for capacity (HS-R1).
-		evicted, evictErr := t.store.EvictOldest(ctx, t.capBytes, limits)
-		if evictErr != nil {
-			return t.fail(ctx, "history_traffic_maintain_failed")
-		}
-		if evicted {
-			metaCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), trafficMetaTimeout)
-			defer cancel()
-			if err = t.store.Update(metaCtx, func(tx *historystore.TrafficTx) error {
-				return tx.SetMeta(metaCtx, historystore.MetaPartial, "1")
-			}); err == nil {
-				err = t.bumpDeletion(ctx)
-			}
-			if err != nil {
-				return t.fail(ctx, "history_traffic_maintain_failed")
-			}
-		}
 	}
 	t.idleMaintenance(ctx)
 	return 0

@@ -12,7 +12,18 @@ public final class RouteImportSession {
   public private(set) var busy = false
   public private(set) var committing = false
   public private(set) var finished = false
-  public private(set) var message = ""
+  private var retainedMessage = RetainedProductMessage()
+  private var messageSuffix = RetainedProductMessage()
+  public var message: String { message(context: .chinese) }
+  public func message(context: PresentationContext) -> String {
+    retainedMessage.text(context: context) + messageSuffix.text(context: context)
+  }
+  private func setMessage(
+    _ message: RetainedProductMessage, suffix: RetainedProductMessage = .init()
+  ) {
+    retainedMessage = message
+    messageSuffix = suffix
+  }
   public enum Phase: Sendable {
     case idle, reading, downloading, importing, completed, partial, failed, cancelled
   }
@@ -69,7 +80,7 @@ public final class RouteImportSession {
     let old = preview
     preview = nil
     selected = []
-    message = trimmed.isEmpty ? "" : "正在识别导入内容…"
+    setMessage(trimmed.isEmpty ? .init() : RetainedProductMessage(key: "route_import.reading"))
     phase = trimmed.isEmpty ? .idle : .reading
     recognition = Task { [weak self] in
       if let old { await self?.discard(old.token) }
@@ -85,7 +96,7 @@ public final class RouteImportSession {
   public func makePreview() async {
     guard !busy && !finished else { return }
     busy = true
-    message = ""
+    setMessage(.init())
     generation += 1
     let current = generation
     let text = source
@@ -99,7 +110,10 @@ public final class RouteImportSession {
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       let subscription = trimmed.hasPrefix("https://") && !trimmed.contains("\n")
       phase = subscription ? .downloading : .reading
-      message = subscription ? "正在下载订阅…" : "正在识别导入内容…"
+      setMessage(
+        subscription
+          ? RetainedProductMessage(key: "route_import.downloading")
+          : RetainedProductMessage(key: "route_import.reading"))
       let result = try await fetch(subscription ? trimmed : text, subscription, name)
       guard current == generation && !Task.isCancelled else {
         await discard(result.token)
@@ -109,10 +123,12 @@ public final class RouteImportSession {
       previewInput = text
       previewName = name
       selected = Set(result.items.filter(Self.selectable).map(\.id))
-      message = "\(selected.count) 条可导入；重复、隐藏与错误项不会导入"
+      setMessage(
+        RetainedProductMessage(
+          key: "route_import.eligible", parameters: ["count": String(selected.count)]))
     } catch {
       if current == generation {
-        message = Self.describe(error)
+        setMessage(Self.failureMessage(error))
         phase = .failed
       }
     }
@@ -129,10 +145,10 @@ public final class RouteImportSession {
         lastImportedInput = source.trimmingCharacters(in: .whitespacesAndNewlines)
         finished = true
         phase = .completed
-        message = "线路已存在，未重复导入"
+        setMessage(RetainedProductMessage(key: "route_import.duplicate"))
       } else {
         phase = .failed
-        message = "没有可导入的线路，请查看下方原因"
+        setMessage(RetainedProductMessage(key: "route_import.none"))
       }
       await discard(result.token)
       return
@@ -140,7 +156,11 @@ public final class RouteImportSession {
     busy = true
     committing = true
     phase = .importing
-    message = isSource ? "正在创建或更新订阅分组…" : "正在导入 \(valid.count) 条线路…"
+    setMessage(
+      isSource
+        ? RetainedProductMessage(key: "route_import.source_importing")
+        : RetainedProductMessage(
+          key: "route_import.importing", parameters: ["count": String(valid.count)]))
     defer {
       busy = false
       committing = false
@@ -151,11 +171,18 @@ public final class RouteImportSession {
       lastImportedInput = source.trimmingCharacters(in: .whitespacesAndNewlines)
       finished = true
       phase = errors.isEmpty ? .completed : .partial
-      let operation = isSource ? "订阅已导入或更新" : "已导入 \(valid.count) 条线路"
-      message = operation + (errors.isEmpty ? "，正在测试延迟" : "；\(errors.count) 条失败，查看下方原因")
+      setMessage(
+        isSource
+          ? RetainedProductMessage(key: "route_import.source_imported")
+          : RetainedProductMessage(
+            key: "route_import.imported", parameters: ["count": String(valid.count)]),
+        suffix: errors.isEmpty
+          ? RetainedProductMessage(key: "route_import.testing_suffix")
+          : RetainedProductMessage(
+            key: "route_import.partial_suffix", parameters: ["count": String(errors.count)]))
     } catch {
       phase = .failed
-      message = Self.describe(error) + "。输入已保留；请核对列表后重试"
+      setMessage(Self.failureMessage(error), suffix: .init(key: "route_import.failed_retry"))
       preview = nil
       selected = []
       await discard(result.token)
@@ -165,7 +192,7 @@ public final class RouteImportSession {
     guard canConfirm, let preview else { return }
     busy = true
     committing = true
-    message = "正在等待导入结果…"
+    setMessage(RetainedProductMessage(key: "route_import.waiting"))
     defer {
       busy = false
       committing = false
@@ -174,9 +201,9 @@ public final class RouteImportSession {
       try await commit(preview, selected.sorted())
       finished = true
       self.preview = nil
-      message = "导入完成"
+      setMessage(RetainedProductMessage(key: "route_import.complete"))
     } catch {
-      message = Self.describe(error) + "。输入已保留；请先核对目录，再重新预览"
+      setMessage(Self.failureMessage(error), suffix: .init(key: "route_import.failed_preview"))
       // An ACK may have committed before disconnect. Never resubmit this token automatically.
       self.preview = nil
       selected = []
@@ -205,12 +232,17 @@ public final class RouteImportSession {
     selected = []
     return old
   }
-  private static func describe(_ error: Error) -> String {
-    if let error = error as? ProductError { return ProductErrorPresentation.message(error) }
-    if let error = error as? LocalizedError, let description = error.errorDescription {
-      return description
+  private static func failureMessage(_ error: Error) -> RetainedProductMessage {
+    guard let failure = failure(error) else {
+      return RetainedProductMessage(key: "route_import.failed_unknown")
     }
-    if let error = error as? ClientError { return error.message }
-    return "预览或导入失败，请检查输入与后台连接"
+    return RetainedProductMessage(failure: failure)
+  }
+  private static func failure(_ error: Error) -> ProductFailure? {
+    if error is ProductError || error is ClientError { return ProductFailure(error) }
+    if let error = error as? LocalizedError, let description = error.errorDescription {
+      return .original(description)
+    }
+    return nil
   }
 }

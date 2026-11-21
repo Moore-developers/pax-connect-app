@@ -66,7 +66,7 @@ func TestLogsPaxInboxOverflowIsRecordedAndEventsCarryPaxSource(t *testing.T) {
 	}
 }
 
-func TestLogsRetentionAndCapacityMaintenance(t *testing.T) {
+func TestLogsRetentionMaintenance(t *testing.T) {
 	ctx := context.Background()
 	h := newLogsHarness(t)
 	if err := h.logs.Update(ctx, func(tx *historystore.LogsTx) error {
@@ -87,18 +87,17 @@ func TestLogsRetentionAndCapacityMaintenance(t *testing.T) {
 			t.Fatalf("%s kept %d expired rows", table, n)
 		}
 	}
-	// One recent row is enough to cross a one-byte cap; eviction is reported, not refused.
-	h.l.capBytes = 1
+	// Maintenance preserves recent data and does not mark a new capacity loss.
 	h.appendRows([]config.Observation{logObservation(2, "started", testLogFlow("s/1/new"), 0, 0, "", "")})
 	h.settle()
 	var connections int
 	if err := h.logs.Reader().QueryRow("SELECT count(*) FROM col_connections").Scan(&connections); err != nil {
 		t.Fatal(err)
 	}
-	if connections != 0 {
-		t.Fatalf("capacity eviction left %d connections", connections)
+	if connections != 1 {
+		t.Fatalf("maintenance kept %d recent connections, want 1", connections)
 	}
-	if v, ok, err := h.logs.Meta(ctx, historystore.MetaCapacityEvicted); err != nil || !ok || v != "1" {
+	if v, ok, err := h.logs.Meta(ctx, historystore.MetaCapacityEvicted); err != nil || !ok || v != "0" {
 		t.Fatalf("capacity_evicted: %q %v %v", v, ok, err)
 	}
 }

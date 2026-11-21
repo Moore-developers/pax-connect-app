@@ -52,27 +52,42 @@ public enum AIReprice {
     }
   }
   /// Dry-run summary, e.g. "将更新 12 条请求，费用 $1.000 → $0.800（其中 3 条按小时汇总估算）".
-  public static func previewText(_ r: AIRepriceResult) -> String {
-    guard r.requests > 0 else { return "所选范围没有可更新的请求" }
-    var text =
-      "将更新 \(r.requests) 条请求，费用 "
-      + AIUsageFormatting.cost(r.oldCost) + " → " + AIUsageFormatting.cost(r.newCost)
-    if r.aggregatedRequests > 0 { text += "（其中 \(r.aggregatedRequests) 条按小时汇总估算）" }
+  public static func previewText(_ result: AIRepriceResult) -> String {
+    previewText(result, context: .chinese)
+  }
+  public static func previewText(_ r: AIRepriceResult, context: PresentationContext) -> String {
+    guard r.requests > 0 else { return context.text("reprice.no_requests") }
+    var text = context.text(
+      "reprice.preview",
+      [
+        "count": String(r.requests), "old": AIUsageFormatting.cost(r.oldCost),
+        "new": AIUsageFormatting.cost(r.newCost),
+      ])
+    if r.aggregatedRequests > 0 {
+      text += context.text("reprice.aggregated", ["count": String(r.aggregatedRequests)])
+    }
     return text
   }
-  public static func doneText(_ r: AIRepriceResult) -> String {
-    "已更新 \(r.requests) 条请求，费用 "
-      + AIUsageFormatting.cost(r.oldCost) + " → " + AIUsageFormatting.cost(r.newCost)
+  public static func doneText(_ result: AIRepriceResult) -> String {
+    doneText(result, context: .chinese)
   }
-  public static func message(_ error: any Error) -> String {
-    switch (error as? ProductError)?.code {
-    case "ai_usage_busy": return "正在采集，请稍后重试"
-    case "ai_profile_not_found": return "Profile 不存在，请刷新后重试"
-    case "ai_usage_range_invalid": return "日期范围无效，请重新选择"
-    case "ai_usage_unavailable": return "本地用量暂不可用，请稍后重试"
-    default: return "更新失败，请稍后重试"
-    }
+  public static func doneText(_ r: AIRepriceResult, context: PresentationContext) -> String {
+    context.text(
+      "reprice.done",
+      [
+        "count": String(r.requests), "old": AIUsageFormatting.cost(r.oldCost),
+        "new": AIUsageFormatting.cost(r.newCost),
+      ])
   }
+  public static func message(_ error: any Error) -> String { message(error, context: .chinese) }
+  public static func message(_ error: any Error, context: PresentationContext) -> String {
+    let code = (error as? ProductError)?.code ?? ""
+    let known = [
+      "ai_usage_busy", "ai_profile_not_found", "ai_usage_range_invalid", "ai_usage_unavailable",
+    ]
+    return context.text("reprice.error." + (known.contains(code) ? code : "unknown"))
+  }
+
 }
 
 /// Preview-then-confirm flow of one repricing request; a real run only follows a preview of
@@ -84,7 +99,7 @@ public final class AIRepriceFlow {
     case working
     case preview(AIRepriceResult)
     case done(AIRepriceResult)
-    case failed(String)
+    case failed(ProductError)
   }
   public struct Request: Equatable, Sendable {
     public let profileID: String
@@ -118,7 +133,7 @@ public final class AIRepriceFlow {
     set(.idle)
   }
   private func run(_ request: Request, dryRun: Bool) async {
-    guard let data else { return set(.failed(AIReprice.message(ProductError(code: "")))) }
+    guard let data else { return set(.failed(ProductError(code: ""))) }
     set(.working)
     do {
       let result = try await data.reprice(
@@ -132,7 +147,7 @@ public final class AIRepriceFlow {
       }
     } catch {
       pending = nil
-      set(.failed(AIReprice.message(error)))
+      set(.failed((error as? ProductError) ?? ProductError(code: "")))
     }
   }
   private func set(_ value: State) {

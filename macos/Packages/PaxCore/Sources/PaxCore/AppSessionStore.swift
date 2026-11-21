@@ -3,18 +3,20 @@ import Observation
 public enum AppSessionFailure: Error, Equatable, Sendable {
   case passwordRequired, authenticationFailed, invalidBundle, legacyService, anotherSession
   case launchFailed, shutdownFailed, residueUnknown, cleanupFailed, recoveryStorageUnavailable
-  public var message: String {
+  public var message: String { message(context: .chinese) }
+  public func message(context: PresentationContext) -> String {
     switch self {
-    case .passwordRequired: "启动后台需要管理员授权"
-    case .authenticationFailed: "密码未通过，或当前账户没有管理员权限"
-    case .invalidBundle: "应用文件校验失败，请重新安装 Pax Connect"
-    case .legacyService: "旧版后台服务仍已登记，请先停用旧版后台后重试"
-    case .anotherSession: "另一个 Pax Connect 实例正在使用后台，请先退出它"
-    case .residueUnknown: "无法确认旧 Pax 资源归属，已暂停启动；请重试或查看诊断"
-    case .cleanupFailed: "旧 Pax 后台或网络资源尚未释放，已暂停启动，请稍后重试"
-    case .recoveryStorageUnavailable: "后台恢复存储不可用，启动已暂停；请更新 App 后重试，无需反复输入密码"
-    case .launchFailed: "后台未能启动，请重试"
-    case .shutdownFailed: "后台尚未确认关闭，App 已保留运行，请重试退出"
+    case .passwordRequired: context.text("app_session.failure.password_required")
+    case .authenticationFailed: context.text("app_session.failure.authentication_failed")
+    case .invalidBundle: context.text("app_session.failure.invalid_bundle")
+    case .legacyService: context.text("app_session.failure.legacy_service")
+    case .anotherSession: context.text("app_session.failure.another_session")
+    case .residueUnknown: context.text("app_session.failure.residue_unknown")
+    case .cleanupFailed: context.text("app_session.failure.cleanup_failed")
+    case .recoveryStorageUnavailable:
+      context.text("app_session.failure.recovery_storage_unavailable")
+    case .launchFailed: context.text("app_session.failure.launch_failed")
+    case .shutdownFailed: context.text("app_session.failure.shutdown_failed")
     }
   }
 }

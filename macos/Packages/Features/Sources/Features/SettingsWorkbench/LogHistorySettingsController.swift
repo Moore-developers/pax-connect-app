@@ -5,7 +5,8 @@ import PaxUI
 
 /// Only the confirmed log preferences are connected; other settings keep their own capability gates.
 @MainActor
-final class LogHistorySettingsController: NSViewController {
+final class LogHistorySettingsController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   private let telemetry: TelemetryStore
   private let retention = PaxRoutePicker(style: .toolbar)
   private let retentionHours: [UInt32] = [1, 12, 24]
@@ -18,15 +19,20 @@ final class LogHistorySettingsController: NSViewController {
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     clear.setAccessibilityIdentifier("history-clear")
-    retention.addItems(withTitles: ["1小时", "12小时", "24小时"])
+    interfaceCopy.picker(
+      retention,
+      keys: ["settings.logs.one_hour", "settings.logs.twelve_hours", "settings.logs.day"])
     retention.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
-    retention.setAccessibilityLabel("日志保留时间")
+    interfaceCopy.bind(retention, key: "settings.logs.retention_accessibility") {
+      $0.setAccessibilityLabel($1)
+    }
+    interfaceCopy.button(clear, key: "settings.logs.clear")
     retention.target = self
     retention.action = #selector(changeRetention)
     retention.selectItem(at: 2)
     retention.setAccessibilityIdentifier("history-retention")
-    let note = PaxText.label(
-      "清除日志不影响流量统计和当前连接。",
+    let note = interfaceCopy.label(
+      "settings.logs.note",
       font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
     let footer = NSStackView(views: [note, status])
     footer.orientation = .vertical
@@ -35,14 +41,17 @@ final class LogHistorySettingsController: NSViewController {
     for item in footer.arrangedSubviews {
       item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
     }
-    view = PaxPreferenceGroup(
-      title: "日志", symbol: "internaldrive",
+    let group = PaxPreferenceGroup(
+      title: "", symbol: "internaldrive",
       rows: [
-        PaxPreferenceRow(
-          title: "保留时间", detail: "到期自动删除日志与连接明细。", control: retention, style: .compact),
-        PaxPreferenceRow(
-          title: "历史日志", detail: "删除已记录的日志及原文，新事件继续记录。", control: clear, style: .compact),
+        interfaceCopy.preference(
+          title: "settings.logs.retention", detail: "settings.logs.retention_detail",
+          control: retention),
+        interfaceCopy.preference(
+          title: "settings.logs.history", detail: "settings.logs.history_detail", control: clear),
       ], style: .compact, footer: footer)
+    view = interfaceCopy.group(group, key: "settings.logs.title")
+    interfaceCopy.onChange = { [weak self] in self?.render() }
     observe()
   }
   private func observe() {
@@ -57,7 +66,9 @@ final class LogHistorySettingsController: NSViewController {
     retention.isEnabled = telemetry.available && !telemetry.busy
     retention.selectItem(
       at: retentionHours.firstIndex(of: telemetry.settings.logRetentionHours) ?? 2)
-    status.stringValue = telemetry.message.isEmpty ? telemetry.qualityMessage : telemetry.message
+    let context = interfaceCopy.context
+    let message = telemetry.message(context: context)
+    status.stringValue = message.isEmpty ? telemetry.qualityMessage(context: context) : message
     status.isHidden = status.stringValue.isEmpty
   }
   @objc private func changeRetention() {
@@ -72,7 +83,9 @@ final class LogHistorySettingsController: NSViewController {
     }
     if hours < telemetry.settings.logRetentionHours {
       confirm(
-        title: "缩短日志保留时间？", detail: "超过\(hours)小时的日志与原文将被删除，无法撤销。流量汇总保持。", action: "缩短保留时间",
+        title: interfaceCopy.text("settings.logs.shorten_title"),
+        detail: interfaceCopy.text("settings.logs.shorten_detail", ["hours": String(hours)]),
+        action: interfaceCopy.text("settings.logs.shorten"),
         run: save)
       render()
     } else {
@@ -80,7 +93,11 @@ final class LogHistorySettingsController: NSViewController {
     }
   }
   @objc private func clearHistory() {
-    confirm(title: "清除本机历史日志？", detail: "事件与原文将被删除，无法撤销。新事件继续记录。", action: "清除日志") { [weak self] in
+    confirm(
+      title: interfaceCopy.text("settings.logs.clear_title"),
+      detail: interfaceCopy.text("settings.logs.clear_detail"),
+      action: interfaceCopy.text("settings.logs.clear_confirm")
+    ) { [weak self] in
       guard let self else { return }
       Task { _ = await self.telemetry.clearLogs() }
     }
@@ -92,7 +109,7 @@ final class LogHistorySettingsController: NSViewController {
     let alert = NSAlert()
     alert.messageText = title
     alert.informativeText = detail
-    alert.addButton(withTitle: "取消")
+    alert.addButton(withTitle: interfaceCopy.text("common.cancel"))
     alert.addButton(withTitle: action)
     alert.buttons.last?.keyEquivalent = ""
     alert.beginSheetModal(for: window) { response in

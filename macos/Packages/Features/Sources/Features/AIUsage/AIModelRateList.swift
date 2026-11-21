@@ -11,6 +11,7 @@ final class AIModelRateList: NSObject, NSTextFieldDelegate {
   /// The visible family tab changed, so the hosting card's height did too.
   var onLayoutChange: (() -> Void)?
   private(set) var models: [String] = []
+  var context = PresentationContext.chinese
   private var drafts: [String: String]
   /// Saved values, kept exact: an untouched field whose text is only a rounded display of a
   /// legacy value (more than 3 decimals) must not rewrite it.
@@ -108,7 +109,8 @@ final class AIModelRateList: NSObject, NSTextFieldDelegate {
   }
 
   func update(models next: [String], fallback value: Double) {
-    let placeholder = "默认 " + AIUsageFormatting.multiplierInput(value)
+    let placeholder = context.text(
+      "model_rate.default", ["value": AIUsageFormatting.multiplierInput(value)])
     for field in fields.values { field.placeholderString = placeholder }
     guard next != models else { return }
     models = next
@@ -121,14 +123,17 @@ final class AIModelRateList: NSObject, NSTextFieldDelegate {
     panels = []
     families = Self.families(next)
     if next.isEmpty {
-      view.addArrangedSubview(AIUsageLayout.label("暂无模型：读取模型目录或产生用量后会列在这里", secondary: true))
+      view.addArrangedSubview(
+        AIUsageLayout.label(context.text("model_rate.empty"), secondary: true))
       return
     }
     if !families.contains(where: { $0.title == selectedFamily }) {
       selectedFamily = families[0].title
     }
     if families.count > 1 {
-      let tabs = PaxTabs(families.map(\.title), counts: families.map { $0.models.count })
+      let tabs = PaxTabs(
+        families.map { $0.title == "其他" ? context.text("model_rate.other") : $0.title },
+        counts: families.map { $0.models.count })
       tabs.selectedIndex = families.firstIndex { $0.title == selectedFamily } ?? 0
       tabs.setAccessibilityIdentifier("ai-model-rate-families")
       tabs.onSelect = { [weak self] index in self?.select(index) }
@@ -169,10 +174,10 @@ final class AIModelRateList: NSObject, NSTextFieldDelegate {
     input.alignment = .right
     input.delegate = self
     input.setAccessibilityIdentifier("ai-model-rate-" + id)
-    input.setAccessibilityLabel(id + " 倍率")
+    input.setAccessibilityLabel(context.text("model_rate.multiplier_ax", ["model": id]))
     input.widthAnchor.constraint(equalToConstant: 96).isActive = true
     fields[id] = input
-    let error = AIUsageLayout.label(AIMultiplierInput.errorText, secondary: true)
+    let error = AIUsageLayout.label(context.text("profile_editor.rate_error"), secondary: true)
     error.textColor = PaxTheme.Color.error
     error.isHidden = true
     errors[id] = error

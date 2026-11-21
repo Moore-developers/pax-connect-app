@@ -6,15 +6,20 @@ extension NetworkDiagnosticView {
   func showIPBlock() {
     let exit = report?.exit
     let readings = [
-      ("线路出口 IP", exit?.ip ?? "未取得"),
       (
-        "地区",
+        context.text("native_diagnostic.b50f6bb571"),
+        exit?.ip ?? context.text("native_diagnostic.e7954a2f3a")
+      ),
+      (
+        context.text("native_diagnostic.0b5daa9276"),
         [exit?.country, exit?.city].compactMap { $0 }.filter { !$0.isEmpty }.joined(
           separator: " · ")
       ),
       (
-        "ASN / 运营商",
-        [exit?.asn ?? "", P.organization(intelligenceReport)].filter { !$0.isEmpty }.joined(
+        context.text("native_diagnostic.1df0f2a76c"),
+        [exit?.asn ?? "", P.organization(intelligenceReport, context: context)].filter {
+          !$0.isEmpty
+        }.joined(
           separator: " · ")
       ),
     ]
@@ -23,17 +28,30 @@ extension NetworkDiagnosticView {
       if !rows.isEmpty { rows.append(divider()) }
       let detail =
         [
-          "线路：" + (report?.targetRouteName ?? "未取得"),
-          "检测时间：" + MeasurementTimestamp.text(report?.at),
-          "国家：" + P.value(exit?.country ?? ""), "城市：" + P.value(exit?.city ?? ""),
-          "ASN：" + P.value(exit?.asn ?? ""), "运营商：" + P.organization(intelligenceReport),
-          "IP 类型：" + P.typeName(intelligenceReport?.ipType ?? ""),
-          "资料时间：" + MeasurementTimestamp.text(intelligenceReport?.at),
-        ] + (intelligenceReport?.score.map { ["ipx.al 供应方评分：\($0) / 100"] } ?? [])
+          context.text("native_diagnostic.5dda3f9bb8")
+            + (report?.targetRouteName ?? context.text("native_diagnostic.e7954a2f3a")),
+          context.text("native_diagnostic.2f3e61e480") + MeasurementTimestamp.text(report?.at),
+          context.text("native_diagnostic.beedab4aae")
+            + P.value(exit?.country ?? "", context: context),
+          context.text("native_diagnostic.485cd74fe4")
+            + P.value(exit?.city ?? "", context: context),
+          "ASN：" + P.value(exit?.asn ?? "", context: context),
+          context.text("native_diagnostic.a2c7b936df")
+            + P.organization(intelligenceReport, context: context),
+          context.text("native_diagnostic.1680846442")
+            + P.typeName(intelligenceReport?.ipType ?? "", context: context),
+          context.text("native_diagnostic.0bddcd655b")
+            + MeasurementTimestamp.text(intelligenceReport?.at),
+        ]
+        + (intelligenceReport?.score.map {
+          [context.text("native_diagnostic.f6f1d6b0d5", ["arg0": String(describing: $0)])]
+        } ?? [])
       let details = detail.joined(separator: "\n")
       rows.append(
         diagnosticRow(
-          title: title, subtitle: value.isEmpty ? "未取得" : value, symbol: "circle.grid.2x2",
+          title: title,
+          subtitle: value.isEmpty ? context.text("native_diagnostic.e7954a2f3a") : value,
+          symbol: "circle.grid.2x2",
           detail: details))
     }
     let summary = vertical(rows, spacing: 0)
@@ -42,9 +60,12 @@ extension NetworkDiagnosticView {
       card(sourcesContent(), flexibleHeight: true), card(servicesContent(), flexibleHeight: true),
       card(
         vertical([
-          heading("IP 属性", cardTitle: true),
+          heading(context.text("native_diagnostic.dd5fe5361f"), cardTitle: true),
           text(
-            (store.stale ? "上次线路检测 · " : "线路检测 · ") + MeasurementTimestamp.text(report?.at),
+            (store.stale
+              ? context.text("native_diagnostic.b8d2a37276")
+              : context.text("native_diagnostic.7394b49888"))
+              + MeasurementTimestamp.text(report?.at),
             secondary: true), summary,
         ]), flexibleHeight: true),
       card(pathsContent(), flexibleHeight: true),
@@ -61,25 +82,39 @@ extension NetworkDiagnosticView {
 
   private func riskContent() -> NSView {
     let leftCategories: [(String, [String])] = [
-      ("匿名", ["代理", "VPN", "Tor", "iCloud 中继", "匿名出口"]),
-      ("黑名单", ["邮件 DNSBL", "Shodan 标签"]),
-      ("暴露面", ["开放端口", "已知漏洞", "自签证书"]),
+      (
+        context.text("native_diagnostic.34a917cd44"),
+        ["proxy", "VPN", "Tor", "icloud_relay", "anonymous_exit"]
+      ),
+      (context.text("native_diagnostic.174ec5a4ab"), ["mail_dnsbl", "shodan_tags"]),
+      (
+        context.text("native_diagnostic.6cafeab656"),
+        ["open_ports", "known_vulnerabilities", "self_signed_certificate"]
+      ),
     ]
     let rightCategories: [(String, [String])] = [
-      ("滥用", ["滥用标记", "代理风险 ≥67", "爬虫", "威胁情报名单", "恶意扫描"]),
-      ("网络", ["机房 IP", "移动网络", "伪家宽", "人类流量 <50%", "广播 IP"]),
+      (
+        context.text("native_diagnostic.553b6296f9"),
+        ["abuse", "proxy_risk", "crawler", "threat_list", "malicious_scanning"]
+      ),
+      (
+        context.text("native_diagnostic.97b31b5d63"),
+        ["datacenter", "mobile", "residential_proxy", "low_human_traffic", "broadcast_ip"]
+      ),
     ]
     let risks = groups["risk"] ?? []
     let columns = twoColumns(
       riskColumn(leftCategories, risks: risks), riskColumn(rightCategories, risks: risks),
       ratio: PaxTheme.NetworkDiagnostics.equalColumnRatio, spacing: PaxTheme.Spacing.page)
     return vertical([
-      heading("风险分类", cardTitle: true),
+      heading(context.text("native_diagnostic.2ef6b672c5"), cardTitle: true),
       text(
-        P.acquisitionSummary(intelligenceReport) + " · "
+        P.acquisitionSummary(intelligenceReport, context: context) + " · "
           + MeasurementTimestamp.text(intelligenceReport?.at)
-          + (store.stale || intelligenceReport?.at != report?.at ? " · 上次资料" : ""), secondary: true),
-      assessmentText(P.riskOverview(risks)), columns,
+          + (store.stale || intelligenceReport?.at != report?.at
+            ? context.text("native_diagnostic.bdcc02259f") : ""),
+        secondary: true),
+      assessmentText(P.riskOverview(risks, context: context)), columns,
     ])
   }
 
@@ -88,17 +123,23 @@ extension NetworkDiagnosticView {
   {
     var views: [NSView] = []
     for (category, labels) in categories {
-      let values = risks.filter { $0.value == category }
+      let values = risks
       var rows: [NSView] = [heading(category)]
       for label in labels {
         if rows.count > 1 { rows.append(divider()) }
-        let fact = values.first { $0.label == label }
-        let judgment = fact.map(P.riskAssessment)
-        let value = judgment?.text ?? (report == nil ? "尚未检测" : "来源资料不足，不能判断")
-        let detail = P.factDetails(fact, report: intelligenceReport)
+        let fact = values.first { P.factKind($0) == label }
+        let judgment = fact.map { P.riskAssessment($0, context: context) }
+        let value =
+          judgment?.text
+          ?? (report == nil
+            ? context.text("native_diagnostic.4d2966c438")
+            : context.text("native_diagnostic.2ccd13e2cd"))
+        let detail = P.factDetails(fact, report: intelligenceReport, context: context)
         rows.append(
           diagnosticRow(
-            title: label, subtitle: value, symbol: "circle.grid.2x2", detail: detail,
+            title: fact.map { P.factLabel($0, context: context) }
+              ?? context.text("diagnostic.fact." + label), subtitle: value,
+            symbol: "circle.grid.2x2", detail: detail,
             tone: judgment?.tone ?? .pending))
       }
       let list = vertical(rows, spacing: 0)

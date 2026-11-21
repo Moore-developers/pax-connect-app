@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "error.routing_library_invalid": "规则内容无效、重复或超出容量，请检查后重试",
+    "error.routing_revision_conflict": "规则已在后台改变，请切回规则页读取最新配置后重试",
+    "error.routing_route_unavailable": "指定线路不存在、尚未确认 TLS 或未载入当前内核；保留原规则，请先检查线路",
+    "error.routing_application_unavailable": "应用已移动、删除或身份不可确认，请重新选择应用",
+    "error.routing_processes_unavailable": "暂时无法读取近期有流量的应用和进程",
+    "error.routing_source_invalid": "来源不是支持的 sing-box 规则集，或包含不支持的条件；保留原规则",
+    "error.routing_update_unavailable": "当前内核未确认规则更新，已尝试恢复原规则；请检查代理状态后重试",
+    "error.routing_recovery_required": "规则保存或恢复无法确认，已暂停编辑；请重启 App 后检查配置",
+    "error.routing_save_failed": "本地规则无法保存，原规则保留，请检查磁盘和文件权限",
+    "error.routing_library_unavailable": "规则管理后台暂不可用，请重新连接",
+    "error.routing_rules_unavailable": "当前分流规则暂时无法读取，请稍后重试"
+  }
+}

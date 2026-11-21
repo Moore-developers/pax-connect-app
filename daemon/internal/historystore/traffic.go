@@ -244,18 +244,6 @@ func (t *Traffic) Prune(ctx context.Context, cutoffs TrafficCutoffs, limits Limi
 	return t.prune(ctx, targets, limits)
 }
 
-// EvictOldest deletes the oldest buckets in batches until LiveBytes is at most capBytes,
-// and reports whether eviction happened (HS-R1). Writes are never refused for capacity.
-func (t *Traffic) EvictOldest(ctx context.Context, capBytes int64, limits Limits) (bool, error) {
-	return t.evictOldest(ctx, capBytes, limits, evictSpec{primaryTable: "traffic_5m", primaryColumn: "bucket_ms", targets: []pruneTarget{
-		{table: "traffic_5m", column: "bucket_ms"},
-		{table: "search_evidence", column: "bucket_ms"},
-		{table: "coverage_5m", column: "bucket_ms"},
-		{table: "recent_5s", column: "bucket_ms"},
-		{table: "recent_cuts", column: "bucket_ms"},
-	}})
-}
-
 // RecentCut reads an exact observation-time row for cutoff queries inside a 5-second bucket.
 func (t *TrafficTx) RecentCut(ctx context.Context, k TrafficKey) (TrafficRow, bool, error) {
 	return getRow(ctx, t.tx, "recent_cuts", k)

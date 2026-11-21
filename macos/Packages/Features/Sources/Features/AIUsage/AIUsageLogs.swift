@@ -4,7 +4,7 @@ import PaxUI
 
 extension AIUsageViewController {
   func renderLogs() {
-    let logs = AIUsageLogView(store: store)
+    let logs = AIUsageLogView(store: store, interfaceCopy: interfaceCopy)
     logs.onRequest = { [weak self] id in self?.show(.request(id)) }
     logContent = logs
     add(logs)
@@ -33,11 +33,13 @@ private enum FilterWidth {
 /// Retains filter controls while only the rows and matching totals are refreshed.
 @MainActor
 final class AIUsageLogView: NSView, NSTextFieldDelegate {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
   let store: AIUsageStore
   var onRequest: ((String) -> Void)?
   let cellActions = AIUsageActions()
   let status = PaxRoutePicker(style: .filter)
-  private let cost = PaxFilterRange(title: "费用 $")
+  private lazy var cost = PaxFilterRange(title: context.text("ai_logs.77fe4ba3d2"))
   private var minimum: PaxRouteField { cost.minimum }
   private var maximum: PaxRouteField { cost.maximum }
   private let costError = AIUsageLayout.label("", secondary: true)
@@ -46,16 +48,19 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
   private var modelWidth: NSLayoutConstraint?
   private let client = PaxRoutePicker(style: .filter)
   private lazy var reset = PaxRouteButton(
-    "清除", style: .quiet, target: self, action: #selector(clear))
-  private lazy var previous = PaxCompactButton("上一页", target: self, action: #selector(previousPage))
-  private lazy var next = PaxCompactButton("下一页", target: self, action: #selector(nextPage))
+    context.text("ai_logs.bce2377283"), style: .quiet, target: self, action: #selector(clear))
+  private lazy var previous = PaxCompactButton(
+    context.text("ai_logs.c9b9ae7a61"), target: self, action: #selector(previousPage))
+  private lazy var next = PaxCompactButton(
+    context.text("ai_logs.8a8542f696"), target: self, action: #selector(nextPage))
   private let pageLabel = AIUsageLayout.label("", secondary: true)
   private let countLabel = AIUsageLayout.label("", secondary: true)
   /// Summary cards of every row matching the period and filters, above the table.
   let summaryView = AIUsageLogSummaryView()
   private let emptyCard = PaxCard()
-  private let empty = PaxEmptyState(
-    symbol: "list.bullet.rectangle", title: "没有请求日志", caption: "", identifier: "ai-log-empty")
+  private lazy var empty = PaxEmptyState(
+    symbol: "list.bullet.rectangle", title: context.text("ai_logs.2f9320dc76"), caption: "",
+    identifier: "ai-log-empty")
   private var page = 0
   private var rows: [AIRequest] = []
   private var matching: [AIRequest] = []
@@ -63,7 +68,9 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
   private let readStatus = PaxInlineStatus()
   let table: PaxDataTable
 
-  init(store: AIUsageStore) {
+  init(store: AIUsageStore, interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
     self.store = store
     table = PaxDataTable(
       columns: [
@@ -71,44 +78,51 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
         // compact status and multiplier columns stay fixed, as in the route table.
         .init("CLI", width: 110, growth: 0, symbol: "terminal", sortable: false),
         .init(
-          "模型 / 时间", width: 166, growth: 3, symbol: "clock", sortable: false),
-        .init(
-          "Profile / 来源", width: 90, growth: 2, alignment: .center, symbol: "person.crop.circle",
-          inset: cellInset, sortable: false),
-        .init(
-          "倍率", width: 56, growth: 0, alignment: .center, symbol: "creditcard", inset: cellInset,
+          context.text("ai_logs.f996981f0d"), width: 166, growth: 3, symbol: "clock",
           sortable: false),
         .init(
-          "TPS / 耗时", width: 104, growth: 1, alignment: .center, symbol: "speedometer",
+          context.text("ai_logs.be547232eb"), width: 90, growth: 2, alignment: .center,
+          symbol: "person.crop.circle",
           inset: cellInset, sortable: false),
         .init(
-          "Token · 官方 / 渠道", width: 160, numeric: true, growth: 2, symbol: "number",
+          context.text("ai_logs.205f148340"), width: 56, growth: 0, alignment: .center,
+          symbol: "creditcard", inset: cellInset,
+          sortable: false),
+        .init(
+          context.text("ai_logs.3282fd6773"), width: 104, growth: 1, alignment: .center,
+          symbol: "speedometer",
+          inset: cellInset, sortable: false),
+        .init(
+          context.text("ai_logs.df444cc4db"), width: 160, numeric: true, growth: 2,
+          symbol: "number",
           inset: cellInset,
           sortable: false),
         .init(
-          "缓存率", width: 72, growth: 0.5, alignment: .center, symbol: "internaldrive",
+          context.text("ai_logs.column.cache"), width: 72, growth: 0.5, alignment: .center,
           inset: cellInset, sortable: false),
         .init(
-          "状态", width: 56, growth: 0, alignment: .center, symbol: "checkmark.circle",
+          context.text("ai_logs.6320b4a872"), width: 56, growth: 0, alignment: .center,
           inset: cellInset, sortable: false),
       ], metrics: .init(),
       selection: .browse)
     super.init(frame: .zero)
     for (field, placeholder, id) in [
-      (minimum, "最低", "ai-log-min-cost"), (maximum, "最高", "ai-log-max-cost"),
+      (minimum, context.text("ai_logs.8b5f2a61b7"), "ai-log-min-cost"),
+      (maximum, context.text("ai_logs.8672864e90"), "ai-log-max-cost"),
     ] {
       field.placeholderString = placeholder
       field.delegate = self
       field.setAccessibilityIdentifier(id)
-      field.setAccessibilityLabel("官方费用" + placeholder + "（美元）")
-      field.toolTip = "按1×官方费用筛选，含边界；留空不限制，最多6位小数"
+      field.setAccessibilityLabel(
+        context.text("ai_logs.c0b69a3163") + placeholder + context.text("ai_logs.3b9fc50aab"))
+      field.toolTip = context.text("ai_logs.ec25b4f178")
       field.widthAnchor.constraint(greaterThanOrEqualToConstant: 84).isActive = true
     }
     costError.textColor = PaxTheme.Color.error
     costError.isHidden = true
     status.setAccessibilityIdentifier("ai-log-result")
     reset.setAccessibilityIdentifier("ai-log-reset")
-    reset.toolTip = "清除费用范围和全部筛选，保留日期"
+    reset.toolTip = context.text("ai_logs.755d15031a")
     for (picker, id) in [
       (profile, "ai-log-profile"), (model, "ai-log-model"), (client, "ai-log-client"),
       (status, "ai-log-result"),
@@ -118,7 +132,7 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
       picker.target = self
       picker.action = #selector(filterChanged(_:))
     }
-    cost.toolTip = "按官方费用（1×）筛选"
+    cost.toolTip = context.text("ai_logs.27925a6ba8")
     let fields: [NSView] = [cost, client, profile, model, status, reset]
     let filters = PaxFilterRow(fields)
     // Keep the filter controls on one row at the minimum supported content width.
@@ -175,6 +189,23 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
 
+  func invalidateLanguage() {
+    for (index, key) in [
+      "", "ai_logs.f996981f0d", "ai_logs.be547232eb", "ai_logs.205f148340", "ai_logs.3282fd6773",
+      "ai_logs.df444cc4db", "ai_logs.column.cache", "ai_logs.6320b4a872",
+    ].enumerated() where !key.isEmpty {
+      table.setColumnTitle(context.text(key), at: index)
+    }
+    reset.title = context.text("ai_logs.bce2377283")
+    previous.title = context.text("ai_logs.c9b9ae7a61")
+    next.title = context.text("ai_logs.8a8542f696")
+    empty.apply(
+      title: context.text("ai_logs.2f9320dc76").isEmpty ? "" : context.text("ai_logs.2f9320dc76"),
+      caption: "")
+    cost.applyTitle(context.text("ai_logs.77fe4ba3d2"))
+    refresh()
+    table.refreshVisibleCopy()
+  }
   func refresh() {
     for (field, value) in [(minimum, store.minimumCost), (maximum, store.maximumCost)] {
       if field.currentEditor() == nil, costError.isHidden {
@@ -183,13 +214,17 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
       field.isEnabled = store.preview || store.data?.costRangeSupported == true
     }
     populate(
-      profile, title: "全部 Profile", options: store.logProfileOptions, selected: store.logProfileID)
+      profile, title: context.text("ai_logs.4e108572f4"),
+      options: store.logProfileOptions(context: context),
+      selected: store.logProfileID)
     populate(
-      model, title: "全部模型", options: store.models.map { ($0.id, $0.name) },
+      model, title: context.text("ai_logs.0164f80178"),
+      options: store.models.map { ($0.id, $0.name) },
       selected: store.logModelID)
     modelWidth?.constant = Self.pickerWidth(model, minimum: FilterWidth.model)
     populate(
-      client, title: "全部 CLI", options: AIClient.allCases.map { ($0.rawValue, $0.rawValue) },
+      client, title: context.text("ai_logs.54438e1395"),
+      options: AIClient.allCases.map { ($0.rawValue, $0.rawValue) },
       selected: store.logClient?.rawValue)
     for item in client.itemArray {
       if let raw = item.representedObject as? String, let cli = AIClient(rawValue: raw),
@@ -200,28 +235,37 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
       }
     }
     populate(
-      status, title: "全部状态", options: [("success", "成功"), ("failed", "失败")],
+      status, title: context.text("ai_logs.0a379c1e73"),
+      options: [
+        ("success", context.text("ai_logs.053461ce86")),
+        ("failed", context.text("ai_logs.28384d7afd")),
+      ],
       selected: store.logResult.map { $0 ? "success" : "failed" })
     reset.isEnabled =
       store.hasLogFilters || !minimum.stringValue.isEmpty || !maximum.stringValue.isEmpty
     matching = store.filteredLogs
     page = store.preview ? 0 : store.logPage
-    summaryView.apply(period: store.period.rawValue, totals: store.logSummary)
+    summaryView.apply(
+      period: store.period.label(context: context), totals: store.logSummary, context: context)
     summaryView.setAccessibilityLabel(
-      AIUsageLogFormat.summary(period: store.period.rawValue, totals: store.logSummary))
+      AIUsageLogFormat.summary(
+        period: store.period.label(context: context), totals: store.logSummary, context: context))
     renderRows()
   }
   private struct CellKey: Hashable {
     let request: AIRequest
     let modelName: String
     let column: Int
+    let presentationRevision: UInt64
     func hash(into hasher: inout Hasher) {
       hasher.combine(request.id)
       hasher.combine(column)
     }
   }
   private func cellKey(_ request: AIRequest, column: Int) -> CellKey {
-    CellKey(request: request, modelName: store.model(request.modelID), column: column)
+    CellKey(
+      request: request, modelName: store.model(request.modelID), column: column,
+      presentationRevision: context.revision)
   }
   /// Width at which the picker draws its selected title in full (title + insets), capped.
   static func pickerWidth(_ picker: NSPopUpButton, minimum: CGFloat) -> CGFloat {
@@ -248,15 +292,16 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
     readStatus.isHidden = !waiting && failure == nil
     readStatus.apply(
       failure == nil ? .working : .failure,
-      text: failure ?? "正在读取本地请求…", action: failure == nil ? nil : "重试")
+      text: failure ?? context.text("ai_logs.8287d18154"),
+      action: failure == nil ? nil : context.text("ai_logs.b8784c8dd5"))
     readStatus.onAction = { [weak self] in self?.store.data?.retry() }
     summaryView.isHidden = waiting
     // Product mode has no collected usage, so say so instead of blaming the filters.
-    empty.update(caption: "没有匹配的本地请求，请调整日期或清除筛选")
+    empty.update(caption: context.text("ai_logs.82cea0d2fa"))
     let total = store.preview ? matching.count : store.logSummary.count
     countLabel.stringValue =
       matching.isEmpty
-      ? "0 条"
+      ? context.text("ai_logs.dce2940b63")
       : "\(start + 1)–\(start + rows.count) / " + AIUsageFormatting.count(total)
     pageLabel.stringValue = "\(page + 1) / \(max(1, (total + 9) / 10))"
     previous.isEnabled = page > 0
@@ -265,11 +310,16 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
   private func populate(
     _ picker: NSPopUpButton, title: String, options: [(String, String)], selected: String?
   ) {
-    picker.removeAllItems()
-    for (id, label) in [("", title)] + options {
-      let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
-      item.representedObject = id
-      picker.menu?.addItem(item)
+    let entries = [("", title)] + options
+    if picker.itemArray.compactMap({ $0.representedObject as? String }) == entries.map(\.0) {
+      for (item, entry) in zip(picker.itemArray, entries) { item.title = entry.1 }
+    } else {
+      picker.removeAllItems()
+      for (id, label) in entries {
+        let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+        item.representedObject = id
+        picker.menu?.addItem(item)
+      }
     }
     picker.selectItem(
       at: picker.itemArray.firstIndex { ($0.representedObject as? String) == (selected ?? "") } ?? 0
@@ -302,7 +352,7 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
       }
       store.perform(.logCostRange(bounds.minimum, bounds.maximum))
     } catch {
-      costError.stringValue = error.message + "；仍显示上次有效筛选结果"
+      costError.stringValue = error.message + context.text("ai_logs.dc02b05846")
       costError.isHidden = false
     }
   }

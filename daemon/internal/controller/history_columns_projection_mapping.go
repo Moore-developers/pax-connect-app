@@ -108,7 +108,7 @@ func columnGroupProduct(g historystore.ColumnGroup, e config.HistoryEvent) *pb.P
 }
 
 func columnGroupRecord(g historystore.ColumnGroup, e config.HistoryEvent) *pb.LogRecord {
-	p := &pb.LogRecord{Kind: g.Kind, RecordId: g.Key, EventId: g.EventID, Level: pb.LogLevel(g.Level), Title: g.Title, Source: e.Source, Flow: columnFlowProto(g.Flow), FirstAt: timestamppb.New(g.FirstAt), LastAt: timestamppb.New(g.LastAt), EventCount: g.Count, AsOf: timestamppb.New(g.Until), OperationFrom: e.OperationFrom, OperationTo: e.OperationTo, SystemCategory: g.SystemCategory, SystemEvent: systemEventProto(e.System), CategoryName: g.CategoryName, CategorySymbol: g.CategorySymbol}
+	p := &pb.LogRecord{Kind: g.Kind, RecordId: g.Key, EventId: g.EventID, Level: pb.LogLevel(g.Level), Title: g.Title, TitleText: productTextProto(e.TitleText), Source: e.Source, Flow: columnFlowProto(g.Flow), FirstAt: timestamppb.New(g.FirstAt), LastAt: timestamppb.New(g.LastAt), EventCount: g.Count, AsOf: timestamppb.New(g.Until), OperationFrom: e.OperationFrom, OperationTo: e.OperationTo, SystemCategory: g.SystemCategory, SystemEvent: systemEventProto(e.System), CategoryName: g.CategoryName, CategorySymbol: g.CategorySymbol}
 	if g.Metrics != nil {
 		p.Metrics = metricsProto(*g.Metrics)
 	}

@@ -164,13 +164,8 @@ import Testing
     #expect(NetworkDiagnosticPresentation.acquisitionSummary(legacy).contains("旧记录"))
   }
 
-  @Test("导出保留备用原因并脱敏提供者查询IP，不把未收录当安全")
-  func exportAndAbsence() throws {
-    let markdown = NetworkDiagnosticPresentation.markdown(
-      report(), services: nil, environment: nil, stale: false)
-    #expect(markdown.contains("仅补缺：VPN"))
-    #expect(markdown.contains("provider_http_429") == false)
-    #expect(!markdown.contains("203.0.113.24"))
+  @Test("未收录或未请求不代表安全")
+  func providerAbsence() throws {
     let missing = NetworkDiagnosticReport(
       .with {
         $0.providers = [

@@ -4,6 +4,43 @@ import Testing
 @testable import PaxCore
 
 @Suite("数据驱动详情") struct LogDetailPresentationTests {
+  @Test func localizedEventKeepsUserNamesAndUnknownMeaning() throws {
+    let catalog = try LanguageCatalog.bundled()
+    let context = PresentationContext(
+      language: .english, messages: try #require(catalog.packs[.english]).messages)
+    var event = SystemEvent()
+    event.type = "route.edit"
+    event.name = "编辑线路"
+    event.nameText = ProductText(code: "event.route.edit")
+    event.result = "completed"
+    var field = EventField()
+    field.label = "线路"
+    field.labelText = ProductText(code: "event.field.route")
+    field.before = "开启代理"
+    field.after = "用户自定路线"
+    var section = EventSection()
+    section.kind = "changes"
+    section.title = "线路变化"
+    section.titleText = ProductText(code: "event.section.route_changes")
+    section.fields = [field]
+    event.sections = [section]
+    var record = LogRecord()
+    record.kind = "operation"
+    record.systemEvent = event
+    record.title = "编辑线路：已完成"
+    var detail = HistoryLogDetail()
+    detail.record = record
+    let plan = LogDetailPresentation(detail: detail, perspective: .system, context: context)
+    #expect(plan.title == "Edit Route")
+    #expect(plan.sections[0].title == "Route Changes")
+    #expect(plan.sections[0].rows[0].0 == "Route")
+    #expect(plan.sections[0].rows[0].1 == "开启代理 → 用户自定路线")
+    #expect(
+      ProductTextPresentation.recordTitle(record, context: context) == "Edit Route: Completed")
+    #expect(
+      ProductTextPresentation.text(
+        ProductText(code: "future.unknown"), original: "原文", context: context) == "原文")
+  }
   @Test("新系统类别无需页面模板，事实与变化不出现网络字段")
   func unknownSystem() {
     var r = LogRecord()

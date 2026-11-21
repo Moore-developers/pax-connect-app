@@ -1,12 +1,16 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 /// 工作台各页共用的原生浮层骨架；业务错误文案由页面覆盖。
 @MainActor
-class WorkbenchModalController: NSViewController {
+class WorkbenchModalController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   let pane: PaxDialogView
   var maximumPresentationWidth: CGFloat? { nil }
   var alignsToTrailingEdge: Bool { false }
+  var localizedTitleKey: String? { nil }
+  var localizedSubtitleKey: String? { nil }
   init(
     title: String, subtitle: String = "", size: NSSize = PaxTheme.Routes.picker,
     style: PaxDialogView.Style = .auxiliary,
@@ -18,20 +22,23 @@ class WorkbenchModalController: NSViewController {
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
+    if let key = localizedTitleKey { pane.applyTitle(interfaceCopy.text(key)) }
+    if let key = localizedSubtitleKey { pane.applySubtitle(interfaceCopy.text(key)) }
     view = pane
     view.frame = NSRect(origin: .zero, size: preferredContentSize)
-    let close = PaxRouteButton(
-      "关闭", symbol: "xmark", style: pane.style == .event ? .secondary : .quiet, target: self,
-      action: #selector(close))
+    let close = interfaceCopy.button(
+      PaxRouteButton(
+        "", symbol: "xmark", style: pane.style == .event ? .secondary : .quiet, target: self,
+        action: #selector(close)), key: "common.close")
     close.imagePosition = .imageOnly
-    close.setAccessibilityLabel("关闭浮层")
+    close.setAccessibilityLabel(interfaceCopy.text("common.close"))
     pane.identityActions.addArrangedSubview(close)
   }
   func button(_ title: String, _ action: Selector, primary: Bool = false) -> PaxRouteButton {
     PaxRouteButton(title, style: primary ? .primary : .secondary, target: self, action: action)
   }
   func showError(_ error: Error) {
-    pane.status.stringValue = "操作失败，请检查输入"
+    pane.status.stringValue = self.interfaceCopy.text("interface_detail.b25cfc0ab5")
     pane.status.textColor = PaxTheme.Color.error
     pane.status.isHidden = false
     pane.status.superview?.isHidden = false

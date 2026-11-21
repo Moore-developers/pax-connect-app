@@ -2694,22 +2694,27 @@ func (x *AIUsageLimitFlat) GetOverSpend() *AIUsageLimitMoney {
 }
 
 type AIUsageLimitRow struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Id            string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Cli           string                   `protobuf:"bytes,2,opt,name=cli,proto3" json:"cli,omitempty"`
-	SessionId     string                   `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Title         string                   `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Model         string                   `protobuf:"bytes,5,opt,name=model,proto3" json:"model,omitempty"`
-	Effort        string                   `protobuf:"bytes,6,opt,name=effort,proto3" json:"effort,omitempty"`
-	Emphasized    bool                     `protobuf:"varint,7,opt,name=emphasized,proto3" json:"emphasized,omitempty"`
-	Note          string                   `protobuf:"bytes,8,opt,name=note,proto3" json:"note,omitempty"`
-	Bands         []*AIUsageLimitBand      `protobuf:"bytes,9,rep,name=bands,proto3" json:"bands,omitempty"`
-	Lines         *AIUsageModelLimit       `protobuf:"bytes,10,opt,name=lines,proto3" json:"lines,omitempty"`
-	ModelLines    []*AIUsageLimitModelLine `protobuf:"bytes,11,rep,name=model_lines,json=modelLines,proto3" json:"model_lines,omitempty"`
-	Multiple      *float64                 `protobuf:"fixed64,12,opt,name=multiple,proto3,oneof" json:"multiple,omitempty"`
-	OverSpend     *AIUsageLimitMoney       `protobuf:"bytes,13,opt,name=over_spend,json=overSpend,proto3" json:"over_spend,omitempty"`
-	Flat          *AIUsageLimitFlat        `protobuf:"bytes,14,opt,name=flat,proto3" json:"flat,omitempty"`
-	Unpriced      int64                    `protobuf:"varint,15,opt,name=unpriced,proto3" json:"unpriced,omitempty"`
+	state      protoimpl.MessageState   `protogen:"open.v1"`
+	Id         string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Cli        string                   `protobuf:"bytes,2,opt,name=cli,proto3" json:"cli,omitempty"`
+	SessionId  string                   `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Title      string                   `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Model      string                   `protobuf:"bytes,5,opt,name=model,proto3" json:"model,omitempty"`
+	Effort     string                   `protobuf:"bytes,6,opt,name=effort,proto3" json:"effort,omitempty"`
+	Emphasized bool                     `protobuf:"varint,7,opt,name=emphasized,proto3" json:"emphasized,omitempty"`
+	Note       string                   `protobuf:"bytes,8,opt,name=note,proto3" json:"note,omitempty"`
+	Bands      []*AIUsageLimitBand      `protobuf:"bytes,9,rep,name=bands,proto3" json:"bands,omitempty"`
+	Lines      *AIUsageModelLimit       `protobuf:"bytes,10,opt,name=lines,proto3" json:"lines,omitempty"`
+	ModelLines []*AIUsageLimitModelLine `protobuf:"bytes,11,rep,name=model_lines,json=modelLines,proto3" json:"model_lines,omitempty"`
+	Multiple   *float64                 `protobuf:"fixed64,12,opt,name=multiple,proto3,oneof" json:"multiple,omitempty"`
+	OverSpend  *AIUsageLimitMoney       `protobuf:"bytes,13,opt,name=over_spend,json=overSpend,proto3" json:"over_spend,omitempty"`
+	Flat       *AIUsageLimitFlat        `protobuf:"bytes,14,opt,name=flat,proto3" json:"flat,omitempty"`
+	Unpriced   int64                    `protobuf:"varint,15,opt,name=unpriced,proto3" json:"unpriced,omitempty"`
+	// Distinct sessions in an all-session model row; absent in legacy replies and other row kinds.
+	SessionCount *int64 `protobuf:"varint,16,opt,name=session_count,json=sessionCount,proto3,oneof" json:"session_count,omitempty"`
+	// Raw catalog title and provenance; title remains the legacy display fallback.
+	TitleSource   string `protobuf:"bytes,17,opt,name=title_source,json=titleSource,proto3" json:"title_source,omitempty"`
+	RawTitle      string `protobuf:"bytes,18,opt,name=raw_title,json=rawTitle,proto3" json:"raw_title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2847,6 +2852,27 @@ func (x *AIUsageLimitRow) GetUnpriced() int64 {
 		return x.Unpriced
 	}
 	return 0
+}
+
+func (x *AIUsageLimitRow) GetSessionCount() int64 {
+	if x != nil && x.SessionCount != nil {
+		return *x.SessionCount
+	}
+	return 0
+}
+
+func (x *AIUsageLimitRow) GetTitleSource() string {
+	if x != nil {
+		return x.TitleSource
+	}
+	return ""
+}
+
+func (x *AIUsageLimitRow) GetRawTitle() string {
+	if x != nil {
+		return x.RawTitle
+	}
+	return ""
 }
 
 type AIUsageLimitCurrent struct {
@@ -3846,7 +3872,7 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\brequests\x18\x02 \x01(\x03R\brequests\x12-\n" +
 	"\x04cost\x18\x03 \x01(\v2\x19.pax.v1.AIUsageLimitMoneyR\x04cost\x128\n" +
 	"\n" +
-	"over_spend\x18\x04 \x01(\v2\x19.pax.v1.AIUsageLimitMoneyR\toverSpend\"\x9d\x04\n" +
+	"over_spend\x18\x04 \x01(\v2\x19.pax.v1.AIUsageLimitMoneyR\toverSpend\"\x99\x05\n" +
 	"\x0fAIUsageLimitRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03cli\x18\x02 \x01(\tR\x03cli\x12\x1d\n" +
@@ -3868,8 +3894,12 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\n" +
 	"over_spend\x18\r \x01(\v2\x19.pax.v1.AIUsageLimitMoneyR\toverSpend\x12,\n" +
 	"\x04flat\x18\x0e \x01(\v2\x18.pax.v1.AIUsageLimitFlatR\x04flat\x12\x1a\n" +
-	"\bunpriced\x18\x0f \x01(\x03R\bunpricedB\v\n" +
-	"\t_multiple\"h\n" +
+	"\bunpriced\x18\x0f \x01(\x03R\bunpriced\x12(\n" +
+	"\rsession_count\x18\x10 \x01(\x03H\x01R\fsessionCount\x88\x01\x01\x12!\n" +
+	"\ftitle_source\x18\x11 \x01(\tR\vtitleSource\x12\x1b\n" +
+	"\traw_title\x18\x12 \x01(\tR\brawTitleB\v\n" +
+	"\t_multipleB\x10\n" +
+	"\x0e_session_count\"h\n" +
 	"\x13AIUsageLimitCurrent\x12\x18\n" +
 	"\acontext\x18\x01 \x01(\x03R\acontext\x12\x19\n" +
 	"\x05limit\x18\x02 \x01(\x03H\x00R\x05limit\x88\x01\x01\x12\x12\n" +

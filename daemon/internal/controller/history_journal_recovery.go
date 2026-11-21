@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const journalRepairLimit = 6
+
 // reportDamage only queues bounded repair intent. Capture alone mutates hour files.
 func (r *journalConsumers) reportDamage(err error) {
 	var damage *historystore.JournalDamage
@@ -19,7 +21,7 @@ func (r *journalConsumers) reportDamage(err error) {
 	if r.repairs == nil {
 		r.repairs = map[int64]time.Time{}
 	}
-	if len(r.repairs) < journalMaxFiles {
+	if len(r.repairs) < journalRepairLimit {
 		r.repairs[damage.Hour.Unix()] = damage.Hour
 	}
 }

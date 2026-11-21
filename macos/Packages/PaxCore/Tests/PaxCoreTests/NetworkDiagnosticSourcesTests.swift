@@ -56,8 +56,6 @@ import Testing
     #expect(P.sourceListOverview(value).text.contains("2 条来源资料"))
     #expect(P.sourceListOverview(value).text.contains("10 项未返回资料"))
     #expect(value.sources.count == 2)
-    let markdown = P.markdown(value, services: nil, environment: nil, stale: false)
-    #expect(markdown.contains("IPLocate · 补充：资料请求超时"))
     #expect(P.sourceRows(value, onlyDifferences: true).count == 10)
   }
 

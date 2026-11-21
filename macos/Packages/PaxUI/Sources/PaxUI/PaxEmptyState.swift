@@ -3,6 +3,7 @@ import AppKit
 /// 空状态：符号 + 标题 + 说明 + 可选 CTA；不伪造数据，缺什么写什么。
 public final class PaxEmptyState: NSView {
   private let captionField: NSTextField
+  private let titleField: NSTextField
   private var actionButton: PaxButton?
 
   public init(
@@ -10,7 +11,7 @@ public final class PaxEmptyState: NSView {
     target: AnyObject? = nil, action: Selector? = nil, identifier: String? = nil
   ) {
     let icon = PaxIcon.view(symbol, size: 28, weight: .regular)
-    let titleField = NSTextField(labelWithString: title)
+    titleField = NSTextField(labelWithString: title)
     titleField.font = PaxTheme.Typography.title(15)
     titleField.textColor = PaxTheme.Color.text
     captionField = NSTextField(wrappingLabelWithString: caption)
@@ -48,6 +49,10 @@ public final class PaxEmptyState: NSView {
   }
 
   public func update(caption: String) {
+    captionField.stringValue = caption
+  }
+  public func apply(title: String, caption: String) {
+    titleField.stringValue = title
     captionField.stringValue = caption
   }
 }

@@ -3,18 +3,20 @@ import AppKit
 /// Shared settings section: heading, card, rows and separators, without feature state.
 public final class PaxPreferenceGroup: NSStackView {
   public enum Style { case standard, compact }
+  private let titleField: NSTextField
 
   public init(
     title: String, symbol: String, rows: [NSView], style: Style = .standard, footer: NSView? = nil
   ) {
+    titleField = PaxText.label(
+      title, font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont, weight: .medium))
     super.init(frame: .zero)
     orientation = .vertical
     alignment = .leading
     spacing = PaxTheme.Spacing.tight
     let heading = NSStackView(views: [
       NSImageView(image: PaxIcon.image(symbol, size: PaxTheme.Control.navigationIcon) ?? NSImage()),
-      PaxText.label(
-        title, font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont, weight: .medium)),
+      titleField,
       NSView(),
     ])
     heading.spacing = PaxTheme.Spacing.tight
@@ -64,4 +66,5 @@ public final class PaxPreferenceGroup: NSStackView {
     }
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func apply(title: String) { titleField.stringValue = title }
 }

@@ -145,7 +145,7 @@ func networkDiagnosticProto(v measurement.NetworkDiagnosticReport) *pb.NetworkDi
 		r.Sources = append(r.Sources, &pb.NetworkDiagnosticSource{Name: s.Name, Country: s.Country, City: s.City, Asn: s.ASN, Org: s.Org, ProviderDate: s.ProviderDate, ProviderId: s.ProviderID})
 	}
 	for _, f := range v.Facts {
-		r.Facts = append(r.Facts, &pb.NetworkDiagnosticFact{Group: f.Group, Label: f.Label, Value: f.Value, Source: f.Source, State: f.State, ProviderId: f.ProviderID})
+		r.Facts = append(r.Facts, &pb.NetworkDiagnosticFact{Group: f.Group, Label: f.Label, Value: f.Value, Source: f.Source, State: f.State, ProviderId: f.ProviderID, Kind: measurement.DiagnosticFactKind(f.Label), LabelText: diagnosticFactText(f.Label)})
 	}
 	for _, p := range v.Providers {
 		r.Providers = append(r.Providers, &pb.NetworkDiagnosticProvider{Id: p.ID, QueryIp: p.QueryIP, Family: p.Family, State: p.State, ErrorCode: p.ErrorCode, Capabilities: p.Capabilities, HttpStatus: uint32(p.HTTPStatus), DurationMs: uint64(max(0, p.Duration.Milliseconds())), At: timestamppb.New(p.At), FallbackFor: p.FallbackFor, FallbackReason: p.FallbackReason})
@@ -154,4 +154,12 @@ func networkDiagnosticProto(v measurement.NetworkDiagnosticReport) *pb.NetworkDi
 		r.Probes = append(r.Probes, &pb.NetworkDiagnosticProbe{Target: p.Target, Attempt: uint32(p.Attempt), HttpStatus: uint32(p.HTTPStatus), DurationMs: uint64(max(0, p.Duration.Milliseconds())), ErrorCode: p.ErrorCode, ExpectedResponse: p.ExpectedResponse, At: timestamppb.New(p.At), State: p.State, Stage: p.Stage, RedirectHost: p.RedirectHost})
 	}
 	return r
+}
+
+func diagnosticFactText(label string) *pb.ProductText {
+	kind := measurement.DiagnosticFactKind(label)
+	if kind == "" {
+		return nil
+	}
+	return &pb.ProductText{Code: "diagnostic.fact." + kind}
 }

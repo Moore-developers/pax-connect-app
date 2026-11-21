@@ -1,0 +1,21 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "error.history_converting": "Converting records…",
+    "error.history_building": "Building the log index. Records will appear when it is ready.",
+    "error.history_expired": "These records have expired or been cleared.",
+    "error.history_cursor_expired": "Records were cleared or the read expired. Refresh to continue.",
+    "error.history_query_busy": "There are too many records. Narrow the time range and retry.",
+    "error.history_capacity_reached": "The storage limit was reached. Older records may have been removed.",
+    "error.settings_conflict": "Log settings changed. Refresh and retry.",
+    "error.invalid_filter": "Invalid filter. Choose it again.",
+    "error.history_cursor_stale": "History has changed. Reload to continue.",
+    "error.icon_cache_unavailable": "Logs were cleared, but the website icon cache could not be cleared. Retry clearing it.",
+    "error.history_store_failed": "Measurement history could not be saved or read. The current route remains usable.",
+    "error.usage_sample_failed": "Current usage is unavailable. History is preserved, but coverage is incomplete.",
+    "error.usage_store_failed": "Usage records could not be saved or read. The current route remains usable.",
+    "error.history_unavailable": "The backend has not provided history records."
+  }
+}

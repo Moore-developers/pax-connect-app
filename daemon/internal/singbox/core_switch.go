@@ -47,7 +47,8 @@ func (r *CoreRuntime) SelectRoute(ctx context.Context, expected, target string) 
 		return old, false, err
 	}
 	if old == target {
-		return target, len(r.retired) == 0, nil
+		err := r.closeRetired(ctx)
+		return target, err == nil, err
 	}
 	if old != target {
 		r.cancelCurrentPath(true)
@@ -71,28 +72,43 @@ func (r *CoreRuntime) closeRetired(ctx context.Context) error {
 	if len(r.retired) == 0 || r.Status() != "STARTED" {
 		return nil
 	}
-	snapshot := &connectionSnapshot{ctx: ctx}
-	_ = r.current().SubscribeConnections(&daemon.SubscribeConnectionsRequest{}, snapshot)
-	if snapshot.events == nil {
-		return errors.New("core_connections_unavailable")
+	connections, err := r.activeNativeConnections(ctx)
+	if err != nil {
+		return err
 	}
-	for _, event := range snapshot.events.Events {
-		c := event.Connection
-		if c == nil {
-			continue
-		}
-		owned := r.retired[c.Outbound]
-		for _, tag := range c.ChainList {
-			owned = owned || r.retired[tag]
-		}
-		if !owned {
+	for _, c := range connections {
+		if !r.retiredSelectorConnection(c) {
 			continue
 		}
 		if _, err := r.current().CloseConnection(ctx, &daemon.CloseConnectionRequest{Id: c.Id}); err != nil {
 			return errors.New("core_connections_pending")
 		}
 	}
+	remaining, err := r.activeNativeConnections(ctx)
+	if err != nil {
+		return err
+	}
+	for _, c := range remaining {
+		if r.retiredSelectorConnection(c) {
+			return errors.New("core_connections_pending")
+		}
+	}
 	return nil
+}
+
+func (r *CoreRuntime) retiredSelectorConnection(c *daemon.Connection) bool {
+	if c == nil || c.ClosedAt != 0 || !slices.Contains(c.ChainList, "proxy") {
+		return false
+	}
+	if r.retired[c.Outbound] {
+		return true
+	}
+	for _, tag := range c.ChainList {
+		if r.retired[tag] {
+			return true
+		}
+	}
+	return false
 }
 
 // Maintain retires late-arriving old-node flows as well as already tracked ones.
@@ -105,19 +121,28 @@ func (r *CoreRuntime) Maintain(ctx context.Context) {
 		return
 	}
 	monitor := instance.Box().Network().InterfaceMonitor()
-	if monitor == nil {
-		return
+	if monitor != nil {
+		current := monitor.DefaultInterface()
+		if current == nil || strings.HasPrefix(current.Name, "utun") || current.Name == "lo0" {
+			r.fixedHealth.invalidate(r.pathVersion.Load())
+			return
+		}
+		r.DefaultInterfaceChanged(current.Name, current.Index)
 	}
-	current := monitor.DefaultInterface()
-	if current == nil || strings.HasPrefix(current.Name, "utun") || current.Name == "lo0" {
-		return
+	// A gateway/Wi-Fi change can retain en0. Invalidate old verdicts before
+	// consuming their completion, even when the interface name did not change.
+	network := instance.Box().Network().NetworkEnvironment()
+	if network != r.fixedNetwork {
+		r.fixedHealth.invalidate(r.pathVersion.Load())
+		r.fixedNetwork = network
 	}
-	r.DefaultInterfaceChanged(current.Name, current.Index)
+	r.maintainFixedRoutes(ctx)
 }
 
 // SetPaused forwards device state without constructing or reviving an instance.
 func (r *CoreRuntime) SetPaused(paused bool) error {
 	r.cancelCurrentPath(true)
+	r.fixedPaused = paused
 	instance := r.current().Instance()
 	if instance == nil || r.Status() != "STARTED" {
 		return nil

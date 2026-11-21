@@ -53,6 +53,7 @@ func (c *Controller) applyCore(ctx context.Context, p config.RouteConfig) error 
 		}
 		l := c.routing.library.Clone()
 		l.WebRTC = p.NetworkPrivacy.WebRTC
+		l.RouteNames = c.routingRouteNames()
 		p.Routing = &l
 		p.RoutingApplications = c.routing.apps
 		if len(p.RoutingApplications) == 0 {

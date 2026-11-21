@@ -93,23 +93,12 @@ import Testing
     }
   }
 
-  @Test("无路由时逐项详情写不适用，不写失败；报告只写状态不写地址")
-  func detailsAndReport() async {
+  @Test("无路由时逐项详情写不适用，不写失败")
+  func details() {
     let value = report(
       route: check("ipv6_route", "absent", error: "ipv6_no_default_route"), v6Failed: true)
     let failed = value.browser.checks?.first { $0.kind == "ipv6" }
     #expect(P.checkOutcome(failed!, ipv6Off: true).contains("不适用：本机未开启 IPv6"))
     #expect(!P.checkOutcome(failed!).contains("不适用"))
-    let on = report(route: check("ipv6_route", "observed", value: "en0"), v6Failed: false)
-    let store = EnvironmentDiagnosticStore(request: { _, _ in on }, openBrowser: { _ in true })
-    store.start()
-    for _ in 0..<100 where store.report == nil { await Task.yield() }
-    let line = P.markdown(store).split(separator: "\n").first { $0.hasPrefix("- IPv6：") }
-    #expect(line?.contains("已开启") == true)
-    #expect(line?.contains(address) == false)
-    #expect(line?.contains("en0") == false)
-    let whole = P.markdown(store)
-    #expect(!whole.contains("en0"))
-    #expect(!whole.contains(address))
   }
 }

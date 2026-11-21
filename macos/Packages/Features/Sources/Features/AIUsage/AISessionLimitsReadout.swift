@@ -1,14 +1,21 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 /// One readout for the limits page. Row details and help icons share its lifetime and styling.
 @MainActor final class AILimitReadout {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   private let panel = NSPopover()
   private weak var owner: NSView?
   private var monitor: Any?
   private weak var scrollingWindow: NSWindow?
 
-  init() {
+  init(interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
     panel.behavior = .applicationDefined
     panel.animates = false
     monitor = NSEvent.addLocalMonitorForEvents(
@@ -77,19 +84,25 @@ import PaxUI
     return column
   }
 
-  func help(_ title: String, _ text: String) -> NSView {
+  func help(_ title: String, _ text: String) -> NSView { help { _ in (title, text) } }
+
+  func help(_ content: @escaping (PresentationContext) -> (String, String)) -> NSView {
     let image = NSImageView()
     image.image = PaxIcon.image("questionmark.circle", size: PaxTheme.Routes.metaFont)
     image.contentTintColor = PaxTheme.Color.textSecondary
     image.widthAnchor.constraint(equalToConstant: PaxTheme.Spacing.regular).isActive = true
     image.heightAnchor.constraint(equalTo: image.widthAnchor).isActive = true
     let host = AILimitReadoutHost(image, readout: self) {
-      Self.explanation(title, text)
+      let (title, text) = content(self.context)
+      return Self.explanation(title, text)
     }
     host.setAccessibilityElement(true)
     host.setAccessibilityRole(.button)
-    host.setAccessibilityLabel(title + "说明")
-    host.setAccessibilityHelp(text)
+    interfaceCopy.bind(host) { host, context in
+      let (title, text) = content(context)
+      host.setAccessibilityLabel(title + context.text("session_limits.4262c45dc7"))
+      host.setAccessibilityHelp(text)
+    }
     return host
   }
 }

@@ -40,8 +40,8 @@ import Testing
     #expect(store.report == nil)
     #expect(store.message.contains("尚未检测"))
   }
-  @Test("首次连接不混入重复延迟；导出冻结且默认脱敏")
-  func coldWarmAndExport() {
+  @Test("首次连接不混入重复延迟")
+  func coldAndWarm() {
     let raw = Pax_V1_NetworkDiagnosticReport.with {
       $0.targetRouteID = "route-fixture"
       $0.targetRouteName = "Private route"
@@ -82,16 +82,6 @@ import Testing
     #expect(summary.firstMS == 900)
     #expect(summary.median == 120)
     #expect(summary.range == "100–140 ms")
-    let text = NetworkDiagnosticPresentation.markdown(
-      report, services: nil, environment: nil, stale: false)
-    #expect(!text.contains("203.0.113.24"))
-    #expect(!text.contains("203.0.113.0/24"))
-    #expect(!text.contains("Private route"))
-    #expect(!text.contains("private other route"))
-    #expect(
-      text
-        == NetworkDiagnosticPresentation.markdown(
-          report, services: nil, environment: nil, stale: false))
   }
 
   @Test("时区显示保留负号与夏令时，未知不补猜")
@@ -105,5 +95,4 @@ import Testing
     #expect(NetworkDiagnosticPresentation.utcOffset("unknown", at: Date()).contains("未知"))
     #expect(NetworkDiagnosticPresentation.languageName("en-TW").contains("en-TW"))
   }
-
 }

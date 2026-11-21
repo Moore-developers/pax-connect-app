@@ -7,7 +7,7 @@ import (
 	"pax-connect/daemon/internal/config"
 )
 
-// Capacity cleanup keeps ordered DNS answers for live groups while removing
+// Retention cleanup keeps ordered DNS answers for live groups while removing
 // children of missing groups. Owner keys include an embedded NUL separator.
 func TestColumnOrphanCleanupKeepsLiveGroupAnswers(t *testing.T) {
 	ctx := context.Background()

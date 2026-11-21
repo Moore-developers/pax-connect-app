@@ -10,6 +10,31 @@ extension PaxTheme.Dashboard {
 }
 
 public final class PaxModelTrendCard: PaxCard {
+  public struct Copy {
+    public var title = "模型用量趋势"
+    public var metrics = ["费用", "Token"]
+    public var today = ["今日费用", "今日 Token"]
+    public var chart = ["近 7 日费用构成", "近 7 日 Token 构成"]
+    public var yesterday = ["昨日费用", "昨日 Token"]
+    public var all = "全部"
+    public var filter = "Profile 与模型筛选"
+    public var chartSummary = PaxStackedChart.defaultSummary
+    public var average = "近 7 日日均"
+    public var series = ["输入", "输出", "缓存"]
+    public init() {}
+  }
+  private var copy = Copy()
+  public func applyCopy(_ copy: Copy) {
+    self.copy = copy
+    heading.text = copy.title
+    chart.seriesLabels = copy.series
+    chart.summarize = copy.chartSummary
+    modelPicker.setAccessibilityLabel(copy.filter)
+    updateModelPicker()
+    tabs.apply(labels: copy.metrics)
+    averageTitle.stringValue = copy.average
+    render()
+  }
   private static let factCount = 3
   private let heading = PaxCardHeading("模型用量趋势", symbol: "chart.bar")
   private let tabs = PaxTabs(["费用", "Token"])
@@ -100,7 +125,9 @@ public final class PaxModelTrendCard: PaxCard {
   }
 
   private func updateModelPicker() {
-    PaxUsageFilterMenu.populate(modelPicker, groups: model.groups, selection: model.selection)
+    PaxUsageFilterMenu.populate(
+      modelPicker, groups: model.groups, selection: model.selection,
+      allTitle: copy.all)
   }
 
   @objc private func selectModel() {
@@ -126,9 +153,9 @@ public final class PaxModelTrendCard: PaxCard {
     updated.stringValue = model.updated
     updated.isHidden = model.updated.isEmpty
     value.stringValue = series.value
-    metricTitle.stringValue = metric == 0 ? "今日费用" : "今日 Token"
-    chartTitle.stringValue = metric == 0 ? "近 7 日费用构成" : "近 7 日 Token 构成"
-    yesterdayTitle.stringValue = metric == 0 ? "昨日费用" : "昨日 Token"
+    metricTitle.stringValue = copy.today[metric]
+    chartTitle.stringValue = copy.chart[metric]
+    yesterdayTitle.stringValue = copy.yesterday[metric]
     for index in 0..<Self.factCount {
       let fact = index < series.facts.count ? series.facts[index] : nil
       factTitles[index].stringValue = fact?.label ?? ""
@@ -138,7 +165,7 @@ public final class PaxModelTrendCard: PaxCard {
     }
     yesterdayValue.stringValue = series.yesterday
     averageValue.stringValue = series.average
-    legend.items = zip(["输入", "输出", "缓存"], Self.seriesColors).map { .init($0, color: $1) }
+    legend.items = zip(copy.series, Self.seriesColors).map { .init($0, color: $1) }
     chart.unit = metric == 0 ? "$" : "tokens"
     chart.currentIndex = model.currentIndex
     chart.samples = series.days

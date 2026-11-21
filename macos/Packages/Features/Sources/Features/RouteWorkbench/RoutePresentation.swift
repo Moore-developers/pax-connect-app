@@ -8,6 +8,19 @@ extension NSViewController {
     presentWorkbenchModal(controller)
   }
   func presentWorkbenchModal(_ controller: WorkbenchModalController) {
+    var owner: NSViewController? = self
+    while let current = owner {
+      if let consumer = current as? any InterfaceLanguageConsumer {
+        controller.interfaceCopy.apply(consumer.interfaceCopy.context)
+        break
+      }
+      if let shell = current as? WorkbenchShellViewController, let context = shell.language?.context
+      {
+        controller.interfaceCopy.apply(context)
+        break
+      }
+      owner = current.parent
+    }
     present(controller, animator: WorkbenchPresentation())
   }
 }

@@ -1,4 +1,40 @@
 (async () => {
+  const sessionRoot = new URL(location.href);
+  sessionRoot.search = ''; sessionRoot.hash = '';
+  const base = sessionRoot.href;
+  const catalog = paxBrowserCatalog;
+  const resolve = values => {
+    for (const value of values) {
+      const base = String(value).toLowerCase().split(/[-_]/)[0];
+      if (base === 'zh') return 'zh-Hans';
+      if (base === 'en') return 'en';
+    }
+    return 'en';
+  };
+  let locale = resolve([document.documentElement.dataset.paxLocale, ...(navigator.languages || [])]), words, customUnavailable = false;
+  try {
+    const response = await fetch(new URL('presentation', sessionRoot), { credentials: 'omit', cache: 'no-store' });
+    if (!response.ok) throw Error();
+    const presentation = await response.json();
+    if (presentation && catalog[presentation.locale]) {
+      locale = presentation.locale;
+      words = { ...catalog[locale], ...presentation.messages };
+    }
+  } catch { customUnavailable = true; }
+  words ||= catalog[locale];
+  const text = (key, params = {}) => (words[key] || catalog[locale][key] || '').replace(
+    /\{\{|\}\}|\{([A-Za-z0-9_]+)\}/g,
+    (match, name) => match === '{{' ? '{' : match === '}}' ? '}' : String(params[name] ?? '—'));
+  document.documentElement.lang = locale;
+  document.title = text('browser.title');
+  for (const element of document.querySelectorAll('[data-copy]')) {
+    element.textContent = text(element.dataset.copy);
+  }
+  if (customUnavailable) {
+    const note = document.createElement('p');
+    note.textContent = text('browser.custom_unavailable');
+    document.querySelector('main').append(note);
+  }
   const status = document.getElementById('state');
   const card = document.querySelector('main');
   const hint = document.getElementById('hint');
@@ -24,18 +60,18 @@
   }
   function pauseCountdown() {
     stopCountdown();
-    countdown.textContent = '已暂停自动关闭 · 剩余 ' + Math.ceil(remainingMS / 1000) + ' 秒';
+    countdown.textContent = text('browser.paused', { seconds: Math.ceil(remainingMS / 1000) });
   }
   function closePage() {
     if (closing) return;
     stopCountdown();
     closing = true;
-    countdown.textContent = '正在关闭此标签页…';
+    countdown.textContent = text('browser.closing');
     try { window.close(); }
     catch { /* Browser policy may reject closing a tab opened by the App. */ }
     setTimeout(() => {
-      hint.textContent = '结果已回传。浏览器未允许自动关闭，请手动关闭此标签页。';
-      countdown.textContent = '快捷键 ⌘W';
+      hint.textContent = text('browser.manual_close');
+      countdown.textContent = text('browser.shortcut');
       actions.hidden = true;
     }, 350);
   }
@@ -45,7 +81,7 @@
     const tick = () => {
       remainingMS = Math.max(0, closeDeadline - Date.now());
       if (remainingMS === 0) { closePage(); return; }
-      countdown.textContent = Math.ceil(remainingMS / 1000) + ' 秒后尝试自动关闭';
+      countdown.textContent = text('browser.countdown', { seconds: Math.ceil(remainingMS / 1000) });
       closeTimer = setTimeout(tick, 200);
     };
     tick();
@@ -54,7 +90,7 @@
   keep.addEventListener('click', () => {
     retained = true;
     stopCountdown();
-    countdown.textContent = '已保留页面，可随时关闭。';
+    countdown.textContent = text('browser.kept');
     keep.hidden = true;
   });
   details.addEventListener('toggle', () => {
@@ -65,12 +101,11 @@
       startCountdown();
     }
   });
-  const base = location.href;
   const result = {
     languages: Array.from(navigator.languages || []).slice(0, 16),
     region: Intl.DateTimeFormat().resolvedOptions().locale,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    browser: /Edg\//.test(navigator.userAgent) ? 'Microsoft Edge' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : '当前浏览器',
+    browser: /Edg\//.test(navigator.userAgent) ? 'Microsoft Edge' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : 'Browser',
     ipv4: '', ipv6: '', rtcAddresses: [], rtcState: 'empty', checks: []
   };
   const check = (kind, target) => ({ kind, target, state: 'failed', value: '', errorCode: '', durationMS: 0, httpStatus: 0, at: new Date().toISOString() });
@@ -204,18 +239,18 @@
     result.rtcAddresses = [...new Set([...cf, ...google])].slice(0, 32);
     const rtcChecks = result.checks.filter(c => c.kind.startsWith('rtc_'));
     result.rtcState = result.rtcAddresses.length ? 'complete' : rtcChecks.every(c => c.state === 'unsupported') ? 'unsupported' : rtcChecks.every(c => c.state === 'failed') ? 'failed' : 'empty';
-    stage('submitting', '正在回传检测结果…', '回传成功后 5 秒尝试自动关闭。');
+    stage('submitting', text('browser.submitting'), text('browser.submitting_hint'));
     const response = await timed(base + 'result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result) }, 25000);
     if (!response.ok) throw Error();
     const noIPv6 = response.headers.get('X-Pax-IPv6-Route') === 'absent';
     const partial = result.checks.some(c => ['failed', 'timeout', 'unsupported'].includes(c.state) && !(noIPv6 && c.kind === 'ipv6'));
-    stage(partial ? 'partial' : 'complete', partial ? '检测结束，部分项目未完成' : '浏览器检测完成', '结果已回传 Pax Connect，请返回 App 查看。');
+    stage(partial ? 'partial' : 'complete', partial ? text('browser.partial') : text('browser.complete'), text('browser.submitted'));
     submitted = true;
     countdown.hidden = false;
     actions.hidden = false;
     if (details.open) pauseCountdown();
     else startCountdown();
   } catch {
-    stage('failed', '结果未能回传', '检测可能已停止或超时，请返回 Pax Connect 重新检测。');
+    stage('failed', text('browser.failed'), text('browser.failed_hint'));
   }
 })();

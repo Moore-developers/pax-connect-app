@@ -22,7 +22,7 @@ const (
 	gapSessionChanged = "session_change"  // the core restarted: its old tail and new head are unseen
 	gapLost           = "lost"            // the core buffer overflowed past our cursor
 	gapReset          = "reset_required"  // the core demanded a baseline for another reason
-	gapEvicted        = "journal_evicted" // a journal file was removed by the capacity cap before it was consumed
+	gapEvicted        = "journal_evicted" // historical capacity eviction before consumption
 	gapDropped        = "journal_dropped" // a journal file was corrupt or had another schema and was quarantined
 	gapCursorAhead    = "cursor_ahead"    // our cursor is beyond the core's high water
 )
@@ -93,7 +93,7 @@ func detectCoreGap(cursor historystore.Cursor, b config.ObservationBatch, seedin
 	return &gap
 }
 
-// evictionGap describes a whole hour file lost to the capacity cap or to corruption.
+// evictionGap describes a whole hour file lost to corruption or a historical capacity eviction.
 func evictionGap(reason string, hour time.Time) journalGap {
 	return journalGap{Reason: reason, FromMs: hour.UnixMilli(), ToMs: hour.Add(time.Hour).UnixMilli()}
 }

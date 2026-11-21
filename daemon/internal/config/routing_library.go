@@ -40,10 +40,11 @@ type RoutingPackage struct {
 
 // RoutingLibrary is the durable, revisioned local rule configuration.
 type RoutingLibrary struct {
-	WebRTC   bool `json:"-"`
-	Schema   int
-	Revision uint64
-	Packages []RoutingPackage
+	WebRTC     bool              `json:"-"`
+	RouteNames map[string]string `json:"-"` // Runtime display names keyed by saved destination (route:<id>).
+	Schema     int
+	Revision   uint64
+	Packages   []RoutingPackage
 }
 
 // RoutingApplication freezes a confirmed executable identity, including bundle-contained helpers.
@@ -76,18 +77,19 @@ func (l RoutingLibrary) Clone() RoutingLibrary {
 	return next
 }
 func (l RoutingLibrary) Validate() error {
-	if l.Schema != 1 || l.Revision == 0 || len(l.Packages) < 2 || len(l.Packages) > 128 || l.Packages[0].ID != "priority" || l.Packages[len(l.Packages)-1].ID != "geo" {
+	if l.Schema != 1 || l.Revision == 0 || len(l.Packages) < 2 || len(l.Packages) > 129 || l.Packages[0].ID != "priority" || l.Packages[len(l.Packages)-1].ID != "geo" {
 		return ErrRoutingLibrary
 	}
 	presentationBytes := 0
 	seen, names := map[string]bool{}, map[string]bool{}
 	total := 0
-	for _, p := range l.Packages {
-		if p.ID == "" || len(p.ID) > 128 || seen[p.ID] || p.Name == "" || len([]rune(p.Name)) > 48 || (names[p.Name] && p.Kind != "adblock") || !routingDestination(p.Destination, false) {
+	for index, p := range l.Packages {
+		fixedName := p.Kind == "adblock" || p.Kind == "claude"
+		if p.ID == "" || len(p.ID) > 128 || seen[p.ID] || p.Name == "" || len([]rune(p.Name)) > 48 || (names[p.Name] && !fixedName) || !routingDestination(p.Destination, false) {
 			return ErrRoutingLibrary
 		}
 		seen[p.ID] = true
-		if p.Kind != "adblock" {
+		if !fixedName {
 			names[p.Name] = true
 		}
 		if p.Kind == "geo" {
@@ -108,6 +110,13 @@ func (l RoutingLibrary) Validate() error {
 			}
 		case "adblock":
 			if p.ID != AdblockPackageID || p.Name != "广告拦截" || p.Source != AdblockSource || p.Destination != "block" || l.Packages[len(l.Packages)-2].ID != p.ID {
+				return ErrRoutingLibrary
+			}
+		case "claude":
+			beforeGeo := index == len(l.Packages)-2
+			beforeAdblock := index == len(l.Packages)-3 && l.Packages[index+1].Kind == "adblock"
+			if p.ID != ClaudePackageID || p.Name != ClaudePackageName || p.Source != "" || p.Automatic ||
+				len(p.Rules) != 0 || len(p.PreviousRules) != 0 || (!beforeGeo && !beforeAdblock) {
 				return ErrRoutingLibrary
 			}
 		case "local":
@@ -152,6 +161,9 @@ func (l RoutingLibrary) Validate() error {
 			ids[r.ID] = true
 			matches[r.Method+"|"+r.Target] = true
 		}
+	}
+	if len(l.Packages) > 128 && !slices.ContainsFunc(l.Packages, func(p RoutingPackage) bool { return p.Kind == "claude" }) {
+		return ErrRoutingLibrary
 	}
 	return nil
 }
@@ -204,6 +216,17 @@ func NormalizeRoutingTarget(method, target string) (string, error) {
 // RoutingLibraryStore uses the protected atomic file shell; corrupt files are never replaced.
 type RoutingLibraryStore struct{ file *storage.PrivateFile }
 
+// Keep Claude preferences alongside the legacy package list so older builds can still read it.
+type routingLibraryDocument struct {
+	RoutingLibrary
+	Claude *claudePreferences `json:"Claude,omitempty"`
+}
+
+type claudePreferences struct {
+	Destination string
+	Enabled     bool
+}
+
 func NewRoutingLibraryStore(path string, owner uint32) *RoutingLibraryStore {
 	return &RoutingLibraryStore{storage.NewPrivateFile(path, owner, 8<<20)}
 }
@@ -212,8 +235,17 @@ func (s *RoutingLibraryStore) Load() (RoutingLibrary, bool, error) {
 	if err != nil || !exists {
 		return NewRoutingLibrary(), exists, err
 	}
-	var l RoutingLibrary
-	if json.Unmarshal(raw, &l) != nil || l.Validate() != nil {
+	var doc routingLibraryDocument
+	if json.Unmarshal(raw, &doc) != nil {
+		return doc.RoutingLibrary, true, ErrRoutingLibrary
+	}
+	l := doc.RoutingLibrary
+	if doc.Claude != nil {
+		p := NewClaudeRoutingPackage()
+		p.Destination, p.Enabled = doc.Claude.Destination, doc.Claude.Enabled
+		l.Packages = slices.Insert(l.Packages, l.BuiltInStart(), p)
+	}
+	if l.Validate() != nil {
 		return l, true, ErrRoutingLibrary
 	}
 	return l, true, nil
@@ -222,7 +254,13 @@ func (s *RoutingLibraryStore) Save(ctx context.Context, l RoutingLibrary) error 
 	if l.Validate() != nil {
 		return ErrRoutingLibrary
 	}
-	raw, err := json.Marshal(l)
+	doc := routingLibraryDocument{RoutingLibrary: l}
+	if index := slices.IndexFunc(l.Packages, func(p RoutingPackage) bool { return p.Kind == "claude" }); index >= 0 {
+		p := l.Packages[index]
+		doc.Claude = &claudePreferences{Destination: p.Destination, Enabled: p.Enabled}
+		doc.Packages = slices.Delete(slices.Clone(l.Packages), index, index+1)
+	}
+	raw, err := json.Marshal(doc)
 	if err != nil {
 		return ErrRoutingLibrary
 	}

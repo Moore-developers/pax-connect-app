@@ -34,7 +34,21 @@
  			paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
  		}
  	}()
-@@ -720,7 +722,7 @@
+@@ -434,6 +436,13 @@
+ 			return result
+ 		case *R.RuleActionReject:
+ 			rejectErr := action.Error(r.ctx)
++			if action.NoDrop && rejectErr != nil && metadata.InboundType == C.TypeTun && (metadata.Network == N.NetworkTCP || metadata.Network == N.NetworkUDP) {
++				ctx := paxobs.WithConnection(ctx)
++				paxobs.Emit(ctx, paxobs.Event{Stage: "accepted", Source: metadata.Source.String(), Inbound: metadata.InboundType, Network: metadata.Network, Domain: metadata.Destination.Fqdn, IP: metadata.Destination.Addr.String(), Port: metadata.Destination.Port})
++				paxobs.Emit(ctx, paxobs.Event{Stage: "matched", Rule: ruleDescription, Domain: metadata.Domain, Network: metadata.Network, Process: processPath(metadata.ProcessInfo)})
++				paxobs.Emit(ctx, paxobs.Event{Stage: "rejected", Level: "error", Code: paxobs.FailureCode(rejectErr)})
++				paxobs.Emit(ctx, paxobs.Event{Stage: "closed"})
++			}
+ 			if rejectErr == nil && metadata.Network == N.NetworkICMP {
+ 				return continueResult
+ 			}
+@@ -720,7 +729,7 @@
  		if actionType == C.RuleActionTypeRoute ||
  			actionType == C.RuleActionTypeReject ||
  			actionType == C.RuleActionTypeHijackDNS {
@@ -43,7 +57,7 @@
  			selectedRule = currentRule
  			selectedRuleIndex = currentRuleIndex
  			break match
-@@ -953,3 +955,10 @@
+@@ -953,3 +962,10 @@
  	}
  	return nil
  }

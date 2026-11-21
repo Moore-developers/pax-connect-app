@@ -6,6 +6,8 @@ import PaxUI
 /// One feedback surface for both proxy switches, with actions owned by each problem.
 @MainActor
 final class ProxyStatusAccessory: NSView {
+  private let interfaceCopy: InterfaceCopyBindings
+  private var context: PresentationContext { interfaceCopy.context }
   private let connection: ConnectionStore?
   private weak var presenter: NSViewController?
   private let mode: NSView
@@ -16,6 +18,8 @@ final class ProxyStatusAccessory: NSView {
   private var successVisible = false
   private var successTask: Task<Void, Never>?
   init(mode: NSView, connection: ConnectionStore?, presenter: NSViewController) {
+    interfaceCopy =
+      (presenter as? any InterfaceLanguageConsumer)?.interfaceCopy ?? InterfaceCopyBindings()
     self.mode = mode
     self.connection = connection
     self.presenter = presenter
@@ -32,6 +36,7 @@ final class ProxyStatusAccessory: NSView {
     }
     popover.behavior = .transient
     observe()
+    interfaceCopy.bind(self) { view, _ in view.renderPresentation() }
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override var intrinsicContentSize: NSSize {
@@ -53,71 +58,92 @@ final class ProxyStatusAccessory: NSView {
   private func observe() {
     guard let connection else { return }
     withObservationTracking {
-      if previousStatus != connection.status {
-        successTask?.cancel()
-        successVisible = previousStatus != nil && connection.status == .protected
-        previousStatus = connection.status
-        if successVisible {
-          successTask = Task { @MainActor [weak self] in
-            do { try await Task.sleep(for: .seconds(PaxTheme.InlineStatus.successDuration)) } catch
-            { return }
-            self?.successVisible = false
-            self?.observe()
-          }
-        }
-      }
-      let routes = connection.routesStore
-      let busy =
-        connection.requesting || (connection.proxyEnabled && connection.pendingOperationID != nil)
-        || connection.proxyStarting || connection.connectionTransitioning
-        || routes?.selecting == true
-      let issues = connection.feedback
-      primary = busy ? nil : issues.first
-      if connection.connection != .connected {
-        primary = issues.first { $0.id == "connection" }
-        status.setVisible(true)
-        let working =
-          connection.backendRecoveryInProgress
-          || [.connecting, .retrying].contains(connection.connection)
-        status.apply(
-          working ? .working : .failure,
-          text: working ? "正在重连后台…" : "后台连接已断开",
-          action: connection.canRecoverBackend ? "恢复后台" : nil,
-          additionalCount: issues.count, detail: primary?.detail)
-      } else if busy {
-        status.setVisible(true)
-        status.apply(
-          .working,
-          text: connection.proxyProgressText,
-          action: connection.proxyStarting || connection.connectionTransitioning ? "取消" : nil,
-          additionalCount: issues.count)
-      } else if let primary {
-        status.setVisible(true)
-        status.apply(
-          primary.action == .authorize || primary.id == "degraded" ? .warning : .failure,
-          text: primary.title, action: "查看 \(issues.count) 项",
-          dismissible: true, detail: primary.detail)
-      } else if connection.proxyEnabled && connection.currentPathSupported
-        && !connection.currentPathSummary.isEmpty
-      {
-        status.setVisible(true)
-        status.apply(
-          ["checking", "waiting_network"].contains(connection.currentPathCheck.state)
-            ? .working : connection.currentPathCheck.state == "passed" ? .success : .idle,
-          text: connection.currentPathSummary,
-          action: connection.canCheckCurrentPath ? "重新验证" : nil,
-          detail: connection.currentPathVerificationTime
-        )
-      } else if successVisible {
-        status.setVisible(true)
-        status.apply(.success, text: "已连接")
-      } else {
-        status.setVisible(false)
-      }
-      if popover.isShown { updateProblems() }
+      renderPresentation()
     } onChange: { [weak self] in
       Task { @MainActor [weak self] in self?.observe() }
     }
+  }
+  private func renderPresentation() {
+    guard let connection else { return }
+    if previousStatus != connection.status {
+      successTask?.cancel()
+      successVisible = previousStatus != nil && connection.status == .protected
+      previousStatus = connection.status
+      if successVisible {
+        successTask = Task { @MainActor [weak self] in
+          do { try await Task.sleep(for: .seconds(PaxTheme.InlineStatus.successDuration)) } catch {
+            return
+          }
+          self?.successVisible = false
+          self?.observe()
+        }
+      }
+    }
+    let routes = connection.routesStore
+    let busy =
+      connection.requesting || (connection.proxyEnabled && connection.pendingOperationID != nil)
+      || connection.proxyStarting || connection.connectionTransitioning
+      || routes?.selecting == true
+    let issues = connection.feedback(context: context)
+    primary = busy ? nil : issues.first
+    if connection.connection != .connected {
+      primary = issues.first { $0.id == "connection" }
+      status.setVisible(true)
+      let working =
+        connection.backendRecoveryInProgress
+        || [.connecting, .retrying].contains(connection.connection)
+      applyStatus(
+        working ? .working : .failure,
+        text: working
+          ? context.text("network_controls.ee7a2a5cb4")
+          : context.text("network_controls.d2d1752a0b"),
+        action: connection.canRecoverBackend ? context.text("network_controls.2f13cbac4d") : nil,
+        additionalCount: issues.count, detail: primary?.detail)
+    } else if busy {
+      status.setVisible(true)
+      applyStatus(
+        .working,
+        text: connection.proxyProgressText(context: context),
+        action: connection.proxyStarting || connection.connectionTransitioning
+          ? context.text("network_controls.2cd0f3be87") : nil,
+        additionalCount: issues.count)
+    } else if let primary {
+      status.setVisible(true)
+      applyStatus(
+        primary.action == .authorize || primary.id == "degraded" ? .warning : .failure,
+        text: primary.title,
+        action: context.text(
+          "network_controls.c149957073", ["arg0": String(describing: issues.count)]),
+        dismissible: true, detail: primary.detail)
+    } else if connection.proxyEnabled && connection.currentPathSupported
+      && !connection.currentPathSummary(context: context).isEmpty
+    {
+      status.setVisible(true)
+      applyStatus(
+        ["checking", "waiting_network"].contains(connection.currentPathCheck.state)
+          ? .working : connection.currentPathCheck.state == "passed" ? .success : .idle,
+        text: connection.currentPathSummary(context: context),
+        action: connection.canCheckCurrentPath ? context.text("network_controls.73224d5fe5") : nil,
+        detail: connection.currentPathVerificationTime(context: context)
+      )
+    } else if successVisible {
+      status.setVisible(true)
+      applyStatus(.success, text: context.text("network_controls.5be0323e8a"))
+    } else {
+      status.setVisible(false)
+    }
+    if popover.isShown { updateProblems() }
+  }
+  private func applyStatus(
+    _ state: PaxInlineStatus.State, text: String, action: String? = nil,
+    additionalCount: Int = 0, dismissible: Bool = false, detail: String? = nil
+  ) {
+    status.apply(
+      state, text: text, action: action, additionalCount: additionalCount,
+      dismissible: dismissible, detail: detail,
+      moreTitle: context.text("status.more", ["count": String(additionalCount)]),
+      dismissTitle: context.text("status.dismiss"), dismissHelp: context.text("status.dismiss_help")
+    )
   }
   private func performStatusAction() {
     guard let connection, let presenter else { return }
@@ -138,7 +164,8 @@ final class ProxyStatusAccessory: NSView {
     }
   }
   private func perform(_ issue: ConnectionFeedback) {
-    guard let connection, let presenter, connection.feedback.contains(issue) else { return }
+    guard let connection, let presenter, connection.feedback(context: context).contains(issue)
+    else { return }
     switch issue.action {
     case .recoverBackend:
       popover.close()
@@ -178,7 +205,7 @@ final class ProxyStatusAccessory: NSView {
   }
   private func updateProblems() {
     guard let connection else { return }
-    let issues = connection.feedback
+    let issues = connection.feedback(context: context)
     guard !issues.isEmpty else {
       popover.close()
       return
@@ -201,7 +228,8 @@ final class ProxyStatusAccessory: NSView {
       stack.addArrangedSubview(title)
       stack.addArrangedSubview(detail)
       if issue.action != .details && issue.action != .service {
-        let button = FeedbackActionButton(title: issue.actionTitle) { [weak self] in
+        let button = FeedbackActionButton(title: issue.actionTitle(context: context)) {
+          [weak self] in
           self?.perform(issue)
         }
         stack.addArrangedSubview(button)
@@ -211,7 +239,8 @@ final class ProxyStatusAccessory: NSView {
       connection.connection == .connected,
       connection.routesStore?.capabilities.contains("network.connection_diagnostics.v1") == true
     {
-      let diagnose = FeedbackActionButton(title: "线路诊断…") { [weak self] in
+      let diagnose = FeedbackActionButton(title: context.text("network_controls.20e847f90a")) {
+        [weak self] in
         guard let self, let presenter = self.presenter else { return }
         self.popover.close()
         presenter.presentRouteModal(
@@ -221,7 +250,8 @@ final class ProxyStatusAccessory: NSView {
       stack.addArrangedSubview(diagnose)
     }
     if connection.canReconnect {
-      let reconnect = FeedbackActionButton(title: "重新连接当前线路") { [weak self] in
+      let reconnect = FeedbackActionButton(title: context.text("network_controls.08a29d58a2")) {
+        [weak self] in
         self?.popover.close()
         Task { await connection.reconnectProxy() }
       }

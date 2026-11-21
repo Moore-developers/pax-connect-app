@@ -2,28 +2,36 @@ import Foundation
 import PaxClient
 
 @MainActor public enum ExitLocationPresentation {
-  public static func region(_ value: ExitLocation) -> String {
+  public static func region(_ value: ExitLocation, context: PresentationContext = .chinese)
+    -> String
+  {
     let country =
       value.countryCode.isEmpty
       ? value.country
-      : Locale(identifier: "zh_Hans").localizedString(forRegionCode: value.countryCode)
+      : Locale(identifier: context.language == .chinese ? "zh_Hans" : "en").localizedString(
+        forRegionCode: value.countryCode)
         ?? value.country
     var seen = Set<String>()
     let parts = [country, value.region, value.city].filter {
       !$0.isEmpty && seen.insert($0.lowercased()).inserted
     }
-    return parts.isEmpty ? "地区未获取" : parts.joined(separator: " · ")
+    return parts.isEmpty ? context.text("exit.region_missing") : parts.joined(separator: " · ")
   }
-  public static func details(_ value: ExitLocation) -> String {
-    var parts = [region(value)]
+  public static func details(_ value: ExitLocation, context: PresentationContext = .chinese)
+    -> String
+  {
+    var parts = [region(value, context: context)]
     let owner = [value.isp, value.asn].filter { !$0.isEmpty }.joined(separator: " · ")
     if !owner.isEmpty { parts.append(owner) }
-    parts.append("查询：" + value.source + " · " + MeasurementTimestamp.text(value.at))
+    parts.append(
+      context.text("exit.query") + value.source + " · " + MeasurementTimestamp.text(value.at))
     if !value.geoSource.isEmpty {
-      parts.append("地区来源：" + value.geoSource + " · " + MeasurementTimestamp.text(value.geoAt))
+      parts.append(
+        context.text("exit.source") + value.geoSource + " · "
+          + MeasurementTimestamp.text(value.geoAt))
     }
-    if !value.geoError.isEmpty { parts.append("地区信息不完整") }
-    parts.append("地区为IP数据库估计，可能与实际机房位置不同")
+    if !value.geoError.isEmpty { parts.append(context.text("exit.incomplete")) }
+    parts.append(context.text("exit.estimate"))
     return parts.joined(separator: "\n")
   }
 }

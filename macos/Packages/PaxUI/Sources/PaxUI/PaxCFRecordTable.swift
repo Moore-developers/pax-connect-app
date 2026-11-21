@@ -2,7 +2,7 @@ import AppKit
 
 /// Stage-specific metrics, row actions and incremental updates share one native table.
 public final class PaxCFRecordTable: NSView {
-  public enum Action: Int { case latency, download, both, location }
+  public enum Action: Int, CaseIterable { case latency, download, both, location }
   public struct Row: Equatable {
     public let id: String
     public let values: [String]
@@ -29,22 +29,40 @@ public final class PaxCFRecordTable: NSView {
   private var selected = ""
   private var emptyMessage = ""
   private var actionsEnabled = false
-  private let table = PaxDataTable(
-    columns: [
-      .init("IP 地址", width: PaxTheme.Workbench.directionColumn, growth: 2),
-      .init("入口延迟", width: PaxTheme.Routes.measurementColumn, numeric: true, sortable: true),
-      .init("CF 下载速度", width: PaxTheme.Routes.measurementColumn, numeric: true, sortable: true),
-      .init(
-        "IP 地区", width: PaxTheme.Workbench.directionColumn, sortable: false, contentLayout: .fill),
-      .init(
-        "操作", width: PaxTheme.Routes.formLabelWidth, growth: 0, alignment: .center, sortable: false,
-        contentLayout: .fill),
-    ],
-    metrics: .init(
-      rowHeight: PaxTheme.Table.memberRow, headerHeight: PaxTheme.Table.compactHeader,
-      selectionRail: true),
-    selection: .multiple)
-  public init() {
+  private let table: PaxDataTable
+  private let configuredTitle: String
+  private let actionLabel: String
+  private let actionTitles: [Action: String]
+  public init(
+    columnTitles: (
+      ip: String, latency: String, download: String, location: String, actions: String
+    ),
+    configuredTitle: String, actionLabel: String, actionTitles: [Action: String]
+  ) {
+    self.configuredTitle = configuredTitle
+    self.actionLabel = actionLabel
+    self.actionTitles = actionTitles
+    table = PaxDataTable(
+      columns: [
+        .init(columnTitles.ip, width: PaxTheme.Workbench.directionColumn, growth: 2),
+        .init(
+          columnTitles.latency, width: PaxTheme.Routes.measurementColumn, numeric: true,
+          sortable: true),
+        .init(
+          columnTitles.download, width: PaxTheme.Routes.measurementColumn, numeric: true,
+          sortable: true),
+        .init(
+          columnTitles.location, width: PaxTheme.Workbench.directionColumn, sortable: false,
+          contentLayout: .fill),
+        .init(
+          columnTitles.actions, width: PaxTheme.Routes.formLabelWidth, growth: 0,
+          alignment: .center,
+          sortable: false, contentLayout: .fill),
+      ],
+      metrics: .init(
+        rowHeight: PaxTheme.Table.memberRow, headerHeight: PaxTheme.Table.compactHeader,
+        selectionRail: true),
+      selection: .multiple)
     super.init(frame: .zero)
     table.translatesAutoresizingMaskIntoConstraints = false
     addSubview(table)
@@ -93,7 +111,9 @@ public final class PaxCFRecordTable: NSView {
   }
   private func cell(_ id: String, _ column: Int) -> NSView? {
     let view: NSView =
-      column == 4 ? CFActionCell() : column > 0 && column < 3 ? PaxMetricCell() : CFTextCell()
+      column == 4
+      ? CFActionCell(label: actionLabel)
+      : column > 0 && column < 3 ? PaxMetricCell() : CFTextCell(configuredTitle: configuredTitle)
     _ = update(view, id: id, column: column)
     return view
   }
@@ -123,10 +143,8 @@ public final class PaxCFRecordTable: NSView {
     guard onTest != nil, byID[id] != nil else { return nil }
     let menu = NSMenu()
     menu.autoenablesItems = false
-    for (title, action) in [
-      ("测试此 IP 延迟", Action.latency), ("测试此 IP 下载", .download), ("延迟和下载都测", .both),
-      ("查询此 IP 地区", .location),
-    ] {
+    for action in Action.allCases {
+      guard let title = actionTitles[action] else { continue }
       let item = NSMenuItem(title: title, action: #selector(test(_:)), keyEquivalent: "")
       item.target = self
       item.representedObject = [id, String(action.rawValue)]
@@ -146,9 +164,10 @@ public final class PaxCFRecordTable: NSView {
 private final class CFTextCell: NSView {
   private let value = PaxText.label("", font: PaxTheme.Typography.label(size: PaxTheme.Table.font))
   private let caption = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
-  private let configured = PaxFeatureTag("当前配置", style: .protocolLabel)
-  override init(frame: NSRect) {
-    super.init(frame: frame)
+  private let configured: PaxFeatureTag
+  init(configuredTitle: String) {
+    configured = PaxFeatureTag(configuredTitle, style: .protocolLabel)
+    super.init(frame: .zero)
     value.lineBreakMode = .byTruncatingTail
     caption.lineBreakMode = .byTruncatingTail
     let heading = NSStackView(views: [value, configured])
@@ -184,12 +203,12 @@ private final class CFTextCell: NSView {
 private final class CFActionCell: NSView {
   let button = PaxRouteButton("", symbol: "ellipsis", style: .quiet)
   var openMenu: (() -> Void)?
-  override init(frame: NSRect) {
-    super.init(frame: frame)
+  init(label: String) {
+    super.init(frame: .zero)
     button.target = self
     button.action = #selector(showMenu)
     button.imagePosition = .imageOnly
-    button.setAccessibilityLabel("此 IP 的测试操作")
+    button.setAccessibilityLabel(label)
     button.translatesAutoresizingMaskIntoConstraints = false
     addSubview(button)
     NSLayoutConstraint.activate([

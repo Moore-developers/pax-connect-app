@@ -18,7 +18,7 @@ func codexDatabaseSessions(ctx context.Context, root string, updates *agentUpdat
 	if os.IsNotExist(err) {
 		return nil, ""
 	}
-	if err != nil || !info.Mode().IsRegular() || info.Size() > 512<<20 {
+	if err != nil || !info.Mode().IsRegular() {
 		return nil, "native_database_unavailable"
 	}
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)

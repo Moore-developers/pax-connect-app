@@ -3,12 +3,14 @@
 #   用法：scripts/check.sh [--plan]      （或 CHECK_PLAN=1）只打印选中的步骤，不执行、不写 stamp
 #   路径分类（先匹配先生效）：
 #     文档  *.md、docs/、.scratch/、tests/*/evidence/ → 不跑测试，只跑 lint-size
-#     工具  Makefile、check/commit/worktree-hash/check-size/ui-shot/relaunch 脚本、.githooks/ 等 → 只跑 lint-size + 语法检查
+#     专项工具 旧数据迁移、构建前退出、代理验收探针及其用例和调用入口 → 对应专项 + 语法检查
+#     工具  Makefile、check/commit/worktree-hash/check-size/ui-shot 脚本、.githooks/ 等 → 只跑 lint-size + 语法检查
 #     Swift 保留测试包 → P 及其有测试的下游；PaxUI / Features / macos App → 静态检查 + 真实路径验收提醒
 #           保留测试包依赖链 PaxProto→PaxClient→PaxCore
 #           scripts/test-swift.py → Python 语法检查；runner 行为变更另选保留包的定向用例
-#     proto api/*.proto → Swift 全部 + Go（等于全量，需先向用户说明再跑）
+#     proto api/*.proto → Swift 全部 + Go（涉及全局门禁，见 AGENTS.md）
 #     其余（daemon/、patches/、configs/、tests/、其它 scripts/ 等，含未识别路径，保守）→ Go 测试
+#     迁移名单内的产品文件存储路径、格式或上限所在代码 → 追加旧数据迁移专项
 #   lint：lint-size 总跑；lint-go 仅当涉及 Go（daemon/、patches/、*.go、api/*.proto）；lint-swift 仅当涉及 macos/*.swift。
 #   日志：每次运行写 $(git rev-parse --git-path pax-check-logs)/<时间戳>-<pid>.log；失败时在终端列出失败用例名。
 set -euo pipefail
@@ -34,6 +36,7 @@ SWIFT_ORDER=(PaxClient PaxCore)
 # 选中的包记在变量 hit_<包名>（因何选中），兼容 macOS 自带 bash 3.2（无关联数组）
 hit() { local v="hit_$1"; printf %s "${!v:-}"; }
 want_go= want_ui_acceptance= want_lint_go= want_lint_swift= want_syntax= count=0 docs=0 tooling=0
+want_migration= want_quiesce= want_proxy_probe=
 
 mark_swift() { # $1=包名 $2=路径；沿下游传播
   local pkg=$1 path=$2
@@ -51,7 +54,13 @@ while IFS= read -r -d '' path; do
   count=$((count + 1))
   case "$path" in
     *.md|docs/*|.scratch/*|tests/*/evidence/*) docs=$((docs + 1)) ;;
-    Makefile|scripts/check.sh|scripts/commit.sh|scripts/worktree-hash.sh|scripts/check-size.sh|scripts/size-baseline.txt|scripts/ui-shot.sh|scripts/ui-shot.swift|scripts/relaunch.sh|.githooks/*|.gitignore|.gitattributes|.zcodeignore)
+    scripts/migrate-root-data.sh|scripts/migrate-root-data.py|scripts/test-migrate-root-data.py)
+      tooling=$((tooling + 1)); want_migration=1; want_syntax=1 ;;
+    scripts/quiesce-build-app.py|scripts/test-quiesce-build-app.py|scripts/build-app.sh|scripts/relaunch.sh|scripts/backup-release-data.py)
+      tooling=$((tooling + 1)); want_quiesce=1; want_syntax=1 ;;
+    tests/proxy-session/probe.py|tests/proxy-session/test_probe.py|tests/proxy-session/accept.sh)
+      tooling=$((tooling + 1)); want_proxy_probe=1; want_syntax=1 ;;
+    Makefile|scripts/check.sh|scripts/commit.sh|scripts/worktree-hash.sh|scripts/check-size.sh|scripts/size-baseline.txt|scripts/ui-shot.sh|scripts/ui-shot.swift|.githooks/*|.gitignore|.gitattributes|.zcodeignore)
       tooling=$((tooling + 1)); case "$path" in *.sh|.githooks/*) want_syntax=1 ;; esac ;;
     macos/Packages/PaxProto/*)
       mark_swift PaxClient "$path"
@@ -81,7 +90,13 @@ while IFS= read -r -d '' path; do
     *)
       [ -n "$want_go" ] || want_go=$path
       case "$path" in daemon/*|patches/*|*.go|go.mod|go.sum) [ -n "$want_lint_go" ] || want_lint_go=$path ;; esac
-      case "$path" in *.sh|*.py) want_syntax=1 ;; esac ;;
+      case "$path" in
+        *.sh|*.py) want_syntax=1 ;;
+        daemon/cmd/pax-connectd/main.go|daemon/internal/config/catalog.go|daemon/internal/config/catalog_document.go|daemon/internal/config/catalog_store.go|\
+        daemon/internal/config/measurement_exit.go|daemon/internal/config/measurement_store.go|daemon/internal/config/measurement_preferences.go|\
+        daemon/internal/config/tlspolicy.go|daemon/internal/config/tlspolicy_store.go|daemon/internal/cfoptimizer/catalog.go|daemon/internal/storage/private_file.go)
+          want_migration=1 ;;
+      esac ;;
   esac
 done < "$tmp"
 
@@ -90,6 +105,9 @@ steps=("make lint-size")
 [ -z "$want_lint_go" ] || steps+=("make lint-go")
 [ -z "$want_lint_swift" ] || steps+=("make lint-swift")
 [ -z "$want_syntax" ] || steps+=("scripts/check.sh --syntax")
+[ -z "$want_migration" ] || steps+=("python3 -B scripts/test-migrate-root-data.py")
+[ -z "$want_quiesce" ] || steps+=("python3 -B scripts/test-quiesce-build-app.py")
+[ -z "$want_proxy_probe" ] || steps+=("python3 -B tests/proxy-session/test_probe.py")
 [ -z "$want_go" ] || steps+=("make test-go")
 swift_pkgs=()
 for p in "${SWIFT_ORDER[@]}"; do [ -z "$(hit "$p")" ] || swift_pkgs+=("macos/Packages/$p"); done

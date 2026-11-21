@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "error.routing_library_invalid": "Rules are invalid, duplicated, or exceed the limit. Check and retry.",
+    "error.routing_revision_conflict": "Rules changed in the backend. Return to the rules page to reload before retrying.",
+    "error.routing_route_unavailable": "The specified route is missing, has unconfirmed TLS, or is not loaded. The rule is preserved; check the route.",
+    "error.routing_application_unavailable": "The application moved, was deleted, or cannot be identified. Select it again.",
+    "error.routing_processes_unavailable": "Applications and processes with recent traffic are temporarily unavailable.",
+    "error.routing_source_invalid": "This is not a supported sing-box rule set, or it contains unsupported conditions. Original rules are preserved.",
+    "error.routing_update_unavailable": "The core did not confirm the rule update. Restoration was attempted. Check proxy status before retrying.",
+    "error.routing_recovery_required": "Saving or restoring rules could not be confirmed. Editing is paused. Restart the app and check the configuration.",
+    "error.routing_save_failed": "Rules could not be saved. Original rules are preserved. Check disk space and file permissions.",
+    "error.routing_library_unavailable": "The rule management backend is unavailable. Reconnect and retry.",
+    "error.routing_rules_unavailable": "Routing rules are temporarily unavailable. Retry later."
+  }
+}

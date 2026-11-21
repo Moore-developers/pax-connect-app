@@ -57,6 +57,29 @@ public struct PaxModelRankModel: Equatable {
 
 /// 今日费用摘要与四列模型排行；局部切换口径，刷新时保留选择。
 public final class PaxModelRankCard: PaxCard {
+  public struct Copy {
+    public var title = "模型用量排行"
+    public var empty = "暂无模型"
+    public var open = "查看全部 ›"
+    public var today = "今日模型费用"
+    public var metrics = ["费用", "Token"]
+    public var metricAccessibility = ["排行按费用", "排行按 Token"]
+    public var model = "模型"
+    public var cost = "费用"
+    public var shares = ["费用占比", "Token 占比"]
+    public init() {}
+  }
+  private var copy = Copy()
+  public func applyCopy(_ copy: Copy) {
+    self.copy = copy
+    heading.text = copy.title
+    link.title = copy.open
+    link.setAccessibilityLabel(copy.open)
+    title.stringValue = copy.today
+    headers[0].stringValue = copy.model
+    tabs.apply(labels: copy.metrics, accessibilityLabels: copy.metricAccessibility)
+    render()
+  }
   private let heading = PaxCardHeading("模型用量排行", symbol: "trophy")
   private let link = PaxCompactButton("查看全部 ›", style: .text, target: nil, action: nil)
   private let title = PaxText.label("今日模型费用", font: PaxTheme.Typography.caption(), secondary: true)
@@ -128,12 +151,12 @@ public final class PaxModelRankCard: PaxCard {
     caption.toolTip = model.caption
     tabs.selectedIndex = metric
     headers[1].stringValue = metric == 1 ? "Token ↓" : "Token"
-    headers[2].stringValue = metric == 0 ? "费用 ↓" : "费用"
-    headers[3].stringValue = metric == 0 ? "费用占比" : "Token 占比"
+    headers[2].stringValue = copy.cost + (metric == 0 ? " ↓" : "")
+    headers[3].stringValue = copy.shares[metric]
     let values = metric == 0 ? model.rows : model.tokenRows
     for (index, row) in rows.enumerated() {
       row.isHidden = showsEmpty
-      row.apply(values.indices.contains(index) ? values[index] : nil)
+      row.apply(values.indices.contains(index) ? values[index] : nil, empty: copy.empty)
     }
     needsLayout = true
   }
@@ -263,8 +286,8 @@ private final class ModelRankRow: NSView {
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
 
-  func apply(_ value: PaxModelRankModel.Row?) {
-    name.stringValue = value?.name ?? "暂无模型"
+  func apply(_ value: PaxModelRankModel.Row?, empty: String) {
+    name.stringValue = value?.name ?? empty
     name.toolTip = value?.name
     name.font = PaxTheme.Typography.label(
       size: PaxTheme.Routes.nameFont, weight: value == nil ? .regular : .medium)
@@ -280,7 +303,7 @@ private final class ModelRankRow: NSView {
       setAccessibilityLabel(
         "\(value.name)，\(value.clients)，\(value.tokens) Token，\(value.cost)，\(value.percent)")
     } else {
-      setAccessibilityLabel("暂无模型")
+      setAccessibilityLabel(empty)
     }
     needsLayout = true
   }

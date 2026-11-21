@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "about.versions": "Version Information",
+    "about.licenses": "Open-Source Licenses",
+    "about.kernel": "Network Core",
+    "about.bundled_kernel": "Bundled sing-box",
+    "about.bundled_daemon": "Bundled Daemon",
+    "about.bundled_daemon_detail": "Backend included with the app",
+    "about.running_daemon": "Connected Daemon",
+    "about.running_daemon_detail": "Currently connected backend",
+    "about.system": "Operating System",
+    "about.system_detail": "Current operating system version",
+    "about.architecture": "Architecture",
+    "about.architecture_detail": "App build architecture",
+    "about.version": "{version} (build {build})",
+    "about.domain_rules": "Domain rule source",
+    "about.geodata_rules": "Rule data source",
+    "about.geographic_data": "Geographic data source",
+    "about.gpl_later": "GPL v3 or later",
+    "about.geolite_terms": "GeoLite2 Data Terms",
+    "about.demo": "Demo Mode",
+    "about.disconnected": "Not Connected",
+    "about.version_unavailable": "Bundled version information unavailable"
+  }
+}

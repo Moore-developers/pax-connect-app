@@ -6,14 +6,15 @@ import PaxCore
 @MainActor @Observable
 final class AboutStore {
   static let licenses: [(name: String, detail: String, license: String)] = [
-    ("sing-box", "网络内核", "GPL v3"),
-    ("domain-list-community", "域名规则来源", "MIT"),
-    ("sing-geodata", "规则数据来源", "GPL v3 或后续版本"),
-    ("GeoLite2 / MaxMind", "地理数据来源", "GeoLite2 数据条款"),
+    ("sing-box", "about.kernel", "GPL v3"),
+    ("domain-list-community", "about.domain_rules", "MIT"),
+    ("sing-geodata", "about.geodata_rules", "about.gpl_later"),
+    ("GeoLite2 / MaxMind", "about.geographic_data", "about.geolite_terms"),
   ]
   let connection: ConnectionStore?
   let bundle: Bundle
-  let applicationVersion: String
+  let version: String
+  let build: String
   let bundledDaemon: String
   let kernel: String
   let system: String
@@ -27,10 +28,9 @@ final class AboutStore {
     self.connection = connection
     self.preview = preview
     self.bundle = bundle
-    let version =
-      bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "未知"
-    let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "未知"
-    applicationVersion = "\(version)（构建 \(build)）"
+    version =
+      bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
     bundledDaemon = Self.resource("daemon-version", bundle: bundle)
     kernel = Self.resource("kernel-version", bundle: bundle)
     let os = ProcessInfo.processInfo.operatingSystemVersion
@@ -42,14 +42,18 @@ final class AboutStore {
     #endif
   }
   var connected: Bool { connection?.connection == .connected }
-  var runningDaemon: String {
-    preview ? "演示模式" : connected ? (connection?.daemonVersion ?? "未知") : "未连接"
+  func runningDaemon(context: PresentationContext) -> String {
+    preview
+      ? context.text("about.demo")
+      : connected
+        ? (connection?.daemonVersion ?? context.text("common.unknown"))
+        : context.text("about.disconnected")
   }
   private static func resource(_ name: String, bundle: Bundle) -> String {
     guard let url = bundle.url(forResource: name, withExtension: "txt"),
       let value = try? String(contentsOf: url, encoding: .utf8)
         .trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty
-    else { return "随包版本信息不可用" }
+    else { return "" }
     return value
   }
 }

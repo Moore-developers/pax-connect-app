@@ -5,10 +5,11 @@
 #   make app      构建 AppKit App（需要 macos/PaxConnect.xcodeproj，见 macos/README.md）
 #   make lint     lint-size + lint-go + lint-swift 的合集
 #   make lint-size / lint-go / lint-swift   check-size（--changed）/ gofmt+go vet+golangci-lint / swift-format，可单跑
-#   make test     全量（Go + 保留的 Swift 测试包），必须带 FULL_REASON="工单/用户确认的理由"，否则拒绝；
+#   make test     默认全量（Go + 保留的 Swift 测试包），专项用例见 docs/architecture/validation.md。
+#                 必须带 FULL_REASON="工单/用户确认的理由"，否则拒绝。
 #                 带理由时时间戳+理由+结果追加到 $(git rev-parse --git-path pax-full-runs.log)，输出另存 pax-check-logs/
 #   make check    按变更路径（相对 HEAD，含未跟踪）选最小检查集：文档只跑 lint-size；Swift 按保留测试包依赖选下游；
-#                 Features/App 改动走真实路径验收；Go 改动才跑 Go 测试；lint 只查涉及的语言。CHECK_PLAN=1 只打印计划（见 scripts/check.sh）
+#                 Features/App 改动走真实路径验收；工具专项按路径选测；lint 只查涉及的语言。CHECK_PLAN=1 只打印计划（见 scripts/check.sh）
 #   make test-go    [PKG=./internal/controller] [RUN=TestX]  指定 PKG/RUN 时只跑该范围（integration tag 同全量）
 #   make test-swift [PKG=macos/Packages/PaxCore] [FILTER=Suite/test]  只跑指定 package / 过滤器
 #                 两者共用 TEST_TIMEOUT（默认 10m，如 TEST_TIMEOUT=20m）：Go 用 -timeout，
@@ -29,6 +30,8 @@ export PATH := $(CURDIR)/.tools/bin:$(PATH)
 SWIFT_PACKAGES := $(wildcard macos/Packages/*)
 SWIFT_TEST_PACKAGES := $(filter-out macos/Packages/Features macos/Packages/PaxProto macos/Packages/PaxUI,$(SWIFT_PACKAGES))
 GO_TAGS := with_quic,with_gvisor,with_utls,with_clash_api,pax_tun_guard
+GO_SECONDARY_TESTS := ^(TestIdleControllerDoesNotReparseCatalogTLSEverySecond|TestHistoryBurstRemainsQueryableAndBounded|TestRoutingMatchFixtureRecordedScenarios)$$
+SWIFT_SECONDARY_TESTS := (AIRepriceTests/messages|LocationExposureTests/assessed|TrafficChartFormattingTests/connectionTime|OnboardingStoreTests/returningUsersAreNotForcedThroughWelcome)([(]|$$)
 TEST_TIMEOUT ?= 10m
 PKG ?=
 RUN ?=
@@ -79,7 +82,7 @@ ifeq ($(strip $(FULL_REASON)),)
 else
 	@dir="$$(git rev-parse --git-path pax-check-logs)"; mkdir -p "$$dir"; ts="$$(date +%Y%m%d-%H%M%S)"; \
 	 log="$$dir/$$ts-full-test.log"; echo "full test: 日志 $$log"; \
-	 set +e; $(MAKE) test-go test-swift 2>&1 | tee "$$log"; rc=$${PIPESTATUS[0]}; set -e; \
+	 set +e; $(MAKE) test-go test-swift EXCLUDE_SECONDARY=1 2>&1 | tee "$$log"; rc=$${PIPESTATUS[0]}; set -e; \
 	 if [ "$$rc" -eq 0 ]; then r=pass; else r=fail; fi; \
 	 printf '%s\t%s\t%s\t%s\n' "$$(date '+%Y-%m-%d %H:%M:%S')" "$(FULL_REASON)" "$$r" "$$log" >> "$$(git rev-parse --git-path pax-full-runs.log)"; \
 	 if [ "$$r" != pass ]; then echo "full test: 失败项："; grep -aE "Test Case '.*' failed|^✘ Test |^--- FAIL|^FAIL[[:space:]:]|^ERROR:|^error:|timed out|^  - " "$$log" | sort -u | head -40; fi; \
@@ -91,18 +94,15 @@ ifneq ($(strip $(PKG)$(RUN)),)
 	cd daemon && ../scripts/go.sh test -tags integration,$(GO_TAGS) -count=1 -timeout $(TEST_TIMEOUT) $(if $(value RUN),-v -run '$(value RUN)') $(or $(PKG),./...)
 else
 	@echo "--- go test ---"
-	cd daemon && ../scripts/go.sh test -tags integration,$(GO_TAGS) -timeout $(TEST_TIMEOUT) ./...
+	cd daemon && ../scripts/go.sh test -tags integration,$(GO_TAGS) -timeout $(TEST_TIMEOUT) $(if $(EXCLUDE_SECONDARY),-skip '$(GO_SECONDARY_TESTS)') ./...
 	cd daemon && ../scripts/go.sh test -timeout $(TEST_TIMEOUT) github.com/sagernet/sing-tun -run '^TestPax' -count=1
 	cd daemon && ../scripts/go.sh test -timeout $(TEST_TIMEOUT) github.com/sagernet/sing-box/common/settings -run '^TestPaxProxy' -count=1
-	cd daemon && ../scripts/go.sh test -timeout $(TEST_TIMEOUT) github.com/sagernet/sing-box/dns -run '^TestPaxDNS' -count=1
-	python3 scripts/test-migrate-root-data.py
-	python3 -B scripts/test-quiesce-build-app.py
-	python3 -B tests/proxy-session/test_probe.py
+	cd daemon && ../scripts/go.sh test -timeout $(TEST_TIMEOUT) github.com/sagernet/sing-box/dns github.com/sagernet/sing-box/common/process -run '^TestPaxDNS' -count=1
 endif
 
 test-swift:
 	@echo "--- swift test ---"
-	python3 scripts/test-swift.py --timeout $(TEST_TIMEOUT) $(if $(value FILTER),--filter '$(value FILTER)') $(or $(PKG),$(SWIFT_TEST_PACKAGES))
+	python3 scripts/test-swift.py --timeout $(TEST_TIMEOUT) $(if $(value FILTER),--filter '$(value FILTER)') $(if $(EXCLUDE_SECONDARY),--skip '$(SWIFT_SECONDARY_TESTS)') $(or $(PKG),$(SWIFT_TEST_PACKAGES))
 
 check:
 	./scripts/check.sh

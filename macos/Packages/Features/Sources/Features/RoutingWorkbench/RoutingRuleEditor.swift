@@ -4,7 +4,10 @@ import PaxUI
 
 @MainActor
 final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
-  private enum Kind: Int, CaseIterable {
+  override var localizedTitleKey: String? {
+    draft.id == nil ? "rules_ui.add_rule" : "rules_ui.edit_rule"
+  }
+  enum Kind: Int, CaseIterable {
     case application, process, domain, ip
     var title: String { ["应用", "进程", "域名", "IP"][rawValue] }
 
@@ -23,10 +26,10 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     case failed
   }
 
-  private let store: RoutingWorkbenchStore
-  private var draft: RoutingWorkbenchStore.RuleDraft
+  let store: RoutingWorkbenchStore
+  var draft: RoutingWorkbenchStore.RuleDraft
   private let tabs = PaxTabs(Kind.allCases.map(\.title))
-  private var kind: Kind
+  var kind: Kind
   private let candidates: RoutingRuleCandidateGrid
   private let appOptions = NSStackView()
   private let appSearch = PaxRouteSearchField()
@@ -39,12 +42,12 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     "", style: .quiet, target: self, action: #selector(toggleProcessLimit))
   private let previewLabel = PaxText.label("", secondary: true, wrapping: true)
 
-  private var target: NSTextField?
+  var target: NSTextField?
   private var method: NSPopUpButton?
   private let scope = PaxTabs(["整个应用", "选择已观测域名"])
   private var importedMethod: NSPopUpButton?
   private var checks: [NSButton] = []
-  private var destination: RoutingDestinationPicker?
+  var destination: RoutingDestinationPicker?
   private var requiresRoute = false
   private var saveButton: NSButton?
   private var matchingAppIDs: Set<String> = []
@@ -76,9 +79,19 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
   }
   override func loadView() {
     super.loadView()
+    tabs.apply(
+      labels: [
+        "rules.method.application", "rules.method.process", "rules_ui.domain", "rules_ui.ip",
+      ].map { interfaceCopy.text($0) })
+    scope.apply(labels: [
+      interfaceCopy.text("rules_ui.whole_app"), interfaceCopy.text("rules_ui.observed_domains"),
+    ])
     tabs.onSelect = { [weak self] in self?.changeKind($0) }
     candidates.onSelect = { [weak self] in self?.choose($0) }
-    for (field, title) in [(appSearch, "搜索应用"), (processSearch, "搜索进程名称或路径")] {
+    for (field, title) in [
+      (appSearch, self.interfaceCopy.text("interface_detail.06351ff759")),
+      (processSearch, self.interfaceCopy.text("interface_detail.8175a5888f")),
+    ] {
       field.placeholderString = title
       field.target = self
       field.action = #selector(filterCandidates)
@@ -157,7 +170,10 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
       pane.status.isHidden = true
       switch kind {
       case .application, .process:
-        pane.add(PaxSectionHeader("近期有流量的" + kind.title, detail: "按流量从高到低"))
+        pane.add(
+          PaxSectionHeader(
+            self.interfaceCopy.text("interface_detail.7870370778") + kind.title,
+            detail: self.interfaceCopy.text("interface_detail.0361d4db2c")))
         pane.add(kind == .process ? processSearch : appSearch)
         pane.add(candidates)
         if kind == .process { pane.add(processLimitRow) }
@@ -169,12 +185,24 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
         }
       case .domain, .ip:
         let (box, field) = field(
-          kind == .ip ? "IP 或网段" : "域名", value: draft.target, identifier: "routing-rule-target")
+          kind == .ip
+            ? self.interfaceCopy.text("interface_detail.49b28623d2")
+            : self.interfaceCopy.text("logs.domains"), value: draft.target,
+          identifier: "routing-rule-target")
         field.delegate = self
         target = field
         pane.add(box)
         method = picker(
-          "匹配范围", items: kind == .ip ? ["单 IP", "IP 网段"] : ["精确域名", "域名及子域"],
+          self.interfaceCopy.text("interface_detail.0bb202d398"),
+          items: kind == .ip
+            ? [
+              self.interfaceCopy.text("interface_detail.669dae8a03"),
+              self.interfaceCopy.text("interface_detail.7e49735747"),
+            ]
+            : [
+              self.interfaceCopy.text("interface_detail.3d1aa10e58"),
+              self.interfaceCopy.text("interface_detail.d970428baf"),
+            ],
           selected: [.cidr, .domainSuffix].contains(draft.method) ? 1 : 0,
           action: #selector(valueChanged))
       }
@@ -183,15 +211,20 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
           browser: store.routeSelectionStore, current: draft.destination,
           requiresRoute: requiresRoute,
           onChange: { [weak self] in self?.valueChanged() },
-          onResize: { [weak self] in self?.pane.invalidateContentSize() })
+          onResize: { [weak self] in self?.pane.invalidateContentSize() },
+          context: self.interfaceCopy.context)
         destination = picker
-        pane.add(PaxRouteSectionHeading("这条规则的去向", symbol: "arrow.triangle.branch"))
+        pane.add(
+          PaxRouteSectionHeading(
+            self.interfaceCopy.text("interface_detail.6768c18442"), symbol: "arrow.triangle.branch")
+        )
         pane.add(picker)
       }
       if !selectingCandidate { pane.add(previewLabel) }
-      let save = button("保存规则", #selector(save), primary: true)
+      let save = button(
+        self.interfaceCopy.text("interface_detail.b5aa919e9a"), #selector(save), primary: true)
       saveButton = save
-      pane.setActions([button("取消", #selector(close)), save])
+      pane.setActions([button(self.interfaceCopy.text("common.cancel"), #selector(close)), save])
       updatePreview()
     }
   }
@@ -205,12 +238,12 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     switch candidateList {
     case .idle, .loading:
       values = []
-      status = "正在读取有流量的" + kind.title + "…"
+      status = self.interfaceCopy.text("interface_detail.fcf9c69c5c") + kind.title + "…"
     case .failed:
       values = []
-      status = "读取近期流量失败，切换标签可重试。"
+      status = self.interfaceCopy.text("interface_detail.01551facd9")
     case .ready(let result):
-      status = "近期没有记录到有流量的" + kind.title + "。"
+      status = self.interfaceCopy.text("interface_detail.ffd1be1288") + kind.title + "。"
       if isProcess {
         limited = result.limited
         values = result.processes.map {
@@ -230,16 +263,26 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
       processMore.isHidden = !query.isEmpty || values.count <= processPreviewCount
       processMore.title =
         showsAllProcesses
-        ? "收起为前 \(processPreviewCount) 条" : "显示全部（\(values.count)）"
+        ? self.interfaceCopy.text(
+          "interface_detail.9de76557b0", ["arg0": String(describing: processPreviewCount)])
+        : self.interfaceCopy.text(
+          "interface_detail.72f4f0ac7e", ["arg0": String(describing: values.count)])
       processMore.setAccessibilityLabel(processMore.title)
       let count = showsAllProcesses ? values.count : min(values.count, processPreviewCount)
       processNote.stringValue =
         limited
-        ? "仅列流量最高的 \(values.count) 项"
-        : (showsAllProcesses ? "当前列表 · 全部 \(count) 项" : "当前列表 · 流量前 \(count) 项")
+        ? self.interfaceCopy.text(
+          "interface_detail.9fc015db10", ["arg0": String(describing: values.count)])
+        : (showsAllProcesses
+          ? self.interfaceCopy.text(
+            "interface_detail.f8e5800471", ["arg0": String(describing: count)])
+          : self.interfaceCopy.text(
+            "interface_detail.d97b8dddb0", ["arg0": String(describing: count)]))
       processLimitRow.isHidden = processMore.isHidden && !limited
       selectionNote.font = .monospacedSystemFont(ofSize: PaxTheme.Routes.metaFont, weight: .regular)
-      selectionNote.stringValue = draft.target.isEmpty ? "" : "精确匹配路径   " + draft.target
+      selectionNote.stringValue =
+        draft.target.isEmpty
+        ? "" : self.interfaceCopy.text("interface_detail.8ba6841c32") + draft.target
       selectionNote.toolTip = draft.target
     } else {
       selectionNote.font = PaxTheme.Typography.caption()
@@ -249,7 +292,7 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
         !values.contains(where: { $0.id == savedApplication }),
         let name = store.applications.first(where: { $0.id == savedApplication })?.name
       {
-        selectionNote.stringValue = "已选应用  " + name
+        selectionNote.stringValue = self.interfaceCopy.text("interface_detail.98d0ab87fd") + name
         selectionNote.toolTip = name
       } else {
         selectionNote.stringValue = ""
@@ -261,11 +304,12 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
       ? Array(filtered.prefix(processPreviewCount)) : filtered
     candidates.apply(
       visible, selected: draft.target,
-      emptyMessage: values.isEmpty ? status : "没有匹配的" + kind.title,
+      emptyMessage: values.isEmpty
+        ? status : self.interfaceCopy.text("interface_detail.7b10b39663") + kind.title,
       isProcess: isProcess)
   }
 
-  private func processName(for path: String) -> String {
+  func processName(for path: String) -> String {
     // Claude's native installer uses the version number as the executable filename.
     let claudeVersionPath =
       #"^/(Users/[^/]+|(?:private/)?var/root)/\.local/share/claude/versions/v?[0-9]+(\.[0-9]+)+([-+._][0-9A-Za-z.]+)?$"#
@@ -321,14 +365,17 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     importedMethod = nil
     checks = []
     scope.selectedIndex = draft.importDomains ? 1 : 0
-    let title = PaxText.label("匹配范围", font: PaxTheme.Typography.label(weight: .medium))
+    let title = PaxText.label(
+      self.interfaceCopy.text("interface_detail.0bb202d398"),
+      font: PaxTheme.Typography.label(weight: .medium))
     title.widthAnchor.constraint(equalToConstant: PaxTheme.Routes.formLabelWidth).isActive = true
     let row = NSStackView(views: [title, scope, NSView()])
     row.spacing = PaxTheme.Spacing.regular
     addAppOption(row)
     guard draft.importDomains else {
       let note = PaxText.label(
-        "包含已确认归属的辅助进程、新域名与直接 IP。", font: PaxTheme.Typography.caption(), secondary: true,
+        self.interfaceCopy.text("interface_detail.d669d511c5"), font: PaxTheme.Typography.caption(),
+        secondary: true,
         wrapping: true)
       let noteRow = NSStackView(views: [note])
       noteRow.edgeInsets.left = PaxTheme.Routes.formLabelWidth + row.spacing
@@ -336,7 +383,10 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
       return
     }
     let domains = store.observedDomains(draft.target)
-    if domains.isEmpty { addAppOption(PaxText.label("此应用尚无已观测域名。", secondary: true)) }
+    if domains.isEmpty {
+      addAppOption(
+        self.interfaceCopy.label("interface_detail.e2871cd6d2", secondary: true))
+    }
     for domain in domains {
       let check = NSButton(checkboxWithTitle: domain, target: self, action: #selector(valueChanged))
       check.state = draft.selectedDomains.contains(domain) ? .on : .off
@@ -345,9 +395,13 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     }
     addAppOption(
       PaxText.label(
-        "域名规则对其他应用也生效；不会自动添加未来域名。", secondary: true, wrapping: true))
+        self.interfaceCopy.text("interface_detail.855be913e4"), secondary: true, wrapping: true))
     importedMethod = picker(
-      "域名匹配方式", items: ["精确域名", "域名及子域"],
+      self.interfaceCopy.text("interface_detail.de88f6d0fa"),
+      items: [
+        self.interfaceCopy.text("interface_detail.3d1aa10e58"),
+        self.interfaceCopy.text("interface_detail.d970428baf"),
+      ],
       selected: draft.domainMethod == .domainSuffix ? 1 : 0, action: #selector(valueChanged),
       section: appOptions)
   }
@@ -379,7 +433,7 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     case .domain, .ip: return true
     }
   }
-  private var selectedApplicationAvailable: Bool {
+  var selectedApplicationAvailable: Bool {
     matchingAppIDs.contains(draft.target)
       || (draft.target == savedApplication && store.applications.contains { $0.id == draft.target })
   }
@@ -389,58 +443,10 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     } else {
       previewLabel.stringValue =
         destination != nil && destination?.selection == nil
-        ? "请选择一条线路，再保存规则。" : store.draftSummary(draft)
+        ? self.interfaceCopy.text("interface_detail.13fa119f20") : store.draftSummary(draft)
     }
     saveButton?.isEnabled = canSave
     pane.invalidateContentSize()
-  }
-  private func updateCandidateFooter() {
-    let footer = pane.status
-    footer.isHidden = false
-    footer.textColor = PaxTheme.Color.textSecondary
-    guard let pack = store.package(draft.packageID) else {
-      footer.stringValue = "规则包已不存在。"
-      return
-    }
-    if destination != nil && destination?.selection == nil {
-      footer.stringValue = "请选择一条线路，再保存规则。"
-      return
-    }
-    if draft.target.isEmpty || (kind == .application && !selectedApplicationAvailable) {
-      footer.stringValue = draft.target.isEmpty ? "请选择" + kind.title + "。" : "请选择搜索结果中的应用；原选择和草稿保留。"
-      return
-    }
-    do {
-      _ = try store.ruleProjection(draft, in: pack)
-    } catch {
-      footer.stringValue = (error as? RoutingWorkbenchStore.EditError)?.message ?? "请输入有效目标。"
-      return
-    }
-    let target: String
-    if kind == .process {
-      target = processName(for: draft.target)
-    } else if draft.importDomains {
-      target =
-        "\(draft.selectedDomains.count) 个"
-        + (draft.domainMethod == .domainSuffix ? "域名及子域" : "精确域名")
-    } else {
-      target = store.applications.first { $0.id == draft.target }?.name ?? draft.target
-    }
-    let dest = pack.kind == .priority ? draft.destination : pack.destination
-    let headline = target + " → " + store.destinationName(dest)
-    let summary = NSMutableAttributedString(
-      string: headline,
-      attributes: [
-        .font: PaxTheme.Typography.label(weight: .semibold), .foregroundColor: PaxTheme.Color.text,
-      ])
-    let note = pack.kind == .priority ? "优先规则 · 仅影响新连接" : "沿用「" + pack.name + "」规则包的去向"
-    summary.append(
-      NSAttributedString(
-        string: "\n" + note,
-        attributes: [
-          .font: PaxTheme.Typography.caption(), .foregroundColor: PaxTheme.Color.textSecondary,
-        ]))
-    footer.attributedStringValue = summary
   }
   func controlTextDidChange(_ notification: Notification) { valueChanged() }
   @objc private func save() {

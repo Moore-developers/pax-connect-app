@@ -1,4 +1,5 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 @MainActor
@@ -8,13 +9,14 @@ extension RoutingPackagesController {
       updateArea.removeArrangedSubview(item)
       item.removeFromSuperview()
     }
-    guard [.subscription, .geo, .adblock].contains(pack.kind) else {
+    guard pack.kind.canUpdate else {
       updateArea.isHidden = true
       return
     }
     updateArea.isHidden = false
     let expand = NSButton(
-      title: "来源与更新设置", target: self, action: #selector(toggleUpdates))
+      title: self.interfaceCopy.text("interface_detail.6f5a1a563f"), target: self,
+      action: #selector(toggleUpdates))
     expand.setButtonType(.toggle)
     expand.imagePosition = .imageLeading
     expand.image = PaxIcon.image(showsUpdates ? "chevron.down" : "chevron.right")
@@ -27,7 +29,7 @@ extension RoutingPackagesController {
     updateArea.addArrangedSubview(header)
     if showsUpdates {
       let source = PaxText.label(
-        RoutingGeoPresentation.source(pack),
+        RoutingGeoPresentation.source(pack, context: interfaceCopy.context),
         font: PaxTheme.Typography.time, secondary: true,
         wrapping: true)
       source.heightAnchor.constraint(
@@ -37,20 +39,25 @@ extension RoutingPackagesController {
       if store.telemetry != nil && pack.kind == .geo {
         updateArea.addArrangedSubview(
           PaxText.label(
-            RoutingGeoPresentation.sourceExplanation, secondary: true,
+            RoutingGeoPresentation.sourceExplanation(context: interfaceCopy.context),
+            secondary: true,
             wrapping: true))
         return
       }
       let version = PaxText.label(
-        "当前有效版本：" + pack.version, font: PaxTheme.Typography.time, secondary: true)
+        self.interfaceCopy.text("interface_detail.8432b4e50b") + pack.version,
+        font: PaxTheme.Typography.time, secondary: true)
       version.heightAnchor.constraint(equalToConstant: version.intrinsicContentSize.height)
         .isActive = true
       updateArea.addArrangedSubview(version)
       let automatic = NSButton(
-        checkboxWithTitle: "每天自动检查更新", target: self, action: #selector(automaticChanged(_:)))
+        checkboxWithTitle: self.interfaceCopy.text("interface_detail.80faccd7df"), target: self,
+        action: #selector(automaticChanged(_:)))
       automatic.state = pack.automatic ? .on : .off
       automatic.isEnabled = store.canEdit && !pack.updating
-      let rollback = PaxRouteButton("回退上一版", target: self, action: #selector(rollback))
+      let rollback = PaxRouteButton(
+        self.interfaceCopy.text("interface_detail.e700bc424c"), target: self,
+        action: #selector(rollback))
       rollback.isEnabled = store.canEdit && pack.previousVersion != nil && !pack.updating
       let row = NSStackView(views: [automatic, rollback])
       row.spacing = PaxTheme.Spacing.tight
@@ -59,7 +66,10 @@ extension RoutingPackagesController {
     }
     if !pack.updateMessage.isEmpty {
       updateArea.addArrangedSubview(
-        PaxText.label(pack.updateMessage, secondary: true, wrapping: true))
+        PaxText.label(
+          ProductTextPresentation.text(
+            pack.updateText, original: pack.updateMessage, context: interfaceCopy.context),
+          secondary: true, wrapping: true))
     }
     for item in updateArea.arrangedSubviews {
       item.widthAnchor.constraint(equalTo: updateArea.widthAnchor).isActive = true

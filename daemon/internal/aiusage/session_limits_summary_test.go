@@ -248,3 +248,24 @@ func TestLimitsMonthComparisonRequiresEqualElapsedCalendarSpan(t *testing.T) {
 		t.Fatal("partial month must retain the matching prior wall-clock cutoff", comparison)
 	}
 }
+
+// The display count is distinct native roots, not request count or descendant count.
+func TestLimitsModelRowsExposeDistinctSessionsAndRawTitle(t *testing.T) {
+	fact := func(cli, session string) limitFact {
+		return limitFact{root: SessionKey{cli, session}, row: AnalysisRow{CLI: cli, Session: session, Model: "gpt-6.1-sol", Summary: Summary{Count: 1}}}
+	}
+	facts := []limitFact{fact("codex", "a"), fact("codex", "a"), fact("codex", "b"), fact("claude", "a")}
+	rows := limitModelRows(facts, "m:")
+	if len(rows) != 1 || rows[0].SessionCount == nil || *rows[0].SessionCount != 3 {
+		t.Fatalf("distinct roots missing: %+v", rows)
+	}
+	g := agentGraph{Catalog: map[SessionKey]SessionCatalogEntry{{"claude", "a"}: {Title: "用户 title", TitleSource: "claude.user-message"}}}
+	named := limitSessionRow(g, SessionKey{"claude", "a"}, facts[3:])
+	if named.RawTitle != "用户 title" || named.TitleSource != "claude.user-message" || named.Title != "最近消息：用户 title" {
+		t.Fatalf("title provenance lost: %+v", named)
+	}
+	unnamed := limitSessionRow(g, SessionKey{"codex", "0123456789abcdef"}, facts[:1])
+	if unnamed.TitleSource != "pax.unnamed" || unnamed.RawTitle != "0123456789ab" {
+		t.Fatalf("unnamed identity lost: %+v", unnamed)
+	}
+}

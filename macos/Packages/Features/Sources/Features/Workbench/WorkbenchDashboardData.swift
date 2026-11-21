@@ -152,10 +152,10 @@ extension WorkbenchDashboardViewController {
     let now = store.trafficCapturedAt
     if store.scenario == .empty {
       var trend = PaxModelTrendModel()
-      trend.empty = "近 7 日暂无模型请求"
+      trend.empty = self.interfaceCopy.text("dashboard_value.no_week_requests")
       trendCard.apply(trend)
       var rank = PaxModelRankModel()
-      rank.empty = "今日暂无模型请求"
+      rank.empty = self.interfaceCopy.text("dashboard_value.no_today_requests")
       rankCard.apply(rank)
     } else {
       let buckets = store.dashboardUsageBuckets
@@ -166,9 +166,13 @@ extension WorkbenchDashboardViewController {
       rankCard.apply(DashboardUsageProjection.rank(buckets: buckets, state: nil, now: now))
     }
     attentionCard.apply(
-      PaxInsightModel(items: store.dashboardAttention, emptyTitle: "一切正常 · 今日暂无问题"))
+      PaxInsightModel(
+        items: store.dashboardAttention,
+        emptyTitle: self.interfaceCopy.text("dashboard.no_problems")))
     changesCard.apply(
-      PaxInsightModel(items: store.dashboardChanges, emptyTitle: "今日暂无 Pax 操作记录"))
+      PaxInsightModel(
+        items: store.dashboardChanges,
+        emptyTitle: self.interfaceCopy.text("dashboard.no_operations")))
     applyAction(store.dashboardAction)
   }
 }

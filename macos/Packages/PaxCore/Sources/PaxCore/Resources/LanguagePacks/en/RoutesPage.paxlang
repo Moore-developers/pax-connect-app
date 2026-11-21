@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "routes.usage_per_hours": "MB/{hours} h",
+    "routes.usage_per_minutes": "MB/{minutes} min",
+    "routes.groups": "Groups",
+    "routes.import": "Import",
+    "routes.create": "Add Proxy",
+    "routes.reset_sort": "Reset Sort",
+    "routes.refresh": "Refresh",
+    "routes.refreshing": "Refreshing…",
+    "routes.test": "Test",
+    "routes.testing": "Testing · {count}",
+    "routes.diagnostics": "Diagnostics",
+    "routes.reconnect": "Reconnect",
+    "routes.search": "Search proxies",
+    "routes.empty_title": "No Proxies",
+    "routes.empty_caption": "Add a proxy or import share links and subscriptions.",
+    "routes.group_unavailable": "Group management is unavailable. Check the backend connection.",
+    "routes.import_not_connected": "Route import is not connected to the backend.",
+    "routes.import_unavailable": "Import is unavailable. Check the backend connection.",
+    "routes.create_unavailable": "The backend is unavailable or does not support adding proxy routes.",
+    "routes.refresh_group_hint": "Switch to a subscription group before refreshing it.",
+    "routes.default_group_ax": "Default: local routes not assigned to a group",
+    "routes.subscription_group_ax": "Subscription group, {name}, {count} routes",
+    "routes.custom_group_ax": "Custom group, {name}, {count} routes",
+    "routes.column.name": "Proxy",
+    "routes.column.features": "Options",
+    "routes.column.address": "Exit IP",
+    "routes.column.latency": "Latency",
+    "routes.column.speed": "Download",
+    "routes.certificate_count": {
+      "one": "Resolve {count} Certificate Issue",
+      "other": "Resolve {count} Certificate Issues"
+    },
+    "routes.current": "Active Proxy",
+    "routes.selected": "Selected Proxy",
+    "routes.not_available": "Unavailable"
+  }
+}

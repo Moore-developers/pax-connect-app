@@ -1,0 +1,27 @@
+syntax = "proto3";
+package pax.v1;
+import "operation_context.proto";
+import "google/protobuf/timestamp.proto";
+option go_package = "pax-connect/daemon/gen/proto/paxv1";
+
+// Product meaning and event-time safe arguments; never an executable template.
+message ProductText {
+  string code = 1;
+  map<string, string> params = 2;
+}
+// Only the known browser.* subset of an immutable presentation snapshot.
+message BrowserPresentation {
+  string locale = 1;
+  map<string, string> messages = 2;
+}
+message EnvironmentDiagnosticRequest {
+ string action = 1; // start, read, cancel, sources
+ string session_id = 2;
+ OperationContext context = 3;
+ BrowserPresentation presentation = 4;
+}
+
+message EventCategory {string key=1;string name=2;string symbol=3;ProductText name_text=4;}
+message EventField {string label=1;string value=2;string before=3;string after=4;ProductText label_text=5;ProductText value_text=6;ProductText before_text=7;ProductText after_text=8;}
+message EventSection {string kind=1;string title=2;repeated EventField fields=3;ProductText title_text=4;}
+message SystemEvent {string type=1;string name=2;EventCategory category=3;string result=4;string error_code=5;google.protobuf.Timestamp started_at=6;repeated EventSection sections=7;ProductText name_text=8;}

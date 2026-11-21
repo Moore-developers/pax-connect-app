@@ -4,12 +4,18 @@ import PaxUI
 
 extension NetworkDiagnosticView {
   func sourcesContent() -> NSView {
-    let filter = action(store.onlyDifferences ? "全部来源" : "仅看分歧 / 缺失") { [weak self] in
+    let filter = action(
+      store.onlyDifferences
+        ? context.text("native_diagnostic.9f357adb61")
+        : context.text("native_diagnostic.5f36aced9d")
+    ) { [weak self] in
       self?.store.onlyDifferences.toggle()
     }
     filter.setAccessibilityIdentifier("network-source-filter")
     var rows: [NSView] = []
-    for source in P.sourceRows(intelligenceReport, onlyDifferences: store.onlyDifferences) {
+    for source in P.sourceRows(
+      intelligenceReport, onlyDifferences: store.onlyDifferences, context: context)
+    {
       if !rows.isEmpty { rows.append(divider()) }
       rows.append(
         diagnosticRow(
@@ -19,17 +25,27 @@ extension NetworkDiagnosticView {
     let list = vertical(rows, spacing: 0)
     list.setAccessibilityIdentifier("diagnostic-sources-table")
     let views: [NSView] = [
-      horizontal([heading("多源对照", cardTitle: true), NSView(), filter]),
+      horizontal([
+        heading(context.text("native_diagnostic.9608f6ef4a"), cardTitle: true), NSView(), filter,
+      ]),
       text(
-        "指定线路：" + (report?.targetRouteName ?? "尚未检测") + " · 检测于 "
-          + MeasurementTimestamp.text(report?.at) + (store.stale ? " · 上次检测" : ""), secondary: true),
-      assessmentText(P.sourceListOverview(intelligenceReport)), list,
-      text(P.acquisitionSummary(intelligenceReport), secondary: true),
-      text(rows.isEmpty ? "当前没有可展示的来源" : "分歧表示资料口径不同，不自动判定哪一源正确。", secondary: true),
+        context.text("native_diagnostic.8870892b72")
+          + (report?.targetRouteName ?? context.text("native_diagnostic.4d2966c438"))
+          + context.text("native_diagnostic.803d722e2f")
+          + MeasurementTimestamp.text(report?.at)
+          + (store.stale ? context.text("native_diagnostic.68b60191d6") : ""), secondary: true),
+      assessmentText(P.sourceListOverview(intelligenceReport, context: context)), list,
+      text(P.acquisitionSummary(intelligenceReport, context: context), secondary: true),
       text(
-        "资料查询于 " + MeasurementTimestamp.text(intelligenceReport?.at)
+        rows.isEmpty
+          ? context.text("native_diagnostic.19e7b8f8e3")
+          : context.text("native_diagnostic.a136915ce9"), secondary: true),
+      text(
+        context.text("native_diagnostic.4e31faa72a")
+          + MeasurementTimestamp.text(intelligenceReport?.at)
           + (intelligenceReport?.at != report?.at
-            ? " · 上次同 IP 资料；本次：" + P.problem(report?.providerError ?? "") : ""),
+            ? context.text("native_diagnostic.08b1ae01f0")
+              + P.problem(report?.providerError ?? "", context: context) : ""),
         secondary: true),
     ]
     return vertical(views)

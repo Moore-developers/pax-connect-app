@@ -18,11 +18,18 @@ enum RoutingTrafficCellKey: Hashable {
     var latest: String {
       TrafficFormatting.milliseconds(samples.last.map { Double($0.milliseconds) })
     }
-    var title: String { dns ? "解析耗时" : "响应延迟" }
-    var context: String { workbenchResponseContext(state: state, count: samples.count, dns: dns) }
-    func series(in page: TrafficPage) -> PaxTimeSeries {
+    func title(presentation: PresentationContext) -> String {
+      dns
+        ? presentation.text("traffic_details.d824870c1d")
+        : presentation.text("traffic_details.abe05d4485")
+    }
+    func context(presentation: PresentationContext) -> String {
+      workbenchResponseContext(state: state, count: samples.count, dns: dns, context: presentation)
+    }
+    func series(in page: TrafficPage, presentation: PresentationContext) -> PaxTimeSeries {
       workbenchResponseSeries(
-        samples, from: page.from, asOf: page.asOf, limit: samples.count, dns: dns)
+        samples, from: page.from, asOf: page.asOf, limit: samples.count, dns: dns,
+        context: presentation)
     }
   }
   struct Count: Hashable {
@@ -30,15 +37,26 @@ enum RoutingTrafficCellKey: Hashable {
     let failures: UInt64
     let blocked: Bool
     let ipv6Limited: Bool
-    let system: Bool
 
-    var value: String { system && failures == 0 ? "\(connections) 条" : String(connections) }
-    var result: String { blocked ? "阻断" : "失败" }
-    var failureText: String { "\(failures) 次" + result }
-    var evidence: String? {
+    func result(presentation: PresentationContext) -> String {
+      blocked
+        ? presentation.text("traffic_details.6d363f5a1d")
+        : presentation.text("traffic_details.28384d7afd")
+    }
+    func failureText(presentation: PresentationContext) -> String {
+      presentation.text(
+        "traffic_details.attempt_result",
+        ["count": String(failures), "result": result(presentation: presentation)])
+    }
+    func evidence(presentation: PresentationContext) -> String? {
       guard failures > 0 else { return nil }
-      let reason = ipv6Limited ? "（IPv6 未启用；该次 Pax 连接仅使用 IPv4）" : ""
-      return "范围内新建连接 \(connections) 条；\(result) \(failures) 次" + reason
+      let reason = ipv6Limited ? presentation.text("traffic_details.c7b7606b39") : ""
+      return presentation.text(
+        "traffic_details.e6323a4287",
+        [
+          "arg0": String(describing: connections), "arg1": result(presentation: presentation),
+          "arg2": String(describing: failures),
+        ]) + reason
     }
   }
   struct Transfer: Hashable {
@@ -48,7 +66,12 @@ enum RoutingTrafficCellKey: Hashable {
 
     var uploadText: String { known ? TrafficFormatting.bytes(upload) : "—" }
     var downloadText: String { known ? TrafficFormatting.bytes(download) : "—" }
-    var note: String? { known ? nil : "DNS查询没有独立字节计数证据" }
+    func readout(presentation: PresentationContext) -> String {
+      presentation.text("traffic.transfer_readout", ["up": uploadText, "down": downloadText])
+    }
+    func note(presentation: PresentationContext) -> String? {
+      known ? nil : presentation.text("traffic_details.fbe6468d7a")
+    }
   }
 
   case identity(String, Int, String, String, String)
@@ -94,8 +117,7 @@ func routingTrafficCellKey(
       .init(
         connections: fact.connections, failures: fact.failedCount,
         blocked: fact.failedCount > 0 && fact.direction == "blocked",
-        ipv6Limited: fact.failedCount > 0 && TrafficFormatting.isIPv6LimitedPath(fact),
-        system: dimension == .system))
+        ipv6Limited: fact.failedCount > 0 && TrafficFormatting.isIPv6LimitedPath(fact)))
   case 5:
     return .transfer(
       .init(
@@ -108,23 +130,32 @@ func routingTrafficCellKey(
 @MainActor
 func updateRoutingTrafficCell(
   _ cell: NSView, key: RoutingTrafficCellKey, store: RoutingWorkbenchStore,
-  tooltip: PaxChartTooltipCoordinator
+  tooltip: PaxChartTooltipCoordinator, context: PresentationContext = .chinese
 ) -> Bool {
   switch key {
   case .latency(let latency):
-    guard let view = cell as? PaxTimeLatencyView, view.chart.pinKey == latency.pinKey,
-      view.chart.style.title == latency.title
-    else { return false }
+    guard let view = cell as? PaxTimeLatencyView, view.chart.pinKey == latency.pinKey else {
+      return false
+    }
+    if view.chart.style.title != latency.title(presentation: context) {
+      var style = PaxTimeSeriesStyle.latency(title: latency.title(presentation: context)) {
+        TrafficFormatting.milliseconds($0)
+      }
+      style.copy = timeSeriesCopy(context)
+      view.chart.style = style
+    }
     view.updateCompact(
-      series: latency.series(in: store.livePage), latest: latency.latest, context: latency.context)
+      series: latency.series(in: store.livePage, presentation: context), latest: latency.latest,
+      context: latency.context(presentation: context))
   case .count(let count):
     guard let view = cell as? RoutingTrafficCountCell else { return false }
-    view.apply(count)
+    view.apply(count, context: context)
   case .transfer(let transfer):
     return PaxTrafficCells.updateTransfer(
       cell, uploadText: transfer.uploadText, downloadText: transfer.downloadText,
       upload: Double(transfer.upload), download: Double(transfer.download),
-      tooltip: transfer.known ? tooltip : nil, note: transfer.note)
+      tooltip: transfer.known ? tooltip : nil, note: transfer.note(presentation: context),
+      accessibilityReadout: transfer.readout(presentation: context))
   default: return false
   }
   return true
@@ -134,20 +165,22 @@ func updateRoutingTrafficCell(
 func makeRoutingTrafficCell(
   _ id: String, column: Int, key: RoutingTrafficCellKey?,
   store: RoutingWorkbenchStore, icons: WorkbenchObjectIcons,
-  tooltip: PaxChartTooltipCoordinator, onActivate: @escaping () -> Void
+  tooltip: PaxChartTooltipCoordinator, context: PresentationContext = .chinese,
+  onActivate: @escaping () -> Void
 ) -> NSView? {
   if id == "load-more", column == 0 {
-    return PaxTrafficCells.objectButton("加载更多") {
+    return PaxTrafficCells.objectButton(context.text("traffic_details.af90a08fec")) {
       store.liveFrozen = true
       store.scheduleLive(more: true)
     }
   }
-  if case .count(let count) = key { return RoutingTrafficCountCell(count) }
+  if case .count(let count) = key { return RoutingTrafficCountCell(count, context: context) }
   if case .transfer(let transfer) = key {
     return PaxTrafficCells.transfer(
       uploadText: transfer.uploadText, downloadText: transfer.downloadText,
       upload: Double(transfer.upload), download: Double(transfer.download),
-      tooltip: transfer.known ? tooltip : nil, note: transfer.note)
+      tooltip: transfer.known ? tooltip : nil, note: transfer.note(presentation: context),
+      accessibilityReadout: transfer.readout(presentation: context))
   }
   guard
     let row = store.telemetry == nil
@@ -155,18 +188,18 @@ func makeRoutingTrafficCell(
   else { return nil }
   let fact = store.liveFact(id: id)
   if column == 0, store.dimension == .system {
-    let name = PaxTrafficCells.objectButton(row.name, onActivate: onActivate)
+    let name = PaxTrafficCells.objectButton(
+      row.name, accessibilityTitle: context.text("traffic.open_connections_ax", ["name": row.name]),
+      onActivate: onActivate)
     return icons.identityView(
       kind: .application, id: fact?.objectID ?? row.id, name: row.name,
       content: routingSourceContent(name, title: row.name, subtitle: fact?.sourceLabel ?? ""),
       size: PaxTheme.Logs.directoryCompactIconSize)
   }
-  if column == 4, store.dimension == .system {
-    return PaxText.label(
-      "\(row.count) 条", font: PaxTheme.Typography.metric(size: PaxTheme.Dashboard.bodyFont))
-  }
   if column == 2 {
-    let title = fact.map { TrafficRuleFormatting.latestTitle($0.latestMatch) } ?? row.basisTitle
+    let title =
+      fact.map { TrafficRuleFormatting.latestTitle($0.latestMatch, context: context) }
+      ?? row.basisTitle
     let label = PaxText.label(title, font: PaxTheme.Typography.caption())
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
@@ -176,14 +209,17 @@ func makeRoutingTrafficCell(
     label.alignment = .center
     label.maximumNumberOfLines = 1
     label.lineBreakMode = .byTruncatingTail
-    label.toolTip = fact.map { TrafficRuleFormatting.latestEvidence($0.latestMatch) } ?? title
+    label.toolTip =
+      fact.map { TrafficRuleFormatting.latestEvidence($0.latestMatch, context: context) } ?? title
     return label
   }
   let baseDisplay = PaxTrafficAnalysisRow(
-    id: row.id, name: row.name, symbol: row.symbol, direction: row.direction.title,
+    id: row.id, name: row.name, symbol: row.symbol,
+    direction: row.direction.title(context: context),
     route: column == 1
-      ? (fact.map(TrafficFormatting.actualConnections)
-        ?? TrafficFormatting.actualConnection(direction: row.direction.title, route: row.route))
+      ? (fact.map { TrafficFormatting.actualConnections($0, context: context) }
+        ?? TrafficFormatting.actualConnection(
+          direction: row.direction.title(context: context), route: row.route, context: context))
       : "",
     count: row.count,
     upload: column == 5 ? TrafficFormatting.bytes(row.upload) : "",
@@ -199,10 +235,10 @@ func makeRoutingTrafficCell(
   // every cell multiplies first-visible row work by the number of columns.
   if case .latency(let latency) = key {
     display.latencyText = latency.latest
-    display.latencyTitle = latency.title
-    display.latencyContext = latency.context
+    display.latencyTitle = latency.title(presentation: context)
+    display.latencyContext = latency.context(presentation: context)
     display.latencyPinKey = latency.pinKey
-    display.latencySeries = latency.series(in: store.livePage)
+    display.latencySeries = latency.series(in: store.livePage, presentation: context)
   }
   if column == 3, store.telemetry == nil {
     let lower = store.now.addingTimeInterval(-store.period.seconds)
@@ -210,7 +246,9 @@ func makeRoutingTrafficCell(
       $0.started > lower && $0.started <= store.now && $0.establishmentMS != nil
     }
     .sorted { $0.started == $1.started ? $0.id < $1.id : $0.started < $1.started }.suffix(20).map {
-      PaxTimeSeriesPoint(at: $0.started, value: $0.establishmentMS, sampleID: $0.id, note: "连接开始时间")
+      PaxTimeSeriesPoint(
+        at: $0.started, value: $0.establishmentMS, sampleID: $0.id,
+        note: context.text("traffic_details.e338cc5ec0"))
     }
     display.latencySeries = .init(
       domain: .init(start: lower, end: store.now), points: points, axis: .samples)
@@ -228,12 +266,23 @@ func makeRoutingTrafficCell(
         content: content,
         size: PaxTheme.Dashboard.nodeTitle, gap: PaxTheme.Dashboard.titleGap,
         tint: PaxTheme.Color.textSecondary)
-    })
+    }, timeSeriesCopy: timeSeriesCopy(context),
+    objectAccessibilityTitle: column == 0
+      ? context.text("traffic.open_connections_ax", ["name": row.name]) : nil,
+    transferReadout: column == 5
+      ? context.text("traffic.transfer_readout", ["up": display.upload, "down": display.download])
+      : nil)
   if column == 1, let fact {
     let exits =
       fact.exits.isEmpty
-      ? ["记录的线路：" + fact.routeName + "\n线路标识：" + fact.routeID]
-      : fact.exits.map { "记录的线路：" + $0.routeName + "\n线路标识：" + $0.routeID }
+      ? [
+        context.text("traffic_details.57319236e5") + fact.routeName
+          + context.text("traffic_details.218ed6d7ac") + fact.routeID
+      ]
+      : fact.exits.map {
+        context.text("traffic_details.57319236e5") + $0.routeName
+          + context.text("traffic_details.218ed6d7ac") + $0.routeID
+      }
     let evidence = exits.joined(separator: "\n")
     cell.toolTip = evidence
     for child in cell.subviews { child.toolTip = evidence }
@@ -247,8 +296,9 @@ private final class RoutingTrafficCountCell: NSView {
     "", font: PaxTheme.Typography.metric(size: PaxTheme.Dashboard.bodyFont))
   private let failures = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
 
-  init(_ value: RoutingTrafficCellKey.Count) {
+  init(_ value: RoutingTrafficCellKey.Count, context: PresentationContext = .chinese) {
     super.init(frame: .zero)
+    count.alignment = .center
     failures.alignment = .center
     failures.lineBreakMode = .byTruncatingTail
     let labels = NSStackView(views: [count, failures])
@@ -263,7 +313,7 @@ private final class RoutingTrafficCountCell: NSView {
       labels.centerYAnchor.constraint(equalTo: centerYAnchor),
       count.widthAnchor.constraint(equalTo: labels.widthAnchor),
     ])
-    apply(value)
+    apply(value, context: context)
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
 
@@ -271,15 +321,13 @@ private final class RoutingTrafficCountCell: NSView {
     NSSize(width: NSView.noIntrinsicMetric, height: PaxTheme.Table.memberRow)
   }
 
-  func apply(_ value: RoutingTrafficCellKey.Count) {
-    let text = value.value
+  func apply(_ value: RoutingTrafficCellKey.Count, context: PresentationContext = .chinese) {
+    let text = String(value.connections)
     if count.stringValue != text { count.stringValue = text }
-    let alignment: NSTextAlignment = value.system && value.failures == 0 ? .natural : .center
-    if count.alignment != alignment { count.alignment = alignment }
-    let failureText = value.failures > 0 ? value.failureText : ""
+    let failureText = value.failures > 0 ? value.failureText(presentation: context) : ""
     if failures.stringValue != failureText { failures.stringValue = failureText }
     if failures.isHidden != failureText.isEmpty { failures.isHidden = failureText.isEmpty }
-    let evidence = value.evidence
+    let evidence = value.evidence(presentation: context)
     if toolTip != evidence {
       count.toolTip = evidence
       failures.toolTip = evidence

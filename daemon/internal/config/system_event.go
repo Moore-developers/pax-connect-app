@@ -7,20 +7,28 @@ import (
 )
 
 // EventCategory is supplied by the producer, never a UI category whitelist.
-type EventCategory struct{ Key, Name, Symbol string }
+type EventCategory struct {
+	Key, Name, Symbol string
+	NameText          *ProductText `json:",omitempty"`
+}
 
 // EventField is a saved display fact or a saved before/after pair, not a config reference.
-type EventField struct{ Label, Value, Before, After string }
+type EventField struct {
+	Label, Value, Before, After                 string
+	LabelText, ValueText, BeforeText, AfterText *ProductText `json:",omitempty"`
+}
 
 // EventSection is a bounded native content block; no executable or markup payload.
 type EventSection struct {
 	Kind, Title string
+	TitleText   *ProductText `json:",omitempty"`
 	Fields      []EventField
 }
 
 // SystemEvent is immutable event-time evidence. New categories need no UI branch.
 type SystemEvent struct {
 	Type, Name, Result, ErrorCode string
+	NameText                      *ProductText `json:",omitempty"`
 	Category                      EventCategory
 	StartedAt                     *time.Time `json:",omitempty"`
 	Sections                      []EventSection
@@ -32,6 +40,11 @@ func ValidateSystemEvent(e *SystemEvent) error {
 		return nil
 	}
 	invalid := errors.New("invalid_system_event")
+	for _, text := range []*ProductText{e.NameText, e.Category.NameText} {
+		if ValidateProductText(text) != nil {
+			return invalid
+		}
+	}
 	key := func(s string) bool {
 		if len(s) < 1 || len(s) > 96 {
 			return false
@@ -47,12 +60,22 @@ func ValidateSystemEvent(e *SystemEvent) error {
 	if !key(e.Type) || e.Category.Key != "" && !key(e.Category.Key) || len(e.Name) > 256 || len(e.Category.Name) > 128 || len(e.Category.Symbol) > 80 || len(e.Result) > 80 || len(e.ErrorCode) > 160 || len(e.Sections) > 8 {
 		return invalid
 	}
-	total := 0
+	total := productTextSize(e.NameText) + productTextSize(e.Category.NameText)
 	for _, s := range e.Sections {
+		total += productTextSize(s.TitleText)
+		if ValidateProductText(s.TitleText) != nil {
+			return invalid
+		}
 		if !oneEventBlock(s.Kind) || len(s.Title) > 128 || len(s.Fields) > 32 {
 			return invalid
 		}
 		for _, f := range s.Fields {
+			total += productTextSize(f.LabelText) + productTextSize(f.ValueText) + productTextSize(f.BeforeText) + productTextSize(f.AfterText)
+			for _, text := range []*ProductText{f.LabelText, f.ValueText, f.BeforeText, f.AfterText} {
+				if ValidateProductText(text) != nil {
+					return invalid
+				}
+			}
 			if len(f.Label) > 128 || len(f.Value) > 2048 || len(f.Before) > 2048 || len(f.After) > 2048 {
 				return invalid
 			}

@@ -17,14 +17,15 @@ public struct ConnectionFeedback: Equatable, Identifiable, Sendable {
     self.detail = detail
     self.action = action
   }
-  public var actionTitle: String {
+  public var actionTitle: String { actionTitle(context: .chinese) }
+  public func actionTitle(context: PresentationContext) -> String {
     switch action {
-    case .authorize: "授权连接"
-    case .service, .conflict: "查看"
-    case .retryConnection, .retrySelection: "重试"
-    case .recheckCurrentPath: "重新验证"
-    case .recoverBackend: "恢复后台"
-    case .details: "查看原因"
+    case .authorize: context.text("network_controls.b423c50f29")
+    case .service, .conflict: context.text("network_controls.db8db05304")
+    case .retryConnection, .retrySelection: context.text("network_controls.b8784c8dd5")
+    case .recheckCurrentPath: context.text("network_controls.73224d5fe5")
+    case .recoverBackend: context.text("network_controls.2f13cbac4d")
+    case .details: context.text("network_controls.856cba0533")
     }
   }
 }
@@ -40,28 +41,37 @@ extension ConnectionStore {
 
   /// Prefer the daemon target; the in-flight local target fills gaps before
   /// that target is available. Never label a switch with the previous route.
-  public var proxyProgressText: String {
-    if degradedReason?.code == "pax_cleanup_pending" { return "正在清理旧 Pax 连接…" }
-    if degradedReason?.code == "tun_releasing" { return "正在关闭其它 TUN…" }
+  public var proxyProgressText: String { proxyProgressText(context: .chinese) }
+  public func proxyProgressText(context: PresentationContext) -> String {
+    if degradedReason?.code == "pax_cleanup_pending" {
+      return context.text("network_controls.0200e69b74")
+    }
+    if degradedReason?.code == "tun_releasing" {
+      return context.text("network_controls.ebf7e6dc11")
+    }
     if degradedReason?.code == "network_recovering" {
       let name = currentRoute?.name ?? routesStore?.selectedRoute?.name
-      return name.map { "网络恢复中 · \($0)" } ?? "网络恢复中…"
+      return name.map {
+        context.text("network_controls.a239fb5b1f", ["arg0": String(describing: $0)])
+      } ?? context.text("network_controls.1d0751517f")
     }
     let target =
       !pendingTargetRouteID.isEmpty
       ? pendingTargetRouteID : routesStore?.selecting == true ? routesStore?.selectionTargetID : nil
     if let target, !target.isEmpty {
       if let name = routes.first(where: { $0.id == target })?.name, !name.isEmpty {
-        return "正在切换到：\(name)…"
+        return context.text("network_controls.c866469ad1", ["arg0": String(describing: name)])
       }
-      return "正在切换线路…"
+      return context.text("network_controls.de1102293b")
     }
     if proxyEnabled {
       let name = currentRoute?.name ?? routesStore?.selectedRoute?.name
-      if let name, !name.isEmpty { return "正在连接：\(name)…" }
-      return "正在连接…"
+      if let name, !name.isEmpty {
+        return context.text("network_controls.8a46ba340c", ["arg0": String(describing: name)])
+      }
+      return context.text("network_controls.8be0ea36a9")
     }
-    return "正在恢复直连…"
+    return context.text("network_controls.ebbe9d1fb8")
   }
 
   public var feedback: [ConnectionFeedback] {
@@ -72,50 +82,60 @@ extension ConnectionStore {
     return feedbackTimeline.update(visible, attempts: routesStore?.feedbackOrder ?? [:])
   }
 
-  public var unresolvedFeedback: [ConnectionFeedback] {
+  public func feedback(context: PresentationContext) -> [ConnectionFeedback] {
+    let localized = Dictionary(
+      unresolvedFeedback(context: context).map { ($0.id, $0) }, uniquingKeysWith: { $1 })
+    return feedback.map { localized[$0.id] ?? $0 }
+  }
+  public var unresolvedFeedback: [ConnectionFeedback] { unresolvedFeedback(context: .chinese) }
+  public func unresolvedFeedback(context: PresentationContext) -> [ConnectionFeedback] {
     var items: [ConnectionFeedback] = []
     if connection != .connected {
       items.append(
         ConnectionFeedback(
-          id: "connection", title: "后台连接已断开",
-          detail: (clientError.map { $0.message + "。" } ?? "")
-            + "保留最后一次数据，当前网络状态待确认。",
+          id: "connection", title: context.text("network_controls.d2d1752a0b"),
+          detail: (clientError.map { ProductErrorPresentation.message($0, context: context) + "。" }
+            ?? "")
+            + context.text("network_controls.72fae1defb"),
           action: requestBackendRecovery == nil ? .details : .recoverBackend))
     } else if needsServiceAuthorization {
       items.append(
         ConnectionFeedback(
-          id: "authorization", title: "需要系统授权",
-          detail: "授权代理内核后继续连接。密码仅用于本次 sudo 授权，不会保存。", action: .authorize))
+          id: "authorization", title: context.text("network_controls.a881831d4e"),
+          detail: context.text("network_controls.45ea9a5046"), action: .authorize))
     } else if let error = operationError {
-      items.append(proxyFeedback(error, id: "proxy", retry: .retryConnection))
+      items.append(proxyFeedback(error, id: "proxy", retry: .retryConnection, context: context))
     }
     if let error = routesStore?.selectionError {
       let action =
         routesStore?.selectionTargetID.map(ConnectionFeedback.Action.retrySelection) ?? .details
-      items.append(proxyFeedback(error, id: "selection", retry: action))
+      items.append(proxyFeedback(error, id: "selection", retry: action, context: context))
     }
     if status == .off, let error = degradedReason,
       ["system_proxy_taken_over", "mixed_unavailable"].contains(error.code)
     {
       items.append(
         ConnectionFeedback(
-          id: "ingress", title: "Pax 已停止接管",
-          detail: ProductErrorPresentation.message(error), action: .retryConnection))
+          id: "ingress", title: context.text("network_controls.c12211abc3"),
+          detail: ProductErrorPresentation.message(error, context: context),
+          action: .retryConnection))
     }
     if externalTUNActive {
       items.append(
         ConnectionFeedback(
           id: "external-tun",
-          title: degradedReason?.code == "tun_taken_over" ? "其它应用已接管，Pax 已停止" : "其它 TUN 正在接管流量",
-          detail: "请在对应应用或系统设置的 VPN 中手动关闭 TUN，再重试连接。", action: .details))
+          title: degradedReason?.code == "tun_taken_over"
+            ? context.text("network_controls.1b7407589d")
+            : context.text("network_controls.eca3426b18"),
+          detail: context.text("network_controls.b014e9b86b"), action: .details))
     }
     if let error = degradedReason, status == .degraded, !connectionTransitioning,
       error.code != "protection_unverified" || !currentPathSupported
     {
       items.append(
         ConnectionFeedback(
-          id: "degraded", title: "连接需要注意",
-          detail: ProductErrorPresentation.message(error),
+          id: "degraded", title: context.text("network_controls.6b8ba95e69"),
+          detail: ProductErrorPresentation.message(error, context: context),
           action: [
             "route_lost", "tun_missing", "dns_unprotected", "proxy_unreachable",
             "route_connections_pending", "mixed_probe_failed", "mixed_unavailable",
@@ -131,22 +151,23 @@ extension ConnectionStore {
         if reason.code == "protection_unverified" && currentPathSupported { continue }
         items.append(
           ConnectionFeedback(
-            id: "degraded:" + reason.code, title: "连接需要注意",
-            detail: ProductErrorPresentation.message(reason), action: .details))
+            id: "degraded:" + reason.code, title: context.text("network_controls.6b8ba95e69"),
+            detail: ProductErrorPresentation.message(reason, context: context), action: .details))
       }
     }
     if currentPathSupported && currentPathCheck.state == "failed" {
       items.append(
         ConnectionFeedback(
-          id: "current-path", title: "当前通道需要注意",
-          detail: ProductErrorPresentation.message(.init(code: currentPathCheck.cause)),
+          id: "current-path", title: context.text("network_controls.3cd70ae144"),
+          detail: ProductErrorPresentation.message(
+            .init(code: currentPathCheck.cause), context: context),
           action: .recheckCurrentPath))
     }
     if powerForwardingFailed {
       items.append(
         ConnectionFeedback(
-          id: "power", title: "睡眠状态同步中",
-          detail: "睡眠或唤醒通知尚未确认送达，正在重试。", action: .details))
+          id: "power", title: context.text("network_controls.1311fd4b2e"),
+          detail: context.text("network_controls.e3c43e45aa"), action: .details))
     }
     let priorityCount = items.count
     items.append(
@@ -158,7 +179,8 @@ extension ConnectionStore {
             })
           else { return issue }
           return ConnectionFeedback(
-            id: issue.id, title: source.name + " · 更新失败", detail: issue.detail, action: .details)
+            id: issue.id, title: source.name + context.text("network_controls.6aae0cffaa"),
+            detail: issue.detail, action: .details)
         })
     for source in routesStore?.subscriptions ?? [] {
       if items.contains(where: { $0.id == "subscription:" + source.id }) { continue }
@@ -168,7 +190,8 @@ extension ConnectionStore {
         items.append(
           ConnectionFeedback(
             id: "subscription:" + source.id,
-            title: source.name + " · 更新失败", detail: ProductErrorPresentation.message(error),
+            title: source.name + context.text("network_controls.6aae0cffaa"),
+            detail: ProductErrorPresentation.message(error, context: context),
             action: .details))
       }
     }
@@ -176,8 +199,8 @@ extension ConnectionStore {
     {
       items.append(
         ConnectionFeedback(
-          id: "measurement", title: "线路测量未完成",
-          detail: ProductErrorPresentation.message(error), action: .details))
+          id: "measurement", title: context.text("network_controls.bd45a590b3"),
+          detail: ProductErrorPresentation.message(error, context: context), action: .details))
     }
     return Array(items.prefix(priorityCount))
       + items.dropFirst(priorityCount).sorted {
@@ -197,30 +220,35 @@ extension ConnectionStore {
     dismissedFeedbackAttempt[issue.id] = routesStore?.feedbackOrder[issue.id]
   }
 
-  private func proxyFeedback(_ error: ProductError, id: String, retry: ConnectionFeedback.Action)
+  private func proxyFeedback(
+    _ error: ProductError, id: String, retry: ConnectionFeedback.Action,
+    context: PresentationContext = .chinese
+  )
     -> ConnectionFeedback
   {
     let title: String
     let action: ConnectionFeedback.Action
     switch error.code {
     case "core_required":
-      title = "启动代理需要系统授权"
+      title = context.text("network_controls.68b971b4a5")
       action = .authorize
     case "service_privileges_required":
-      title = "后台缺少系统权限"
+      title = context.text("network_controls.81169208d7")
       action = .service
     case "tun_conflict_other", "pax_tun_stale":
-      title = "TUN 正在被占用"
+      title = context.text("network_controls.dca6b69388")
       action = .conflict
     default:
-      title = id == "selection" ? "线路切换失败" : "连接失败"
+      title =
+        id == "selection"
+        ? context.text("network_controls.9e1b3d1cbe") : context.text("network_controls.89c4766afc")
       action = retry
     }
     return ConnectionFeedback(
       id: id, title: title,
       detail: error.code == "service_privileges_required"
-        ? "启动代理需要具备系统权限的代理内核；线路管理、订阅与测速可正常使用。"
-        : ProductErrorPresentation.message(error), action: action)
+        ? context.text("network_controls.fdcbf2e381")
+        : ProductErrorPresentation.message(error, context: context), action: action)
   }
 }
 

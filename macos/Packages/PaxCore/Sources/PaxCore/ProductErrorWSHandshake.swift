@@ -2,21 +2,28 @@ import Foundation
 
 extension ProductErrorPresentation {
   /// Cloudflare 520–530 是 CDN 报告的源站故障，属线路服务商服务端问题，不提示用户核对本地配置。
-  static func wsHandshakeMessage(status: String?) -> String {
+  static func wsHandshakeMessage(status: String?, context: PresentationContext = .chinese) -> String
+  {
     guard let status, let code = Int(status), (520...530).contains(code) else {
-      return "WS 握手失败\(status.map { "（HTTP \($0)）" } ?? "")，请核对 Host、路径与服务端"
+      return context.text(
+        "error.ws_handshake",
+        [
+          "status": status.map {
+            context.language == .chinese ? "（HTTP " + $0 + "）" : " (HTTP " + $0 + ")"
+          } ?? ""
+        ])
     }
     let reason =
       switch code {
-      case 521: "源站拒绝连接"
-      case 522: "源站连接超时"
-      case 523: "源站不可达"
-      case 524: "源站响应超时"
-      case 525: "源站 TLS 握手失败"
-      case 526: "源站证书无效"
-      case 530: "源站不可用"
-      default: "源站故障"
+      case 521: context.text("error.ws_521")
+      case 522: context.text("error.ws_522")
+      case 523: context.text("error.ws_523")
+      case 524: context.text("error.ws_524")
+      case 525: context.text("error.ws_525")
+      case 526: context.text("error.ws_526")
+      case 530: context.text("error.ws_530")
+      default: context.text("error.ws_unknown")
       }
-    return "服务端源站故障（HTTP \(code) · \(reason)），Cloudflare 报告线路服务商的服务器异常，非本地配置问题；请换线路或联系服务商"
+    return context.text("error.ws_origin", ["code": String(code), "reason": reason])
   }
 }

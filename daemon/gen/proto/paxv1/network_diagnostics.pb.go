@@ -268,6 +268,10 @@ type NetworkDiagnosticFact struct {
 	Source        string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
 	State         string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"` // information, hit, clear, unknown
 	ProviderId    string                 `protobuf:"bytes,6,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	Kind          string                 `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"`
+	LabelText     *ProductText           `protobuf:"bytes,8,opt,name=label_text,json=labelText,proto3" json:"label_text,omitempty"`
+	ValueText     *ProductText           `protobuf:"bytes,9,opt,name=value_text,json=valueText,proto3" json:"value_text,omitempty"`
+	SourceText    *ProductText           `protobuf:"bytes,10,opt,name=source_text,json=sourceText,proto3" json:"source_text,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -342,6 +346,34 @@ func (x *NetworkDiagnosticFact) GetProviderId() string {
 		return x.ProviderId
 	}
 	return ""
+}
+
+func (x *NetworkDiagnosticFact) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *NetworkDiagnosticFact) GetLabelText() *ProductText {
+	if x != nil {
+		return x.LabelText
+	}
+	return nil
+}
+
+func (x *NetworkDiagnosticFact) GetValueText() *ProductText {
+	if x != nil {
+		return x.ValueText
+	}
+	return nil
+}
+
+func (x *NetworkDiagnosticFact) GetSourceText() *ProductText {
+	if x != nil {
+		return x.SourceText
+	}
+	return nil
 }
 
 // One bounded exact-IP request, including skipped/failed attempts and fallback provenance.
@@ -1645,7 +1677,7 @@ var File_network_diagnostics_proto protoreflect.FileDescriptor
 
 const file_network_diagnostics_proto_rawDesc = "" +
 	"\n" +
-	"\x19network_diagnostics.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x10route_exit.proto\"v\n" +
+	"\x19network_diagnostics.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x10route_exit.proto\x1a\x12presentation.proto\"v\n" +
 	"\x18NetworkDiagnosticRequest\x12\x12\n" +
 	"\x04mode\x18\x01 \x01(\tR\x04mode\x12!\n" +
 	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12#\n" +
@@ -1666,7 +1698,7 @@ const file_network_diagnostics_proto_rawDesc = "" +
 	"\x03org\x18\x05 \x01(\tR\x03org\x12#\n" +
 	"\rprovider_date\x18\x06 \x01(\tR\fproviderDate\x12\x1f\n" +
 	"\vprovider_id\x18\a \x01(\tR\n" +
-	"providerId\"\xa8\x01\n" +
+	"providerId\"\xda\x02\n" +
 	"\x15NetworkDiagnosticFact\x12\x14\n" +
 	"\x05group\x18\x01 \x01(\tR\x05group\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
@@ -1674,7 +1706,15 @@ const file_network_diagnostics_proto_rawDesc = "" +
 	"\x06source\x18\x04 \x01(\tR\x06source\x12\x14\n" +
 	"\x05state\x18\x05 \x01(\tR\x05state\x12\x1f\n" +
 	"\vprovider_id\x18\x06 \x01(\tR\n" +
-	"providerId\"\xf1\x02\n" +
+	"providerId\x12\x12\n" +
+	"\x04kind\x18\a \x01(\tR\x04kind\x122\n" +
+	"\n" +
+	"label_text\x18\b \x01(\v2\x13.pax.v1.ProductTextR\tlabelText\x122\n" +
+	"\n" +
+	"value_text\x18\t \x01(\v2\x13.pax.v1.ProductTextR\tvalueText\x124\n" +
+	"\vsource_text\x18\n" +
+	" \x01(\v2\x13.pax.v1.ProductTextR\n" +
+	"sourceText\"\xf1\x02\n" +
 	"\x19NetworkDiagnosticProvider\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bquery_ip\x18\x02 \x01(\tR\aqueryIp\x12\x16\n" +
@@ -1851,40 +1891,44 @@ var file_network_diagnostics_proto_goTypes = []any{
 	(*ConnectionDiagnosticStep)(nil),    // 12: pax.v1.ConnectionDiagnosticStep
 	(*TrafficPathFinding)(nil),          // 13: pax.v1.TrafficPathFinding
 	(*TrafficPathDiagnostics)(nil),      // 14: pax.v1.TrafficPathDiagnostics
-	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
-	(*ExitLocation)(nil),                // 16: pax.v1.ExitLocation
+	(*ProductText)(nil),                 // 15: pax.v1.ProductText
+	(*timestamppb.Timestamp)(nil),       // 16: google.protobuf.Timestamp
+	(*ExitLocation)(nil),                // 17: pax.v1.ExitLocation
 }
 var file_network_diagnostics_proto_depIdxs = []int32{
-	15, // 0: pax.v1.NetworkDiagnosticProvider.at:type_name -> google.protobuf.Timestamp
-	15, // 1: pax.v1.NetworkDiagnosticProbe.at:type_name -> google.protobuf.Timestamp
-	15, // 2: pax.v1.NetworkDiagnosticReport.at:type_name -> google.protobuf.Timestamp
-	16, // 3: pax.v1.NetworkDiagnosticReport.exit:type_name -> pax.v1.ExitLocation
-	2,  // 4: pax.v1.NetworkDiagnosticReport.sources:type_name -> pax.v1.NetworkDiagnosticSource
-	3,  // 5: pax.v1.NetworkDiagnosticReport.facts:type_name -> pax.v1.NetworkDiagnosticFact
-	5,  // 6: pax.v1.NetworkDiagnosticReport.probes:type_name -> pax.v1.NetworkDiagnosticProbe
-	4,  // 7: pax.v1.NetworkDiagnosticReport.providers:type_name -> pax.v1.NetworkDiagnosticProvider
-	1,  // 8: pax.v1.NetworkDiagnosticReport.progress:type_name -> pax.v1.NetworkDiagnosticProgress
-	15, // 9: pax.v1.EnvironmentCheck.at:type_name -> google.protobuf.Timestamp
-	8,  // 10: pax.v1.EnvironmentSample.resolvers:type_name -> pax.v1.EnvironmentResolver
-	6,  // 11: pax.v1.EnvironmentSample.intelligence:type_name -> pax.v1.NetworkDiagnosticReport
-	7,  // 12: pax.v1.EnvironmentSample.checks:type_name -> pax.v1.EnvironmentCheck
-	9,  // 13: pax.v1.EnvironmentDiagnosticReport.mac:type_name -> pax.v1.EnvironmentSample
-	9,  // 14: pax.v1.EnvironmentDiagnosticReport.browser:type_name -> pax.v1.EnvironmentSample
-	15, // 15: pax.v1.EnvironmentDiagnosticReport.at:type_name -> google.protobuf.Timestamp
-	15, // 16: pax.v1.EnvironmentDiagnosticReport.expires_at:type_name -> google.protobuf.Timestamp
-	15, // 17: pax.v1.ConnectionDiagnosticStep.at:type_name -> google.protobuf.Timestamp
-	15, // 18: pax.v1.TrafficPathDiagnostics.at:type_name -> google.protobuf.Timestamp
-	13, // 19: pax.v1.TrafficPathDiagnostics.findings:type_name -> pax.v1.TrafficPathFinding
-	15, // 20: pax.v1.TrafficPathDiagnostics.last_tun_connection:type_name -> google.protobuf.Timestamp
-	15, // 21: pax.v1.TrafficPathDiagnostics.last_mixed_connection:type_name -> google.protobuf.Timestamp
-	15, // 22: pax.v1.TrafficPathDiagnostics.attempt_at:type_name -> google.protobuf.Timestamp
-	12, // 23: pax.v1.TrafficPathDiagnostics.steps:type_name -> pax.v1.ConnectionDiagnosticStep
-	12, // 24: pax.v1.TrafficPathDiagnostics.attempt_steps:type_name -> pax.v1.ConnectionDiagnosticStep
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	15, // 0: pax.v1.NetworkDiagnosticFact.label_text:type_name -> pax.v1.ProductText
+	15, // 1: pax.v1.NetworkDiagnosticFact.value_text:type_name -> pax.v1.ProductText
+	15, // 2: pax.v1.NetworkDiagnosticFact.source_text:type_name -> pax.v1.ProductText
+	16, // 3: pax.v1.NetworkDiagnosticProvider.at:type_name -> google.protobuf.Timestamp
+	16, // 4: pax.v1.NetworkDiagnosticProbe.at:type_name -> google.protobuf.Timestamp
+	16, // 5: pax.v1.NetworkDiagnosticReport.at:type_name -> google.protobuf.Timestamp
+	17, // 6: pax.v1.NetworkDiagnosticReport.exit:type_name -> pax.v1.ExitLocation
+	2,  // 7: pax.v1.NetworkDiagnosticReport.sources:type_name -> pax.v1.NetworkDiagnosticSource
+	3,  // 8: pax.v1.NetworkDiagnosticReport.facts:type_name -> pax.v1.NetworkDiagnosticFact
+	5,  // 9: pax.v1.NetworkDiagnosticReport.probes:type_name -> pax.v1.NetworkDiagnosticProbe
+	4,  // 10: pax.v1.NetworkDiagnosticReport.providers:type_name -> pax.v1.NetworkDiagnosticProvider
+	1,  // 11: pax.v1.NetworkDiagnosticReport.progress:type_name -> pax.v1.NetworkDiagnosticProgress
+	16, // 12: pax.v1.EnvironmentCheck.at:type_name -> google.protobuf.Timestamp
+	8,  // 13: pax.v1.EnvironmentSample.resolvers:type_name -> pax.v1.EnvironmentResolver
+	6,  // 14: pax.v1.EnvironmentSample.intelligence:type_name -> pax.v1.NetworkDiagnosticReport
+	7,  // 15: pax.v1.EnvironmentSample.checks:type_name -> pax.v1.EnvironmentCheck
+	9,  // 16: pax.v1.EnvironmentDiagnosticReport.mac:type_name -> pax.v1.EnvironmentSample
+	9,  // 17: pax.v1.EnvironmentDiagnosticReport.browser:type_name -> pax.v1.EnvironmentSample
+	16, // 18: pax.v1.EnvironmentDiagnosticReport.at:type_name -> google.protobuf.Timestamp
+	16, // 19: pax.v1.EnvironmentDiagnosticReport.expires_at:type_name -> google.protobuf.Timestamp
+	16, // 20: pax.v1.ConnectionDiagnosticStep.at:type_name -> google.protobuf.Timestamp
+	16, // 21: pax.v1.TrafficPathDiagnostics.at:type_name -> google.protobuf.Timestamp
+	13, // 22: pax.v1.TrafficPathDiagnostics.findings:type_name -> pax.v1.TrafficPathFinding
+	16, // 23: pax.v1.TrafficPathDiagnostics.last_tun_connection:type_name -> google.protobuf.Timestamp
+	16, // 24: pax.v1.TrafficPathDiagnostics.last_mixed_connection:type_name -> google.protobuf.Timestamp
+	16, // 25: pax.v1.TrafficPathDiagnostics.attempt_at:type_name -> google.protobuf.Timestamp
+	12, // 26: pax.v1.TrafficPathDiagnostics.steps:type_name -> pax.v1.ConnectionDiagnosticStep
+	12, // 27: pax.v1.TrafficPathDiagnostics.attempt_steps:type_name -> pax.v1.ConnectionDiagnosticStep
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_network_diagnostics_proto_init() }
@@ -1893,6 +1937,7 @@ func file_network_diagnostics_proto_init() {
 		return
 	}
 	file_route_exit_proto_init()
+	file_presentation_proto_init()
 	file_network_diagnostics_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

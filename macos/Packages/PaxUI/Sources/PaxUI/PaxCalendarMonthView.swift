@@ -16,6 +16,7 @@ final class PaxCalendarMonthView: NSView {
   private static let headerHeight: CGFloat = 28
 
   let month: Date
+  private let weekdaySymbols: [String]
   private let calendar: Calendar
   private var cells: [PaxCalendarDayCell] = []
 
@@ -25,7 +26,8 @@ final class PaxCalendarMonthView: NSView {
     didSet { refresh() }
   }
 
-  init(month: Date, calendar: Calendar) {
+  init(month: Date, calendar: Calendar, weekdaySymbols: [String]) {
+    self.weekdaySymbols = weekdaySymbols
     self.calendar = calendar
     self.month = calendar.dateInterval(of: .month, for: month)?.start ?? month
     super.init(frame: .zero)
@@ -47,7 +49,7 @@ final class PaxCalendarMonthView: NSView {
   }
 
   private func build() {
-    let symbols = ["日", "一", "二", "三", "四", "五", "六"]
+    let symbols = weekdaySymbols
     let first = calendar.firstWeekday - 1
     for column in 0..<7 {
       let label = PaxText.label(

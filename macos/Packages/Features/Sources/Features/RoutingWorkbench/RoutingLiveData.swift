@@ -7,10 +7,15 @@ extension RoutingWorkbenchStore {
     self.init(session: WorkbenchDemoStore(), backendAvailable: false, initialPeriod: .day)
     self.telemetry = telemetry
   }
-  static func liveRow(_ row: PaxCore.TrafficRow) -> TrafficRow {
+  static func liveRow(_ row: PaxCore.TrafficRow, context: PresentationContext = .chinese)
+    -> TrafficRow
+  {
     var value = TrafficRow(
       id: row.id, name: row.name,
-      subtitle: row.direction == "direct" ? "直连" : row.direction == "proxy" ? "代理" : "去向未采集",
+      subtitle: row.direction == "direct"
+        ? context.text("traffic_details.b06325c566")
+        : row.direction == "proxy"
+          ? context.text("traffic_details.5e84ea61e8") : context.text("traffic_details.2e76742d3f"),
       symbol: "network", route: row.routeName,
       direction: row.direction == "direct" ? .direct : row.direction == "proxy" ? .proxy : .unknown,
       connections: [], upload: row.upload, download: row.download,
@@ -21,32 +26,40 @@ extension RoutingWorkbenchStore {
     value.aggregatePeak = row.latencyKnown ? Double(row.slowestLatencyMS) : nil
     return value
   }
-  var dataMessage: String? {
+  var dataMessage: String? { dataMessage(context: .chinese) }
+  func dataMessage(context: PresentationContext) -> String? {
     if let telemetry {
       if !liveError.isEmpty && (liveDataInvalid || livePage.items.isEmpty) {
-        return "流量读取失败，请重试"
+        return context.text("traffic_details.a0a1a03a4b")
       }
-      if liveDataInvalid || (liveLoading && livePage.items.isEmpty) { return "正在读取流量" }
-      return telemetry.trafficAvailable ? nil : "后台流量暂不可用"
+      if liveDataInvalid || (liveLoading && livePage.items.isEmpty) {
+        return context.text("traffic_details.b8735f7ddc")
+      }
+      return telemetry.trafficAvailable ? nil : context.text("traffic_details.37d4c165ac")
     }
-    if !backendAvailable { return "流量数据尚未接入后台" }
+    if !backendAvailable { return context.text("traffic_details.9ca94ce061") }
     switch session.scenario {
-    case .loading: return "正在加载流量记录…"
-    case .trafficMissing: return "暂无统计；不能将缺失数据表示为零。"
-    case .trafficFailed: return "统计读取失败，请重试。"
+    case .loading: return context.text("traffic_details.b4b50b0fcd")
+    case .trafficMissing: return context.text("traffic_details.8007bd0ca0")
+    case .trafficFailed: return context.text("traffic_details.9372284a20")
     default: return nil
     }
   }
-  var stateMessage: String {
-    if let telemetry { return liveError.isEmpty ? telemetry.qualityMessage : liveError }
-    if !backendAvailable { return "流量与规则尚未接入后台，暂不可更改。" }
+  var stateMessage: String { stateMessage(context: .chinese) }
+  func stateMessage(context: PresentationContext) -> String {
+    if let telemetry {
+      return liveError.isEmpty
+        ? telemetry.qualityMessage(context: context, includePastEviction: false)
+        : liveErrorText(context: context)
+    }
+    if !backendAvailable { return context.text("traffic_details.9fe5b39e0d") }
     var messages: [String] = []
     if session.scenario == .disconnected {
-      messages.append("后台服务断开，保留最后记录 · " + TrafficFormatting.time(now))
+      messages.append(context.text("traffic_details.c001e7639f") + TrafficFormatting.time(now))
     }
-    if scene == .incomplete { messages.append("记录不完整；采集曾中断，只包含已记录字节。") }
+    if scene == .incomplete { messages.append(context.text("traffic_details.f73b1108b2")) }
     if !messages.isEmpty { return messages.joined(separator: "\n") }
-    if session.scenario == .degraded { return "保护降级；分流记录不代表保护检查已通过。" }
+    if session.scenario == .degraded { return context.text("traffic_details.09907f14c1") }
     return ""
   }
   func reloadLive(more: Bool = false, force: Bool = true, automatic: Bool = false) async {
@@ -97,7 +110,7 @@ extension RoutingWorkbenchStore {
       else { return }
       if more {
         guard previous.readToken == page.readToken, previous.asOf == page.asOf else {
-          liveError = "流量快照已变化，请重新读取"
+          setLiveErrorKey("traffic_read.snapshot_changed")
           return
         }
         page.items = previous.items + page.items
@@ -131,7 +144,7 @@ extension RoutingWorkbenchStore {
       now = page.asOf
     } catch {
       if !Task.isCancelled && generation == liveGeneration {
-        liveError = ProductErrorPresentation.display(error)
+        setLiveError(ProductFailure(error))
       }
     }
   }

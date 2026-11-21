@@ -8,13 +8,16 @@ extension RoutingWorkbenchStore {
       routeSelectionStore = RouteWorkbenchStore(routes: routes, connection: connection)
     }
   }
-  func destinationName(_ destination: Destination) -> String {
+  func destinationName(_ destination: Destination, context: PresentationContext = .chinese)
+    -> String
+  {
     switch destination {
-    case .followDefault: return "跟随默认"
-    case .direct: return "直连"
-    case .global: return "当前线路"
-    case .block: return "阻断"
-    case .route(let id): return availableRoutes.first { $0.id == id }?.name ?? "指定线路不可用（保留指定）"
+    case .followDefault: return context.text("routing_copy.a44f9f9fca")
+    case .direct: return context.text("routing_copy.b06325c566")
+    case .global: return context.text("routing_copy.1466c1f26f")
+    case .block: return context.text("routing_copy.6d363f5a1d")
+    case .route(let id):
+      return availableRoutes.first { $0.id == id }?.name ?? context.text("routing_copy.3ba04b1a53")
     }
   }
   var destinations: [Destination] {

@@ -99,7 +99,7 @@ final class RoutingWorkbenchStore {
     }
   }
   @discardableResult func perform(_ intent: EditIntent) throws -> String {
-    guard telemetry == nil else { throw EditError("真实规则需要等待后台确认保存。") }
+    guard telemetry == nil else { throw EditError(code: "model_copy.2816f04acc") }
     switch intent {
     case .package(let draft): return try savePackage(draft)
     case .rule(let draft): return try saveRule(draft)
@@ -170,7 +170,7 @@ final class RoutingWorkbenchStore {
   }
   func liveRow(id: String) -> TrafficRow? {
     guard !liveDataInvalid else { return nil }
-    if liveNeedsRead { return livePage.items.first { $0.id == id }.map(Self.liveRow) }
+    if liveNeedsRead { return livePage.items.first { $0.id == id }.map { Self.liveRow($0) } }
     if let row = liveRowsByID[id] { return row }
     guard let fact = liveFactsByID[id] else { return nil }
     let row = Self.liveRow(fact)
@@ -189,7 +189,7 @@ final class RoutingWorkbenchStore {
   }
   var liveLoading = false
   var liveFrozen = false
-  var liveError = ""
+  var trafficReadMessage = RetainedProductMessage(original: "")
   var liveGeneration: UInt64 = 0
   let backendAvailable: Bool
   let session: WorkbenchDemoStore
@@ -206,7 +206,8 @@ final class RoutingWorkbenchStore {
   var packages: [RulePackage] = []
   var selectedPackageID = "priority"
   var selectedRuleID: String?
-  var packageMessage = ""
+  var libraryReadMessage = RetainedProductMessage(original: "")
+  var packageMessageText: ProductText? = nil
 
   init(
     session: WorkbenchDemoStore, now: Date = Date(), connections: [Connection]? = nil,
@@ -285,7 +286,7 @@ final class RoutingWorkbenchStore {
       packages[index].enabled = enabled
     case .packageDestination(let id, let value):
       guard canEdit, let index = packages.firstIndex(where: { $0.id == id }),
-        [.local, .subscription].contains(packages[index].kind)
+        packages[index].kind.canChangeDestination
       else { return }
       packages[index].destination = value
     case .removeRule(let packageID, let ruleID): removeRule(packageID: packageID, ruleID: ruleID)
@@ -299,7 +300,7 @@ final class RoutingWorkbenchStore {
       packages[index].rules[rule].enabled = enabled
     case .automatic(let id, let value):
       guard canEdit, let index = packages.firstIndex(where: { $0.id == id }),
-        [.subscription, .geo, .adblock].contains(packages[index].kind), !packages[index].updating
+        packages[index].kind.canUpdate, !packages[index].updating
       else { return }
       packages[index].automatic = value
     case .scene(let value): scene = value
@@ -465,24 +466,28 @@ extension RoutingWorkbenchStore {
     }
   }
   @discardableResult private func savePackage(_ draft: PackageDraft) throws -> String {
-    guard canEdit else { throw EditError("后台已断开，暂时不能修改。") }
+    guard canEdit else { throw EditError(code: "model_copy.3579d9f09f") }
     let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !name.isEmpty, name.count <= 48 else { throw EditError("名称需为 1–48 个字。") }
+    guard !name.isEmpty, name.count <= 48 else { throw EditError(code: "model_copy.e99fcdf1d6") }
     guard !packages.contains(where: { $0.id != draft.id && $0.name == name }) else {
-      throw EditError("已有同名规则包。")
+      throw EditError(code: "model_copy.43583f1ea7")
     }
-    guard [.local, .subscription].contains(draft.kind) else { throw EditError("固定包不可通过此入口创建。") }
+    guard [.local, .subscription].contains(draft.kind) else {
+      throw EditError(code: "model_copy.9230f380a5")
+    }
     if draft.kind == .subscription {
       guard let url = URL(string: draft.source), url.scheme?.lowercased() == "https",
         url.host != nil,
         url.user == nil, url.password == nil, !draft.source.contains(where: \.isWhitespace)
-      else { throw EditError("请输入不含凭据的 HTTPS 规则集地址。") }
-      if session.scenario == .failed { throw EditError("首次下载或校验失败，包未启用；现有规则保留。") }
+      else { throw EditError(code: "model_copy.1ee5067a27") }
+      if session.scenario == .failed { throw EditError(code: "model_copy.ea38c7d652") }
     }
     let id = draft.id ?? UUID().uuidString
     if let index = packages.firstIndex(where: { $0.id == id }) {
-      guard !packages[index].updating else { throw EditError("正在更新，请完成后再修改来源。") }
-      guard packages[index].kind == draft.kind else { throw EditError("不能改变已有包的维护来源类型。") }
+      guard !packages[index].updating else { throw EditError(code: "model_copy.af249dd553") }
+      guard packages[index].kind == draft.kind else {
+        throw EditError(code: "model_copy.c86350ad19")
+      }
       packages[index].name = name
       packages[index].destination = draft.destination
       packages[index].source = draft.source
@@ -491,7 +496,7 @@ extension RoutingWorkbenchStore {
         id: id, name: name, kind: .local, destination: draft.destination, rules: [])
       packages.insert(
         value,
-        at: packages.firstIndex(where: { [.adblock, .geo].contains($0.kind) }) ?? packages.endIndex)
+        at: packages.firstIndex(where: { $0.kind.isBuiltIn }) ?? packages.endIndex)
       if let index = packages.firstIndex(where: { $0.id == id }) {
         packages[index] = RulePackage(
           id: id, name: name, kind: draft.kind, destination: draft.destination,
@@ -517,7 +522,7 @@ extension RoutingWorkbenchStore {
   }
   @discardableResult private func saveRule(_ draft: RuleDraft) throws -> String {
     guard canEdit, let index = packages.firstIndex(where: { $0.id == draft.packageID }) else {
-      throw EditError("规则包不可编辑。")
+      throw EditError(code: "model_copy.ef31832f03")
     }
     let (candidate, id, message) = try ruleProjection(draft, in: packages[index])
     packages[index] = candidate
@@ -530,10 +535,10 @@ extension RoutingWorkbenchStore {
   ) {
     var result = package
     guard [.priority, .local].contains(result.kind) else {
-      throw EditError("来源内容只读，请在本地包维护覆盖。")
+      throw EditError(code: "model_copy.975d33587a")
     }
     if result.kind == .priority && draft.destination == .global {
-      throw EditError("优先规则请选择跟随默认、直连、指定线路或阻断。")
+      throw EditError(code: "model_copy.71cae91f40")
     }
     let imported = draft.method == .application && draft.importDomains
     let targets: [String]
@@ -542,7 +547,7 @@ extension RoutingWorkbenchStore {
       let observed = Set(observedDomains(draft.target))
       targets = Array(Set(draft.selectedDomains)).sorted()
       guard !targets.isEmpty, targets.allSatisfy(observed.contains) else {
-        throw EditError("请选择已观测到的域名。")
+        throw EditError(code: "model_copy.a7ad76b1b5")
       }
       method = draft.domainMethod == .domainSuffix ? .domainSuffix : .domain
     } else {
@@ -556,14 +561,14 @@ extension RoutingWorkbenchStore {
     if let duplicate, !imported {
       if result.kind == .priority {
         guard let existing = result.rules.firstIndex(where: { $0.id == duplicate.id })
-        else { throw EditError("规则已失效。") }
+        else { throw EditError(code: "model_copy.b3ff9b28d0") }
         result.rules[existing].destination = draft.destination
         return (result, duplicate.id, "相同条件已更新原规则，没有重复新增。")
       }
-      throw EditError("同包已有相同条目，请编辑原规则。")
+      throw EditError(code: "model_copy.1a7c4ad900")
     }
     if let id = draft.id, !result.rules.contains(where: { $0.id == id }) {
-      throw EditError("原规则已不存在。")
+      throw EditError(code: "model_copy.2713ede057")
     }
     let additions = normalized.filter { target in
       !imported
@@ -594,10 +599,12 @@ extension RoutingWorkbenchStore {
     let text = target.trimmingCharacters(in: .whitespacesAndNewlines)
     switch method {
     case .application:
-      guard applications.contains(where: { $0.id == text }) else { throw EditError("请选择可确认身份的应用。") }
+      guard applications.contains(where: { $0.id == text }) else {
+        throw EditError(code: "model_copy.eb623e8670")
+      }
       return text
     case .process:
-      guard !target.isEmpty else { throw EditError("请选择记录到可执行路径的进程。") }
+      guard !target.isEmpty else { throw EditError(code: "model_copy.19ad4b1852") }
       return target
     case .domain, .domainSuffix:
       let value =
@@ -609,17 +616,17 @@ extension RoutingWorkbenchStore {
               (97...122).contains($0) || (48...57).contains($0) || $0 == 45
             }
         })
-      else { throw EditError("请输入有效域名，不含协议或路径。") }
+      else { throw EditError(code: "model_copy.119055ce2b") }
       return value
     case .ip:
-      guard let bytes = Self.address(text) else { throw EditError("请输入有效 IPv4 或 IPv6。") }
+      guard let bytes = Self.address(text) else { throw EditError(code: "model_copy.4943731060") }
       return Self.addressText(bytes)
-    case .builtin, .source: throw EditError("来源内容只读。")
+    case .builtin, .source: throw EditError(code: "model_copy.82f2577305")
     case .cidr:
       let parts = text.split(separator: "/", omittingEmptySubsequences: false)
       guard parts.count == 2, let bytes = Self.address(String(parts[0])), let bits = Int(parts[1]),
         bits >= 0, bits <= bytes.count * 8
-      else { throw EditError("请输入有效 IP 网段和前缀。") }
+      else { throw EditError(code: "model_copy.1e24446237") }
       let normalized = bytes.enumerated().map { index, value -> UInt8 in
         let remaining = min(8, max(0, bits - index * 8))
         let mask: UInt8 = remaining == 0 ? 0 : UInt8(0xff << (8 - remaining) & 0xff)
@@ -768,7 +775,7 @@ extension RoutingWorkbenchStore {
     }
     if telemetry != nil {
       return scope + unavailable
-        + "条目去向：\(destinationName(destination))\n按优先规则、自定义包、广告拦截、Geo 的顺序匹配；仅影响新连接。当前界面不估算历史连接受影响数量。"
+        + "条目去向：\(destinationName(destination))\n按优先规则、自定义包、内置包的顺序匹配；仅影响新连接。当前界面不估算历史连接受影响数量。"
     }
     return scope + unavailable
       + "条目去向：\(destinationName(destination))\n已观测 \(targets.count) 条连接，原范围退出 \(exited) 条；保存后匹配：\(sources.joined(separator: "、"))\n未观测影响未知；当前连接与历史保留。"
@@ -812,7 +819,7 @@ extension RoutingWorkbenchStore {
   }
   private func updatePackage(_ id: String, succeeds: Bool) async {
     guard canEdit, let index = packages.firstIndex(where: { $0.id == id }),
-      [.geo, .subscription, .adblock].contains(packages[index].kind), !packages[index].updating
+      packages[index].kind.canUpdate, !packages[index].updating
     else { return }
     packages[index].updating = true
     packages[index].updateMessage = "正在检查与校验新版本…"

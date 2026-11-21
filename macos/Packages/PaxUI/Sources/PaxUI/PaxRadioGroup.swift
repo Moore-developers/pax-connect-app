@@ -26,6 +26,15 @@ public final class PaxRadioGroup: NSStackView {
     setAccessibilityLabel(titles.joined(separator: " / "))
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func apply(titles: [String]) {
+    guard titles.count == options.count else { return }
+    for (option, title) in zip(options, titles) {
+      option.title = title
+      option.setAccessibilityLabel(title)
+      option.invalidateIntrinsicContentSize()
+    }
+    setAccessibilityLabel(titles.joined(separator: " / "))
+  }
 
   private func showSelection() {
     for (index, option) in options.enumerated() {

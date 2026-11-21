@@ -64,7 +64,8 @@ import PaxUI
     setAccessibilityIdentifier("getting-started")
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  func apply(_ model: Model?) {
+  func apply(_ model: Model?, skipTitle: String = "稍后再说") {
+    skip.title = skipTitle
     isHidden = model == nil
     guard let model, rendered != model else { return }
     rendered = model

@@ -1,11 +1,11 @@
 """Run package tests, including Xcode beta's reported test failures in the gate.
 
-Usage: test-swift.py [--timeout 10m] [--filter REGEX] PACKAGE_PATH...
+Usage: test-swift.py [--timeout 10m] [--filter REGEX] [--skip REGEX] PACKAGE_PATH...
 
 Each package builds its tests once, then runs the retained package test suite.
 --timeout bounds every single `swift test` process (not the build). On timeout the
 process group is killed, the tests that started but did not finish are printed, and the
-exit code is non-zero. --filter runs only matching tests.
+exit code is non-zero. --filter selects matching tests and --skip excludes matching tests.
 """
 import os
 import re
@@ -32,6 +32,7 @@ def parse_timeout(text):
 args = sys.argv[1:]
 timeout = 600
 user_filter = None
+skip_filter = None
 packages = []
 while args:
     arg = args.pop(0)
@@ -39,10 +40,12 @@ while args:
         timeout = parse_timeout(args.pop(0))
     elif arg == '--filter':
         user_filter = args.pop(0)
+    elif arg == '--skip':
+        skip_filter = args.pop(0)
     else:
         packages.append(arg)
 if not packages:
-    raise SystemExit('usage: test-swift.py [--timeout 10m] [--filter REGEX] PACKAGE...')
+    raise SystemExit('usage: test-swift.py [--timeout 10m] [--filter REGEX] [--skip REGEX] PACKAGE...')
 
 runs = [(package, user_filter) for package in packages]
 
@@ -64,6 +67,8 @@ for package, test_filter in runs:
     command = ['swift', 'test', '--skip-build', '--package-path', package]
     if test_filter:
         command.extend(['--filter', test_filter])
+    if skip_filter:
+        command.extend(['--skip', skip_filter])
     # Own process group so a timeout kills swift-test and its test host together.
     process = subprocess.Popen(command, start_new_session=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

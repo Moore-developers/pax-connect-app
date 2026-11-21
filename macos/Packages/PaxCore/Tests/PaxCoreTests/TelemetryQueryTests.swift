@@ -6,9 +6,9 @@ import Testing
 private actor TrafficRequests {
   var count = 0
   var cancelled = 0
-  func load(_ q: TrafficFilter) async throws -> TrafficPage {
+  func load(_ q: TrafficFilter, delay: Duration = .milliseconds(80)) async throws -> TrafficPage {
     count += 1
-    do { try await Task.sleep(for: .milliseconds(80)) } catch {
+    do { try await Task.sleep(for: delay) } catch {
       cancelled += 1
       throw error
     }
@@ -106,24 +106,18 @@ struct TelemetryQueryTests {
     #expect(cached.upload == 12)
     #expect(await requests.count == 1)
   }
-  @Test("隐藏或失焦页面不具备刷新资格")
-  func visibility() {
-    let store = TelemetryStore()
-    store.setPresentation(page: .logs, windowVisible: true, appActive: true)
-    #expect(store.isVisible(.logs))
-    #expect(!store.isVisible(.dashboard))
-    store.setAppActive(false)
-    #expect(!store.isVisible(.logs))
-  }
   @Test("最后一个消费者离开会取消底层RPC")
   func lastConsumerCancels() async throws {
     let requests = TrafficRequests()
-    let store = TelemetryStore(traffic: { try await requests.load($0) })
+    let store = TelemetryStore(traffic: { try await requests.load($0, delay: .seconds(30)) })
     store.setConnection(connected: true, capabilities: ["history.traffic.v1"])
     let task = Task { try await store.traffic(TrafficFilter()) }
     while await requests.count == 0 { await Task.yield() }
     task.cancel()
     _ = try? await task.value
+    for _ in 0..<100 where await requests.cancelled == 0 {
+      try await Task.sleep(for: .milliseconds(5))
+    }
     #expect(await requests.cancelled == 1)
     #expect(store.queryCounts().cancellations == 1)
   }
@@ -177,16 +171,27 @@ struct TelemetryQueryTests {
 
   @Test("后台会话变化仍拒收旧详情响应")
   func frozenDetailRejectsPreviousSession() async throws {
-    let requests = TrafficRequests()
+    let (starts, signalStart) = AsyncStream.makeStream(of: Void.self)
+    let (results, deliverResult) = AsyncStream.makeStream(of: Void.self)
+    defer {
+      signalStart.finish()
+      deliverResult.finish()
+    }
     let store = TelemetryStore(trafficDetail: { _ in
-      _ = try await requests.load(TrafficFilter())
+      signalStart.yield()
+      await Task.detached {
+        var pending = results.makeAsyncIterator()
+        await pending.next()
+      }.value
       return TrafficDetail()
     })
     store.setConnection(connected: true, capabilities: ["history.traffic.v1"])
     let task = Task { try await store.trafficDetail(TrafficDetailQuery()) }
-    while await requests.count == 0 { await Task.yield() }
+    var starting = starts.makeAsyncIterator()
+    await starting.next()
     store.setConnection(connected: false, capabilities: ["history.traffic.v1"])
     store.setConnection(connected: true, capabilities: ["history.traffic.v1"])
+    deliverResult.yield()
     do {
       _ = try await task.value
       Issue.record("previous session detail escaped")

@@ -109,7 +109,7 @@ func (t *LogsTx) pruneColumnChunk(ctx context.Context, kind string, cutoff int64
 			if t.batch != nil {
 				t.batch.RemovedEvents = append(t.batch.RemovedEvents, e)
 			}
-			for _, table := range []string{"col_events", "col_event_index", "col_raw", "col_sections", "col_fields"} {
+			for _, table := range []string{"col_events", "col_event_index", "col_raw", "col_texts", "col_sections", "col_fields"} {
 				if _, err = t.tx.ExecContext(ctx, "DELETE FROM "+table+" WHERE event_id=?", key); err != nil {
 					return 0, err
 				}
@@ -176,75 +176,4 @@ func (t *ColumnsTx) pruneColumnOrphans(ctx context.Context, limit int) error {
 		}
 	}
 	return nil
-}
-
-// CapacityBytes excludes frozen v3 facts retained as upgrade-failure evidence.
-// Auxiliary tables and every active column fact/projection/index still count.
-func (l *Logs) CapacityBytes(ctx context.Context) (int64, error) {
-	live, err := l.LiveBytes(ctx)
-	if err != nil {
-		return 0, err
-	}
-	state, err := l.UpgradeState(ctx)
-	if err != nil || state != "failed" {
-		return live, err
-	}
-	var frozen int64
-	err = l.r.QueryRowContext(ctx, `SELECT coalesce(sum(pgsize),0) FROM dbstat WHERE name IN
- (SELECT name FROM sqlite_master WHERE tbl_name IN ('events','connections'))`).Scan(&frozen)
-	return live - frozen, err
-}
-
-// EvictOldest enforces HS-R1 on active data, preserving frozen upgrade evidence.
-func (l *Logs) EvictOldest(ctx context.Context, capBytes int64, limits Limits) (bool, error) {
-	if err := limits.validate(); err != nil {
-		return false, err
-	}
-	state, err := l.UpgradeState(ctx)
-	if err != nil {
-		return false, err
-	}
-	if state == "building" {
-		return false, nil
-	}
-	removed := false
-	for {
-		size, err := l.CapacityBytes(ctx)
-		if err != nil {
-			return removed, err
-		}
-		if size <= capBytes {
-			break
-		}
-		var edge sql.NullInt64
-		err = l.r.QueryRowContext(ctx, "SELECT at_ns FROM col_events ORDER BY at_ns LIMIT 1 OFFSET ?", limits.Rows-1).Scan(&edge)
-		if err == sql.ErrNoRows {
-			err = l.r.QueryRowContext(ctx, "SELECT max(at_ns) FROM col_events").Scan(&edge)
-		}
-		if err != nil {
-			return removed, err
-		}
-		if !edge.Valid {
-			err = l.r.QueryRowContext(ctx, "SELECT min(last_activity_ms)*1000000 FROM col_connections").Scan(&edge)
-			if err != nil {
-				return removed, err
-			}
-		}
-		if !edge.Valid {
-			break
-		}
-		cutoff := time.UnixMilli(edge.Int64/int64(time.Millisecond) + 1)
-		p, err := l.Prune(ctx, cutoff, limits)
-		if err != nil {
-			return removed, err
-		}
-		if p.Deleted == 0 {
-			break
-		}
-		removed = true
-	}
-	if removed {
-		err = l.Update(ctx, func(tx *LogsTx) error { return tx.SetMeta(ctx, MetaCapacityEvicted, "1") })
-	}
-	return removed, err
 }

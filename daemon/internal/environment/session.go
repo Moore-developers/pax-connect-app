@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"io"
 	"net"
 	"net/http"
@@ -16,7 +17,9 @@ import (
 )
 
 //go:embed browser.html
-var browserPage string
+var browserHTML string
+
+var browserPage = template.Must(template.New("browser").Parse(browserHTML))
 
 //go:embed browser.js
 var browserScript string
@@ -45,10 +48,18 @@ type Session struct {
 	browserSubmitted  bool
 	origin, path      string
 	provider          EvidenceProvider
+	presentation      *Presentation
 }
 
 // Start serves a single-use browser page exclusively on IPv4 loopback.
 func Start(parent context.Context, lookup *measurement.ExitLookup, provider EvidenceProvider) (*Session, error) {
+	return StartWithPresentation(parent, lookup, provider, nil)
+}
+
+func StartWithPresentation(parent context.Context, lookup *measurement.ExitLookup, provider EvidenceProvider, presentation *Presentation) (*Session, error) {
+	if err := ValidatePresentation(presentation); err != nil {
+		return nil, err
+	}
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
@@ -56,7 +67,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup, provider Evid
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	transport := &http.Transport{Proxy: nil, TLSHandshakeTimeout: 5 * time.Second, ResponseHeaderTimeout: 7 * time.Second}
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	s := &Session{cancel: cancel, done: make(chan struct{}), client: client, lookup: lookup, provider: provider, origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
+	s := &Session{cancel: cancel, done: make(chan struct{}), client: client, lookup: lookup, provider: provider, presentation: copyPresentation(presentation), origin: "http://" + listener.Addr().String(), path: "/" + randomToken() + "/"}
 	s.state = Snapshot{ID: randomToken(), BrowserURL: s.origin + s.path, At: time.Now()}
 	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.serve(ctx, w, r) }), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 3 * time.Second, MaxHeaderBytes: 8192}
 	go func() { _ = server.Serve(listener) }()
@@ -87,6 +98,7 @@ func Start(parent context.Context, lookup *measurement.ExitLookup, provider Evid
 			}
 		}
 		s.state.Complete = true
+		s.presentation = nil
 		close(s.done)
 	}()
 	go func() {
@@ -142,14 +154,36 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+s.state.ID+"'; style-src 'unsafe-inline'; connect-src 'self' https://ipv4.icanhazip.com https://ipv6.icanhazip.com https://*.bash.ws https://www.cloudflare.com https://ipinfo.io https://myip.ipip.net; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 	endpoint := strings.TrimPrefix(r.URL.Path, s.path)
+	if endpoint == "presentation" && r.Method == http.MethodGet {
+		s.mu.Lock()
+		value := s.presentation
+		s.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(value)
+		return
+	}
+
 	if endpoint == "browser.js" && r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		_, _ = io.WriteString(w, browserScript)
+		_, _ = io.WriteString(w, "const paxBrowserCatalog = ")
+		_ = json.NewEncoder(w).Encode(browserCatalog())
+		_, _ = io.WriteString(w, ";\n"+browserScript)
 		return
 	}
 	if endpoint == "" && r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = io.WriteString(w, strings.ReplaceAll(browserPage, "__NONCE__", s.state.ID))
+		s.mu.Lock()
+		value := s.presentation
+		s.mu.Unlock()
+		pinned := value != nil
+		if !pinned {
+			value = &Presentation{Locale: "en", Messages: browserCatalog()["en"]}
+		}
+		_ = browserPage.Execute(w, struct {
+			*Presentation
+			Pinned bool
+			Nonce  string
+		}{value, pinned, s.state.ID})
 		return
 	}
 	if r.Header.Get("Origin") != s.origin {

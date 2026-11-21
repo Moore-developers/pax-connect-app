@@ -129,6 +129,48 @@ func TestLogViewsKeepBlockingWarningsAndOperationsDistinct(t *testing.T) {
 	}
 }
 
+func TestUnavailableRouteRejectionShowsNamedReasonInLogs(t *testing.T) {
+	ctx := context.Background()
+	c, _ := newLogsTestController(t, newLogsTestDir(t))
+	at := time.Now()
+	flow := config.FlowFact{Domain: "claude.ai", Port: 443, Direction: "blocked", Failure: "rule_rejected", Purpose: "access", StartedAt: at}
+	for i, rule := range []string{"domain_suffix=claude.ai", `{"Package":"Claude","Method":"domain_suffix","Target":"claude.ai","UnavailableRoute":"A"}`} {
+		f := flow
+		f.Key, f.Rule, f.RuleSource = fmt.Sprintf("fixed-reject-%d", i), rule, "Pax 包：Claude"
+		e := config.HistoryEvent{ID: f.Key, At: at, Kind: "rejected", Level: "error", Source: "sing-box", Flow: &f, Result: f.Failure}
+		if err := c.RecordEvent(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const message = "指定线路 A 不可用"
+	problems, err := c.QueryLogs(ctx, &pb.LogQuery{View: "problems"})
+	if err != nil || len(problems.GetItems()) != 2 {
+		t.Fatalf("ordinary and unavailable-route blocks were grouped together: %v %v", problems, err)
+	}
+	for _, item := range problems.Items {
+		if item.ConnectionKey == "fixed-reject-1" && item.Message != message {
+			t.Fatal(item)
+		}
+	}
+	q := &pb.LogQuery{View: "activity", Quick: "blocked"}
+	page, err := c.QueryLogs(ctx, q)
+	if err != nil || len(page.GetRecords()) != 2 {
+		t.Fatal(page, err)
+	}
+	for _, record := range page.Records {
+		if record.GetFlow().GetKey() != "fixed-reject-1" {
+			continue
+		}
+		q.ReadToken = page.ReadToken
+		detail, err := c.GetLogDetail(ctx, &pb.LogDetailRequest{Query: q, RecordId: record.RecordId})
+		if err != nil || record.Title != message || detail.GetRecord().GetTitle() != message || detail.GetFlow().GetRouteId() != "" {
+			t.Fatal(record, detail, err)
+		}
+		return
+	}
+	t.Fatal("missing fixed-route rejection in activity")
+}
+
 func TestUnifiedActivityIncludesConnectionFailuresAndPaxOperations(t *testing.T) {
 	ctx := context.Background()
 	c, _ := newLogsTestController(t, newLogsTestDir(t))

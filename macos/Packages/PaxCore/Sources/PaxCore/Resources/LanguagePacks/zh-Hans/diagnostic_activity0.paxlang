@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "diagnostic_activity.38c1a91549": "线路检测",
+    "diagnostic_activity.541e655330": "尚未开始",
+    "diagnostic_activity.57517eb59f": "已结束探测 {arg0}/{arg1}",
+    "diagnostic_activity.7016090059": "出口",
+    "diagnostic_activity.df08456568": "IP 资料",
+    "diagnostic_activity.e8c43fc5e1": "正在准备线路与探测任务",
+    "diagnostic_activity.02126cbf79": "已结束 {arg0} 项探测",
+    "diagnostic_activity.ed079e5a98": " · 部分项目未完成",
+    "diagnostic_activity.a639236da2": "已停止，保留已有结果",
+    "diagnostic_activity.65f9322365": "查询中",
+    "diagnostic_activity.4be334f6b7": "已返回",
+    "diagnostic_activity.bf4cedf76a": "查询失败",
+    "diagnostic_activity.231fe22042": "未执行",
+    "diagnostic_activity.251bc40e70": "等待",
+    "diagnostic_activity.bcd6771e08": "查询",
+    "diagnostic_activity.3a6c1f7cd5": "浏览器检测",
+    "diagnostic_activity.1482453530": "Mac 检测",
+    "diagnostic_activity.0f9c97f0f0": "已结束，部分项目未完成",
+    "diagnostic_activity.b1e78c6c65": "已结束，结果已返回",
+    "diagnostic_activity.94b236857e": "采样已返回，正在查询 IP 资料",
+    "diagnostic_activity.d2c1cac7f4": "等待浏览器采样回传",
+    "diagnostic_activity.df30b8fed4": "正在采样公网 IP 与 DNS",
+    "diagnostic_activity.af9e03e4b4": "未完成 · "
+  }
+}

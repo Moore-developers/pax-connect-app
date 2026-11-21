@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "status.more": "View {count} issues",
+    "status.dismiss": "Dismiss notice",
+    "status.dismiss_help": "Dismisses this notice without changing the connection"
+  }
+}

@@ -105,25 +105,34 @@ extension AIUsageViewController {
     let columns: [PaxDataTable.Column] = [
       .init("Profile", width: 160, growth: 3, symbol: "person.crop.circle", sortable: false),
       .init(
-        "应用到", width: applyWidth + PaxTheme.Spacing.xs * 2, growth: 0,
+        self.interfaceCopy.text("interface_detail.aa330a7323"),
+        width: applyWidth + PaxTheme.Spacing.xs * 2, growth: 0,
         symbol: "terminal", inset: PaxTheme.Spacing.xs, sortable: false),
-      .init("模型", width: 120, growth: 2, symbol: "sparkles", sortable: false),
       .init(
-        store.period.rawValue + "费用", width: 124, growth: 1, alignment: .left,
+        self.interfaceCopy.text("session.kind.models"), width: 120, growth: 2, symbol: "sparkles",
+        sortable: false),
+      .init(
+        "", width: 124, growth: 1,
+        alignment: .left,
         symbol: "creditcard", sortable: false),
-      .init("Token", width: 80, numeric: true, growth: 1, alignment: .center, sortable: false),
-      .init("请求", width: 68, numeric: true, growth: 1, alignment: .center, sortable: false),
-      .init("缓存率", width: 80, numeric: true, growth: 1, alignment: .center, sortable: false),
+      .init(
+        self.interfaceCopy.text("ai_usage.column.tokens"), width: 80, numeric: true, growth: 1,
+        alignment: .center, sortable: false),
+      .init(
+        self.interfaceCopy.text("interface_detail.393e124155"), width: 68, numeric: true, growth: 1,
+        alignment: .center, sortable: false),
+      .init(
+        self.interfaceCopy.text("ai_usage.cache_rate"), width: 80, numeric: true, growth: 1,
+        alignment: .center, sortable: false),
       .init(
         "", width: moreWidth + PaxTheme.Spacing.xs * 2, growth: 0,
         alignment: .center, inset: PaxTheme.Spacing.xs, sortable: false),
     ]
+    let metrics = PaxDataTable.Metrics(rowHeight: profileRowHeight)
     let table = PaxDataTable(
-      columns: columns, metrics: .init(rowHeight: profileRowHeight), selection: .browse)
-    // The two full CLI buttons establish the actual minimum, as in the prior record list.
-    table.widthAnchor.constraint(
-      greaterThanOrEqualToConstant: columns.reduce(0) { $0 + $1.width }
-    ).isActive = true
+      columns: columns, metrics: metrics, selection: .browse, scrollMode: .fixedHeader)
+    let height = table.heightAnchor.constraint(equalToConstant: metrics.headerHeight)
+    height.isActive = true
     var rows: [String: AIProfileTableRecord] = [:]
     table.cellProvider = { id, column in rows[id]?.cells[column] }
     let open: (String) -> Void = { [weak self] id in
@@ -142,7 +151,16 @@ extension AIUsageViewController {
     }
     let update: () -> Void = { [weak self, weak table] in
       guard let self, let table else { return }
-      let records = self.store.profileRecords
+      let context = self.interfaceCopy.context
+      table.setColumnTitle(context.text("interface_detail.aa330a7323"), at: 1)
+      table.setColumnTitle(context.text("session.kind.models"), at: 2)
+      table.setColumnTitle(
+        context.text("ai_usage.period_cost", ["period": self.store.period.label(context: context)]),
+        at: 3)
+      table.setColumnTitle(context.text("ai_usage.column.tokens"), at: 4)
+      table.setColumnTitle(context.text("interface_detail.393e124155"), at: 5)
+      table.setColumnTitle(context.text("ai_usage.cache_rate"), at: 6)
+      let records = self.store.profileRecords(context: self.interfaceCopy.context)
       let keep = Set(records.map(\.id))
       rows = rows.filter { keep.contains($0.key) }
       for record in records {
@@ -155,9 +173,10 @@ extension AIUsageViewController {
           rows[record.id] = self.recordRow(record, profile)
         }
       }
+      height.constant = metrics.headerHeight + CGFloat(max(1, records.count)) * metrics.rowHeight
       table.apply(
         rows: records.map { .init(id: $0.id, values: [$0.name]) },
-        emptyMessage: "暂无 Profile", reloading: [])
+        emptyMessage: self.interfaceCopy.text("interface_detail.6731ba9f57"), reloading: [])
     }
     contentRefreshers.append(update)
     update()
@@ -169,9 +188,12 @@ extension AIUsageViewController {
     let status = PaxBadge(title: r.statusText, tone: r.statusTone)
     let source = PaxText.tableLabel(r.source, secondary: true)
     source.lineBreakMode = .byTruncatingMiddle
-    source.toolTip = r.isNative ? "保留账号及原生设置，仅供对应 CLI 使用" : p.endpoint
+    source.toolTip =
+      r.isNative ? self.interfaceCopy.text("interface_detail.8e171fc12d") : p.endpoint
     var first: [NSView] = [status]
-    let missing = PaxText.tableLabel("未配置凭据", secondary: true)
+    let missing = interfaceCopy.bind(
+      PaxText.tableLabel("", secondary: true), key: "interface_detail.bbcaaa9e88"
+    ) { $0.stringValue = $1 }
     missing.textColor = PaxTheme.Color.warning
     missing.isHidden = !r.missingKey
     first.append(missing)
@@ -208,8 +230,10 @@ extension AIUsageViewController {
       }
       self.showProfileMenu(current)
     }
-    more.toolTip = "更多操作"
-    more.setAccessibilityLabel("Profile 更多操作")
+    interfaceCopy.bind(more) { button, context in
+      button.toolTip = context.text("interface_detail.9f07d2ce41")
+      button.setAccessibilityLabel(context.text("action.usage.profile_more"))
+    }
     more.widthAnchor.constraint(equalToConstant: moreWidth).isActive = true
     more.setContentHuggingPriority(.required, for: .horizontal)
     more.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -222,7 +246,8 @@ extension AIUsageViewController {
       displayed = next
       status.apply(title: next.statusText, tone: next.statusTone)
       source.stringValue = next.source
-      source.toolTip = next.isNative ? "保留账号及原生设置，仅供对应 CLI 使用" : profile.endpoint
+      source.toolTip =
+        next.isNative ? self.interfaceCopy.text("interface_detail.8e171fc12d") : profile.endpoint
       name.stringValue = next.name
       name.toolTip = next.name
       missing.isHidden = !next.missingKey
@@ -237,7 +262,7 @@ extension AIUsageViewController {
       if let cost = metrics.first {
         AIUsageCostDisplay.apply(
           cost, official: next.costText, channel: next.channelCostText, stacked: true,
-          lineSpacing: PaxTheme.Spacing.xs)
+          lineSpacing: PaxTheme.Spacing.xs, context: self.interfaceCopy.context)
       }
       for (label, value) in zip(
         metrics.dropFirst(), [next.tokensText, next.requestsText, next.cacheText])
@@ -260,7 +285,7 @@ extension AIUsageViewController {
       if cell.0 == "cost" {
         AIUsageCostDisplay.apply(
           value, official: r.costText, channel: r.channelCostText, stacked: true,
-          lineSpacing: PaxTheme.Spacing.xs)
+          lineSpacing: PaxTheme.Spacing.xs, context: self.interfaceCopy.context)
       } else if cell.0 != "token" {
         value.textColor = aiMetricColor(cell.2)
       }
@@ -290,10 +315,11 @@ extension AIUsageViewController {
       button.trailingGlyph = applied ? "✓" : owns ? "!" : "+"
       let label =
         owns
-        ? AIProfilesStore.stateLabel(binding)
+        ? AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context)
         : (["ready", "applied", "pending", "changed"].contains(binding?.state ?? "")
-          ? "可切换" : AIProfilesStore.stateLabel(binding))
-      let text = supported ? label : "仅供对应 CLI 使用"
+          ? self.interfaceCopy.text("interface_detail.ac9747ed16")
+          : AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context))
+      let text = supported ? label : self.interfaceCopy.text("interface_detail.7330fedf83")
       button.setAccessibilityLabel(client.rawValue + "，" + text)
       button.toolTip = client.rawValue + " · " + text
       button.image = AIClientMark.image(client)
@@ -315,10 +341,11 @@ extension AIUsageViewController {
         button.trailingGlyph = applied ? "✓" : owns ? "!" : "+"
         let label =
           owns
-          ? AIProfilesStore.stateLabel(binding)
+          ? AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context)
           : (["ready", "applied", "pending", "changed"].contains(binding?.state ?? "")
-            ? "可切换" : AIProfilesStore.stateLabel(binding))
-        let text = supported ? label : "仅供对应 CLI 使用"
+            ? self.interfaceCopy.text("interface_detail.ac9747ed16")
+            : AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context))
+        let text = supported ? label : self.interfaceCopy.text("interface_detail.7330fedf83")
         button.setAccessibilityLabel(client.rawValue + "，" + text)
         button.toolTip = client.rawValue + " · " + text
         button.compactStyle = applied ? .selected : .bordered

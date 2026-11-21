@@ -87,6 +87,9 @@ func (t *ColumnsTx) PutEvent(ctx context.Context, e config.HistoryEvent) (bool, 
 			}
 		}
 	}
+	if err := t.putEventTexts(ctx, e); err != nil {
+		return false, err
+	}
 	t.rememberEvent(e.ID, true)
 	return true, nil
 }

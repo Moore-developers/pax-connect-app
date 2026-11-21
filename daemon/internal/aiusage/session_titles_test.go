@@ -193,6 +193,61 @@ func TestSessionTitlesRecoverDesktopAndSubagentMetadata(t *testing.T) {
 	}
 }
 
+func TestSessionTitlesDatabaseAcceptsLargeFile(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "state_5.sqlite")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`CREATE TABLE threads(id TEXT PRIMARY KEY, title TEXT); INSERT INTO threads VALUES ('desktop', 'Large database title')`); err != nil {
+		_ = db.Close()
+		t.Fatal(err)
+	}
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// Sparse trailing space makes a valid source exceed the former file-size cap
+	// without allocating hundreds of MiB of fixture data.
+	if err = os.Truncate(path, 513<<20); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, code := codexDatabaseSessions(context.Background(), root, nil)
+	if code != "" || len(entries) != 1 || entries[0].Title != "Large database title" {
+		t.Fatalf("large native database rejected: entries=%v code=%q", entries, code)
+	}
+	after, err := os.Stat(path)
+	if err != nil || after.Size() != before.Size() || !after.ModTime().Equal(before.ModTime()) {
+		t.Fatalf("native database changed: before=%v after=%v error=%v", before, after, err)
+	}
+	expired, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	if entries, code = codexDatabaseSessions(expired, root, nil); len(entries) != 0 || code != "native_database_unavailable" {
+		t.Fatalf("expired query accepted: entries=%v code=%q", entries, code)
+	}
+}
+
+func TestSessionTitlesDatabaseKeepsRowLimit(t *testing.T) {
+	root := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(root, "state_5.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if _, err = db.Exec(`CREATE TABLE threads(id TEXT PRIMARY KEY, title TEXT);
+ WITH RECURSIVE ids(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM ids WHERE n<10001)
+ INSERT INTO threads SELECT CAST(n AS TEXT), 'Thread title' FROM ids`); err != nil {
+		t.Fatal(err)
+	}
+	if entries, code := codexDatabaseSessions(context.Background(), root, nil); len(entries) != 0 || code != "capacity" {
+		t.Fatalf("row limit changed: entries=%d code=%q", len(entries), code)
+	}
+}
+
 func TestSessionTitlesDatabaseFailureKeepsIndex(t *testing.T) {
 	for _, kind := range []string{"missing", "corrupt", "unsupported-schema", "symlink"} {
 		t.Run(kind, func(t *testing.T) {

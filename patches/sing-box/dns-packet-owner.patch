@@ -1,0 +1,302 @@
+--- a/common/process/searcher_darwin_shared.go
++++ b/common/process/searcher_darwin_shared.go
+@@ -117,6 +117,54 @@
+ 		return lastOwner, nil
+ 	}
+ 	return nil, ErrNotFound
++}
++
++// FindDNSPacketOwner identifies a single possible sender of this UDP packet.
++// Even a matching connected socket may share the wire tuple with an
++// unconnected socket using SO_REUSEPORT.
++func (*darwinSearcher) FindDNSPacketOwner(source, destination netip.AddrPort) (*adapter.ConnectionOwner, error) {
++	source = normalizeDarwinAddrPort(source)
++	destination = normalizeDarwinAddrPort(destination)
++	snapshot, err := buildDarwinSnapshotForFamily(N.NetworkUDP, source.Addr().Is6())
++	if err != nil {
++		return nil, err
++	}
++	entry, err := matchDarwinDNSPacketOwner(snapshot.entries, source, destination)
++	if err != nil {
++		return nil, err
++	}
++	path, err := getExecPathFromPID(entry.pid)
++	if err != nil {
++		return nil, err
++	}
++	return &adapter.ConnectionOwner{UserId: entry.uid, ProcessPath: path}, nil
++}
++
++func matchDarwinDNSPacketOwner(entries []darwinConnectionEntry, source, destination netip.AddrPort) (darwinConnectionEntry, error) {
++	sourceAddr := source.Addr()
++	if !source.IsValid() || !destination.IsValid() || source.Port() == 0 || destination.Port() == 0 {
++		return darwinConnectionEntry{}, ErrNotFound
++	}
++	var owner darwinConnectionEntry
++	for _, entry := range entries {
++		if entry.localPort != source.Port() || sourceAddr.BitLen() != entry.localAddr.BitLen() ||
++			(entry.localAddr != sourceAddr && !entry.localAddr.IsUnspecified()) {
++			continue
++		}
++		connectedToDestination := entry.remotePort == destination.Port() && entry.remoteAddr == destination.Addr()
++		unconnected := entry.remotePort == 0 && entry.remoteAddr.IsUnspecified()
++		if !connectedToDestination && !unconnected {
++			continue
++		}
++		if entry.pid == 0 || (owner.pid != 0 && (entry.pid != owner.pid || entry.uid != owner.uid)) {
++			return darwinConnectionEntry{}, ErrNotFound
++		}
++		owner = entry
++	}
++	if owner.pid == 0 {
++		return darwinConnectionEntry{}, ErrNotFound
++	}
++	return owner, nil
+ }
+
+ func (f *darwinConnectionFinder) resetCache() {
+@@ -142,6 +190,10 @@
+ }
+
+ func buildDarwinSnapshot(network string) (darwinSnapshot, error) {
++	return buildDarwinSnapshotForFamily(network, false)
++}
++
++func buildDarwinSnapshotForFamily(network string, preferIPv6 bool) (darwinSnapshot, error) {
+ 	spath, itemSize, err := darwinSnapshotSettings(network)
+ 	if err != nil {
+ 		return darwinSnapshot{}, err
+@@ -152,7 +204,7 @@
+ 	}
+ 	return darwinSnapshot{
+ 		createdAt: time.Now(),
+-		entries:   parseDarwinSnapshot(value, itemSize),
++		entries:   parseDarwinSnapshot(value, itemSize, preferIPv6),
+ 	}, nil
+ }
+
+@@ -168,12 +220,12 @@
+ 	}
+ }
+
+-func parseDarwinSnapshot(buf []byte, itemSize int) []darwinConnectionEntry {
++func parseDarwinSnapshot(buf []byte, itemSize int, preferIPv6 bool) []darwinConnectionEntry {
+ 	entries := make([]darwinConnectionEntry, 0, (len(buf)-darwinXinpgenSize)/itemSize)
+ 	for i := darwinXinpgenSize; i+itemSize <= len(buf); i += itemSize {
+ 		inp := i
+ 		so := i + darwinXsocketOffset
+-		entry, ok := parseDarwinConnectionEntry(buf[inp:so], buf[so:so+structSize-darwinXsocketOffset])
++		entry, ok := parseDarwinConnectionEntry(buf[inp:so], buf[so:so+structSize-darwinXsocketOffset], preferIPv6)
+ 		if ok {
+ 			entries = append(entries, entry)
+ 		}
+@@ -181,7 +233,7 @@
+ 	return entries
+ }
+
+-func parseDarwinConnectionEntry(inp []byte, so []byte) (darwinConnectionEntry, bool) {
++func parseDarwinConnectionEntry(inp []byte, so []byte, preferIPv6 bool) (darwinConnectionEntry, bool) {
+ 	if len(inp) < darwinXsocketOffset || len(so) < structSize-darwinXsocketOffset {
+ 		return darwinConnectionEntry{}, false
+ 	}
+@@ -193,7 +245,9 @@
+ 	}
+ 	flag := inp[darwinXinpcbVFlag]
+ 	switch {
+-	case flag&0x1 != 0:
++	// An unconnected dual-stack socket can send IPv6 DNS even though the
++	// general-purpose lookup prefers its IPv4 PCB view.
++	case flag&0x1 != 0 && (!preferIPv6 || flag&0x2 == 0):
+ 		entry.remoteAddr = netip.AddrFrom4([4]byte(inp[darwinXinpcbForeignAddr+darwinXinpcbIPv4Addr : darwinXinpcbForeignAddr+darwinXinpcbIPv4Addr+4]))
+ 		entry.localAddr = netip.AddrFrom4([4]byte(inp[darwinXinpcbLocalAddr+darwinXinpcbIPv4Addr : darwinXinpcbLocalAddr+darwinXinpcbIPv4Addr+4]))
+ 		return entry, true
+--- a/protocol/dns/handle.go
++++ b/protocol/dns/handle.go
+@@ -3,12 +3,12 @@
+ import (
+ 	"context"
+ 	"encoding/binary"
+-	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+
+ 	"github.com/sagernet/sing-box/adapter"
+ 	C "github.com/sagernet/sing-box/constant"
+ 	"github.com/sagernet/sing-box/dns"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"github.com/sagernet/sing/common"
+ 	"github.com/sagernet/sing/common/buf"
+ 	"github.com/sagernet/sing/common/bufio"
+@@ -71,6 +71,30 @@
+ 	conn.Write(responseBuffer.Bytes())
+ }
+
++type dnsPacketOwnerLookupKey struct{}
++
++// WithDNSPacketOwnerLookup refreshes the sending process for each captured datagram.
++func WithDNSPacketOwnerLookup(ctx context.Context, lookup func(context.Context, *adapter.InboundContext)) context.Context {
++	return context.WithValue(ctx, dnsPacketOwnerLookupKey{}, lookup)
++}
++
++func beginDNSPacket(ctx context.Context, message *mDNS.Msg, metadata adapter.InboundContext, destination M.Socksaddr) (context.Context, func(*mDNS.Msg, error)) {
++	lookup, ok := ctx.Value(dnsPacketOwnerLookupKey{}).(func(context.Context, *adapter.InboundContext))
++	if ok {
++		metadata.Destination = destination
++		lookup(ctx, &metadata)
++		metadata.Destination = M.Socksaddr{}
++		// The lookup is only for datagrams read from this inbound connection.
++		ctx = context.WithValue(ctx, dnsPacketOwnerLookupKey{}, nil)
++	}
++	process := ""
++	if metadata.ProcessInfo != nil {
++		process = metadata.ProcessInfo.ProcessPath
++	}
++	queryCtx, finish := paxobs.BeginDNS(ctx, message, metadata.Network, metadata.InboundType, process)
++	return adapter.WithContext(queryCtx, &metadata), finish
++}
++
+ func NewDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn N.PacketConn, cachedPackets []*N.PacketBuffer, metadata adapter.InboundContext) error {
+ 	metadata.Destination = M.Socksaddr{}
+ 	frontHeadroom := N.CalculateFrontHeadroom(conn)
+@@ -133,13 +157,8 @@
+ 				}
+ 				timeout.Update()
+ 			}
+-			metadataInQuery := metadata
+-			process := ""
+-			if metadataInQuery.ProcessInfo != nil {
+-				process = metadataInQuery.ProcessInfo.ProcessPath
+-			}
+-			queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadataInQuery.Network, metadataInQuery.InboundType, process)
+-			router.ExchangeAsync(adapter.WithContext(queryCtx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++			queryCtx, finish := beginDNSPacket(ctx, &message, metadata, destination)
++			router.ExchangeAsync(queryCtx, &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
+ 				finish(response, err)
+ 				if err != nil {
+ 					cancel(err)
+@@ -209,13 +228,8 @@
+ 				}
+ 				timeout.Update()
+ 			}
+-			metadataInQuery := metadata
+-			process := ""
+-			if metadataInQuery.ProcessInfo != nil {
+-				process = metadataInQuery.ProcessInfo.ProcessPath
+-			}
+-			queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadataInQuery.Network, metadataInQuery.InboundType, process)
+-			router.ExchangeAsync(adapter.WithContext(queryCtx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
++			queryCtx, finish := beginDNSPacket(ctx, &message, metadata, destination)
++			router.ExchangeAsync(queryCtx, &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
+ 				finish(response, err)
+ 				if err != nil {
+ 					cancel(err)
+--- a/route/dns.go
++++ b/route/dns.go
+@@ -2,13 +2,13 @@
+
+ import (
+ 	"context"
+-	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net"
+ 	"time"
+
+ 	"github.com/sagernet/sing-box/adapter"
+ 	C "github.com/sagernet/sing-box/constant"
+ 	"github.com/sagernet/sing-box/dns"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	dnsOutbound "github.com/sagernet/sing-box/protocol/dns"
+ 	R "github.com/sagernet/sing-box/route/rule"
+ 	E "github.com/sagernet/sing/common/exceptions"
+@@ -40,7 +40,17 @@
+ }
+
+ func (r *Router) hijackDNSPacket(ctx context.Context, conn N.PacketConn, packetBuffers []*N.PacketBuffer, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+-	r.searchProcessInfo(ctx, &metadata)
++	lookupOwner := r.dnsPacketOwnerLookup()
++	if lookupOwner == nil {
++		r.searchProcessInfo(ctx, &metadata)
++	} else {
++		// TUN supplies the wire destination for every queued packet. Any
++		// OriginDestination carried here describes only the first route match.
++		if metadata.InboundType == C.TypeTun {
++			metadata.OriginDestination = M.Socksaddr{}
++		}
++		ctx = dnsOutbound.WithDNSPacketOwnerLookup(ctx, lookupOwner)
++	}
+ 	paxobs.Emit(ctx, paxobs.Event{Stage: "dns_control"})
+ 	err := N.ReportPacketConnHandshakeSuccess(conn, nil)
+ 	if err != nil {
+@@ -63,7 +73,11 @@
+ 		r.logger.ErrorContext(ctx, E.Cause(err, "process DNS packet: unpack request"))
+ 		return
+ 	}
+-	r.searchProcessInfo(ctx, &metadata)
++	if lookupOwner := r.dnsPacketOwnerLookup(); lookupOwner != nil && metadata.ProcessInfo == nil {
++		lookupOwner(ctx, &metadata)
++	} else {
++		r.searchProcessInfo(ctx, &metadata)
++	}
+ 	destination := metadata.Destination
+ 	metadata.Destination = M.Socksaddr{}
+ 	queryCtx, finish := paxobs.BeginDNS(ctx, &message, metadata.Network, metadata.InboundType, processPath(metadata.ProcessInfo))
+--- a/route/process_cache.go
++++ b/route/process_cache.go
+@@ -3,13 +3,13 @@
+ import (
+ 	"context"
+ 	"errors"
+-	"github.com/sagernet/sing-box/experimental/paxobs"
+ 	"net/netip"
+ 	"slices"
+ 	"strings"
+
+ 	"github.com/sagernet/sing-box/adapter"
+ 	"github.com/sagernet/sing-box/common/process"
++	"github.com/sagernet/sing-box/experimental/paxobs"
+ )
+
+ type processCacheKey struct {
+@@ -37,6 +37,44 @@
+ 	return result, err
+ }
+
++// Only the native Darwin searcher needs to disambiguate shared UDP ports. The
++// callback takes a fresh snapshot for each datagram, including on reused flows.
++func (r *Router) dnsPacketOwnerLookup() func(context.Context, *adapter.InboundContext) {
++	searcher, ok := r.processSearcher.(interface {
++		FindDNSPacketOwner(source, destination netip.AddrPort) (*adapter.ConnectionOwner, error)
++	})
++	if !ok {
++		return nil
++	}
++	return func(ctx context.Context, metadata *adapter.InboundContext) {
++		metadata.ProcessInfo = nil
++		if !r.isLocalSource(metadata.Source.Addr) {
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "non_local"})
++			return
++		}
++		destination := metadata.Destination
++		if metadata.OriginDestination.IsIP() {
++			destination = metadata.OriginDestination
++		}
++		if !destination.IsIP() {
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "not_found"})
++			return
++		}
++		owner, err := searcher.FindDNSPacketOwner(metadata.Source.AddrPort(), destination.AddrPort())
++		switch {
++		case errors.Is(err, process.ErrNotFound):
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "not_found"})
++		case err != nil:
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "lookup_failed"})
++		case owner.ProcessPath == "":
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", ProcessStatus: "path_unavailable"})
++		default:
++			metadata.ProcessInfo = owner
++			paxobs.Emit(ctx, paxobs.Event{Stage: "identity", Process: owner.ProcessPath, ProcessStatus: "identified"})
++		}
++	}
++}
++
+ func (r *Router) searchProcessInfo(ctx context.Context, metadata *adapter.InboundContext) {
+ 	if metadata.ProcessInfo != nil {
+ 		paxobs.Emit(ctx, paxobs.Event{Stage: "identity", Process: metadata.ProcessInfo.ProcessPath, ProcessStatus: "path_unavailable"})

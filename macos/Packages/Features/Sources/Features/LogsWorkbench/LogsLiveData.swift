@@ -96,7 +96,7 @@ extension LogsWorkbenchStore {
     directoryFromPage: Bool = false, recoverPage: Bool = false
   ) async {
     guard let telemetry, telemetry.available, telemetry.logSummaryAvailable else {
-      liveMessage = "后台未提供连接摘要，请更新后台"
+      setLiveMessage("logs_read.backend_update")
       return
     }
     if let request, request != requestGeneration { return }
@@ -315,12 +315,12 @@ extension LogsWorkbenchStore {
         return
       }
       if directoryFromPage {
-        liveMessage = "读取应用目录失败 · " + ProductErrorPresentation.display(error)
+        setLiveMessage("logs_read.directory_failed", failure: ProductFailure(error))
         return
       }
-      liveMessage =
-        (privacyInvalid || !initialized ? "读取失败 · " : "读取失败，保留上次快照 · ")
-        + ProductErrorPresentation.display(error)
+      setLiveMessage(
+        privacyInvalid || !initialized ? "logs_read.failed" : "logs_read.failed_retained",
+        failure: ProductFailure(error))
     }
   }
 
@@ -333,7 +333,7 @@ extension LogsWorkbenchStore {
     eventCursor = page.nextCursor
     readToken = page.readToken
     seenSnapshot = (page.history, filter.from, session)
-    liveMessage = invalidationRecovery ? "旧快照已失效，已重新读取最新记录" : ""
+    if invalidationRecovery { setLiveMessage("logs_read.recovered") } else { liveMessage = "" }
     invalidationRecovery = false
     initialized = true
   }

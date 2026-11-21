@@ -1,0 +1,41 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "routes.usage_per_hours": "MB/{hours}小时",
+    "routes.usage_per_minutes": "MB/{minutes}分钟",
+    "routes.groups": "管理分组",
+    "routes.import": "导入线路",
+    "routes.create": "新增线路",
+    "routes.reset_sort": "默认排序",
+    "routes.refresh": "刷新订阅",
+    "routes.refreshing": "刷新中…",
+    "routes.test": "测试线路",
+    "routes.testing": "测试中 · {count}",
+    "routes.diagnostics": "线路诊断",
+    "routes.reconnect": "重新连接",
+    "routes.search": "搜索线路、地址或协议",
+    "routes.empty_title": "暂无线路",
+    "routes.empty_caption": "新增代理线路，或导入分享链接与订阅",
+    "routes.group_unavailable": "当前无法管理分组，请检查后台连接",
+    "routes.import_not_connected": "导入线路尚未接入后台",
+    "routes.import_unavailable": "当前无法导入，请检查后台连接",
+    "routes.create_unavailable": "当前后台不可用或不支持新增代理线路",
+    "routes.refresh_group_hint": "请先切换到订阅分组，再刷新该订阅",
+    "routes.default_group_ax": "默认，未加入分组的本地线路",
+    "routes.subscription_group_ax": "订阅分组，{name}，{count} 条线路",
+    "routes.custom_group_ax": "自定义分组，{name}，{count} 条线路",
+    "routes.column.name": "线路",
+    "routes.column.features": "线路特性",
+    "routes.column.address": "出口地址",
+    "routes.column.latency": "延迟",
+    "routes.column.speed": "下载速度",
+    "routes.certificate_count": {
+      "other": "处理 {count} 条证书异常"
+    },
+    "routes.current": "当前线路",
+    "routes.selected": "已选线路",
+    "routes.not_available": "未获取"
+  }
+}

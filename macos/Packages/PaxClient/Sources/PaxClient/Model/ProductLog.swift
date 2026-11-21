@@ -4,6 +4,8 @@ import Foundation
 ///
 /// `operationID` / `snapshotVersion` 用于把事件关联到一次操作与一份快照（spec.md 的日志验收）。
 public struct ProductLog: Sendable, Equatable {
+  public var messageText: ProductText? = nil
+  public var systemEvent: SystemEvent? = nil
   public var flow: FlowFact? = nil
   public var recordID = ""
   public var problemID = ""

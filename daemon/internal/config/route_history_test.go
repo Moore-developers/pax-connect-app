@@ -22,29 +22,6 @@ func countMetric(h RouteHistory, route, metric string) int {
 	return n
 }
 
-func TestHistoryLimitPerMetric(t *testing.T) {
-	for metric, want := range map[string]int{"latency_auto": 120, "latency": 50, "connect": 50, "exit": 50, "download": 50} {
-		if got := HistoryLimit(metric); got != want {
-			t.Fatalf("%s limit = %d, want %d", metric, got, want)
-		}
-	}
-}
-
-func TestAutoLatencyKeeps120AndEvictsOldest(t *testing.T) {
-	now := time.Now()
-	h := NewRouteHistory()
-	for i := 0; i < 121; i++ {
-		h.Append(historySample("r", "latency_auto", now.Add(time.Duration(i-200)*time.Minute), float64(i+1)), now)
-	}
-	if got := countMetric(h, "r", "latency_auto"); got != 120 {
-		t.Fatalf("kept %d, want 120", got)
-	}
-	oldest := h.Items[len(h.Items)-1]
-	if oldest.Value != 2 {
-		t.Fatalf("oldest kept value = %v, want 2 (sample 1 evicted)", oldest.Value)
-	}
-}
-
 func TestAutoAndManualLatencyDoNotCrowdEachOther(t *testing.T) {
 	now := time.Now()
 	h := NewRouteHistory()

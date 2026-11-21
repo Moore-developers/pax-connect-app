@@ -4,7 +4,16 @@ import PaxUI
 
 /// Two comparable headline values; token volume and unit price remain in the shared readout.
 @MainActor final class AILimitActivityView: NSView {
-  init(summary: AILimitSummary, readout: AILimitReadout) {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
+  init(
+    summary: AILimitSummary, readout: AILimitReadout,
+    interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()
+  ) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
     super.init(frame: .zero)
     let observed = summary.observedThrough ?? .distantPast
     let elapsed = summary.days.filter { $0.at < observed }
@@ -13,13 +22,17 @@ import PaxUI
     let period =
       days.first.flatMap { first in
         days.last.map { first.at == $0.at ? Self.dayTitle(first.at) : Self.period(first.at, $0.at) }
-      } ?? "暂无每日记录"
-    let title = PaxText.label("会话与开销", font: PaxTheme.Typography.caption(), secondary: true)
+      } ?? context.text("session_limits.26fdd367e9")
+    let title = PaxText.label(
+      context.text("session_limits.e91a78797e"), font: PaxTheme.Typography.caption(),
+      secondary: true)
     let range = PaxText.label(period, font: PaxTheme.Typography.label(size: 10), secondary: true)
     let heading = AIUsageLayout.stack([title, NSView(), range], vertical: false)
     let metrics = AIUsageLayout.stack(
       (0..<2).map { index in
-        Self.metric(index, summary: summary, days: days, singleDay: singleDay, readout: readout)
+        Self.metric(
+          index, summary: summary, days: days, singleDay: singleDay, readout: readout,
+          context: context)
       }, vertical: false, equal: true)
     metrics.spacing = PaxTheme.Spacing.medium
     let complete = !elapsed.isEmpty && elapsed.allSatisfy(\.available) && summary.unpriced == 0
@@ -34,17 +47,20 @@ import PaxUI
       improved = false
     }
     let status = PaxText.label(
-      improved ? "会话增加，费用下降" : "费用含缓存与子代理",
+      improved
+        ? context.text("session_limits.a70f76d62d") : context.text("session_limits.a71f463bac"),
       font: PaxTheme.Typography.label(size: 11), secondary: true)
     if improved { status.textColor = PaxTheme.DashboardColor.greenLabel }
-    let hint = PaxText.label("详情 ⓘ", font: PaxTheme.Typography.label(size: 10), secondary: true)
+    let hint = PaxText.label(
+      context.text("session_limits.dd76a0c7b5"), font: PaxTheme.Typography.label(size: 10),
+      secondary: true)
     let footerRow = AIUsageLayout.stack([status, NSView(), hint], vertical: false)
     let footer = AILimitReadoutHost(footerRow, readout: readout) {
-      Self.summaryDetail(summary, complete: complete, singleDay: singleDay)
+      Self.summaryDetail(summary, complete: complete, singleDay: singleDay, context: context)
     }
     footer.setAccessibilityElement(true)
     footer.setAccessibilityRole(.button)
-    footer.setAccessibilityLabel("会话与开销详情")
+    footer.setAccessibilityLabel(context.text("session_limits.43b800a023"))
     let rule = AIUsageLayout.separator()
     for child in [heading, metrics, rule, footer] {
       addSubview(child)
@@ -73,34 +89,38 @@ import PaxUI
 
   private static func metric(
     _ index: Int, summary: AILimitSummary, days: [AILimitDay], singleDay: Bool,
-    readout: AILimitReadout
+    readout: AILimitReadout, context: PresentationContext = .chinese
   ) -> NSView {
     let isCost = index == 0
     let label = PaxText.label(
-      isCost ? (summary.unpriced > 0 ? "官方输入费 · 小计" : "官方输入费") : "活跃主会话",
+      isCost
+        ? (summary.unpriced > 0
+          ? context.text("session_limits.5121436350") : context.text("session_limits.c12ee2cd8c"))
+        : context.text("session_limits.cf3080d2a3"),
       font: PaxTheme.Typography.label(size: 11), secondary: true)
-    if !isCost { label.toolTip = "主会话按周期去重，包含其子代理活动。" }
+    if !isCost { label.toolTip = context.text("session_limits.e104adf566") }
     let costKnown = summary.requests == 0 || summary.unpriced < summary.requests
     let text =
       isCost
       ? AILimitStyle.money(costKnown ? summary.input.official : nil, precision: 2)
-      : "\(summary.sessions) 个"
+      : context.text("session_limits.8a066be426", ["arg0": String(describing: summary.sessions)])
     let amount = PaxText.label(text, font: PaxTheme.Typography.metric(size: 22, weight: .light))
     amount.toolTip = text
     let evidence: NSView
     if singleDay {
       let current = isCost ? summary.input.official : Double(summary.sessions)
       let previous = summary.comparison.map { isCost ? $0.input.official : Double($0.sessions) }
-      let delta = AILimitSummaryStrip.change(current, from: previous)
+      let delta = AILimitSummaryStrip.change(current, from: previous, context: context)
       let change = PaxText.label(
-        delta ?? "上日无有效对照", font: PaxTheme.Typography.label(size: 11), secondary: true)
+        delta ?? context.text("session_limits.fd35d71921"),
+        font: PaxTheme.Typography.label(size: 11), secondary: true)
       if isCost, delta != nil, let previous {
         change.textColor =
           current < previous
           ? PaxTheme.DashboardColor.greenLabel
           : current > previous ? PaxTheme.DashboardColor.redLabel : PaxTheme.Color.textSecondary
       }
-      change.toolTip = "今天比上日同一时刻；已结束日期比上日全天。缺价、缺历史或无请求时不比较。"
+      change.toolTip = context.text("session_limits.f27a3d4a8a")
       evidence = change
     } else {
       let maximum = max(
@@ -111,7 +131,7 @@ import PaxUI
       let columns = days.map { day -> NSView in
         let column = AILimitDayColumn(day: day, isCost: isCost, maximum: maximum)
         let host = AILimitReadoutHost(column, readout: readout) {
-          Self.dayDetail(day, through: summary.observedThrough ?? .distantPast)
+          Self.dayDetail(day, through: summary.observedThrough ?? .distantPast, context: context)
         }
         host.setAccessibilityElement(true)
         host.setAccessibilityRole(.button)
@@ -119,15 +139,21 @@ import PaxUI
         host.setAccessibilityIdentifier(
           "ai-session-day-" + String(Int(day.at.timeIntervalSince1970))
             + (isCost ? "-cost" : "-sessions"))
-        host.setAccessibilityValue(Self.lines(day).joined(separator: "，"))
+        host.setAccessibilityValue(Self.lines(day, context: context).joined(separator: "，"))
         host.setAccessibilityHelp(
-          "0起独立缩放，上限 " + (isCost ? AILimitStyle.money(maximum) : "\(Int(maximum)) 个"))
+          context.text("session_limits.d6e911f400")
+            + (isCost
+              ? AILimitStyle.money(maximum)
+              : context.text(
+                "session_limits.8a066be426", ["arg0": String(describing: Int(maximum))])))
         return host
       }
       let chart = AIUsageLayout.stack(columns, vertical: false, equal: true)
       chart.spacing = PaxTheme.Spacing.xs / 2
       chart.heightAnchor.constraint(equalToConstant: 20).isActive = true
-      chart.setAccessibilityLabel(isCost ? "最近7日官方输入费，独立缩放" : "最近7日活跃主会话，独立缩放")
+      chart.setAccessibilityLabel(
+        isCost
+          ? context.text("session_limits.8731098fa6") : context.text("session_limits.5b55bb417e"))
       evidence = chart
     }
     let column = AIUsageLayout.stack([label, amount, evidence])
@@ -145,27 +171,38 @@ import PaxUI
   private static func dayTitle(_ date: Date) -> String {
     AIUsageFormatting.monthDay(date).replacingOccurrences(of: "-", with: "/")
   }
-  private static func lines(_ day: AILimitDay) -> [String] {
-    guard day.available else { return ["数据不完整或超出保留期"] }
+  private static func lines(_ day: AILimitDay, context: PresentationContext = .chinese) -> [String]
+  {
+    guard day.available else { return [context.text("session_limits.b4078a492d")] }
     var lines = [
-      "活跃主会话  \(day.sessions) 个",
-      "输入Token  " + (day.inputTokens.map(AIUsageFormatting.count) ?? "—"),
-      "官方输入费  " + AILimitStyle.money(value(day, isCost: true), precision: 2),
+      context.text("session_limits.c8e405688a", ["arg0": String(describing: day.sessions)]),
+      context.text("session_limits.7135ccdedf")
+        + (day.inputTokens.map(AIUsageFormatting.count) ?? "—"),
+      context.text("session_limits.de3a6e83f5")
+        + AILimitStyle.money(value(day, isCost: true), precision: 2),
     ]
     if day.pricedRequests < day.requests {
-      lines.append("已定价小计 · \(day.requests - day.pricedRequests) 次未定价")
+      lines.append(
+        context.text(
+          "session_limits.59ae0f1a87",
+          ["arg0": String(describing: day.requests - day.pricedRequests)]))
     }
     return lines
   }
-  private static func dayDetail(_ day: AILimitDay, through observed: Date) -> NSView {
+  private static func dayDetail(
+    _ day: AILimitDay, through observed: Date, context: PresentationContext = .chinese
+  ) -> NSView {
     var title = Self.dayTitle(day.at)
     if Calendar.current.isDate(day.at, inSameDayAs: observed) {
-      title += " · 截至" + AIUsageFormatting.recentUse(observed, now: observed)
+      title +=
+        context.text("session_limits.38b0ff7832")
+        + AIUsageFormatting.recentUse(observed, now: observed)
     }
-    return AILimitReadout.explanation(title, lines(day).joined(separator: "\n"))
+    return AILimitReadout.explanation(title, lines(day, context: context).joined(separator: "\n"))
   }
   private static func summaryDetail(
-    _ summary: AILimitSummary, complete: Bool, singleDay: Bool
+    _ summary: AILimitSummary, complete: Bool, singleDay: Bool,
+    context: PresentationContext = .chinese
   ) -> NSView {
     let rate =
       complete
@@ -176,14 +213,15 @@ import PaxUI
     let scope =
       summary.days.first.flatMap { first in
         summary.days.last.map { first.at == $0.at ? dayTitle(first.at) : period(first.at, $0.at) }
-      } ?? "所选范围"
+      } ?? context.text("session_limits.1b39de344d")
     let date = PaxText.label(scope, font: PaxTheme.Typography.label(size: 11), secondary: true)
     let header = AIUsageLayout.stack(
-      [AIUsageLayout.heading("会话与开销"), NSView(), date], vertical: false)
+      [AIUsageLayout.heading(context.text("session_limits.e91a78797e")), NSView(), date],
+      vertical: false)
     let price = PaxText.label(
       AILimitStyle.money(rate), font: PaxTheme.Typography.metric(size: 28, weight: .light))
     price.textColor = rate == nil ? AILimitStyle.dim : PaxTheme.DashboardColor.redLabel
-    let unit = AIUsageLayout.stack([price, detailNote("每百万输入 Token")])
+    let unit = AIUsageLayout.stack([price, detailNote(context.text("session_limits.4bce29062a"))])
     unit.spacing = PaxTheme.Spacing.xs
     let token = PaxText.label(
       tokenText, font: PaxTheme.Typography.metric(size: 28, weight: .light))
@@ -191,7 +229,7 @@ import PaxUI
       summary.inputTokens == nil ? AILimitStyle.dim : PaxTheme.DashboardColor.greenLabel
     token.alignment = .right
     token.toolTip = summary.inputTokens.map(AIUsageFormatting.count)
-    let caption = detailNote("输入 Token")
+    let caption = detailNote(context.text("session_limits.3c94b4c759"))
     caption.alignment = .right
     let tokens = AIUsageLayout.stack([token, caption])
     tokens.spacing = PaxTheme.Spacing.xs
@@ -199,10 +237,10 @@ import PaxUI
     metrics.spacing = PaxTheme.Spacing.regular
     var items: [NSView] = [header, metrics]
     if rate == nil {
-      items.append(detailNote("单位费用暂不可算"))
+      items.append(detailNote(context.text("session_limits.e6827f3cd7")))
     }
     if singleDay, summary.comparison == nil {
-      items.append(detailNote("上日暂无可比数据"))
+      items.append(detailNote(context.text("session_limits.2e2d3e3fe9")))
     }
     let column = AIUsageLayout.stack(items)
     column.spacing = PaxTheme.Spacing.medium
@@ -210,7 +248,7 @@ import PaxUI
       equalToConstant: PaxTheme.AISession.selectorWidth + PaxTheme.Spacing.regular * 2
     ).isActive = true
     column.setAccessibilityIdentifier("ai-session-usage-cost-detail")
-    column.setAccessibilityHelp("输入费用和 Token 均含缓存与子代理，不含输出。")
+    column.setAccessibilityHelp(context.text("session_limits.47c0f7f09e"))
     return column
   }
 

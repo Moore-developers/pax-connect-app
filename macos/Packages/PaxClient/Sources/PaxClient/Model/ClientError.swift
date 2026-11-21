@@ -26,25 +26,6 @@ public enum ClientError: Error, Sendable, Equatable {
     }
   }
 
-  public var message: String {
-    switch self {
-    case .proxyMustBeOff: "请先关闭代理，再更新后台服务"
-    case .installationRequired: "请将 App 放入 /Applications/PaxConnect.app 后重新打开"
-    case .installationInvalid: "App 的后台服务资源或签名无效，请重新构建或安装"
-    case .registrationFailed: "登记后台服务失败，请检查系统设置后重试"
-    case .serviceIdentityUnknown: "后台服务与当前 App 不匹配，请退出其它 Pax 实例或重新安装"
-    case .updateFailed: "更新后台服务失败，请重试或重新安装"
-    case .unavailable: "后台服务暂不可用"
-    case .timeout: "连接后台服务超时"
-    case .permissionDenied: "无权访问后台服务，请检查授权"
-    case .protocolMismatch(let daemon, let client):
-      "后台服务协议不兼容（App v\(client)，daemon \(daemon.map { String($0) } ?? "未知")），请更新或重新安装"
-    case .invalidEvent: "后台服务返回了无效同步数据"
-    case .eventGap: "状态同步中断，正在重新获取"
-    case .unknown: "连接后台服务失败，请重试"
-    }
-  }
-
   static func classify(_ error: any Error) -> ClientError {
     if let error = error as? ClientError { return error }
     if let error = error as? RPCError {

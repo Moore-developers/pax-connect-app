@@ -1,4 +1,3 @@
-import Foundation
 import Testing
 
 @testable import PaxCore
@@ -23,22 +22,6 @@ struct ConnectionStoreTests {
     store.apply(statusEvent(.protected))
     #expect(store.status == .protected)
     #expect(store.degradedReason == nil)
-  }
-
-  @Test("快照里的最近事件按容量截断，最旧的先丢")
-  func logRingBuffer() {
-    let store = ConnectionStore(logCapacity: 3)
-    let logs = (1...5).map {
-      ProductLog(
-        at: Date(timeIntervalSince1970: 0), level: .info, message: "e\($0)", operationID: "",
-        snapshotVersion: 0)
-    }
-    store.apply(
-      .snapshot(
-        DaemonSnapshot(
-          snapshotVersion: 1, status: .off, routes: [], currentRoute: nil, todayTraffic: .zero,
-          settings: DaemonSettings(autoConnect: false), recentLogs: logs)))
-    #expect(store.recentLogs.map(\.message) == ["e3", "e4", "e5"])
   }
 
   @Test("断线保留最后快照，只改连接标记")
@@ -114,13 +97,6 @@ struct ConnectionStoreTests {
     await store.perform(.setProxyEnabled(true))
     #expect(store.pendingOperationID == nil)
     #expect(store.status == .off)
-  }
-
-  @Test("操作结果按 operationID 清空 pending 状态")
-  func pendingOperationClearing() {
-    let store = ConnectionStore()
-    store.apply(.operation(OperationResult(operationID: "op-other", ok: true, error: nil)))
-    #expect(store.pendingOperationID == nil)
   }
 }
 

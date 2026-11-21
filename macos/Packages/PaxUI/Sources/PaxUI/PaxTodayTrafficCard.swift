@@ -32,6 +32,12 @@ public struct PaxTodayTrafficModel: Equatable {
 public final class PaxTrafficShareRow: NSView {
   public static let labels = ["代理", "直连", "未归类"]
   private var values: [Double] = [0, 0, 0]
+  private var names = PaxTrafficShareRow.labels
+  public func applyCopy(title: String, labels: [String]) {
+    self.title.stringValue = title
+    names = labels
+    apply(shares: values, empty: emptyLabel.stringValue)
+  }
   private let title = PaxText.label(
     "流量去向", font: PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont))
   private let legend = PaxSeriesLegend()
@@ -58,7 +64,7 @@ public final class PaxTrafficShareRow: NSView {
     let percent = Self.percentages(values)
     legend.items =
       percent.map { percentages in
-        Self.labels.enumerated().map { index, label in
+        names.enumerated().map { index, label in
           .init("\(label) \(percentages[index])%", color: PaxTheme.Color.series[index])
         }
       } ?? []
@@ -66,8 +72,8 @@ public final class PaxTrafficShareRow: NSView {
     emptyLabel.stringValue = percent == nil ? empty : ""
     emptyLabel.isHidden = percent != nil
     let text =
-      percent.map { zip(Self.labels, $0).map { "\($0) \($1)%" }.joined(separator: "，") } ?? empty
-    setAccessibilityLabel("流量去向，" + text)
+      percent.map { zip(names, $0).map { "\($0) \($1)%" }.joined(separator: "，") } ?? empty
+    setAccessibilityLabel(title.stringValue + ", " + text)
     needsDisplay = true
     needsLayout = true
   }
@@ -114,6 +120,17 @@ public final class PaxTrafficShareRow: NSView {
 
 /// 概览「今日流量」：上传 / 下载大数、占比条与填满剩余空间的每小时柱。
 public final class PaxTodayTrafficCard: PaxCard {
+  public func applyCopy(
+    title: String, upload: String, download: String, shareTitle: String, directions: [String],
+    chartSummary: @escaping @Sendable (String, String, String) -> String
+  ) {
+    heading.text = title
+    uploadCaption.stringValue = "↑ " + upload
+    downloadCaption.stringValue = "↓ " + download
+    share.applyCopy(title: shareTitle, labels: directions)
+    chart.seriesLabels = [upload, download]
+    chart.summarize = chartSummary
+  }
   private let heading = PaxCardHeading("今日流量", symbol: "arrow.up.arrow.down", trailing: "")
   private let uploadCaption = PaxText.label("↑ 上传", font: PaxTheme.Typography.caption())
   private let downloadCaption = PaxText.label("↓ 下载", font: PaxTheme.Typography.caption())

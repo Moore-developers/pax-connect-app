@@ -1,0 +1,7 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "traffic_duration.seconds": "{seconds}秒"
+  }
+}

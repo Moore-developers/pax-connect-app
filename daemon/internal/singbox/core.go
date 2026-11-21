@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/sagernet/sing-box/daemon"
+	"github.com/sagernet/sing-box/experimental/paxgate"
 	"github.com/sagernet/sing-box/experimental/paxobs"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -23,6 +24,10 @@ import (
 // CoreRuntime adapts StartedService without exposing its upstream types.
 // Its caller serializes lifecycle/status calls; upstream owns subscription locks.
 type CoreRuntime struct {
+	fixed          *fixedRouteProtection
+	fixedHealth    *fixedHealth
+	fixedPaused    bool
+	fixedNetwork   uint64
 	routingProfile string
 	pathMu         sync.Mutex
 	pathVersion    atomic.Uint64
@@ -46,6 +51,10 @@ func NewCoreRuntime(ctx context.Context) *CoreRuntime {
 	ctx = runtimeContext(ctx)
 	h := &corePlatform{}
 	r := &CoreRuntime{observations: newCoreObservations(), ctx: ctx, handler: h}
+	r.fixed = newFixedRouteProtection(r)
+	r.fixedHealth = newFixedHealth(ctx)
+	ctx = paxgate.WithGuard(ctx, r.fixed.gate.acquire)
+	ctx = context.WithValue(ctx, coreRouteGateKey{}, r.fixed.gate)
 	ctx = paxobs.WithRuleNames(ctx)
 	ctx = paxobs.WithSink(ctx, r.observations.capture)
 	r.ctx = ctx
@@ -61,10 +70,26 @@ func (r *CoreRuntime) Register(s grpc.ServiceRegistrar) {
 // Apply replaces the instance using upstream reload semantics.
 func (r *CoreRuntime) Apply(profile string) error {
 	r.cancelCurrentPath(true)
+	r.fixedHealth.drain()
+	r.fixedNetwork = 0
 	r.observations.collecting.Store(false)
 	defer func() { r.observations.collecting.Store(r.Status() == "STARTED") }()
 	var opts option.Options
 	if err := opts.UnmarshalJSONContext(r.ctx, []byte(profile)); err != nil {
+		return err
+	}
+	if err := r.fixed.configure(profile); err != nil {
+		return err
+	}
+	effective, err := r.fixed.applyProfile(profile)
+	if err != nil {
+		return err
+	}
+	paxobs.SetRuleNames(r.ctx, r.fixed.applySources(profile, r.fixed.baseSources))
+	defer paxobs.SetRuleNames(r.ctx, r.fixed.baseSources)
+	// Decode into a fresh union value: option decoders merge omitted fields.
+	opts = option.Options{}
+	if err := opts.UnmarshalJSONContext(r.ctx, []byte(effective)); err != nil {
 		return err
 	}
 	r.pathDetours = map[string]string{}
@@ -99,7 +124,7 @@ func (r *CoreRuntime) Apply(profile string) error {
 	if err := r.current().StartOrReloadService(r.ctx, string(raw), nil); err != nil {
 		return err
 	}
-	r.routingProfile = profile
+	r.routingProfile = effective
 	for _, out := range opts.Outbounds {
 		if selector, ok := out.Options.(*option.SelectorOutboundOptions); ok && out.Tag == "proxy" && selector.Default != "" {
 			_, _, err := r.SelectRoute(context.Background(), r.SelectedTag(), selector.Default)
@@ -113,6 +138,13 @@ func (r *CoreRuntime) Apply(profile string) error {
 func (r *CoreRuntime) Clear() error {
 	r.routingProfile = ""
 	r.cancelCurrentPath(true)
+	r.fixedHealth.drain()
+	r.fixed.gate.reset()
+	r.fixed.blocked = map[string]bool{}
+	r.fixed.tags = map[string]bool{}
+	r.fixed.baseProfile = ""
+	r.fixed.status = map[string]*fixedRouteClosure{}
+	r.fixed.dirty, r.fixedPaused, r.fixedNetwork = false, false, 0
 	r.observations.collecting.Store(false)
 	r.retired = nil
 	current := r.current()
@@ -174,7 +206,12 @@ func (r *CoreRuntime) current() *daemon.StartedService {
 }
 
 // Close releases service observers after all RPCs have drained.
-func (r *CoreRuntime) Close() { r.cancelCurrentPath(true); r.current().Close() }
+func (r *CoreRuntime) Close() {
+	r.cancelCurrentPath(true)
+	r.fixedHealth.cancel()
+	r.fixed.gate.reset()
+	r.current().Close()
+}
 
 // Status reads the upstream status using its first subscription value.
 func (r *CoreRuntime) Status() string {

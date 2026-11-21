@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "history_quality.disconnected": "与后台断开，保留最后记录",
+    "history_quality.previous_eviction": "历史不全（旧容量限制）",
+    "history_quality.idle": "当前未采集，正在查看本地历史",
+    "settings.mcp.dsh_desktop": "DSH 桌面",
+    "settings.logs.cleared": "日志已清除，新事件继续记录",
+    "settings.logs.retention_saved": "日志保留时间已保存"
+  }
+}

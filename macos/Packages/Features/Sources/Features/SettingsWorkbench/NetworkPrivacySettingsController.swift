@@ -4,7 +4,9 @@ import PaxUI
 
 /// Saved network intent is distinct from the running instance's frozen policy.
 @MainActor
-final class NetworkPrivacySettingsController: NSViewController {
+final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
+  private var statusMessage: (String, [String: String])? = ("settings.loading", [:])
   private let routes: RoutesStore
   private let mode = PaxRoutePicker(style: .toolbar)
   private lazy var webRTC = PaxToggle(
@@ -25,17 +27,21 @@ final class NetworkPrivacySettingsController: NSViewController {
   required init?(coder: NSCoder) { fatalError("代码构建") }
 
   override func loadView() {
-    mode.addItems(withTitles: ["加密分流", "严格隐私"])
+    interfaceCopy.picker(mode, keys: ["settings.privacy.balanced", "settings.privacy.strict"])
     mode.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
     mode.setAccessibilityIdentifier("privacy-dns-mode")
-    mode.setAccessibilityLabel("DNS 保护")
+    interfaceCopy.bind(mode, key: "settings.privacy.dns") { $0.setAccessibilityLabel($1) }
+    interfaceCopy.bind(webRTC, key: "settings.privacy.webrtc") { $0.apply(label: $1) }
+    interfaceCopy.button(save, key: "settings.privacy.save")
+    interfaceCopy.button(retry, key: "settings.retry")
+    interfaceCopy.onChange = { [weak self] in self?.renderStatus() }
     webRTC.setAccessibilityIdentifier("privacy-webrtc")
     save.setAccessibilityIdentifier("privacy-save")
     retry.setAccessibilityIdentifier("privacy-retry")
     mode.target = self
     mode.action = #selector(changed)
-    let note = PaxText.label(
-      "仅开启代理时提供保护；修改后，下次开启代理生效。",
+    let note = interfaceCopy.label(
+      "settings.privacy.note",
       font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
     note.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let actions = NSStackView(views: [note, NSView(), retry, save])
@@ -47,22 +53,26 @@ final class NetworkPrivacySettingsController: NSViewController {
     for item in footer.arrangedSubviews {
       item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
     }
-    view = PaxPreferenceGroup(
-      title: "网络保护", symbol: "lock.shield",
+    let group = PaxPreferenceGroup(
+      title: "", symbol: "lock.shield",
       rows: [
-        PaxPreferenceRow(
-          title: "DNS 保护", detail: "加密分流按规则选择直连或代理；严格隐私经代理解析公网域名。节点引导与内网域名例外。", control: mode,
-          style: .compact),
-        PaxPreferenceRow(
-          title: "WebRTC 公网出口限制", detail: "识别的公网 STUN 经代理，可能影响通话；不保证隐藏所有 IP。", control: webRTC,
-          style: .compact),
+        interfaceCopy.preference(
+          title: "settings.privacy.dns", detail: "settings.privacy.dns_detail", control: mode),
+        interfaceCopy.preference(
+          title: "settings.privacy.webrtc", detail: "settings.privacy.webrtc_detail",
+          control: webRTC),
       ], style: .compact, footer: footer)
+    view = interfaceCopy.group(group, key: "settings.privacy.title")
     read()
   }
 
-  private func showStatus(_ message: String) {
-    status.stringValue = message
-    status.isHidden = message.isEmpty
+  private func showStatus(_ key: String, parameters: [String: String] = [:]) {
+    statusMessage = key.isEmpty ? nil : (key, parameters)
+    renderStatus()
+  }
+  private func renderStatus() {
+    status.stringValue = statusMessage.map { interfaceCopy.text($0.0, $0.1) } ?? ""
+    status.isHidden = status.stringValue.isEmpty
   }
 
   @objc private func read() {
@@ -73,11 +83,11 @@ final class NetworkPrivacySettingsController: NSViewController {
     webRTC.isEnabled = false
     retry.isHidden = true
     guard routes.capabilities.contains("network.privacy.v1") else {
-      showStatus("后台尚未就绪，连接后可重试。")
+      showStatus("settings.backend_unavailable")
       retry.isHidden = false
       return
     }
-    showStatus("正在读取…")
+    showStatus("settings.loading")
     task = Task { [weak self] in
       guard let self else { return }
       defer { task = nil }
@@ -92,7 +102,11 @@ final class NetworkPrivacySettingsController: NSViewController {
         webRTC.isEnabled = true
         showStatus("")
       } catch {
-        showStatus("读取失败：" + ProductErrorPresentation.display(error))
+        showStatus(
+          "settings.read_failed",
+          parameters: [
+            "detail": ProductErrorPresentation.display(error, context: interfaceCopy.context)
+          ])
         retry.isHidden = false
       }
     }
@@ -103,7 +117,7 @@ final class NetworkPrivacySettingsController: NSViewController {
     save.isEnabled =
       (mode.indexOfSelectedItem == 1) != (saved.dnsMode == "strict")
       || webRTC.isChecked != saved.webRTC
-    showStatus(save.isEnabled ? "尚未保存" : "")
+    showStatus(save.isEnabled ? "settings.unsaved" : "")
   }
 
   @objc private func commit() {
@@ -113,7 +127,7 @@ final class NetworkPrivacySettingsController: NSViewController {
     save.isEnabled = false
     mode.isEnabled = false
     webRTC.isEnabled = false
-    showStatus("正在保存…")
+    showStatus("settings.saving")
     task = Task { [weak self] in
       guard let self else { return }
       defer {
@@ -126,9 +140,13 @@ final class NetworkPrivacySettingsController: NSViewController {
           case .networkPrivacy(let value) = try await routes.measurement(.saveNetworkPrivacy(draft))
         else { return }
         saved = value
-        showStatus("已保存，下次开启代理生效")
+        showStatus("settings.privacy.saved")
       } catch {
-        showStatus("保存失败，草稿保留：" + ProductErrorPresentation.display(error))
+        showStatus(
+          "settings.save_failed",
+          parameters: [
+            "detail": ProductErrorPresentation.display(error, context: interfaceCopy.context)
+          ])
         save.isEnabled = true
       }
     }

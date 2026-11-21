@@ -136,10 +136,10 @@ struct AIRepriceFlowTests {
   func failures() async {
     let flow = AIRepriceFlow(data: store(Calls(), fail: "ai_usage_busy"))
     await flow.preview(request)
-    #expect(flow.state == .failed("正在采集，请稍后重试"))
+    #expect(flow.state == .failed(ProductError(code: "ai_usage_busy")))
     let gone = AIRepriceFlow(data: store(Calls(), fail: "ai_profile_not_found"))
     await gone.preview(request)
-    #expect(gone.state == .failed("Profile 不存在，请刷新后重试"))
+    #expect(gone.state == .failed(ProductError(code: "ai_profile_not_found")))
     let none = AIRepriceFlow(data: nil)
     #expect(!none.available)
     await none.preview(request)

@@ -5,6 +5,8 @@ import PaxUI
 /// 只呈现调用方导出的完整分享链接；线路读取与协议编码由调用方负责。
 @MainActor
 final class RouteShareController: RouteModalController {
+  override var localizedTitleKey: String? { "modal.share.qr" }
+
   override var maximumPresentationWidth: CGFloat? { PaxTheme.RouteShare.width }
   private let loadLink: @MainActor () async throws -> String
   private var loadTask: Task<Void, Never>?
@@ -44,7 +46,7 @@ final class RouteShareController: RouteModalController {
     message.setAccessibilityIdentifier("route-share-state")
     qr.setAccessibilityElement(true)
     qr.setAccessibilityRole(.image)
-    qr.setAccessibilityLabel("线路分享二维码")
+    qr.setAccessibilityLabel(self.interfaceCopy.text("action.routes.share_qr_ax"))
     qr.setAccessibilityIdentifier("route-share-qr")
     pane.add(qr)
     qrHeight = qr.heightAnchor.constraint(equalToConstant: PaxTheme.RouteShare.codeSide)
@@ -79,7 +81,7 @@ final class RouteShareController: RouteModalController {
       height: PaxTheme.RouteShare.linkHeight)
     linkView.textContainer?.widthTracksTextView = true
     linkView.textContainer?.lineBreakMode = .byCharWrapping
-    linkView.setAccessibilityLabel("完整分享链接，可选择并复制")
+    linkView.setAccessibilityLabel(self.interfaceCopy.text("action.routes.complete_share"))
     linkView.setAccessibilityIdentifier("route-share-link")
     linkScroll.hasVerticalScroller = true
     linkScroll.borderType = .noBorder
@@ -88,7 +90,8 @@ final class RouteShareController: RouteModalController {
     linkScroll.documentView = linkView
     linkScroll.heightAnchor.constraint(equalToConstant: PaxTheme.RouteShare.linkHeight).isActive =
       true
-    let privacy = NSTextField(wrappingLabelWithString: "包含敏感连接信息，仅分享给可信任的人。")
+    let privacy = NSTextField(
+      wrappingLabelWithString: self.interfaceCopy.text("interface_detail.83bf6351bf"))
     privacy.font = PaxTheme.Typography.caption()
     privacy.textColor = PaxTheme.Color.textSecondary
     privacy.alignment = .center
@@ -102,9 +105,9 @@ final class RouteShareController: RouteModalController {
     copyButton.isEnabled = false
     qr.isHidden = true
     linkCard.isHidden = true
-    message.stringValue = "正在生成分享链接…"
+    message.stringValue = self.interfaceCopy.text("interface_detail.11aa81ccf3")
     pane.status.stringValue = ""
-    pane.setActions([button("关闭", #selector(close)), copyButton])
+    pane.setActions([button(self.interfaceCopy.text("common.close"), #selector(close)), copyButton])
     let load = loadLink
     loadTask = Task { @MainActor [weak self] in
       do {
@@ -124,8 +127,10 @@ final class RouteShareController: RouteModalController {
   }
 
   private func showLoadFailure(_ explanation: String? = nil) {
-    message.stringValue = explanation ?? "无法获取分享链接，请重试。"
-    pane.setActions([button("关闭", #selector(close)), retryButton])
+    message.stringValue = explanation ?? self.interfaceCopy.text("interface_detail.eb7df121e4")
+    pane.setActions([
+      button(self.interfaceCopy.text("common.close"), #selector(close)), retryButton,
+    ])
   }
 
   private func showLink(_ link: String) {
@@ -136,9 +141,9 @@ final class RouteShareController: RouteModalController {
     if qr.apply(link) {
       qrHeight?.constant = qr.renderedSide
       qr.isHidden = false
-      message.stringValue = "扫码导入，或复制完整链接"
+      message.stringValue = self.interfaceCopy.text("interface_detail.e15712d224")
     } else {
-      message.stringValue = "链接过长或无法编码为二维码。仍可复制完整链接到导入窗口。"
+      message.stringValue = self.interfaceCopy.text("interface_detail.76446b3053")
     }
     pane.invalidateContentSize()
     // 呈现容器按新内容测量后再定位一次，避免初始 clip origin 沿用布局中的偏移。
@@ -160,11 +165,14 @@ final class RouteShareController: RouteModalController {
     guard let shareLink else { return }
     NSPasteboard.general.clearContents()
     let copied = NSPasteboard.general.setString(shareLink, forType: .string)
-    pane.status.stringValue = copied ? "已复制链接" : "复制失败，请选择链接后重试"
+    pane.status.stringValue =
+      copied
+      ? self.interfaceCopy.text("interface_detail.31d5f72a2e")
+      : self.interfaceCopy.text("interface_detail.a0cc21ad0e")
     pane.status.textColor = copied ? PaxTheme.Color.textSecondary : PaxTheme.Color.error
     pane.status.isHidden = false
     pane.status.superview?.isHidden = false
-    pane.setActions([button("关闭", #selector(close)), copyButton])
+    pane.setActions([button(self.interfaceCopy.text("common.close"), #selector(close)), copyButton])
   }
 
   override func close() {

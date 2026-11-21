@@ -4,7 +4,7 @@
 
 发布入口：AGENTS.md指向docs/release/WORKFLOW.md；BUILD.md定义本地打包。scripts/public-allowlist.txt包含导出所需的release安装/版本材料，私有执行记录留在tests/release/。
 
-术语入口为根GLOSSARY.md；网络观测补充定义按职责拆在docs/glossary/network-observation.md。
+术语入口为根GLOSSARY.md；网络观测、界面语言补充定义在docs/glossary/network-observation.md与interface-language.md。
 
 
 
@@ -14,7 +14,7 @@ pax-connect/
 │   ├── pax.proto                        # App ↔ 后台产品 gRPC
 │   ├── pax_core.proto                   # paxd ↔ root core 内部 gRPC，仅Go
 │   └── ai_profile_state / ai_profiles / ai_usage / network_diagnostics / operation / operation_context / privacy / route_edit / route_exit / route_usage / traffic .proto   # 按族拆出的产品 gRPC 消息
-├── patches/{sing-box,sing-tun}/          # 固定版本上游补丁（观测、路由/DNS热更、代理关闭归属、路由保护）及无root回归
+├── patches/{sing-box,sing-tun}/          # 固定版本上游补丁（观测、主动准入、路由/DNS热更、DNS进程归属、代理关闭归属、路由保护）及无root回归
 ├── daemon/
 │   ├── go.mod                           # 锁定 sing-box Go module
 │   ├── go.sum
@@ -31,9 +31,9 @@ pax-connect/
 │   ├── internal/coreclient/             # paxd 调 root core 的内部 RPC、内核身份与会话（只依赖 config 标准值）
 │   ├── internal/controller/             # 产品状态机、操作队列、保护检查、错误解释
 │   ├── internal/mcpserver/              # MCP schema/RPC映射、脱敏和有界查询续页
-│   ├── internal/config/                 # 生成、校验、版本和回滚
+│   ├── internal/config/                 # 生成、校验、版本和回滚；routing_claude.go 提供内置 Claude 名单
 │   ├── internal/importers/              # 链接/二维码/订阅/outbound → NodeProfile
-│   ├── internal/singbox/                # 配置转换/StartedService/selector、无TUN测量
+│   ├── internal/singbox/                # 配置转换/StartedService/selector、指定线路熔断、无TUN测量
 │   ├── internal/environment/            # 当前环境固定探针、真实浏览器静态采样页与短时loopback会话
 │   ├── internal/measurement/            # 独立HTTP测量/脱敏/预算
 │   ├── internal/network/                # 只读物理路径/路由归属与测量，无CAS或强关
@@ -69,6 +69,13 @@ pax-connect/
 └── third_party/licenses/
 ```
 
+呈现语义定义在api/presentation.proto；config/product_text与controller/system_event_text／system_event_mapping承接事件语义，historystore/columns_text负责可选col_texts子表及冻结读，清理沿现有owner。environment/presentation、browser_texts.json与scripts/language-browser-catalog.py负责短会话网页词条，内置字典由App资源单源生成。跨端模型与旧诊断可选Codable字段在PaxClient，ProductTextPresentation和LogDetailPresentation在PaxCore；日志语言更新位于Features/LogsWorkbench/LogsInterfaceLanguage。
+
+语言包沿PaxCore的LanguagePack／LanguageCatalog／StrictLanguageJSON／LanguagePackRepository／InterfaceLanguageStore；资源在Sources/PaxCore/Resources/LanguagePacks/{en,zh-Hans}按功能拆分。Features/SettingsWorkbench/InterfaceLanguageSettingsController提供本地语言与包操作，Workbench/InterfaceCopyBindings只更新显式产品文字；App/Info.plist声明语言与导入类型。定向测试LanguagePackTests，运行证据tests/interface-localization；范围与未完成项见architecture §19。
+
+指定线路熔断沿`singbox/core_fixed_{health,routes,owner}.go`与`core_route_gate.go`，准入上游接口在`patches/sing-box/routegate/`；`telemetry/fixed_route_events.go`复用系统事件投影。定向回归在同包，真实网络、socket与实窗证据在`tests/fixed-route-breaker/`。
+
+崩溃防逃逸1153已取消。`tests/crash-guard/seatbelt_probe.py`及`evidence/`保留本机机制验证；未实施草案归档至`docs/archive/2026-11-20-crash-guard-1153/`并登记归档索引，取消边界见`changes/pax-connect-network-control-plane/fixed-route-crash-guard.md`。
 
 来源投影沿现有目录：config/traffic_identity.go 定义 AI CLI 路径证据和目标键；controller/traffic_identity_projection.go 只读纠正旧桶，traffic_exits.go 聚合真实出口；对应测试验证历史保守性与跨窗口守恒。
 

@@ -21,7 +21,8 @@ App 不直连 sing-box 管理接口。代理 OFF 通过 CloseService 交还 TUN 
 
 ### 2.1 core 运行合同
 
-- **ON / 选路**：ON 把可用目录冻结为 core 内原生 proxy selector，当前选中线路由 paxd 持有，每次 Apply 后明确重选，不依赖 selector 持久化。普通切线保留实例与 TUN，经 `SelectOutbound` 切换后按旧 node tag 在内存中关闭 TCP/UDP；迟到的旧连接由 core 每 200ms 扫尾，不开 HTTP 管理端口、不误关 direct。目标不在冻结配置内时走同一 ApplyCatalog 显式 reload，失败恢复前次私有 profile 与选择。
+- **ON / 选路**：ON 把可用目录冻结为 core 内原生 proxy selector，当前选中线路由 paxd 持有，每次 Apply 后明确重选，不依赖 selector 持久化。普通切线保留实例与 TUN，经 `SelectOutbound` 切换后只关闭经proxy的旧线路TCP/UDP，保留仍固定该线路的连接；迟到连接由core每200ms扫尾，过滤已关闭记录并回读确认。目标不在冻结配置内时走同一ApplyCatalog显式reload，失败恢复前次私有profile与选择。
+- **指定线路熔断**：运行出站的检查、准入取消、定向断开和恢复见[熔断合同](../changes/pax-connect-network-control-plane/fixed-route-breaker.md)。由原root串行owner提交；worker不持生命周期锁联网。准入独立于被动观测，不开放额外管理口或系统防逃逸能力。
 - **切线结果**：请求响应丢失时回读 Hello 真实选中 tag；已提交但旧连接关闭未确认返回 `route_connections_pending`，真实线路未知返回 `core_selection_unknown`，不假装已回滚。Stop / CancelOperation 都可取消准备与切换，目录版本由串行 owner 冻结。
 - **第三方 TUN**：Apply 在任何 runtime / 系统代理写入前观察公开目标路由，只认自己预先指定的 utun 名；第三方占用时 root 识别 NE 或 fd owner，返回 `tun_conflict_other` 与受控名称 / kind / interface 参数，识别不了不猜。UI 提示用户到对应 App 或系统设置手动关闭；Pax 不发 SIGTERM / SIGKILL / `scutil` 停止，也不调用第三方控制 API。
 - **关闭与残留**：ClearProfile / Shutdown / owner 退出在内核 Clear 且状态 IDLE 后，只清仍指向 127.0.0.1 与本 core mixed-port 的系统代理，并有界回读 `scutil` 确认；未释放或读取失败不确认成功。不恢复第三方旧值，无 CAS / journal。
@@ -37,6 +38,8 @@ App 与 paxd 使用当前用户权限，paxd 由 App 拉为子进程；无密码
 paxd 数据目标为 `~/Library/Application Support/Pax Connect/`，私有数据文件 mode 0600，由用户手动运行一次性管道 `sudo scripts/migrate-root-data.sh --export | scripts/migrate-root-data.sh --import`：root 只读旧数据并输出流，普通用户完整校验后写入自己的目录，产品不含迁移逻辑（2026-10-16 用户决定）；用户 socket 与 root core 控制边界分离。core 校验配置白名单并在启动时清理仍指向 Pax 端口的残留系统代理。完整权限、配置限制和复用规则唯一见[决策](../changes/pax-connect-network-control-plane/decisions/core-process-model.md)。
 
 当前 App 启动不请求 sudo；ON 时 core 缺失/无响应则沿 core_required 开始可取消的授权续接。正常 core 会话内复用，OFF 清网络并保留进程。socket/生命周期见 §4、§17。
+
+界面语言与`.paxlang`导入类型由App Info.plist声明；PaxCore资源bundle保存内置语言数据。网页内置字典从同源生成并随daemon嵌入，build-daemon先核对生成结果。自定义包只写Application Support/Pax Connect/LanguagePacks，不修改签名bundle。
 
 ## 17. 构建、签名与安装
 

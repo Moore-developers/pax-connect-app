@@ -15,21 +15,29 @@ enum DashboardInsightProjection {
     return nil
   }
 
-  static func actionModel(_ action: Action) -> PaxActionModel {
+  static func actionModel(_ action: Action, context: PresentationContext = .chinese)
+    -> PaxActionModel
+  {
     switch action {
     case .addRoute:
       return .init(
-        id: "add-route", symbol: "plus.circle", tone: .info, title: "还没有线路",
-        detail: "添加线路后即可开启代理", primary: "添加线路")
+        id: "add-route", symbol: "plus.circle", tone: .info,
+        title: context.text("dashboard_value.no_route_action"),
+        detail: context.text("dashboard_value.add_route_action_detail"),
+        primary: context.text("dashboard_value.add_route_action"))
     case .channelFailed:
       return .init(
         id: "channel-failed", symbol: "exclamationmark.triangle", tone: .error,
-        title: "当前通道检查失败", detail: "无法通过当前线路访问网络，请重新验证或诊断", primary: "线路诊断",
-        secondary: "重新验证")
+        title: context.text("dashboard_value.channel_failed"),
+        detail: context.text("dashboard_value.channel_failed_detail"),
+        primary: context.text("dashboard_value.diagnose_route"),
+        secondary: context.text("dashboard_value.reverify"))
     case .authorize:
       return .init(
-        id: "authorize", symbol: "lock.shield", tone: .warning, title: "启动代理需要系统授权",
-        detail: "授权后才能接管系统网络", primary: "授权连接")
+        id: "authorize", symbol: "lock.shield", tone: .warning,
+        title: context.text("dashboard_value.authorization_needed"),
+        detail: context.text("dashboard_value.authorization_detail"),
+        primary: context.text("dashboard_value.authorize"))
     }
   }
 
@@ -40,33 +48,44 @@ enum DashboardInsightProjection {
 
   /// 今日未解决问题：先放实时问题归并（订阅更新失败、线路测量未完成…），再用今日问题日志补足，至多 3 项。
   static func attention(
-    feedback: [ConnectionFeedback], problems: [ProductLog], calendar: Calendar = .current
+    feedback: [ConnectionFeedback], problems: [ProductLog], calendar: Calendar = .current,
+    context: PresentationContext = .chinese
   ) -> [PaxInsightItem] {
     var items = feedback.map { issue -> PaxInsightItem in
       let failed = errorFeedback.contains(issue.id) || issue.id.hasPrefix("degraded")
       return PaxInsightItem(
         id: "feedback:" + issue.id, symbol: failed ? "exclamationmark.triangle" : "clock",
-        title: issue.title, detail: issue.detail, badge: failed ? "错误" : "待处理",
+        title: issue.title, detail: issue.detail,
+        badge: failed
+          ? context.text("dashboard_value.error") : context.text("dashboard_value.pending"),
         badgeTone: failed ? .error : .warning)
     }
     for log in problems.sorted(by: { $0.at > $1.at }) {
-      guard !items.contains(where: { $0.title == log.message }) else { continue }
+      let title = ProductTextPresentation.logTitle(log, context: context)
+      guard !items.contains(where: { $0.title == title }) else { continue }
       let failed = log.level == .error
       var detail = DashboardFormat.clock(log.lastAt ?? log.at, calendar: calendar)
-      if log.occurrences > 1 { detail += " · \(log.occurrences) 次" }
+      if log.occurrences > 1 {
+        detail += " · " + context.text("dashboard.occurrences", ["count": String(log.occurrences)])
+      }
       if !log.routeName.isEmpty { detail += " · " + log.routeName }
       items.append(
         PaxInsightItem(
           id: "problem:" + (log.problemID.isEmpty ? log.recordID : log.problemID),
-          symbol: failed ? "exclamationmark.triangle" : "clock", title: log.message, detail: detail,
-          badge: failed ? "错误" : "待处理", badgeTone: failed ? .error : .warning))
+          symbol: failed ? "exclamationmark.triangle" : "clock",
+          title: title, detail: detail,
+          badge: failed
+            ? context.text("dashboard_value.error") : context.text("dashboard_value.pending"),
+          badgeTone: failed ? .error : .warning))
     }
     return Array(items.prefix(limit))
   }
 
   /// Pax 操作与线路 / 订阅事件，最新在前，至多 3 项。错误事件不被成功事件挤掉：
   /// 前 3 项里没有错误而更早有错误时，用最近的错误替换最旧的一项。
-  static func changes(operations: [ProductLog], calendar: Calendar = .current) -> [PaxInsightItem] {
+  static func changes(
+    operations: [ProductLog], calendar: Calendar = .current, context: PresentationContext = .chinese
+  ) -> [PaxInsightItem] {
     let sorted = operations.sorted { $0.at > $1.at }
     var picked = Array(sorted.prefix(limit))
     if !picked.contains(where: { $0.level == .error }),
@@ -78,15 +97,16 @@ enum DashboardInsightProjection {
     return picked.map { log in
       let (detail, tone): (String, PaxToneBadge.Tone) =
         switch log.level {
-        case .error: ("失败", .error)
-        case .warning: ("需注意", .warning)
-        default: ("成功", .success)
+        case .error: (context.text("dashboard_value.failed"), .error)
+        case .warning: (context.text("dashboard_value.attention"), .warning)
+        default: (context.text("dashboard_value.success"), .success)
         }
       return PaxInsightItem(
         id: "change:"
           + (log.recordID.isEmpty
             ? log.operationID + "\(log.at.timeIntervalSince1970)" : log.recordID),
-        time: DashboardFormat.clock(log.at, calendar: calendar), title: log.message, detail: detail,
+        time: DashboardFormat.clock(log.at, calendar: calendar),
+        title: ProductTextPresentation.logTitle(log, context: context), detail: detail,
         detailTone: tone)
     }
   }

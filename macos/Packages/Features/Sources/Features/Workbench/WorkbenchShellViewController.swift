@@ -10,6 +10,10 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   var menuConnection: ConnectionStore?
   private var liveTelemetry: TelemetryStore?
   private let pages = NSTabViewController()
+  public let language: InterfaceLanguageStore?
+  public var onPresentationChange: ((PresentationContext) -> Void)?
+  private var presentationRevision: UInt64?
+
   let gettingStarted = GettingStartedView()
   let onboarding = OnboardingStore(
     key: "pax.first-run.v1." + (ProcessInfo.processInfo.environment["PAX_SOCKET"] ?? "production"))
@@ -23,7 +27,8 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   private let routing: RoutingWorkbenchViewController?
   private let logs: LogsWorkbenchViewController?
   private let settings: SettingsWorkbenchViewController?
-  public init(store: WorkbenchDemoStore) {
+  public init(store: WorkbenchDemoStore, language: InterfaceLanguageStore? = nil) {
+    self.language = language
     let icons = WorkbenchObjectIcons()
     dashboard = WorkbenchDashboardViewController(store: store, tooltip: tooltip, objectIcons: icons)
     navigation = WorkbenchNavigation()
@@ -33,7 +38,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     self.routing = routing
     let logs = LogsWorkbenchViewController(session: store, objectIcons: icons)
     self.logs = logs
-    let settings = SettingsWorkbenchViewController()
+    let settings = SettingsWorkbenchViewController(language: language)
     self.settings = settings
     super.init(nibName: nil, bundle: nil)
     pages.tabStyle = .unspecified
@@ -57,13 +62,15 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       NSTabViewItem(viewController: ComponentGalleryViewController(tooltip: tooltip)))
     installNavigation()
     installDashboardLinks()
+    observeLanguage()
   }
   public init(
     routes: RoutesStore, connection: ConnectionStore, telemetry: TelemetryStore? = nil,
     aiProfiles: AIProfilesStore? = nil, aiUsage: AIUsageDataStore? = nil,
     dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil,
-    mcpAccess: MCPAccessActions? = nil
+    mcpAccess: MCPAccessActions? = nil, language: InterfaceLanguageStore? = nil
   ) {
+    self.language = language
     let icons = WorkbenchObjectIcons(telemetry: telemetry)
     onboardingRoutes = routes
     onboardingData = aiUsage
@@ -96,7 +103,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     self.logs = logs
     let settings = SettingsWorkbenchViewController(
       measurement: MeasurementSettingsViewController(routes: routes), telemetry: telemetry,
-      privacyRoutes: routes, mcpAccess: mcpAccess, connection: connection)
+      privacyRoutes: routes, mcpAccess: mcpAccess, connection: connection, language: language)
     self.settings = settings
     super.init(nibName: nil, bundle: nil)
     pages.tabStyle = .unspecified
@@ -114,12 +121,14 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     pages.addTabViewItem(NSTabViewItem(viewController: about))
     installNavigation()
     installDashboardLinks()
+    observeLanguage()
     installOnboarding()
     if let telemetry {
       logs.onRoute = { [weak self] id in
         guard let self else { return }
         guard self.routes.store.node(id) != nil else {
-          self.showHistoryMessage("关联线路已删除")
+          let context = self.language?.context ?? .chinese
+          self.showHistoryMessage(context.text("logs.removed_route"), context: context)
           return
         }
         self.navigation.select(1)
@@ -140,7 +149,11 @@ public final class WorkbenchShellViewController: NSSplitViewController {
                 detail: detail, dimension: .application, telemetry: telemetry,
                 tooltip: self.tooltip, icons: self.routing?.objectIcons
               ))
-          } catch { self?.showHistoryMessage(ProductErrorPresentation.display(error)) }
+          } catch {
+            let context = self?.language?.context ?? .chinese
+            self?.showHistoryMessage(
+              ProductErrorPresentation.display(error, context: context), context: context)
+          }
         }
       }
       dashboard.onShowLogs = { [weak self] in self?.navigation.select(3) }
@@ -150,15 +163,31 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       }
     }
   }
+  private func observeLanguage() {
+    guard let language else { return }
+    withObservationTracking {
+      let context = language.context
+      if presentationRevision != context.revision {
+        presentationRevision = context.revision
+        navigation.apply(context)
+        updateOnboarding()
+        for child in pages.children { child.applyInterfaceLanguage(context) }
+        onPresentationChange?(context)
+      }
+    } onChange: { [weak self] in
+      Task { @MainActor in self?.observeLanguage() }
+    }
+  }
   /// 概览卡片上的跳转入口；日志入口在有 telemetry 时另行接线。
   private func installDashboardLinks() {
     dashboard.onShowRoutes = { [weak self] in self?.navigation.select(1) }
     dashboard.onShowAIUsage = { [weak self] in self?.navigation.select(4) }
   }
-  private func showHistoryMessage(_ message: String) {
+  private func showHistoryMessage(_ message: String, context: PresentationContext) {
     guard let window = view.window else { return }
     let alert = NSAlert()
     alert.messageText = message
+    alert.addButton(withTitle: context.text("common.ok"))
     alert.beginSheetModal(for: window)
   }
   private func installNavigation() {
@@ -170,6 +199,9 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       if let self, self.onboarding.path != nil {
         if index == 4 { self.onboarding.choose(.models) }
         if index == 1 { self.onboarding.choose(.network) }
+      }
+      if let self, let context = self.language?.context {
+        self.pages.tabView.selectedTabViewItem?.viewController?.applyInterfaceLanguage(context)
       }
       self?.updateOnboarding()
     }
@@ -297,6 +329,16 @@ private final class WorkbenchNavigation: NSViewController {
     sidebar.onSelect = { [weak self] pageIndex in self?.select(pageIndex) }
     sidebar.select(selectedIndex)
     view = sidebar
+  }
+  func apply(_ context: PresentationContext) {
+    loadViewIfNeeded()
+    let keys = ["overview", "routes", "traffic", "logs", "usage", "settings", "about"]
+    (view as? PaxSidebar)?.apply(
+      titles: Dictionary(
+        uniqueKeysWithValues:
+          keys.enumerated().map { ($0.offset, context.text("navigation." + $0.element)) }),
+      selectedLabel: context.text("common.selected"),
+      unselectedLabel: context.text("common.unselected"))
   }
   func select(_ index: Int) {
     selectedIndex = index

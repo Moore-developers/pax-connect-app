@@ -1,15 +1,36 @@
 import Foundation
+import PaxCore
 
 /// 包类型的展示文案只有一处映射：同时给出详情副标题与包行摘要，
 /// 新增包类型只改一个 case，不在渲染处各写一遍 switch。
 extension RoutingWorkbenchStore.RulePackage {
-  var kindPresentation: (subtitle: String, summary: String) {
+  func displayName(context: PresentationContext) -> String {
+    let keys: [RoutingWorkbenchStore.PackageKind: String] = [
+      .priority: "priority", .geo: "geo", .adblock: "adblock", .claude: "claude",
+    ]
+    return keys[kind].map { context.text("rules.package." + $0) } ?? name
+  }
+  var kindPresentation: (subtitle: String, summary: String) { kindPresentation(context: .chinese) }
+  func kindPresentation(context: PresentationContext) -> (subtitle: String, summary: String) {
     switch kind {
-    case .priority: ("每条规则单独设置去向 · 优先于所有其他包", "固定 · 最高优先")
-    case .local: ("自己维护 · 包内规则可增删改", "自己维护 · \(rules.count) 条规则")
-    case .subscription: ("从链接订阅 · 匹配内容由来源维护", "订阅 · " + version)
-    case .adblock: ("内置广告域名名单 · 仅阻断命中的新连接 · 用户规则优先", "内置 · " + version)
-    case .geo: ("内置规则 · 作为默认分流依据", "内置 · " + version)
+    case .priority:
+      (context.text("routing_copy.b31b7c4bc4"), context.text("routing_copy.e30c829d3e"))
+    case .local:
+      (
+        context.text("routing_copy.8eb8378a49"),
+        context.text("routing_copy.d461bf4f62", ["arg0": String(describing: rules.count)])
+      )
+    case .subscription:
+      (context.text("routing_copy.a44df5b18c"), context.text("routing_copy.aef0eb612a") + version)
+    case .adblock:
+      (context.text("routing_copy.4eb8d4b047"), context.text("routing_copy.c2703ab2aa") + version)
+    case .claude:
+      (
+        context.text("routing_copy.e40a8313b0"),
+        context.text("routing_copy.350c0e1fd0", ["arg0": String(describing: rules.count)])
+      )
+    case .geo:
+      (context.text("routing_copy.47a81d6b47"), context.text("routing_copy.c2703ab2aa") + version)
     }
   }
 }

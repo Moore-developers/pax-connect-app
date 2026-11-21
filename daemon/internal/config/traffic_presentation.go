@@ -6,7 +6,11 @@ import (
 )
 
 // RoutingMatchEvidence is frozen at kernel match time, not looked up in current UI state.
-type RoutingMatchEvidence struct{ Package, Method, Target string }
+type RoutingMatchEvidence struct {
+	Package, Method, Target string
+	UnavailableRoute        string `json:",omitempty"`
+	FixedRouteName          string `json:",omitempty"`
+}
 
 func RecordedRoutingEvidence(rule string) (RoutingMatchEvidence, bool) {
 	var value RoutingMatchEvidence
@@ -14,6 +18,17 @@ func RecordedRoutingEvidence(rule string) (RoutingMatchEvidence, bool) {
 		return value, true
 	}
 	return value, false
+}
+
+// UnavailableRoutingMessage describes a confirmed rejection for a missing fixed outbound.
+func UnavailableRoutingMessage(f FlowFact) string {
+	if f.Direction != "blocked" || f.Failure != "rule_rejected" {
+		return ""
+	}
+	if match, ok := RecordedRoutingEvidence(f.Rule); ok && match.UnavailableRoute != "" {
+		return "指定线路 " + match.UnavailableRoute + " 不可用"
+	}
+	return ""
 }
 
 // ipv4OnlyRule recognizes only the recorded built-in IPv6 rejection, including

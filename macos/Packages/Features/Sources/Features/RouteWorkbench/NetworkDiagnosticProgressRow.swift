@@ -97,19 +97,30 @@ import PaxUI
     ])
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  func apply(_ activity: NetworkDiagnosticActivity, elapsed: Int) {
+  func apply(
+    _ activity: NetworkDiagnosticActivity, elapsed: Int, context: PresentationContext = .chinese
+  ) {
     name.stringValue = activity.name
     detail.stringValue =
       activity.state == .stopped
-      ? "已停止"
-      : activity.detail.replacingOccurrences(of: "已结束探测", with: "探测已结束")
+      ? context.text("native_diagnostic.f006455e3b")
+      : activity.detail.replacingOccurrences(
+        of: context.text("native_diagnostic.36f686041a"),
+        with: context.text("native_diagnostic.05d44a443d"))
     detail.textColor =
       activity.state == .failed
       ? PaxTheme.Color.error
       : activity.state == .partial ? PaxTheme.Color.amberLabel : PaxTheme.Color.textSecondary
     symbol.apply(activity.state)
-    duration.stringValue = "\(elapsed) 秒"
-    setAccessibilityLabel("\(activity.name)，\(detail.stringValue)，\(elapsed) 秒")
+    duration.stringValue = context.text(
+      "native_diagnostic.1cd3a6d437", ["arg0": String(describing: elapsed)])
+    setAccessibilityLabel(
+      context.text(
+        "native_diagnostic.d7f253b7d2",
+        [
+          "arg0": String(describing: activity.name), "arg1": String(describing: detail.stringValue),
+          "arg2": String(describing: elapsed),
+        ]))
   }
   func stop() { symbol.stop() }
 }

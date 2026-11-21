@@ -156,6 +156,7 @@ public final class PaxDialogView: NSView {
     iconView = view
   }
   public func applyTitle(_ title: String) { titleField.stringValue = title }
+  public func applySubtitle(_ subtitle: String) { subtitleField.stringValue = subtitle }
   public func applyTitleColor(_ color: NSColor) { titleField.textColor = color }
   public func add(_ view: NSView) {
     content.addArrangedSubview(view)

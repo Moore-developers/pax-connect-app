@@ -246,25 +246,32 @@ public final class ConnectionStore {
     else { return nil }
     return route
   }
-  public var proxyMessage: String {
-    if connection != .connected { return clientError?.message ?? "后台服务未连接" }
-    if let operationError { return ProductErrorPresentation.message(operationError) }
+  public var proxyMessage: String { proxyMessage(context: .chinese) }
+  public func proxyMessage(context: PresentationContext) -> String {
+    if connection != .connected {
+      return clientError.map { ProductErrorPresentation.message($0, context: context) }
+        ?? context.text("network_controls.d2d1752a0b")
+    }
+    if let operationError {
+      return ProductErrorPresentation.message(operationError, context: context)
+    }
     if let degradedReason {
       if status == .degraded && activeTLS?.skipped == true {
         let others = degradedReasons.filter { $0.code != "tls_unverified" }
         let suffix =
           others.isEmpty && degradedReason.code != "tls_unverified"
-          ? " · " + ProductErrorPresentation.message(degradedReason)
-          : others.map { " · " + ProductErrorPresentation.message($0) }.joined()
-        return "代理已连接 · 证书未校验" + suffix
+          ? " · " + ProductErrorPresentation.message(degradedReason, context: context)
+          : others.map { " · " + ProductErrorPresentation.message($0, context: context) }.joined()
+        return context.text("dashboard.proxy_tls_skipped") + suffix
       }
-      return ProductErrorPresentation.message(degradedReason)
+      return ProductErrorPresentation.message(degradedReason, context: context)
     }
-    if let clientError { return clientError.message }
-    if proxyStarting { return "连接中，可选择直连取消" }
-    if status == .protected { return "代理已开启" }
-    if proxyConfirmationRoute != nil { return "开启前请确认线路证书设置" }
-    return routesStore?.selectedRoute == nil ? "请先选择线路" : "代理已关闭"
+    if let clientError { return ProductErrorPresentation.message(clientError, context: context) }
+    if proxyStarting { return context.text("dashboard.proxy_connecting") }
+    if status == .protected { return context.text("network_controls.94dcb4778e") }
+    if proxyConfirmationRoute != nil { return context.text("dashboard.proxy_confirm_tls") }
+    return routesStore?.selectedRoute == nil
+      ? context.text("dashboard.proxy_choose_route") : context.text("network_controls.29a31f33c0")
   }
   public func setProxyFromWorkbench(_ enabled: Bool) async {
     if !enabled && needsServiceAuthorization {

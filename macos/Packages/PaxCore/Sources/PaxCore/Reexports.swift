@@ -21,6 +21,7 @@ public typealias DaemonConnection = PaxClient.DaemonConnection
 public typealias ConnectionSession = PaxClient.ConnectionSession
 public typealias ConnectionUpdate = PaxClient.ConnectionUpdate
 public typealias ClientError = PaxClient.ClientError
+public typealias BrowserPresentation = PaxClient.BrowserPresentation
 
 public typealias TLSMode = PaxClient.TLSMode
 public typealias RouteTLSPolicy = PaxClient.RouteTLSPolicy
@@ -159,3 +160,5 @@ public typealias NetworkDiagnosticFact = PaxClient.NetworkDiagnosticReport.Fact
 public typealias NetworkDiagnosticProbe = PaxClient.NetworkDiagnosticReport.Probe
 public typealias EnvironmentDiagnosticReport = PaxClient.EnvironmentDiagnosticReport
 public typealias EnvironmentDiagnosticSample = PaxClient.EnvironmentDiagnosticReport.Sample
+
+public typealias ProductText = PaxClient.ProductText

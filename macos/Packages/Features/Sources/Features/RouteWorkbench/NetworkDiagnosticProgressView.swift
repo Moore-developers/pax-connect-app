@@ -32,12 +32,16 @@ import PaxUI
   private var reading = false
   private var clockTask: Task<Void, Never>?
   private lazy var collapse = PaxRouteButton(
-    "收起", symbol: "chevron.up", style: .quiet, target: self, action: #selector(collapseProgress))
+    context.text("native_diagnostic.afd4b78353"), symbol: "chevron.up", style: .quiet, target: self,
+    action: #selector(collapseProgress))
   private lazy var expand = PaxRouteButton(
-    "展开详情", symbol: "chevron.down", style: .quiet, target: self,
+    context.text("native_diagnostic.4bf0fb2140"), symbol: "chevron.down", style: .quiet,
+    target: self,
     action: #selector(expandProgress))
 
-  init() {
+  let context: PresentationContext
+  init(context: PresentationContext = .chinese) {
+    self.context = context
     super.init(frame: .zero)
     orientation = .vertical
     alignment = .leading
@@ -98,7 +102,7 @@ import PaxUI
       collapsed = false
       remaining = nil
     }
-    activities = store.activities
+    activities = store.activities(context: context)
     isRunning = busy
     expand.isHidden = startedAt == nil
     while rows.count < activities.count {
@@ -119,13 +123,16 @@ import PaxUI
         remaining = hasFailure ? nil : Theme.progressCollapseSeconds
       }
     } else if let at = store.report?.at ?? store.currentEnvironment?.report?.at {
-      compactText.stringValue = "上次检测：\(MeasurementTimestamp.text(at))"
+      compactText.stringValue = context.text(
+        "native_diagnostic.9bfb31c74f", ["arg0": String(describing: MeasurementTimestamp.text(at))])
       compactSymbol.apply(.idle)
     }
     let hasHistory = store.stale && store.report != nil
     history.isHidden = !hasHistory || !busy && !activities.contains { $0.state == .stopped }
     if hasHistory {
-      history.stringValue = "上次有效结果 · 检测于 \(MeasurementTimestamp.text(store.report?.at))"
+      history.stringValue = context.text(
+        "native_diagnostic.098acef136",
+        ["arg0": String(describing: MeasurementTimestamp.text(store.report?.at))])
     }
     isHidden = startedAt == nil && store.report == nil && store.currentEnvironment?.report == nil
     render()
@@ -165,29 +172,73 @@ import PaxUI
       symbol.apply(state)
       compactSymbol.apply(state)
       title.stringValue =
-        isRunning ? "正在检测" : incomplete ? "检测结束，部分未完成" : stopped ? "检测已停止" : "检测已完成"
+        isRunning
+        ? context.text("native_diagnostic.2b5941013c")
+        : incomplete
+          ? context.text("native_diagnostic.81668dd93c")
+          : stopped
+            ? context.text("native_diagnostic.86ba986bcb")
+            : context.text("native_diagnostic.f7bdd9c96d")
       let settled = activities.filter(\.settled).count
       badge.stringValue =
         isRunning
-        ? "已结束 \(settled)/\(activities.count) 路"
-        : incomplete ? "查看未完成项" : stopped ? "结果可继续查看" : "\(activities.count) 路均已完成"
+        ? context.text(
+          "native_diagnostic.21caad5454",
+          ["arg0": String(describing: settled), "arg1": String(describing: activities.count)])
+        : incomplete
+          ? context.text("native_diagnostic.0de8544ea3")
+          : stopped
+            ? context.text("native_diagnostic.b390ab1f6d")
+            : context.text(
+              "native_diagnostic.fc316655c4", ["arg0": String(describing: activities.count)])
       let elapsed = seconds(until: endedAt ?? Date())
       time.stringValue =
-        "开始于 \(MeasurementTimestamp.secondsText(start)) · \(isRunning ? "已用" : "耗时") \(elapsed) 秒"
+        context.text(
+          "native_diagnostic.2dbaf76500",
+          [
+            "arg0": MeasurementTimestamp.secondsText(start),
+            "arg1": isRunning
+              ? context.text("native_diagnostic.937683da32")
+              : context.text("native_diagnostic.e77e3d58b0"), "arg2": String(elapsed),
+          ])
       compactText.stringValue =
-        "\(stopped ? "上次尝试" : "上次检测")：\(MeasurementTimestamp.text(start)) · 耗时 \(elapsed) 秒 · "
-        + (isRunning ? "检测中" : incomplete ? "部分未完成" : stopped ? "已停止" : "已完成")
+        context.text(
+          "native_diagnostic.a4a2cbb9d2",
+          [
+            "arg0": stopped
+              ? context.text("native_diagnostic.94ae067ab5")
+              : context.text("native_diagnostic.f48ea0733c"),
+            "arg1": MeasurementTimestamp.text(start), "arg2": String(elapsed),
+          ])
+        + (isRunning
+          ? context.text("native_diagnostic.20f99990c7")
+          : incomplete
+            ? context.text("native_diagnostic.3bfb98d16f")
+            : stopped
+              ? context.text("native_diagnostic.f006455e3b")
+              : context.text("native_diagnostic.f28461bb49"))
       for (index, activity) in activities.enumerated() {
-        rows[index].apply(activity, elapsed: seconds(until: rowEnds[index] ?? Date()))
+        rows[index].apply(
+          activity, elapsed: seconds(until: rowEnds[index] ?? Date()), context: context)
       }
       collapse.isHidden = isRunning
       note.stringValue =
         isRunning
-        ? "三路并行检测，结果会陆续更新"
+        ? context.text("native_diagnostic.d9cd6f4d5a")
         : incomplete
-          ? "未完成原因保留在下方报告中"
-          : stopped ? "已完成的结果可继续查看" : "结果已更新，完整报告保留在下方"
-      countdown.stringValue = remaining.map { "\(isReading ? "阅读中，暂停收起 · " : "")\($0) 秒后收起" } ?? ""
+          ? context.text("diagnostic.progress.incomplete_details")
+          : stopped
+            ? context.text("native_diagnostic.0dda291efb")
+            : context.text("native_diagnostic.0ff91a01fc")
+      countdown.stringValue =
+        remaining.map {
+          context.text(
+            "native_diagnostic.27c1346251",
+            [
+              "arg0": isReading ? context.text("native_diagnostic.aaa253f901") : "",
+              "arg1": String($0),
+            ])
+        } ?? ""
       countdown.isHidden = remaining == nil
       setAccessibilityLabel(title.stringValue + "，" + badge.stringValue)
     }

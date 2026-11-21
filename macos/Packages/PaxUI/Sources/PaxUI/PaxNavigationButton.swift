@@ -3,7 +3,14 @@ import AppKit
 /// 同一中性选中态用于侧栏与组件目录；NSButton 保留点击、键盘和辅助访问。
 public final class PaxNavigationButton: NSButton {
   private var hovered = false
+  private var selectedLabel = "已选中"
+  private var unselectedLabel = "未选中"
   public var isSelected = false { didSet { updateAppearance() } }
+  public func applyAccessibility(selected: String, unselected: String) {
+    selectedLabel = selected
+    unselectedLabel = unselected
+    setAccessibilityValue(isSelected ? selectedLabel : unselectedLabel)
+  }
   public init(title: String, symbol: String, target: AnyObject? = nil, action: Selector? = nil) {
     super.init(frame: .zero)
     focusRingType = .none
@@ -78,7 +85,7 @@ public final class PaxNavigationButton: NSButton {
       }
     }
     needsDisplay = true
-    setAccessibilityValue(isSelected ? "已选中" : "未选中")
+    setAccessibilityValue(isSelected ? selectedLabel : unselectedLabel)
   }
   public override func viewDidChangeEffectiveAppearance() {
     super.viewDidChangeEffectiveAppearance()

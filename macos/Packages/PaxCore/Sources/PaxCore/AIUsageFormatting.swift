@@ -75,19 +75,22 @@ public enum AIUsageFormatting {
     return "较上一时段 " + (rounded > 0 ? "↑" : "↓") + "\(abs(rounded))" + (points ? "pt" : "%")
   }
   /// Short failure text for a table cell; the full reason stays in the tooltip.
-  public static func failureBrief(_ code: String?) -> String {
+  public static func failureBrief(_ code: String?, context: PresentationContext = .chinese)
+    -> String
+  {
     let text = code ?? ""
     let digits = text.split(whereSeparator: { !$0.isNumber }).first { $0.count == 3 }.map(
       String.init)
     switch (digits, text.uppercased()) {
-    case ("401", _), ("403", _), (_, "AUTH"): return (digits ?? "401") + " 认证"
-    case ("402", _): return "402 额度"
-    case ("429", _), (_, "RATE_LIMIT"): return "429 限流"
-    case (let d?, _) where d.hasPrefix("5"): return d + " 上游"
-    case (let d?, _): return d + " 错误"
-    case (_, "TIMEOUT"): return "超时"
-    case (_, "TRANSPORT"): return "连接失败"
-    default: return "失败"
+    case ("401", _), ("403", _), (_, "AUTH"):
+      return (digits ?? "401") + context.text("usage.failure.auth")
+    case ("402", _): return context.text("usage.failure.quota")
+    case ("429", _), (_, "RATE_LIMIT"): return context.text("usage.failure.limit")
+    case (let d?, _) where d.hasPrefix("5"): return d + context.text("usage.failure.upstream")
+    case (let d?, _): return d + context.text("usage.failure.error")
+    case (_, "TIMEOUT"): return context.text("usage.failure.timeout")
+    case (_, "TRANSPORT"): return context.text("usage.failure.connection")
+    default: return context.text("usage.failure.failed")
     }
   }
 }

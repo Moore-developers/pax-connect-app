@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "error.core_required": "Enabling the proxy requires system authorization. Route management, subscriptions, and tests remain available.",
+    "error.core_identity_mismatch": "The running proxy core does not match this app. Quit other Pax Connect instances and retry.",
+    "error.core_selection_unknown": "The route actually used by the core is unconfirmed. Disable and reconnect the proxy.",
+    "error.core_power_failed": "Forwarding the sleep state has not finished. Retrying.",
+    "error.core_unavailable": "The proxy core is not responding. Quit and reopen the app.",
+    "error.address_in_use": "A resource needed by the proxy core is occupied. Check the local proxy port and retry.",
+    "error.route_conflict": "System routes conflict, possibly with another TUN. Disable that tool’s TUN and retry.",
+    "error.permission_denied": "The proxy core lacks permission. Check system authorization and retry.",
+    "error.resource_unavailable": "A resource required by the proxy core is unavailable. Quit and reopen the app.",
+    "error.configuration_rejected": "The proxy core rejected the configuration. Check route settings and built-in rules.",
+    "error.protection_unverified": "The proxy core started, but connectivity for the current connection has not been verified.",
+    "error.service_privileges_required": "Enabling the proxy requires a core with system privileges. Route management, subscriptions, and tests remain available."
+  }
+}

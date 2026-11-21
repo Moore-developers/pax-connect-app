@@ -57,6 +57,20 @@ with (output / 'prepare.lock').open('w') as lock:
         if relative not in observation_hashes and relative not in routing_hashes:
             (destination / relative).write_bytes(original.read_bytes())
     subprocess.run(['patch', '-s', '-p1', '-i', str(root / 'patches/sing-box/observations-quality.patch')], cwd=destination, check=True)
+    # Explicit admission/cancellation is separate from the passive observer. The
+    # observation/quality stages verify both touched files against pinned hashes.
+    subprocess.run(['patch', '-s', '-p1', '-i', str(root / 'patches/sing-box/connection-gate.patch')], cwd=destination, check=True)
+    gate_target = destination / 'experimental/paxgate'
+    gate_target.mkdir(exist_ok=True)
+    for gate_source in (root / 'patches/sing-box/routegate').glob('*.go'):
+        (gate_target / gate_source.name).write_bytes(gate_source.read_bytes())
+    # The observation stage already verifies and resets the inbound DNS sources.
+    packet_owner = 'common/process/searcher_darwin_shared.go'
+    packet_owner_source = (source / packet_owner).read_bytes()
+    if hashlib.sha256(packet_owner_source).hexdigest() != 'efcd094a24fd1a30e96251441f0ad1e1f624eec10733145c436c56ef093351e5':
+        sys.exit('sing-box Darwin socket owner source checksum mismatch')
+    (destination / packet_owner).write_bytes(packet_owner_source)
+    subprocess.run(['patch', '-s', '-p1', '-i', str(root / 'patches/sing-box/dns-packet-owner.patch')], cwd=destination, check=True)
     dns_hashes = json.loads((root / 'patches/sing-box/dns-source-hashes.json').read_text())
     for relative, expected in dns_hashes.items():
         original = source / relative
@@ -97,4 +111,6 @@ with (output / 'prepare.lock').open('w') as lock:
         staged_test = test_target.with_suffix('.tmp')
         staged_test.write_bytes(test.read_bytes())
         staged_test.replace(test_target)
+    owner_test = root / 'patches/sing-box/dns_packet_owner_darwin_test.go'
+    (destination / 'common/process/pax_packet_owner_darwin_test.go').write_bytes(owner_test.read_bytes())
 print(destination)

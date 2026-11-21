@@ -19,7 +19,6 @@ const (
 	logsPollInterval     = cadence.HistoryLogsFallback
 	logsBatchRecords     = 128
 	logsInboxCapacity    = 64
-	logsCapacityBytes    = 2 << 30
 	logsMetaTimeout      = 2 * time.Second
 	logsStopFlushTimeout = 3 * time.Second
 	logsRetentionHours   = 24
@@ -46,9 +45,6 @@ type logsStore interface {
 	Cursor(ctx context.Context, name string) (historystore.Cursor, bool, error)
 	Meta(ctx context.Context, key string) (string, bool, error)
 	Prune(ctx context.Context, before time.Time, limits historystore.Limits) (historystore.Pruned, error)
-	EvictOldest(ctx context.Context, capBytes int64, limits historystore.Limits) (bool, error)
-	LiveBytes(ctx context.Context) (int64, error)
-	CapacityBytes(ctx context.Context) (int64, error)
 	IncrementalVacuum(ctx context.Context, pages int) error
 	Checkpoint(ctx context.Context) (bool, error)
 	Close() error
@@ -101,7 +97,6 @@ type historyLogs struct {
 	down             bool
 	executingCommand bool
 	failure          error // set by fail during the current pass; see stepOnce
-	capBytes         int64
 	lastVacuum       time.Time
 }
 
@@ -111,7 +106,7 @@ func newHistoryLogs(ctx context.Context, logs logsStore, journal logsJournal, co
 		consumers = newJournalConsumers()
 	}
 	l := &historyLogs{logs: logs, journal: journal, consumers: consumers,
-		now: time.Now, capBytes: logsCapacityBytes, apps: newApplicationIdentities(),
+		now: time.Now, apps: newApplicationIdentities(),
 		backoff: backoff{max: 60 * time.Second}, done: make(chan struct{}), inbox: make(chan config.HistoryEvent, logsInboxCapacity),
 		commands: make(chan logsCommand, logsCommandCapacity), wake: make(chan struct{}, 1)}
 	cursor, ok, err := logs.Cursor(ctx, logsCursorName)

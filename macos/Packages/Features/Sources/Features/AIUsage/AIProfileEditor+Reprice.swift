@@ -21,7 +21,9 @@ extension AIProfileEditor {
     defaultInput != .value(editBaseline?.multiplier ?? 1)
       || rates.hasChanges(from: editBaseline?.modelMultipliers ?? [:])
   }
-  var repriceBlockReason: String? { multiplierDraftChanged ? "请先保存倍率修改，再更新历史" : nil }
+  var repriceBlockReason: String? {
+    multiplierDraftChanged ? self.interfaceCopy.text("profile_editor.save_multiplier_first") : nil
+  }
 
   func draftChanged() { syncDraftState() }
 
@@ -29,17 +31,17 @@ extension AIProfileEditor {
   func syncDraftState() {
     saveButton?.isEnabled = !saving && inputsValid
     if case .invalid = defaultInput {
-      pane.status.stringValue = "计费倍率：" + AIMultiplierInput.errorText
+      pane.status.stringValue =
+        self.interfaceCopy.text("profile_editor.multiplier_error_prefix")
+        + interfaceCopy.text("profile_editor.rate_error")
       pane.status.textColor = PaxTheme.Color.error
       pane.status.isHidden = false
       pane.status.superview?.isHidden = false
       multiplierErrorShown = true
     } else if multiplierErrorShown {
       multiplierErrorShown = false
-      if pane.status.stringValue.hasPrefix("计费倍率：") {  // leave unrelated messages alone
-        pane.status.stringValue = ""
-        pane.status.isHidden = true
-      }
+      pane.status.stringValue = ""
+      pane.status.isHidden = true
     }
     if case .value(let rate) = defaultInput {
       rates.update(models: rates.models, fallback: rate)
@@ -60,21 +62,23 @@ extension AIProfileEditor {
     let models = rateModels(p)
     if ratesCard == nil {
       ratesCard = profileSection(
-        "模型倍率", symbol: "percent",
+        self.interfaceCopy.text("profile_editor.model_multipliers"), symbol: "percent",
         views: [
-          AIUsageLayout.label("留空则使用默认倍率（「配置」页的计费倍率）；保存后只影响之后的新请求。", secondary: true),
+          AIUsageLayout.label(
+            self.interfaceCopy.text("profile_editor.model_multiplier_detail"), secondary: true),
           rates.view,
         ])
       let control = AIRepriceControl(
         profileID: p.id, flow: AIRepriceFlow(data: store.data), now: { [store] in store.now },
-        calendar: store.calendar)
+        calendar: store.calendar, context: interfaceCopy.context)
       control.blockReason = { [weak self] in self?.repriceBlockReason }
       control.onLayoutChange = { [weak self] in self?.pane.invalidateContentSize() }
       repriceControl = control
       repriceCard = profileSection(
-        "重算历史费用", symbol: "arrow.triangle.2.circlepath",
+        self.interfaceCopy.text("profile_editor.reprice"), symbol: "arrow.triangle.2.circlepath",
         views: [
-          AIUsageLayout.label("用已保存的倍率，重新计算过去请求的费用。会改写已记录的费用，无法撤销。", secondary: true),
+          AIUsageLayout.label(
+            self.interfaceCopy.text("profile_editor.reprice_detail"), secondary: true),
           control.view,
         ])
     }
@@ -93,7 +97,7 @@ extension AIProfileEditor {
     repriceControl?.flow.reset()
     let control = AIRepriceControl(
       profileID: latest.id, flow: AIRepriceFlow(data: store.data), todayOnly: true,
-      now: { [store] in store.now }, calendar: store.calendar)
+      now: { [store] in store.now }, calendar: store.calendar, context: interfaceCopy.context)
     control.blockReason = { [weak self] in self?.repriceBlockReason }
     control.onLayoutChange = { [weak self] in self?.pane.invalidateContentSize() }
     control.onDismiss = { [weak self] in
@@ -103,8 +107,12 @@ extension AIProfileEditor {
     }
     todayControl = control
     todayBanner = profileSection(
-      "倍率已保存", symbol: "checkmark.circle",
-      views: [AIUsageLayout.label("历史费用仍按原倍率；可只把今日数据按新倍率更新。", secondary: true), control.view])
+      self.interfaceCopy.text("profile_editor.multiplier_saved"), symbol: "checkmark.circle",
+      views: [
+        AIUsageLayout.label(
+          self.interfaceCopy.text("profile_editor.history_multiplier_detail"), secondary: true),
+        control.view,
+      ])
     render()
   }
 

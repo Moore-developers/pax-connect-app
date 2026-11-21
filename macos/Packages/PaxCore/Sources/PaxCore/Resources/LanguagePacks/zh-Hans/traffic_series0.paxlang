@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "traffic_series.6f5b222e4a": "查询开始时间",
+    "traffic_series.e338cc5ec0": "连接开始时间",
+    "traffic_series.d824870c1d": "解析耗时",
+    "traffic_series.1e5a9cdaa7": "有效响应",
+    "traffic_series.cd55966db0": "正在读取近期{arg0}",
+    "traffic_series.4620f3143c": "近期{arg0}读取失败",
+    "traffic_series.1e25f84df0": "最近 {arg0} 次{arg1} · 记录不完整",
+    "traffic_series.be5e37abf3": "暂无{arg0}",
+    "traffic_series.9af9a941b7": "最近 {arg0} 次{arg1}",
+    "traffic_series.39b4c35a48": "近期{arg0}暂不可用",
+    "traffic_series.569af1a47d": "最新",
+    "traffic_series.abe05d4485": "响应延迟",
+    "traffic_series.96d388c1b2": "IPv6 未启用",
+    "traffic_series.340e2ffc30": "规则未记录",
+    "traffic_series.858717dc95": "已阻断",
+    "traffic_series.93e474c68e": "状态未知",
+    "traffic_series.d79b1d0e5c": "已结束",
+    "traffic_series.3c01089ea0": "活动中"
+  }
+}

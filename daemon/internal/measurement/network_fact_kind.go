@@ -1,0 +1,46 @@
+package measurement
+
+// DiagnosticFactKind recognizes only the fixed field names supported by product adapters.
+// Arbitrary provider labels keep their original text and have no invented semantic key.
+func DiagnosticFactKind(label string) string {
+	return map[string]string{
+		"代理":             "proxy",
+		"VPN":            "vpn",
+		"Tor":            "tor",
+		"iCloud 中继":      "icloud_relay",
+		"匿名出口":           "anonymous_exit",
+		"滥用标记":           "abuse",
+		"代理风险 ≥67":       "proxy_risk",
+		"爬虫":             "crawler",
+		"威胁情报名单":         "threat_list",
+		"恶意扫描":           "malicious_scanning",
+		"邮件 DNSBL":       "mail_dnsbl",
+		"Shodan 标签":      "shodan_tags",
+		"开放端口":           "open_ports",
+		"已知漏洞":           "known_vulnerabilities",
+		"自签证书":           "self_signed_certificate",
+		"机房 IP":          "datacenter",
+		"移动网络":           "mobile",
+		"伪家宽":            "residential_proxy",
+		"人类流量 <50%":      "low_human_traffic",
+		"广播 IP":          "broadcast_ip",
+		"IPQuery 风险":     "ipquery_risk",
+		"proxycheck 风险":  "proxycheck_risk",
+		"proxycheck VPN": "proxycheck_vpn",
+		"AbuseIPDB 置信度":  "abuse_confidence",
+		"AbuseIPDB 举报数":  "abuse_reports",
+		"最近举报":           "last_report",
+		"类型判断":           "type_verdict",
+		"注册国家":           "registration_country",
+		"WHOIS 国家":       "whois_country",
+		"RIR 国家":         "rir_country",
+		"推定使用国":          "inferred_country",
+		"原生 / 广播":        "native_broadcast",
+		"宣告前缀":           "announced_prefix",
+		"RPKI":           "rpki",
+		"rDNS":           "rdns",
+		"资料生成时间":         "generated_at",
+		"ASN 人类流量比例":     "human_traffic",
+		"流量比例资料日期":       "traffic_date",
+	}[label]
+}

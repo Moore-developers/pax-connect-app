@@ -1,0 +1,59 @@
+--- a/route/route.go
++++ b/route/route.go
+@@ -4,6 +4,7 @@
+ 	"context"
+ 	"errors"
+ 	"github.com/sagernet/sing-box/experimental/paxobs"
++	"github.com/sagernet/sing-box/experimental/paxgate"
+ 	"net"
+ 	"net/netip"
+ 	"strings"
+@@ -176,6 +177,18 @@
+ 		selectedOutbound = defaultOutbound
+ 	}
+ 
++	ctx, releaseGate, guardErr := paxgate.Acquire(ctx, selectedOutbound.Tag(), conn.Close)
++	if guardErr != nil {
++		buf.ReleaseMulti(buffers)
++		return guardErr
++	}
++	previousClose := onClose
++	onClose = func(err error) {
++		releaseGate()
++		if previousClose != nil {
++			previousClose(err)
++		}
++	}
+ 	for _, buffer := range buffers {
+ 		conn = bufio.NewCachedConn(conn, buffer)
+ 	}
+@@ -321,6 +334,18 @@
+ 			return E.New("UDP is not supported by outbound: ", defaultOutbound.Tag())
+ 		}
+ 		selectedOutbound = defaultOutbound
++	}
++	ctx, releaseGate, guardErr := paxgate.Acquire(ctx, selectedOutbound.Tag(), conn.Close)
++	if guardErr != nil {
++		N.ReleaseMultiPacketBuffer(packetBuffers)
++		return guardErr
++	}
++	previousClose := onClose
++	onClose = func(err error) {
++		releaseGate()
++		if previousClose != nil {
++			previousClose(err)
++		}
+ 	}
+ 	for _, buffer := range packetBuffers {
+ 		conn = bufio.NewCachedPacketConn(conn, buffer.Buffer, buffer.Destination)
+--- a/route/conn.go
++++ b/route/conn.go
+@@ -248,7 +248,7 @@
+ 	}
+ 	err = N.ReportPacketConnHandshakeSuccess(conn, remotePacketConn)
+ 	if err != nil {
+-		conn.Close()
++		N.CloseOnHandshakeFailure(conn, onClose, err)
+ 		remotePacketConn.Close()
+ 		m.logger.ErrorContext(ctx, "report handshake success: ", err)
+ 		return

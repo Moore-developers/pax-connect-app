@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
@@ -157,24 +158,33 @@ func (s *Session) Apply(ctx context.Context, p config.RouteConfig) error {
 	if err != nil {
 		return errors.New("config_invalid")
 	}
+	loaded, err := runtimeOutboundTags(profile)
+	if err != nil {
+		return err
+	}
+	var sources []string
+	if p.Routing != nil {
+		tags := map[string]string{}
+		for _, r := range s.pendingCatalog {
+			if tag := config.RuntimeTag(r); loaded[tag] {
+				tags["route:"+r.ID] = tag
+			}
+		}
+		tags["route:"+p.ID] = config.RuntimeTag(p)
+		library := *p.Routing
+		library.WebRTC = p.NetworkPrivacy.WebRTC
+		_, sources, err = config.CompileRoutingEvidence(library, p.RoutingApplications, tags, !p.IPv4Only)
+		if err != nil {
+			return err
+		}
+	}
 	digest := sha256.Sum256([]byte(profile))
-	if state == "STARTED" && s.hasApplied && s.applied == digest {
+	if state == "STARTED" && s.hasApplied && s.applied == digest && slices.Equal(s.lastRoutingSources, sources) {
 		return nil
 	}
 	// A lost acknowledgement can still leave the core running. Retain this
 	// uncertainty until a successful Clear; never turn it into an OFF success.
 	s.hasApplied = true
-	var sources []string
-	if p.Routing != nil {
-		tags := map[string]string{}
-		for _, r := range append(s.pendingCatalog, p) {
-			tags["route:"+r.ID] = config.RuntimeTag(r)
-		}
-		_, sources, err = config.CompileRoutingEvidence(*p.Routing, p.RoutingApplications, tags, !p.IPv4Only)
-		if err != nil {
-			return err
-		}
-	}
 	ack, err := c.ApplyProfile(ctx, &pb.ApplyProfileRequest{ProfileJson: profile, Revision: p.ResolvedConfigRevision, RoutingSources: sources})
 	if err != nil {
 		return scrubbedStartFailure(err)
@@ -196,10 +206,7 @@ func (s *Session) Apply(ctx context.Context, p config.RouteConfig) error {
 	s.applied = digest
 	s.hasApplied = true
 	s.selected = config.RuntimeTag(p)
-	s.tags = map[string]bool{s.selected: true}
-	for _, node := range s.pendingCatalog {
-		s.tags[config.RuntimeTag(node)] = true
-	}
+	s.tags = loaded
 	return nil
 }
 

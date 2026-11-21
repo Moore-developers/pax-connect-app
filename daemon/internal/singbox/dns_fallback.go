@@ -56,11 +56,13 @@ func newEncryptedPool(ctx context.Context, logger log.ContextLogger, tag string,
 	if outbound == "" {
 		outbound = "direct"
 	}
-	return &encryptedPool{pool: pool, outbound: outbound, primaryServer: o.Server, backupServer: backup.Server, TransportAdapter: boxdns.NewTransportAdapterWithRemoteOptions("https", tag, o.RemoteDNSServerOptions), primary: primary, backup: secondary}, nil
+	gate, _ := ctx.Value(coreRouteGateKey{}).(*routeGate)
+	return &encryptedPool{gate: gate, pool: pool, outbound: outbound, primaryServer: o.Server, backupServer: backup.Server, TransportAdapter: boxdns.NewTransportAdapterWithRemoteOptions("https", tag, o.RemoteDNSServerOptions), primary: primary, backup: secondary}, nil
 }
 
 type encryptedPool struct {
 	boxdns.TransportAdapter
+	gate                        *routeGate
 	primary, backup             adapter.DNSTransport
 	mu                          sync.Mutex
 	primaryRetry                time.Time
@@ -79,7 +81,11 @@ func (p *encryptedPool) Start(stage adapter.StartStage, s *adapter.Scope) error 
 // Native cache keys include Environment, so in-flight replies from the previous
 // route/network cannot repopulate the cache after a reset.
 func (p *encryptedPool) Environment() []string {
-	return []string{"pax-encrypted-pool", strconv.FormatUint(p.environment.Load()+1, 10)}
+	values := []string{"pax-encrypted-pool", strconv.FormatUint(p.environment.Load()+1, 10)}
+	if p.gate != nil {
+		values = append(values, strconv.FormatUint(p.gate.environment(), 10))
+	}
+	return values
 }
 func (p *encryptedPool) Reset() {
 	p.environment.Add(1)
@@ -90,6 +96,14 @@ func (p *encryptedPool) Reset() {
 	p.backup.Reset()
 }
 func (p *encryptedPool) Exchange(ctx context.Context, q *dns.Msg) (*dns.Msg, error) {
+	if p.gate != nil {
+		leased, release, err := p.gate.acquire(ctx, p.outbound, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+		ctx = leased
+	}
 	ctx, cancel := context.WithTimeout(ctx, dnsTotalBudget)
 	defer cancel()
 	p.mu.Lock()
@@ -125,6 +139,9 @@ func (p *encryptedPool) exchange(ctx context.Context, q *dns.Msg, backup bool) (
 		peer, server = p.backup, p.backupServer
 	}
 	answer, err := peer.Exchange(ctx, q)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err == nil && answer != nil {
 		paxobs.Emit(ctx, paxobs.Event{Stage: "dns_upstream", Network: "doh", IP: server, Outbound: p.outbound, Rule: p.pool})
 	}

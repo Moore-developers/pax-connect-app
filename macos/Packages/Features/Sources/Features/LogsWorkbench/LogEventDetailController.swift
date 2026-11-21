@@ -7,6 +7,7 @@ import PaxUI
 final class LogEventDetailController: WorkbenchModalController {
   override var maximumPresentationWidth: CGFloat? { PaxTheme.Logs.detailSize.width }
   private let event: LogPreviewEvent?
+  private var presentationContext = PresentationContext.chinese
   var onClose: (() -> Void)?
   private var expanded = false
   private var notesExpanded = false
@@ -27,9 +28,11 @@ final class LogEventDetailController: WorkbenchModalController {
   init(
     detail: HistoryLogDetail, telemetry: TelemetryStore? = nil,
     perspective: LogDetailPresentation.Perspective = .application,
-    onTraffic: ((String) -> Void)?, onRoute: ((String) -> Void)?
+    onTraffic: ((String) -> Void)?, onRoute: ((String) -> Void)?,
+    context: PresentationContext = .chinese
   ) {
     event = nil
+    presentationContext = context
     liveDetail = detail
     self.perspective = perspective
     self.telemetry = telemetry
@@ -39,7 +42,8 @@ final class LogEventDetailController: WorkbenchModalController {
     self.onRoute = onRoute
     let time = detail.record?.lastAt ?? detail.event?.at
     super.init(
-      title: LogDetailPresentation(detail: detail, perspective: perspective).title,
+      title: LogDetailPresentation(detail: detail, perspective: perspective, context: context)
+        .title,
       subtitle: time.map(TrafficFormatting.dateMinute) ?? "未记录时间", size: PaxTheme.Logs.detailSize,
       style: .event)
   }
@@ -73,10 +77,13 @@ final class LogEventDetailController: WorkbenchModalController {
     pane.status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     pane.status.stringValue =
       liveDetail == nil
-      ? "来源：脱敏模拟数据 · 字段按 v2rayN / sing-box 日志结构"
-      : "来源："
-        + (liveDetail.map { LogDetailPresentation(detail: $0, perspective: perspective).source }
-          ?? "未记录")
+      ? self.interfaceCopy.text("interface_detail.42cfeb6fe2")
+      : self.interfaceCopy.text("interface_detail.6181ed6f97")
+        + (liveDetail.map {
+          LogDetailPresentation(detail: $0, perspective: perspective, context: presentationContext)
+            .source
+        }
+          ?? self.interfaceCopy.text("session_limits.7450cc5b16"))
     render()
     observeRetention()
   }
@@ -102,28 +109,46 @@ final class LogEventDetailController: WorkbenchModalController {
       return
     }
     guard let event else { return }
-    pane.add(callout(event.kind == .timeout ? "连接失败。等待上游代理响应时超时。" : event.summary))
+    pane.add(
+      callout(
+        event.kind == .timeout
+          ? self.interfaceCopy.text("interface_detail.f9440d83ca") : event.summary))
     pane.add(
       facts([
-        ("目标", event.target), ("线路", event.route), ("应用", event.application ?? "未识别"),
-        ("域名", event.domain ?? "未记录"), ("结果", event.result),
+        (self.interfaceCopy.text("report.target"), event.target),
+        (self.interfaceCopy.text("log_detail.route"), event.route),
+        (
+          self.interfaceCopy.text("log_detail.application"),
+          event.application ?? self.interfaceCopy.text("interface_detail.52e83fa75e")
+        ),
+        (
+          self.interfaceCopy.text("logs.domains"),
+          event.domain ?? self.interfaceCopy.text("session_limits.7450cc5b16")
+        ), (self.interfaceCopy.text("event.field.result"), event.result),
       ]))
     let separator = NSBox()
     separator.boxType = .separator
     pane.add(separator)
     let toggle = PaxRouteButton(
-      "诊断细节与原始日志", symbol: expanded ? "chevron.down" : "chevron.right", style: .quiet,
+      self.interfaceCopy.text("action.logs.raw_details"),
+      symbol: expanded ? "chevron.down" : "chevron.right", style: .quiet,
       target: self, action: #selector(toggle))
     toggle.contentTintColor = PaxTheme.Color.textSecondary
     toggle.font = PaxTheme.Typography.caption()
-    toggle.setAccessibilityValue(expanded ? "已展开" : "已折叠")
+    toggle.setAccessibilityValue(
+      expanded
+        ? self.interfaceCopy.text("settings.expanded")
+        : self.interfaceCopy.text("settings.collapsed"))
     let disclosure = NSStackView(views: [toggle, NSView()])
     pane.add(disclosure)
     if expanded {
       pane.add(
         facts([
-          ("上下文 ID", event.contextID), ("上下文耗时", event.duration),
-          ("本地套接字", event.localSocket), ("上游套接字", event.target), ("出站类型", "VLESS"),
+          (self.interfaceCopy.text("interface_detail.b56398712b"), event.contextID),
+          (self.interfaceCopy.text("interface_detail.b085cee64a"), event.duration),
+          (self.interfaceCopy.text("interface_detail.647d51d916"), event.localSocket),
+          (self.interfaceCopy.text("interface_detail.b35e45917a"), event.target),
+          (self.interfaceCopy.text("interface_detail.7b8d4fcf44"), "VLESS"),
         ]))
       let raw = callout(event.raw, code: true)
       raw.setAccessibilityIdentifier("logs-raw")
@@ -135,61 +160,80 @@ final class LogEventDetailController: WorkbenchModalController {
     if let onClose { onClose() } else { super.close() }
   }
   private func renderLive(_ detail: HistoryLogDetail) {
-    let plan = LogDetailPresentation(detail: detail, perspective: perspective)
+    let plan = LogDetailPresentation(
+      detail: detail, perspective: perspective, context: presentationContext)
     pane.add(callout(plan.status))
     for section in plan.sections {
       pane.add(PaxRouteSectionHeading(section.title, symbol: "info.circle"))
       pane.add(facts(section.rows))
     }
     if !detail.timeline.isEmpty && (detail.record?.flow != nil || detail.timeline.count > 1) {
-      pane.add(PaxRouteSectionHeading("已记录的过程", symbol: "list.bullet", detail: "只展示当时保存的事件"))
+      pane.add(
+        PaxRouteSectionHeading(
+          self.interfaceCopy.text("action.logs.recorded_steps"), symbol: "list.bullet",
+          detail: self.interfaceCopy.text("action.logs.saved_only")))
       for item in detail.timeline.reversed() {
         pane.add(callout(TrafficFormatting.dateMinute(item.at) + " · " + item.message))
       }
     }
     if !plan.notes.isEmpty {
       let notes = PaxRouteButton(
-        "记录说明（\(plan.notes.count)）", symbol: notesExpanded ? "chevron.down" : "chevron.right",
+        self.interfaceCopy.text(
+          "interface_detail.7e2fabbc95", ["arg0": String(describing: plan.notes.count)]),
+        symbol: notesExpanded ? "chevron.down" : "chevron.right",
         style: .quiet, target: self, action: #selector(toggleNotes))
       pane.add(notes)
       if notesExpanded { pane.add(callout(plan.notes.joined(separator: "\n"))) }
     }
     let f = detail.record?.flow ?? detail.flow
     let toggle = PaxRouteButton(
-      "诊断细节与原始日志", symbol: expanded ? "chevron.down" : "chevron.right", style: .quiet, target: self,
+      self.interfaceCopy.text("action.logs.raw_details"),
+      symbol: expanded ? "chevron.down" : "chevron.right", style: .quiet, target: self,
       action: #selector(toggle))
     pane.add(toggle)
     if expanded {
       var diagnostic = [
-        ("事件 ID", detail.record?.eventID ?? detail.event?.eventID ?? ""), ("来源", plan.source),
+        (
+          self.interfaceCopy.text("interface_detail.35d3b09071"),
+          detail.record?.eventID ?? detail.event?.eventID ?? ""
+        ), (self.interfaceCopy.text("log_detail.source"), plan.source),
       ]
       if let f {
-        diagnostic.append(("连接 ID", f.key))
-        if !f.evidence.isEmpty { diagnostic.append(("证据", f.evidence)) }
+        diagnostic.append((self.interfaceCopy.text("interface_detail.44dda6b42e"), f.key))
+        if !f.evidence.isEmpty {
+          diagnostic.append((self.interfaceCopy.text("interface_detail.d883c636d3"), f.evidence))
+        }
       }
       if let e = detail.record?.systemEvent {
-        diagnostic.append(("动作类型", e.type))
-        if !e.errorCode.isEmpty { diagnostic.append(("错误码", e.errorCode)) }
+        diagnostic.append((self.interfaceCopy.text("interface_detail.301c53dd5e"), e.type))
+        if !e.errorCode.isEmpty {
+          diagnostic.append((self.interfaceCopy.text("interface_detail.9c7ff3321e"), e.errorCode))
+        }
       }
       pane.add(facts(diagnostic))
       pane.add(
         callout(
           detail.raw.isEmpty
-            ? "未保存原文" + (detail.rawOmitted.isEmpty ? "" : " · " + detail.rawOmitted)
+            ? self.interfaceCopy.text("interface_detail.51fc908ed0")
+              + (detail.rawOmitted.isEmpty ? "" : " · " + detail.rawOmitted)
             : detail.raw.joined(separator: "\n"), code: true))
-      if detail.truncated { pane.add(callout("原文超过保存上限，已截断")) }
+      if detail.truncated {
+        pane.add(callout(self.interfaceCopy.text("interface_detail.d075ba60e5")))
+      }
     }
     var actions: [NSButton] = []
     if detail.record?.flow?.key.isEmpty == false || detail.event?.connectionKey.isEmpty == false {
       actions.append(
         button(
-          detail.event?.recordID.hasPrefix("problem:") == true ? "代表连接流量" : "查看关联流量",
+          detail.event?.recordID.hasPrefix("problem:") == true
+            ? self.interfaceCopy.text("interface_detail.911b5003f4")
+            : self.interfaceCopy.text("interface_detail.7b0a2cdbfc"),
           #selector(showTraffic)))
     }
     if (detail.record?.flow?.routeID.isEmpty == false && detail.record?.flow?.direction == "proxy")
       || (detail.event?.routeID.isEmpty == false && detail.event?.direction == "proxy")
     {
-      actions.append(button("查看线路", #selector(showRoute)))
+      actions.append(button(self.interfaceCopy.text("action.routes.view"), #selector(showRoute)))
     }
     pane.setActions(actions)
   }

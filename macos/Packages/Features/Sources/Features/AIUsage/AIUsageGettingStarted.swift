@@ -19,10 +19,12 @@ extension AIUsageViewController {
       note.isHidden = !ready || store.hasUsage || store.page == .profiles || store.page == .sessions
       if let last = store.data?.lastUsed.values.max() {
         note.apply(
-          .idle, text: "本时段无请求 · 最近使用 " + last.formatted(date: .numeric, time: .omitted),
-          action: "查看最近有记录的一天")
+          .idle,
+          text: self.interfaceCopy.text("ai_usage.no_recent_requests_prefix")
+            + last.formatted(date: .numeric, time: .omitted),
+          action: self.interfaceCopy.text("ai_usage.view_recent_day"))
       } else {
-        note.apply(.idle, text: "未找到本机会话记录。支持 Claude Code、Codex、DSH；在客户端完成一次请求后自动显示。无需先创建 Profile。")
+        note.apply(.idle, text: self.interfaceCopy.text("ai_usage.no_sessions"))
       }
     }
     contentRefreshers.append(update)

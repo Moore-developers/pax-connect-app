@@ -13,13 +13,11 @@ import (
 const (
 	// Journal retention (history-storage HS-R1, HS-R3).
 	journalMinAge      = 2 * time.Hour // after the hour ended
-	journalMaxBytes    = 256 << 20
-	journalMaxFiles    = 6
 	journalMaintainGap = time.Minute
 )
 
 // Names of the two jobs that read the journal (tickets 84 and 85). main pre-registers both so
-// age deletion waits for them and capacity eviction records the ranges they have not read.
+// age deletion waits for them.
 const (
 	HistoryConsumerLogs    = "logs"
 	HistoryConsumerTraffic = "traffic"
@@ -109,36 +107,6 @@ func (in *historyIngest) maintain(ctx context.Context) {
 	if ok {
 		in.deleteConsumed(now, positions)
 	}
-	var evicted []time.Time
-	if owner, durable := in.journal.(interface {
-		EvictOverConsumed(context.Context, int64, int, []time.Time) ([]time.Time, error)
-	}); durable {
-		var consumed []time.Time
-		if ok {
-			files, err := in.journal.Files()
-			if err == nil {
-				for _, file := range files {
-					if passedBy(positions, file.Hour) {
-						consumed = append(consumed, file.Hour)
-					}
-				}
-			}
-		}
-		var err error
-		evicted, err = owner.EvictOverConsumed(ctx, journalMaxBytes, journalMaxFiles, consumed)
-		if err != nil {
-			in.journalFailed("history_journal_eviction_failed")
-		}
-	} else {
-		evicted, _ = in.journal.EvictOver(journalMaxBytes, journalMaxFiles)
-	}
-	for _, hour := range evicted {
-		if _, durable := in.journal.(interface {
-			PendingLosses(context.Context) ([]historystore.Dropped, error)
-		}); !durable && (!ok || !passedBy(positions, hour)) {
-			in.extra = append(in.extra, evictionGap(gapEvicted, hour))
-		}
-	}
 	if err := in.flushJournalLosses(ctx); err != nil {
 		in.journalFailed("history_journal_repair_failed")
 	}
@@ -197,7 +165,7 @@ func (in *historyIngest) deleteConsumed(now time.Time, positions []consumerHour)
 	}
 }
 
-// flushGaps writes queued journal gaps (eviction, quarantine) with the committed cursor. On
+// flushGaps writes queued journal quarantine gaps with the committed cursor. On
 // failure they stay queued for the next commit.
 func (in *historyIngest) flushGaps(ctx context.Context, now time.Time) {
 	if !in.started || len(in.extra) == 0 { // before the first step the committed cursor is unknown: never write a guess

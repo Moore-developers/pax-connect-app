@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "exit.region_missing": "地区未获取",
+    "exit.query": "查询：",
+    "exit.source": "地区来源：",
+    "exit.incomplete": "地区信息不完整",
+    "exit.estimate": "地区为IP数据库估计，可能与实际机房位置不同",
+    "measurement.phase.latency": "正在测量延迟",
+    "measurement.phase.exit_queued": "出口查询排队中",
+    "measurement.phase.exit_running": "正在查询出口 IP",
+    "measurement.phase.exit_retrying": "正在等待其他出口查询服务",
+    "measurement.phase.unknown": "测量中"
+  }
+}

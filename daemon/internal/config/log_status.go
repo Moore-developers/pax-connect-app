@@ -26,6 +26,9 @@ func LogStatus(f FlowFact) string {
 		return "域名解析：等待结果"
 	}
 	if f.Direction == "blocked" || f.Failure == "rule_rejected" {
+		if message := UnavailableRoutingMessage(f); message != "" {
+			return message
+		}
 		return "规则处理：已阻断"
 	}
 	if f.Failure != "" || f.EstablishmentState == "failed" {

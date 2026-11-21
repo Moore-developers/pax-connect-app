@@ -5,6 +5,9 @@ import PaxUI
 /// Limits section of P07d-ai-session-limits §4.2: title, counts and tabs above the card, then one
 /// row per session, model, main-line model or sub-agent. The session list folds after 10 rows.
 @MainActor final class AILimitListCard {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   static let foldedRows = 10
   let view = AIUsageLayout.stack([])
   private let readout: AILimitReadout
@@ -14,11 +17,14 @@ import PaxUI
   var onToggle: (() -> Void)?
   var onBack: (() -> Void)?
   var onSearch: (() -> Void)?
-  let loadingStatus = PaxText.label(
-    "正在读取会话…", font: PaxTheme.Typography.caption(), secondary: true)
-  private let title = AIUsageLayout.heading("会话开销")
+  lazy var loadingStatus = PaxText.label(
+    context.text("session_limits.c4de4ad42c"), font: PaxTheme.Typography.caption(), secondary: true)
+  private lazy var title = interfaceCopy.usageHeading("session_limits.8eb6779f0a")
   private let titleArea = NSView()
-  private let hint = PaxFeatureTag("点击会话查看详情", tone: .neutral)
+  private lazy var hint = interfaceCopy.bind(
+    PaxFeatureTag(context.text("session_limits.30a95e35ca"), tone: .neutral),
+    key: "session_limits.30a95e35ca"
+  ) { $0.applyTitle($1) }
   private var fullTitle = ""
   private var titleIdentity = ""
   private var compactTitle: NSLayoutConstraint?
@@ -26,13 +32,15 @@ import PaxUI
   private var loading = false
   private lazy var titleHost = AILimitReadoutHost(title, readout: readout) { [weak self] in
     guard let self, selected else { return nil }
-    return AILimitReadout.explanation("会话名称", fullTitle + "\n" + titleIdentity)
+    return AILimitReadout.explanation(
+      context.text("session_limits.e0c412d97f"), fullTitle + "\n" + titleIdentity)
   }
   private lazy var body = AILimitLoadingSlot(
     card, placeholder: AIUsageLayout.card(NSView()), height: PaxTheme.Layout.tableRow * 3)
   private let search = PaxRouteSearchField()
   private lazy var back = PaxCompactButton(
-    "返回", style: .bordered, target: self, action: #selector(goBack))
+    context.text("session_limits.572cf45ba4"), style: .bordered, target: self,
+    action: #selector(goBack))
   private let card: PaxCard
   private var selected = false
   private var kind = 0
@@ -51,7 +59,10 @@ import PaxUI
     "", style: .text, target: self, action: #selector(toggle))
   private lazy var foldRow = AIUsageLayout.stack([fold, NSView()], vertical: false)
 
-  init(readout: AILimitReadout) {
+  init(readout: AILimitReadout, interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
     self.readout = readout
     let inset = PaxTheme.Spacing.card
     card = PaxCard(insets: .init(top: inset, left: inset, bottom: 0, right: inset))
@@ -59,7 +70,7 @@ import PaxUI
     counts.setAccessibilityIdentifier("ai-session-limits-counts")
     title.lineBreakMode = .byTruncatingTail
     title.maximumNumberOfLines = 1
-    title.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    title.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
     titleHost.translatesAutoresizingMaskIntoConstraints = false
     hint.translatesAutoresizingMaskIntoConstraints = false
     titleArea.addSubview(titleHost)
@@ -82,19 +93,22 @@ import PaxUI
     back.capsule = true
     back.capsuleHeight = PaxTheme.Dashboard.tabHeight
     back.image = Self.backIcon()
-    back.setAccessibilityLabel("返回会话开销")
+    back.setAccessibilityLabel(context.text("session_limits.b53d741c28"))
     back.setContentCompressionResistancePriority(.required, for: .horizontal)
     back.setAccessibilityIdentifier("ai-session-limits-back")
     back.isHidden = true
     loadingStatus.isHidden = true
     loadingStatus.setAccessibilityIdentifier("ai-session-loading")
-    search.placeholderString = "搜索名称或会话 ID"
-    search.setAccessibilityLabel("搜索会话")
+    search.placeholderString = context.text("session_limits.7da1a64804")
+    search.setAccessibilityLabel(context.text("session_limits.feb95554de"))
     search.setAccessibilityIdentifier("ai-session-list-search")
     search.sendsSearchStringImmediately = true
     search.target = self
     search.action = #selector(searchChanged)
-    search.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.searchWidth).isActive = true
+    let searchWidth = search.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.searchWidth)
+    searchWidth.priority = .defaultLow
+    searchWidth.isActive = true
+    search.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let header = AIUsageLayout.stack(
       [back, titleArea, counts, loadingStatus, search, switchSlot], vertical: false)
     // Cross-view constraints require the common ancestor installed by the header stack.
@@ -128,16 +142,29 @@ import PaxUI
     return image
   }
 
+  func invalidateLanguage() {
+    rendered = nil
+    headerKey = []
+    tabsKey = []
+    countTexts = []
+    loadingStatus.stringValue = context.text("session_limits.c4de4ad42c")
+    back.title = context.text("session_limits.572cf45ba4")
+    back.setAccessibilityLabel(context.text("session_limits.b53d741c28"))
+    search.placeholderString = context.text("session_limits.7da1a64804")
+    search.setAccessibilityLabel(context.text("session_limits.feb95554de"))
+    for row in rowsByID.values { row.invalidateLanguage() }
+  }
   func setNavigation(session: String?, identity: String?) {
     if identity != nil, !selected { search.abortEditing() }
     if titleIdentity != (identity ?? "") { readout.close(from: titleHost) }
     selected = identity != nil
-    fullTitle = session ?? "会话开销"
+    fullTitle = session ?? context.text("session_limits.8eb6779f0a")
     titleIdentity = identity ?? ""
     back.isHidden = !selected
     updateTitleLayout()
     title.stringValue = fullTitle
-    titleHost.setAccessibilityHelp(selected ? fullTitle + "\n" + titleIdentity : "会话开销")
+    titleHost.setAccessibilityHelp(
+      selected ? fullTitle + "\n" + titleIdentity : context.text("session_limits.8eb6779f0a"))
     search.isHidden = selected || kind != 0
     setLoading(loading)
   }
@@ -164,7 +191,11 @@ import PaxUI
     body.setLoading(
       loading, height: rowHeight * CGFloat(count) + PaxTheme.Spacing.card * 3)
     tabs?.isEnabled = !loading
-    if loading { applyCounts(["请求 —", "轮次 —"]) }
+    if loading {
+      applyCounts([
+        context.text("session_limits.461c9cbb4c"), context.text("session_limits.7bb49a72b6"),
+      ])
+    }
   }
 
   private func applyCounts(_ texts: [String]) {
@@ -187,22 +218,28 @@ import PaxUI
     let summary = scope.summary
     applyCounts(
       loading
-        ? ["请求 —", "轮次 —"]
+        ? [context.text("session_limits.461c9cbb4c"), context.text("session_limits.7bb49a72b6")]
         : [
-          "请求 \(AIUsageFormatting.count(summary.requests))",
-          "轮次 \(summary.turns)" + (summary.turnsComplete ? "" : "*"),
+          context.text(
+            "session_limits.a6f7359681",
+            ["arg0": String(describing: AIUsageFormatting.count(summary.requests))]),
+          context.text("session_limits.d58e4678dd", ["arg0": String(describing: summary.turns)])
+            + (summary.turnsComplete ? "" : "*"),
         ])
-    counts.toolTip = summary.turnsComplete ? "轮次按原生轮次去重" : "* 部分请求缺少轮次记录，只计已识别的轮次"
+    counts.toolTip =
+      summary.turnsComplete
+      ? context.text("session_limits.8cc0524ea8") : context.text("session_limits.1f69884863")
     // Tabs are rebuilt only when their titles change, so a click never replaces its own control.
     let counts = scope.lists.map { !loading && $0.kind == .subagents ? $0.rows.count : nil }
-    let key = scope.lists.map { $0.kind.title } + counts.map { $0.map(String.init) ?? "" }
+    let key =
+      scope.lists.map { $0.kind.title(context: context) } + counts.map { $0.map(String.init) ?? "" }
     if key != tabsKey {
       tabsKey = key
       for view in switchSlot.arrangedSubviews {
         switchSlot.removeArrangedSubview(view)
         view.removeFromSuperview()
       }
-      let tabs = PaxTabs(scope.lists.map { $0.kind.title }, counts: counts)
+      let tabs = PaxTabs(scope.lists.map { $0.kind.title(context: context) }, counts: counts)
       tabs.setAccessibilityIdentifier("ai-session-limits-kind")
       tabs.onSelect = { [weak self] index in self?.onKind?(index) }
       switchSlot.addArrangedSubview(tabs)
@@ -217,7 +254,7 @@ import PaxUI
         $0.title.localizedStandardContains(query)
           || ($0.sessionID ?? $0.id).localizedCaseInsensitiveContains(query)
       }
-      content.emptyMessage = "没有匹配的会话"
+      content.emptyMessage = context.text("session_limits.43a937d227")
     }
     guard rendered != content || renderedExpanded != expanded else { return false }
     readout.close()
@@ -232,11 +269,11 @@ import PaxUI
     if list.edgeInsets.bottom != bottom { list.edgeInsets.bottom = bottom }
     if content.rows.isEmpty {
       rowsByID = [:]
-      empty.stringValue = content.emptyMessage
+      empty.stringValue = content.emptyText(context: context)
       return reconcile([empty])
     }
     let labels = legendLabels(content)
-    let key = [content.kind.title] + labels
+    let key = [content.kind.title(context: context)] + labels
     if key != headerKey {
       headerKey = key
       columnHeader = header(kind: content.kind, labels: labels)
@@ -250,7 +287,7 @@ import PaxUI
         view = existing
         view.apply(row)
       } else {
-        view = AILimitRowView(row: row, readout: readout)
+        view = AILimitRowView(row: row, readout: readout, interfaceCopy: interfaceCopy)
         view.onSelect = { [weak self] id in self?.onSelect?(id) }
       }
       view.showsDivider = index < shown.count - 1
@@ -259,7 +296,11 @@ import PaxUI
     }
     rowsByID = retained
     if folds {
-      let title = expanded ? "收起" : "显示全部 \(content.rows.count) 个"
+      lazy var title =
+        expanded
+        ? context.text("session_limits.afd4b78353")
+        : context.text(
+          "session_limits.40ae9eba51", ["arg0": String(describing: content.rows.count)])
       if fold.title != title { fold.title = title }
       fold.trailingGlyph = expanded ? "▴" : "▾"
       fold.setAccessibilityIdentifier("ai-session-limits-fold")
@@ -301,7 +342,8 @@ import PaxUI
       && configured.allSatisfy {
         $0?.warn == first?.warn && $0?.limit == first?.limit
       }
-    return uniform ? AILimitStyle.edges(first) : AILimitStyle.bandNames
+    return uniform
+      ? AILimitStyle.edges(first, context: context) : AILimitStyle.bandNames(context: context)
   }
 
   /// Column heads share the widths of `AILimitRowView`; the bar column takes the rest.
@@ -316,8 +358,9 @@ import PaxUI
     legend.items = labels.enumerated().map {
       .init($0.element, color: AILimitStyle.bandColors[$0.offset])
     }
-    legend.toolTip = "按输入费用计算占比；各模型的具体阈值见行悬停详情"
-    let bars = AIUsageLayout.stack([head("三段比例"), legend, NSView()], vertical: false)
+    legend.toolTip = context.text("session_limits.83e7c863b6")
+    let bars = AIUsageLayout.stack(
+      [head(context.text("session_limits.e5a1e13b87")), legend, NSView()], vertical: false)
     bars.spacing = PaxTheme.Spacing.tight
     bars.distribution = .fill
     bars.setContentHuggingPriority(.init(1), for: .horizontal)
@@ -328,12 +371,19 @@ import PaxUI
       [
         spacer,
         head(
-          kind == .sessions ? "会话" : kind == .subagents ? "子代理" : "模型",
+          kind == .sessions
+            ? context.text("session_limits.a63280253f")
+            : kind == .subagents
+              ? context.text("session_limits.acd37b4c79")
+              : context.text("session_limits.c98e118e0a"),
           width: AILimitRowView.nameWidth),
         bars,
         metricHead(
-          "费用倍率", width: AILimitRowView.multipleWidth, text: AILimitStyle.multipleExplanation),
-        metricHead("超限增费", width: AILimitRowView.spendWidth, text: AILimitStyle.spendExplanation),
+          context.text("session_limits.76c84b1e3a"), width: AILimitRowView.multipleWidth,
+          text: AILimitStyle.multipleExplanation(context: context)),
+        metricHead(
+          context.text("session_limits.2f7cdaa366"), width: AILimitRowView.spendWidth,
+          text: AILimitStyle.spendExplanation(context: context)),
       ], vertical: false)
     stack.spacing = AILimitRowView.spacing
     stack.distribution = .fill

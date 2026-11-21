@@ -1,0 +1,21 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "error.history_converting": "正在转换",
+    "error.history_building": "正在建立日志索引，完成后会自动显示",
+    "error.history_expired": "相关记录已过期或已清除",
+    "error.history_cursor_expired": "记录已清理或读取已过期，请刷新",
+    "error.history_query_busy": "记录较多，请缩小时间范围后重试",
+    "error.history_capacity_reached": "记录存储达到上限，较早记录可能已淘汰",
+    "error.settings_conflict": "日志设置已改变，请刷新后重试",
+    "error.invalid_filter": "筛选条件无效，请重新选择",
+    "error.history_cursor_stale": "历史记录已更新，请重新加载",
+    "error.icon_cache_unavailable": "日志已清除，但网站图标缓存清理失败，请重试清除",
+    "error.history_store_failed": "测量历史无法保存或读取，当前线路仍可使用",
+    "error.usage_sample_failed": "当前使用量暂不可读取，已保留历史记录；数据覆盖不完整",
+    "error.usage_store_failed": "使用记录无法保存或读取，当前线路仍可使用",
+    "error.history_unavailable": "后台尚未提供历史记录"
+  }
+}

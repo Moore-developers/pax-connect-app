@@ -35,6 +35,9 @@ func logProblem(e config.HistoryEvent) (string, string) {
 			target = f.IP
 		}
 		identity = append(identity, app, target, f.Port, f.RouteID, f.Direction, f.Failure)
+		if message := config.UnavailableRoutingMessage(*f); message != "" {
+			identity = append(identity, message)
+		}
 	} else {
 		identity = append(identity, e.Source, e.Title)
 	}

@@ -43,7 +43,6 @@ type ingestJournal interface {
 	HourOf(ctx context.Context, c historystore.Cursor) (time.Time, bool, error)
 	Files() ([]historystore.JournalFile, error)
 	DeleteHour(hour time.Time) error
-	EvictOver(maxBytes int64, maxFiles int) ([]time.Time, error)
 	TakeDropped() []historystore.Dropped
 	Close() error
 }

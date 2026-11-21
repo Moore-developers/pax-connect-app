@@ -10,7 +10,15 @@ import Observation
   public private(set) var runState = NetworkDiagnosticRunState.idle
   public private(set) var progressReport: EnvironmentDiagnosticReport?
   public private(set) var stale = false
-  public private(set) var message = "检测当前 Mac 和浏览器，与列表选中的线路无关"
+  private var messageValue = RetainedProductMessage(key: "diagnostic_state.9f9f17efdf")
+  public private(set) var message: String {
+    get { messageValue.original }
+    set { messageValue = RetainedProductMessage(original: newValue) }
+  }
+  public func message(context: PresentationContext) -> String {
+    messageValue.text(context: context)
+  }
+  public var isShowingHistoryMessage: Bool { messageValue.key == "diagnostic_state.427740ea8a" }
   public private(set) var revision: UInt64 = 0
   private var task: Task<Void, Never>?
   private var generation: UInt64 = 0
@@ -18,7 +26,9 @@ import Observation
   private var activeSessionID: String?
   private var scannedLocation: (token: UInt64, value: LocationExposure)?
   private let history: NetworkDiagnosticHistory?
-  private let request: @Sendable (String, String) async throws -> EnvironmentDiagnosticReport
+  private let request:
+    @Sendable (String, String, BrowserPresentation?) async throws -> EnvironmentDiagnosticReport
+  private let browserPresentation: @MainActor () -> BrowserPresentation?
   private let openBrowser: @MainActor (URL) async -> Bool
   private let scanLocation: @Sendable () -> LocationExposure
 
@@ -26,18 +36,26 @@ import Observation
     history: NetworkDiagnosticHistory? = nil,
     request: @escaping @Sendable (String, String) async throws -> EnvironmentDiagnosticReport,
     openBrowser: @escaping @MainActor (URL) async -> Bool,
-    scanLocation: @escaping @Sendable () -> LocationExposure = { LocationExposureScanner.current() }
+    scanLocation: @escaping @Sendable () -> LocationExposure = {
+      LocationExposureScanner.current()
+    },
+    browserPresentation: @escaping @MainActor () -> BrowserPresentation? = { nil },
+    requestWithPresentation: (
+      @Sendable (String, String, BrowserPresentation?) async throws -> EnvironmentDiagnosticReport
+    )? = nil
   ) {
     self.history = history
     self.scanLocation = scanLocation
-    self.request = request
+    self.request =
+      requestWithPresentation ?? { action, session, _ in try await request(action, session) }
+    self.browserPresentation = browserPresentation
     self.openBrowser = openBrowser
     if let saved = history?.environment {
       report = saved.report
       previousReport = saved.previous
       local = saved.local
       stale = true
-      message = "显示上次环境检测结果，请按需重新检测"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.427740ea8a")
     }
   }
   public func start() {
@@ -49,7 +67,7 @@ import Observation
     runState = .running
     progressReport = nil
     stale = report != nil
-    message = "正在检测 Mac，等待浏览器采样；最长 45 秒"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.ea79df2570")
     let baseLocal = NetworkDiagnosticEnvironment.current()
     // File and system reads run off the main actor and merge in when they finish.
     scannedLocation = nil
@@ -64,14 +82,15 @@ import Observation
         revision &+= 1
       }
     }
+    let presentation = browserPresentation()
     task = Task { [weak self, request] in
       var session = ""
       var acceptedSample = false
       do {
-        let initial = try await request("start", "")
+        let initial = try await request("start", "", presentation)
         session = initial.sessionID
         guard let self, generation == token, !Task.isCancelled else {
-          _ = try? await request("cancel", session)
+          _ = try? await request("cancel", session, nil)
           return
         }
         activeSessionID = session
@@ -91,11 +110,13 @@ import Observation
           browserOpened = false
         }
         guard generation == token, !Task.isCancelled else { throw CancellationError() }
-        if !browserOpened { message = "无法打开浏览器，继续检测 Mac" }
+        if !browserOpened {
+          messageValue = RetainedProductMessage(key: "diagnostic_state.d3b4091f3f")
+        }
         let deadline = ContinuousClock.now.advanced(by: .seconds(55))
         while ContinuousClock.now < deadline {
           try await Task.sleep(for: .seconds(1))
-          let value = try await request("read", session)
+          let value = try await request("read", session, nil)
           guard generation == token, !Task.isCancelled else { throw CancellationError() }
           progressReport = value
           if previous == nil || value.mac.complete || value.browser.complete {
@@ -107,9 +128,12 @@ import Observation
             if changed { revision &+= 1 }
           }
           if value.complete || (!browserOpened && value.mac.complete) { break }
-          message =
+          messageValue =
             !browserOpened
-            ? "无法打开浏览器，正在检测 Mac…" : value.mac.complete ? "Mac 检测完成，等待浏览器结果…" : "正在检测 Mac 和浏览器…"
+            ? RetainedProductMessage(key: "diagnostic_state.a087cab3fd")
+            : value.mac.complete
+              ? RetainedProductMessage(key: "diagnostic_state.8eef58841d")
+              : RetainedProductMessage(key: "diagnostic_state.f838cf9881")
         }
         if acceptedSample, let report {
           let scanned = await scan.value
@@ -121,23 +145,25 @@ import Observation
           runState = report.complete ? .finished : .failed
           if let old = previous?.0 { previousReport = old }
           history?.saveEnvironment(report, local: local, previous: previousReport)
-          message =
+          messageValue =
             !browserOpened
-            ? "Mac 检测完成；无法打开浏览器，浏览器检测未完成"
-            : report.complete ? "检测完成；未取得的项目已注明原因" : "检测超时，保留已取得的结果"
+            ? RetainedProductMessage(key: "diagnostic_state.344c4c08dc")
+            : report.complete
+              ? RetainedProductMessage(key: "diagnostic_state.2768a685c9")
+              : RetainedProductMessage(key: "diagnostic_state.265ae74875")
         } else {
           runState = .failed
           restorePrevious()
-          message = "本次未取得检测结果，保留上次结果"
+          messageValue = RetainedProductMessage(key: "diagnostic_state.6cc20c1fe4")
         }
       } catch {
         if let self, generation == token, !Task.isCancelled {
           restorePrevious()
-          message = ProductErrorPresentation.display(error)
+          messageValue = RetainedProductMessage(failure: ProductFailure(error))
           runState = .failed
         }
       }
-      if !session.isEmpty { _ = try? await request("cancel", session) }
+      if !session.isEmpty { _ = try? await request("cancel", session, nil) }
       guard let self, generation == token else { return }
       busy = false
       task = nil
@@ -154,18 +180,18 @@ import Observation
     busy = false
     revision &+= 1
     if let id = activeSessionID, !id.isEmpty {
-      Task { [request] in _ = try? await request("cancel", id) }
+      Task { [request] in _ = try? await request("cancel", id, nil) }
     }
     activeSessionID = nil
     restorePrevious()
     previous = nil
-    message = "已停止检测，保留已取得的结果"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.c902c460d7")
   }
   public func invalidate() {
     if busy { cancel() }
     if report != nil {
       stale = true
-      message = "网络或实际连接已变化，以下为历史环境结果"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.f3479ac290")
       revision &+= 1
     }
   }
@@ -173,7 +199,7 @@ import Observation
     if busy { cancel() }
     if report != nil {
       stale = true
-      message = "显示上次环境检测结果，请按需重新检测"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.427740ea8a")
       revision &+= 1
     }
   }
@@ -197,6 +223,6 @@ import Observation
     stale = false
     runState = .idle
     progressReport = nil
-    message = "检测当前 Mac 和浏览器，与列表选中的线路无关"
+    messageValue = RetainedProductMessage(key: "diagnostic_state.9f9f17efdf")
   }
 }

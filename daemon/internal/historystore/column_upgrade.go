@@ -14,7 +14,6 @@ import (
 	"syscall"
 )
 
-const columnUpgradeBudget int64 = 2 << 30
 const columnUpgradeBackup = "logs.v3.backup.db"
 
 func verifyUpgradeSourceTable(ctx context.Context, current, backup *sql.DB, table string) error {
@@ -203,11 +202,15 @@ func prepareColumnUpgrade(ctx context.Context, s *store, owner uint32) error {
 		return err
 	}
 	if !exists {
+		required, e := s.LiveBytes(ctx)
+		if e != nil {
+			return e
+		}
 		var stat syscall.Statfs_t
 		if err = syscall.Statfs(filepath.Dir(s.path), &stat); err != nil {
 			return err
 		}
-		if int64(stat.Bavail)*int64(stat.Bsize) < columnUpgradeBudget {
+		if int64(stat.Bavail)*int64(stat.Bsize) < required {
 			return errors.New("historystore: insufficient upgrade space")
 		}
 		// VACUUM INTO reads the full committed database, including any recovered WAL.
@@ -377,9 +380,6 @@ func (l *Logs) UpgradeBatch(ctx context.Context, project func(context.Context, *
 	if state == "ready" {
 		return true, nil
 	}
-	if err := checkColumnUpgradeSpace(l.path); err != nil {
-		return false, l.failUpgrade(ctx, err)
-	}
 	p, err := l.importer.Batch(ctx, l.columns, 128, project)
 	if err != nil {
 		return false, l.failUpgrade(ctx, err)
@@ -456,24 +456,6 @@ func (l *Logs) Close() error {
 		l.importer = nil
 	}
 	return errors.Join(err, l.columns.Close())
-}
-
-func checkColumnUpgradeSpace(path string) error {
-	var total int64
-	for _, p := range []string{path, path + "-wal", filepath.Join(filepath.Dir(path), columnUpgradeBackup)} {
-		info, err := os.Stat(p)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		total += info.Size()
-	}
-	if total > columnUpgradeBudget {
-		return errors.New("historystore: upgrade space budget exceeded")
-	}
-	return nil
 }
 
 func verifyColumnImport(ctx context.Context, dst *Columns, _ *ColumnImport) error {

@@ -37,6 +37,7 @@ public struct RoutingPackage: Sendable, Equatable {
   public var previousVersion = ""
   public var automatic = false
   public var updateMessage = ""
+  public var updateText: ProductText? = nil
   public var updatedAt: Date? = nil
   public init() {}
   init(_ p: Pax_V1_RoutingPackage) {
@@ -51,6 +52,7 @@ public struct RoutingPackage: Sendable, Equatable {
     previousVersion = p.previousVersion
     automatic = p.automatic
     updateMessage = p.updateMessage
+    updateText = p.hasUpdateText ? ProductText(p.updateText) : nil
     updatedAt = p.updatedUnix > 0 ? Date(timeIntervalSince1970: Double(p.updatedUnix)) : nil
   }
   var proto: Pax_V1_RoutingPackage {
@@ -81,6 +83,7 @@ public struct RoutingLibrarySnapshot: Sendable, Equatable {
   public var routes: [NodeProfile] = []
   public var state = ""
   public var message = ""
+  public var messageText: ProductText? = nil
   public init() {}
   init(_ p: Pax_V1_RoutingLibrarySnapshot) {
     revision = p.revision
@@ -95,6 +98,7 @@ public struct RoutingLibrarySnapshot: Sendable, Equatable {
     routes = p.routes.map { NodeProfile(proto: $0) }
     state = p.state
     message = p.message
+    messageText = p.hasMessageText ? ProductText(p.messageText) : nil
   }
 }
 public struct RoutingMutation: Sendable {

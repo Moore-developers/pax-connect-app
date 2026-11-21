@@ -8,6 +8,10 @@ public struct NetworkDiagnosticReport: Sendable, Equatable, Codable {
     public let providerID: String?
   }
   public struct Fact: Sendable, Equatable, Codable {
+    public var kind: String? = nil
+    public var labelText: ProductText? = nil
+    public var valueText: ProductText? = nil
+    public var sourceText: ProductText? = nil
     public let group, label, value, source, state: String
     public let providerID: String?
   }
@@ -79,9 +83,14 @@ public struct NetworkDiagnosticReport: Sendable, Equatable, Codable {
         providerID: $0.providerID.isEmpty ? nil : $0.providerID)
     }
     facts = p.facts.map {
-      Fact(
+      var fact = Fact(
         group: $0.group, label: $0.label, value: $0.value, source: $0.source, state: $0.state,
         providerID: $0.providerID.isEmpty ? nil : $0.providerID)
+      fact.kind = $0.kind.isEmpty ? nil : $0.kind
+      fact.labelText = $0.hasLabelText ? ProductText($0.labelText) : nil
+      fact.valueText = $0.hasValueText ? ProductText($0.valueText) : nil
+      fact.sourceText = $0.hasSourceText ? ProductText($0.sourceText) : nil
+      return fact
     }
     providers =
       p.providers.isEmpty

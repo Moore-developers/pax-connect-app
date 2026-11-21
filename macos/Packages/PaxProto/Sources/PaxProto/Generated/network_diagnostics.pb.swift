@@ -106,9 +106,42 @@ public nonisolated struct Pax_V1_NetworkDiagnosticFact: Sendable {
 
   public var providerID: String = String()
 
+  public var kind: String = String()
+
+  public var labelText: Pax_V1_ProductText {
+    get {_labelText ?? Pax_V1_ProductText()}
+    set {_labelText = newValue}
+  }
+  /// Returns true if `labelText` has been explicitly set.
+  public var hasLabelText: Bool {self._labelText != nil}
+  /// Clears the value of `labelText`. Subsequent reads from it will return its default value.
+  public mutating func clearLabelText() {self._labelText = nil}
+
+  public var valueText: Pax_V1_ProductText {
+    get {_valueText ?? Pax_V1_ProductText()}
+    set {_valueText = newValue}
+  }
+  /// Returns true if `valueText` has been explicitly set.
+  public var hasValueText: Bool {self._valueText != nil}
+  /// Clears the value of `valueText`. Subsequent reads from it will return its default value.
+  public mutating func clearValueText() {self._valueText = nil}
+
+  public var sourceText: Pax_V1_ProductText {
+    get {_sourceText ?? Pax_V1_ProductText()}
+    set {_sourceText = newValue}
+  }
+  /// Returns true if `sourceText` has been explicitly set.
+  public var hasSourceText: Bool {self._sourceText != nil}
+  /// Clears the value of `sourceText`. Subsequent reads from it will return its default value.
+  public mutating func clearSourceText() {self._sourceText = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _labelText: Pax_V1_ProductText? = nil
+  fileprivate var _valueText: Pax_V1_ProductText? = nil
+  fileprivate var _sourceText: Pax_V1_ProductText? = nil
 }
 
 /// One bounded exact-IP request, including skipped/failed attempts and fallback provenance.
@@ -885,7 +918,7 @@ nonisolated extension Pax_V1_NetworkDiagnosticSource: SwiftProtobuf.Message, Swi
 
 nonisolated extension Pax_V1_NetworkDiagnosticFact: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NetworkDiagnosticFact"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}group\0\u{1}label\0\u{1}value\0\u{1}source\0\u{1}state\0\u{3}provider_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}group\0\u{1}label\0\u{1}value\0\u{1}source\0\u{1}state\0\u{3}provider_id\0\u{1}kind\0\u{3}label_text\0\u{3}value_text\0\u{3}source_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -899,12 +932,20 @@ nonisolated extension Pax_V1_NetworkDiagnosticFact: SwiftProtobuf.Message, Swift
       case 4: try { try decoder.decodeSingularStringField(value: &self.source) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.state) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.providerID) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._labelText) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._valueText) }()
+      case 10: try { try decoder.decodeSingularMessageField(value: &self._sourceText) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.group.isEmpty {
       try visitor.visitSingularStringField(value: self.group, fieldNumber: 1)
     }
@@ -923,6 +964,18 @@ nonisolated extension Pax_V1_NetworkDiagnosticFact: SwiftProtobuf.Message, Swift
     if !self.providerID.isEmpty {
       try visitor.visitSingularStringField(value: self.providerID, fieldNumber: 6)
     }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 7)
+    }
+    try { if let v = self._labelText {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
+    try { if let v = self._valueText {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
+    try { if let v = self._sourceText {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -933,6 +986,10 @@ nonisolated extension Pax_V1_NetworkDiagnosticFact: SwiftProtobuf.Message, Swift
     if lhs.source != rhs.source {return false}
     if lhs.state != rhs.state {return false}
     if lhs.providerID != rhs.providerID {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs._labelText != rhs._labelText {return false}
+    if lhs._valueText != rhs._valueText {return false}
+    if lhs._sourceText != rhs._sourceText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

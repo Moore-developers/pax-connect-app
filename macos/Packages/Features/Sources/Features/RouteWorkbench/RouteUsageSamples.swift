@@ -25,10 +25,13 @@ import PaxUI
 }
 
 /// Axis unit that names the bucket width, so per-bucket volume is never read as a rate.
-func routeUsageUnit(_ domain: PaxTimeDomain) -> String {
+func routeUsageUnit(_ domain: PaxTimeDomain, context: PresentationContext) -> String {
   guard let bucket = domain.bucket else { return "MB" }
   let minutes = Int((bucket / 60).rounded())
-  return minutes >= 60 && minutes % 60 == 0 ? "MB/\(minutes / 60)小时" : "MB/\(minutes)分钟"
+  if minutes >= 60 && minutes % 60 == 0 {
+    return context.text("routes.usage_per_hours", ["hours": String(minutes / 60)])
+  }
+  return context.text("routes.usage_per_minutes", ["minutes": String(minutes)])
 }
 
 /// Fixture series for the isolated demo (no daemon): half-hourly buckets since 08:00.
@@ -47,10 +50,12 @@ func routeUsageUnit(_ domain: PaxTimeDomain) -> String {
 }
 
 @MainActor extension RouteWorkbenchStore {
-  func usageCoverageCaption(_ id: String) -> String {
-    guard let usage = routesUsage(id) else { return "仅含已记录用量；未采集时段不计为0" }
-    let late = routeUsageSeries(usage)?.domain.coverageNote().map { " · " + $0 } ?? ""
-    return "范围 " + (usage.from.map(TrafficFormatting.dateMinute) ?? "未知") + " — "
-      + (usage.until.map(TrafficFormatting.dateMinute) ?? "未知") + late
+  func usageCoverageCaption(_ id: String, context: PresentationContext) -> String {
+    guard let usage = routesUsage(id) else { return context.text("route_readouts.f948d939b6") }
+    let copy = timeSeriesCopy(context)
+    let late = routeUsageSeries(usage)?.domain.coverageNote(format: copy.coverage)
+    let unknown = context.text("common.unknown")
+    return copy.range + (usage.from.map(TrafficFormatting.dateMinute) ?? unknown) + " — "
+      + (usage.until.map(TrafficFormatting.dateMinute) ?? unknown) + (late.map { " · " + $0 } ?? "")
   }
 }

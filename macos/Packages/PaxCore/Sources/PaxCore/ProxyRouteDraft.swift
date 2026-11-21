@@ -26,7 +26,7 @@ public struct ProxyRouteDraft: Equatable, Sendable {
     original = try JSONDecoder().decode([String: JSONValue].self, from: data)
     guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
       let type = object["type"] as? String, ["socks", "http"].contains(type)
-    else { throw Validation("这不是可编辑的 SOCKS5、HTTP 或 HTTPS 线路") }
+    else { throw Validation(key: "proxy_validation.unsupported") }
     let tls = object["tls"] as? [String: Any]
     kind = type == "socks" ? .socks5 : tls?["enabled"] as? Bool == true ? .https : .http
     server = object["server"] as? String ?? ""
@@ -49,21 +49,25 @@ public struct ProxyRouteDraft: Equatable, Sendable {
       ? String(value.dropFirst().dropLast()) : value
   }
   public func document() throws -> String {
-    guard !needsProtocolConfirmation else { throw Validation("请选择代理类型，不能根据端口判断协议") }
-    guard Self.validHost(host) else { throw Validation("请填写有效的 IP 或域名，不包含协议、端口或路径") }
-    guard let number = UInt16(port), number > 0 else { throw Validation("端口须为 1–65535 的整数") }
-    guard displayName.utf8.count <= 128 else { throw Validation("线路名称过长，请填写一个较短的名称") }
+    guard !needsProtocolConfirmation else { throw Validation(key: "proxy_validation.protocol") }
+    guard Self.validHost(host) else { throw Validation(key: "proxy_validation.host") }
+    guard let number = UInt16(port), number > 0 else {
+      throw Validation(key: "proxy_validation.port")
+    }
+    guard displayName.utf8.count <= 128 else { throw Validation(key: "proxy_validation.name") }
     if authenticated {
-      guard !username.isEmpty, !password.isEmpty else { throw Validation("请填写用户名和密码，或选择无需账号密码") }
+      guard !username.isEmpty, !password.isEmpty else {
+        throw Validation(key: "proxy_validation.credentials")
+      }
       let limit = kind == .socks5 ? 255 : 4096
       guard username.utf8.count <= limit, password.utf8.count <= limit,
         kind == .socks5 || !username.contains(":"), !username.contains(where: \.isNewline),
         !password.contains(where: \.isNewline)
-      else { throw Validation("认证信息格式无效或超出协议长度限制") }
+      else { throw Validation(key: "proxy_validation.credential_format") }
     }
     let sni = serverName.trimmingCharacters(in: .whitespacesAndNewlines)
     guard kind != .https || sni.isEmpty || Self.validHost(sni) else {
-      throw Validation("服务器名称须为域名或 IP")
+      throw Validation(key: "proxy_validation.server_name")
     }
     var object = original
     object["type"] = .string(kind == .socks5 ? "socks" : "http")
@@ -90,7 +94,7 @@ public struct ProxyRouteDraft: Equatable, Sendable {
   public static func pasted(_ text: String, keeping draft: Self) throws -> Self {
     let input = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !input.isEmpty, !input.contains(where: \.isNewline) else {
-      throw Validation("请一次粘贴一条代理信息")
+      throw Validation(key: "proxy_validation.one_link")
     }
     var value = draft
     if input.contains("://") {
@@ -98,7 +102,7 @@ public struct ProxyRouteDraft: Equatable, Sendable {
         let kind = Kind.allCases.first(where: { $0.rawValue.lowercased() == scheme }),
         let address = url.host, let port = url.port,
         url.path.isEmpty || url.path == "/", url.query == nil
-      else { throw Validation("仅支持带端口的 socks5://、http://、https:// 单条代理链接") }
+      else { throw Validation(key: "proxy_validation.link_format") }
       value.kind = kind
       value.server = address
       value.port = String(port)
@@ -114,18 +118,20 @@ public struct ProxyRouteDraft: Equatable, Sendable {
       if input.hasPrefix("["), let end = input.firstIndex(of: "]") {
         address = String(input[input.index(after: input.startIndex)..<end])
         let after = input.index(after: end)
-        guard after < input.endIndex, input[after] == ":" else { throw Validation("IPv6 地址后须填写端口") }
+        guard after < input.endIndex, input[after] == ":" else {
+          throw Validation(key: "proxy_validation.ipv6_port")
+        }
         remainder = input[input.index(after: after)...]
       } else {
         guard let separator = input.firstIndex(of: ":") else {
-          throw Validation("请粘贴地址:端口，或地址:端口:用户名:密码")
+          throw Validation(key: "proxy_validation.address_format")
         }
         address = String(input[..<separator])
         remainder = input[input.index(after: separator)...]
       }
       let parts = remainder.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
       guard parts.count == 1 || parts.count == 3 else {
-        throw Validation("格式不明确，请分项填写；IPv6 请使用方括号")
+        throw Validation(key: "proxy_validation.ambiguous")
       }
       value.server = address
       value.port = String(parts[0])
@@ -161,8 +167,10 @@ public struct ProxyRouteDraft: Equatable, Sendable {
     }
   }
   public struct Validation: LocalizedError, Sendable {
-    public let message: String
-    public init(_ message: String) { self.message = message }
+    private let key: String
+    fileprivate init(key: String) { self.key = key }
+    public var message: String { message(context: .chinese) }
+    public func message(context: PresentationContext) -> String { context.text(key) }
     public var errorDescription: String? { message }
   }
 }

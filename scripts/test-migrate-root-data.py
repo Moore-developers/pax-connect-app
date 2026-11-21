@@ -104,13 +104,6 @@ class MigrationTests(unittest.TestCase):
         self.assertNotIn('private fixture', output.getvalue())
         return result, output.getvalue()
 
-    def test_no_flags_is_harmless_help(self):
-        before = snapshot(self.root)
-        result = subprocess.run([str(SCRIPT)], capture_output=True, cwd=self.cwd)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(b'--export', result.stdout)
-        self.assertEqual(snapshot(self.root), before)
-
     def test_cf_evidence_above_two_mib_round_trips_with_routes(self):
         # The product's protected CF repository accepts up to 4 MiB. One valid
         # bounded file must not make export omit the trailer for every file.

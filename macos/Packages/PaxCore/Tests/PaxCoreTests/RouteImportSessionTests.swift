@@ -71,7 +71,7 @@ extension RouteImportSessionTests {
     #expect(!session.busy)
   }
   @Test("失败确认保留输入并禁止自动重试旧token")
-  func failedCommit() async {
+  func failedCommit() async throws {
     let route = NodeProfile(
       id: "r", name: "One", protocolName: "vless", server: "example.test", port: 443, group: "")
     var calls = 0
@@ -96,6 +96,10 @@ extension RouteImportSessionTests {
     #expect(!session.canConfirm)
     #expect(session.source == "draft")
     #expect(session.message.contains("核对目录"))
+    let pack = try #require(LanguageCatalog.bundled().packs[.english])
+    let english = PresentationContext(language: .english, messages: pack.messages)
+    #expect(
+      session.message(context: english).contains("Check the catalog before previewing again."))
   }
 }
 
@@ -103,19 +107,22 @@ extension RouteImportSessionTests {
   @Test("自动识别仅发布最后输入，取消不入库")
   func automaticRecognition() async {
     var inputs: [String] = []
+    let (recognized, didRecognize) = AsyncStream.makeStream(of: Void.self)
+    defer { didRecognize.finish() }
     let session = RouteImportSession(
       preview: { source, _, name in
         inputs.append(source)
         #expect(name.isEmpty)
+        didRecognize.yield()
         return RoutesPreview(token: source, revision: 1, items: [])
       }, cancel: { _ in }, confirm: { _, _ in Issue.record("识别不应入库") })
     session.recognize("first")
     session.recognize("last")
-    try? await Task.sleep(for: .milliseconds(600))
+    var pending = recognized.makeAsyncIterator()
+    await pending.next()
     #expect(inputs == ["last"])
     #expect(session.preview?.token == "last")
     session.recognize("")
-    try? await Task.sleep(for: .milliseconds(50))
     #expect(session.preview == nil)
     await session.cancel()
   }
@@ -128,6 +135,8 @@ extension RouteImportSessionTests {
       id: "r", name: "Fixture", protocolName: "trojan", server: "example.test", port: 443, group: ""
     )
     var writes = 0
+    let (commits, didCommit) = AsyncStream.makeStream(of: Void.self)
+    defer { didCommit.finish() }
     let session = RouteImportSession(
       preview: { _, _, _ in
         RoutesPreview(
@@ -140,10 +149,12 @@ extension RouteImportSessionTests {
       }, cancel: { _ in },
       confirm: { _, ids in
         writes += 1
+        didCommit.yield()
         #expect(ids == ["ok"])
       })
     session.recognize("trojan://fixture@example.test:443\nunknown://bad")
-    try? await Task.sleep(for: .milliseconds(600))
+    var pending = commits.makeAsyncIterator()
+    await pending.next()
     #expect(writes == 1)
     #expect(session.finished)
     #expect(session.message.contains("1"))
@@ -161,7 +172,8 @@ extension RouteImportSessionTests {
     let route = NodeProfile(
       id: "r", name: "Old", protocolName: "trojan", server: "example.test", port: 443, group: "")
     var committed = 0
-    var discarded: [String] = []
+    let (discarded, didDiscard) = AsyncStream.makeStream(of: String.self)
+    defer { didDiscard.finish() }
     let session = RouteImportSession(
       preview: { _, _, _ in
         await gate.wait()
@@ -170,15 +182,15 @@ extension RouteImportSessionTests {
           items: [
             RoutePreviewItem(id: "ok", route: route, errorCode: "", duplicate: false, line: 1)
           ])
-      }, cancel: { discarded.append($0) }, confirm: { _, _ in committed += 1 })
+      }, cancel: { didDiscard.yield($0) }, confirm: { _, _ in committed += 1 })
     session.recognize("https://example.test/sub")
     while !(await gate.entered) { await Task.yield() }
     #expect(session.phase == .downloading)
     await session.cancel()
     await gate.release()
-    try? await Task.sleep(for: .milliseconds(50))
     #expect(committed == 0)
-    #expect(discarded == ["late"])
+    var pending = discarded.makeAsyncIterator()
+    #expect(await pending.next() == "late")
   }
   @Test("再次粘贴同来源的重复项仍自动更新，不要求手动确认")
   func duplicateSourceStillUpdates() async {
@@ -186,6 +198,8 @@ extension RouteImportSessionTests {
       id: "r", name: "Existing", protocolName: "trojan", server: "example.test", port: 443,
       group: "")
     var updates = 0
+    let (commits, didCommit) = AsyncStream.makeStream(of: Void.self)
+    defer { didCommit.finish() }
     let session = RouteImportSession(
       preview: { _, _, _ in
         RoutesPreview(
@@ -196,14 +210,16 @@ extension RouteImportSessionTests {
       }, cancel: { _ in },
       confirm: { _, ids in
         updates += 1
+        didCommit.yield()
         #expect(ids.isEmpty)
       })
     session.recognize("https://example.test/sub")
-    try? await Task.sleep(for: .milliseconds(600))
+    var pending = commits.makeAsyncIterator()
+    await pending.next()
     #expect(updates == 1)
     #expect(session.finished)
     session.recognize("https://example.test/sub")
-    try? await Task.sleep(for: .milliseconds(600))
+    await pending.next()
     #expect(updates == 2)
   }
 }
@@ -216,7 +232,8 @@ extension RouteImportSessionTests {
     )
     var session: RouteImportSession?
     var commits = 0
-    var discarded: [String] = []
+    let (discarded, didDiscard) = AsyncStream.makeStream(of: String.self)
+    defer { didDiscard.finish() }
     session = RouteImportSession(
       preview: { _, _, _ in
         session?.cancelImmediately()
@@ -225,11 +242,11 @@ extension RouteImportSessionTests {
           items: [
             RoutePreviewItem(id: "ok", route: route, errorCode: "", duplicate: false, line: 1)
           ])
-      }, cancel: { discarded.append($0) }, confirm: { _, _ in commits += 1 })
+      }, cancel: { didDiscard.yield($0) }, confirm: { _, _ in commits += 1 })
     session?.recognize("trojan://fixture@example.test:443")
-    try? await Task.sleep(for: .milliseconds(500))
     #expect(commits == 0)
-    #expect(discarded == ["ready"])
+    var pending = discarded.makeAsyncIterator()
+    #expect(await pending.next() == "ready")
     #expect(session?.phase == .cancelled)
   }
 }

@@ -6,6 +6,8 @@ import PaxUI
 /// Confirmation binds to the exact route/revision shown; server rejects a stale sheet.
 @MainActor
 public final class RouteTLSSettingsViewController: NSViewController {
+  let context: PresentationContext
+
   private let store: ConnectionStore
   var onContentResize: (() -> Void)?
   private var route: NodeProfile
@@ -13,29 +15,35 @@ public final class RouteTLSSettingsViewController: NSViewController {
   private var observationRevision: UInt64 = 0
   private var dirty = false
   private var submitted = false
-  private let acknowledgement = NSButton(
-    checkboxWithTitle: "我了解跳过后无法确认服务器身份", target: nil, action: nil)
-  private let warning = NSTextField(wrappingLabelWithString: "跳过后连接仍加密，但无法确认服务器身份。仅在你信任此线路时使用。")
+  private lazy var acknowledgement = NSButton(
+    checkboxWithTitle: context.text("network_controls.ad09451ffe"), target: nil, action: nil)
+  private lazy var warning = NSTextField(
+    wrappingLabelWithString: context.text("network_controls.cde965afb6"))
   private let enableAfterSave: Bool
   private var awaitingEnable = false
   private var dismissed = false
   private var continuationTask: Task<Void, Never>?
   private let mode = NSPopUpButton(frame: .zero, pullsDown: false)
   private let summary = NSTextField(wrappingLabelWithString: "")
-  private let policyBadge = PaxBadge(title: "默认校验")
+  private lazy var policyBadge = PaxBadge(title: context.text("network_controls.48905cc3c6"))
   private let policySource = PaxRouteText.label(
     "", font: PaxTheme.Typography.caption(), secondary: true)
-  private let serverField = RouteDetailField("服务器地址", identifier: "tls-server")
-  private let sniField = RouteDetailField("证书服务器名（SNI）", identifier: "tls-sni")
+  private lazy var serverField = RouteDetailField(
+    context.text("network_controls.d3716cc5a2"), identifier: "tls-server")
+  private lazy var sniField = RouteDetailField(
+    context.text("network_controls.11acbb74e7"), identifier: "tls-sni")
   private let activeState = PaxRouteText.label(
     "", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
   private let resultLabel = NSTextField(wrappingLabelWithString: "")
-  private let save = PaxButton(.prominent, title: "保存设置", target: nil, action: nil)
+  private lazy var save = PaxButton(
+    .prominent, title: context.text("network_controls.c8550237ba"), target: nil, action: nil)
   private var task: Task<Void, Never>?
   public init(
     store: ConnectionStore, route: NodeProfile, enableAfterSave: Bool = false,
-    embedded: Bool = false
+    embedded: Bool = false, context: PresentationContext = .chinese
   ) {
+    self.context = context
+
     self.embedded = embedded
     self.store = store
     self.route = route
@@ -46,7 +54,9 @@ public final class RouteTLSSettingsViewController: NSViewController {
   public required init?(coder: NSCoder) { fatalError("代码构建") }
   public override func loadView() {
     view = NSView(frame: embedded ? .zero : NSRect(x: 0, y: 0, width: 540, height: 330))
-    mode.addItems(withTitles: ["默认校验证书", "跳过校验"])
+    mode.addItems(withTitles: [
+      context.text("network_controls.dfd7f42e89"), context.text("network_controls.299c0daaec"),
+    ])
     mode.selectItem(at: route.tlsPolicy?.mode == .skipVerify ? 1 : 0)
     mode.setAccessibilityIdentifier("tls-mode")
     mode.target = self
@@ -60,13 +70,17 @@ public final class RouteTLSSettingsViewController: NSViewController {
     warning.textColor = PaxTheme.Color.warning
     warning.font = PaxTheme.Typography.caption()
     summary.stringValue = summaryText(route)
-    if enableAfterSave { save.title = "保存并开启代理" }
+    if enableAfterSave { save.title = context.text("network_controls.e9b2433c5e") }
     save.target = self
     save.action = #selector(savePolicy)
     save.setAccessibilityIdentifier("save-tls-policy")
-    let close = PaxButton(.secondary, title: "关闭", target: self, action: #selector(closeSheet))
+    let close = PaxButton(
+      .secondary, title: context.text("network_controls.3fd47edce4"), target: self,
+      action: #selector(closeSheet))
     let controls = NSStackView(views: [
-      PaxRouteText.label("下次连接", font: PaxTheme.Typography.caption(), secondary: true),
+      PaxRouteText.label(
+        context.text("network_controls.7decdb6007"), font: PaxTheme.Typography.caption(),
+        secondary: true),
       mode, NSView(), save,
     ])
     controls.setAccessibilityIdentifier("tls-controls")
@@ -110,12 +124,23 @@ public final class RouteTLSSettingsViewController: NSViewController {
     }
   }
   private func summaryText(_ node: NodeProfile) -> String {
-    let source = node.tlsPolicy?.userOverride == true ? "用户设置" : "来源设置"
-    let mode = node.tlsPolicy?.mode == .skipVerify ? "跳过校验" : "默认校验"
+    let source =
+      node.tlsPolicy?.userOverride == true
+      ? context.text("network_controls.7ce710f646") : context.text("network_controls.88250fa57c")
+    let mode =
+      node.tlsPolicy?.mode == .skipVerify
+      ? context.text("network_controls.299c0daaec") : context.text("network_controls.48905cc3c6")
     let policy =
-      source + " · " + mode + (node.tlsPolicy?.needsConfirmation == true ? " · 尚待确认" : "")
+      source + " · " + mode
+      + (node.tlsPolicy?.needsConfirmation == true
+        ? context.text("network_controls.e09b637f7e") : "")
     return (embedded ? "" : node.name + "\n")
-      + "服务器：\(node.server):\(node.port)\nSNI：\(node.serverName)\n" + policy
+      + context.text(
+        "network_controls.fc58c01d4b",
+        [
+          "arg0": String(describing: node.server), "arg1": String(describing: node.port),
+          "arg2": String(describing: node.serverName),
+        ]) + policy
   }
   @objc private func modeChanged() {
     dirty = true
@@ -172,7 +197,12 @@ public final class RouteTLSSettingsViewController: NSViewController {
       let skips = mode.indexOfSelectedItem == 1
       warning.isHidden = !skips
       acknowledgement.isHidden = !skips
-      if embedded { save.title = skips ? "确认跳过并保存" : "保存证书设置" }
+      if embedded {
+        save.title =
+          skips
+          ? context.text("network_controls.ca603f0ec8")
+          : context.text("network_controls.8bceed7f77")
+      }
       mode.isEnabled = store.canEditTLS
       acknowledgement.isEnabled = store.canEditTLS
       let fresh =
@@ -184,22 +214,30 @@ public final class RouteTLSSettingsViewController: NSViewController {
       summary.stringValue = summaryText(shown)
       if embedded {
         policyBadge.apply(
-          title: route.tlsPolicy?.mode == .skipVerify ? "已保存：跳过校验" : "已保存：默认校验",
+          title: route.tlsPolicy?.mode == .skipVerify
+            ? context.text("network_controls.7fccd23e40")
+            : context.text("network_controls.f80009ff8f"),
           tone: route.tlsPolicy?.mode == .skipVerify ? .warning : .healthy)
         policySource.stringValue =
-          (route.tlsPolicy?.userOverride == true ? "用户设置" : "来源设置")
-          + (route.tlsPolicy?.needsConfirmation == true ? " · 尚待确认" : "")
+          (route.tlsPolicy?.userOverride == true
+            ? context.text("network_controls.7ce710f646")
+            : context.text("network_controls.88250fa57c"))
+          + (route.tlsPolicy?.needsConfirmation == true
+            ? context.text("network_controls.e09b637f7e") : "")
         serverField.value.stringValue = "\(route.server):\(route.port)"
-        sniField.value.stringValue = route.serverName.isEmpty ? "随服务器地址" : route.serverName
+        sniField.value.stringValue =
+          route.serverName.isEmpty ? context.text("network_controls.83c6f641e8") : route.serverName
         if let active = store.activeTLS, active.routeID == route.id {
           activeState.stringValue =
             active.skipped
-            ? "当前连接：跳过校验，未确认服务器身份"
-            : (active.verified ? "当前连接：证书已校验" : "当前连接：默认校验证书")
+            ? context.text("network_controls.764df58d46")
+            : (active.verified
+              ? context.text("network_controls.2a080bef1f")
+              : context.text("network_controls.a83baa7674"))
         } else if store.currentRoute?.id == route.id && store.status != .off {
-          activeState.stringValue = "当前连接未提供证书状态"
+          activeState.stringValue = context.text("network_controls.fa3d422e90")
         } else {
-          activeState.stringValue = "当前未通过此线路连接"
+          activeState.stringValue = context.text("network_controls.d8e8b953ac")
         }
       }
       if store.tlsSaveRouteID == route.id, let error = store.tlsSaveError {
@@ -207,13 +245,19 @@ public final class RouteTLSSettingsViewController: NSViewController {
       } else if store.tlsSaveRouteID == route.id, let message = store.tlsSaveMessage {
         resultLabel.stringValue = message
       } else if !fresh {
-        resultLabel.stringValue = "线路设置已变化，请关闭后重新打开核对"
+        resultLabel.stringValue = context.text("network_controls.01a028e08f")
       } else if !embedded, let active = store.activeTLS, active.routeID == route.id {
         resultLabel.stringValue =
-          active.skipped ? "当前连接：跳过校验，未校验服务器证书" : (active.verified ? "当前连接：证书已校验" : "当前连接：默认校验证书")
+          active.skipped
+          ? context.text("network_controls.05900eb8b2")
+          : (active.verified
+            ? context.text("network_controls.2a080bef1f")
+            : context.text("network_controls.a83baa7674"))
       } else {
         resultLabel.stringValue =
-          enableAfterSave ? "保存成功后继续开启这条线路" : "保存后下次开启生效，不会自动开启或重连"
+          enableAfterSave
+          ? context.text("network_controls.4914b9cfc2")
+          : context.text("network_controls.9d04894908")
       }
     } onChange: { [weak self] in
       Task { @MainActor [weak self] in
@@ -233,11 +277,20 @@ public final class RouteTLSSettingsViewController: NSViewController {
     }
     if selected == .skipVerify {
       let alert = NSAlert()
-      alert.messageText = "仅对这条线路跳过证书校验？"
+      alert.messageText = context.text("network_controls.aaf3b19bd9")
       alert.informativeText =
-        "\(route.name)\n\(route.server):\(route.port) · SNI \(route.serverName)\n服务器身份将无法确认。连接仍加密，但显示降级。保存后\(enableAfterSave ? "继续开启代理。" : "下次连接生效。")"
-      alert.addButton(withTitle: "取消")
-      alert.addButton(withTitle: "确认跳过并保存")
+        context.text(
+          "network_controls.34c6250ef7",
+          [
+            "arg0": String(describing: route.name), "arg1": String(describing: route.server),
+            "arg2": String(describing: route.port), "arg3": String(describing: route.serverName),
+            "arg4": String(
+              describing: enableAfterSave
+                ? context.text("network_controls.5633399fbc")
+                : context.text("network_controls.ef7ce07385")),
+          ])
+      alert.addButton(withTitle: context.text("network_controls.2cd0f3be87"))
+      alert.addButton(withTitle: context.text("network_controls.ca603f0ec8"))
       guard let window = view.window else { return }
       alert.beginSheetModal(for: window) { [weak self] response in
         Task { @MainActor [weak self] in

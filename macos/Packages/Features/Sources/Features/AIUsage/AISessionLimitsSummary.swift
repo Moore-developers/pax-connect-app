@@ -121,15 +121,22 @@ import PaxUI
 
 /// Input/estimated excess, observed average ratio, and activity/current context.
 @MainActor final class AILimitSummaryStrip {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   let view: NSView
   private let cards = [
     AILimitKpiCard(evidenceWidth: 78, evidenceLayout: .input),
-    AILimitKpiCard(evidenceWidth: 135.2, evidenceLayout: .means), AILimitKpiCard(),
+    AILimitKpiCard(evidenceWidth: 112, evidenceLayout: .means), AILimitKpiCard(),
   ]
-  let readout = AILimitReadout()
+  let readout: AILimitReadout
   private let activityHost = NSView()
 
-  init() {
+  init(interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
+    readout = AILimitReadout(interfaceCopy: interfaceCopy)
     let surfaces =
       cards.prefix(2).map { AIUsageLayout.card($0) } + [AIUsageLayout.card(activityHost)]
     let row = NSStackView(views: surfaces)
@@ -140,14 +147,16 @@ import PaxUI
       surfaces[0].widthAnchor.constraint(equalTo: surfaces[1].widthAnchor, constant: 24),
       surfaces[2].widthAnchor.constraint(equalTo: surfaces[1].widthAnchor, multiplier: 1.25),
     ])
-    for (index, text) in [
-      (0, "输入费用已含估算超限增费，不再次相加。\n" + AILimitStyle.spendExplanation),
-      (
-        1,
-        "超限单次输入均费 ÷ 安全单次输入均费，只计已定价且有上限的请求。\nDeepSeek按同模型、同峰谷时段加权比较。图中均费为原始实际值，不能直接相除。预警不参与比较；缓存构成也会影响差异。"
-      ),
-    ] {
-      let help = readout.help(index == 0 ? "输入费用与增费" : "费用倍率", text)
+    for index in 0..<2 {
+      let help = readout.help { context in
+        (
+          context.text(index == 0 ? "session_limits.d00bc9b5f7" : "session_limits.76c84b1e3a"),
+          index == 0
+            ? context.text("session_limits.b74590e63f")
+              + AILimitStyle.spendExplanation(context: context)
+            : context.text("session_limits.5a8f5be2f8")
+        )
+      }
       cards[index].addSubview(help)
       help.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
@@ -162,18 +171,21 @@ import PaxUI
 
   private func bar(_ fraction: Double, color: NSColor) -> NSView {
     let result = PaxShareBar(
-      segments: [.init("占比", value: min(1, max(0, fraction)))], colors: [color], total: 1)
+      segments: [.init(context.text("session_limits.cc87b27b64"), value: min(1, max(0, fraction)))],
+      colors: [color], total: 1)
     result.heightAnchor.constraint(equalToConstant: 5).isActive = true
     return result
   }
 
-  static func change(_ value: Double, from base: Double?) -> String? {
+  static func change(_ value: Double, from base: Double?, context: PresentationContext = .chinese)
+    -> String?
+  {
     guard let base, base > 0 else { return nil }
     let delta = (value / base - 1) * 100
-    if abs(delta) < 0.05 { return "较上日持平" }
+    if abs(delta) < 0.05 { return context.text("session_limits.557a26fc6a") }
     let number =
       abs(delta) < 1 ? String(format: "%.1f", abs(delta)) : String(format: "%.0f", abs(delta))
-    return "较上日 " + (delta > 0 ? "↑" : "↓") + number + "%"
+    return context.text("session_limits.61e91c81b3") + (delta > 0 ? "↑" : "↓") + number + "%"
   }
 
   private func footer(_ label: String, value: String, color: NSColor? = nil) -> NSView {
@@ -190,11 +202,15 @@ import PaxUI
     let share = summary.input.official > 0 && spend >= 0 ? spend / summary.input.official : nil
     let fraction = min(1, max(0, share ?? 0))
     let ring = PaxDonutChart(
-      segments: [.init("估算超限增费", value: fraction), .init("其他输入费用", value: 1 - fraction)],
+      segments: [
+        .init(context.text("session_limits.8dad12266e"), value: fraction),
+        .init(context.text("session_limits.ab6e07d6e8"), value: 1 - fraction),
+      ],
       center: AIUsageFormatting.percent(share), compact: true,
       colors: [PaxTheme.DashboardColor.red, PaxTheme.Color.cardBorder],
       centerFont: PaxTheme.Typography.label(size: 12))
-    ring.setAccessibilityLabel("估算超限增费占输入费用 " + AIUsageFormatting.percent(share))
+    ring.setAccessibilityLabel(
+      context.text("session_limits.09feb8e761") + AIUsageFormatting.percent(share))
     ring.heightAnchor.constraint(equalToConstant: 78).isActive = true
     return ring
   }
@@ -203,23 +219,26 @@ import PaxUI
     let safe = summary.bands[0].average?.official
     let over = summary.bands[2].average?.official
     let ceiling = max(safe ?? 0, over ?? 0)
-    let rows = [("安全", safe, AILimitStyle.bandColors[0]), ("超限", over, AILimitStyle.bandColors[2])]
-      .map {
-        name, amount, color in
-        let label = PaxText.label(name, font: PaxTheme.Typography.caption(), secondary: true)
-        let money = PaxText.label(
-          AILimitStyle.money(amount), font: PaxTheme.Typography.time
-        )
-        label.font = PaxTheme.Typography.label(size: 11)
-        money.font = PaxTheme.Typography.label(size: 11)
-        let heading = AIUsageLayout.stack([label, NSView(), money], vertical: false)
-        heading.spacing = 3
-        let row = AIUsageLayout.stack([
-          heading, bar(ceiling > 0 ? (amount ?? 0) / ceiling : 0, color: color),
-        ])
-        row.spacing = 3
-        return row
-      }
+    let rows = [
+      (context.text("session_limits.afb63a620b"), safe, AILimitStyle.bandColors[0]),
+      (context.text("session_limits.314600a8ae"), over, AILimitStyle.bandColors[2]),
+    ]
+    .map {
+      name, amount, color in
+      let label = PaxText.label(name, font: PaxTheme.Typography.caption(), secondary: true)
+      let money = PaxText.label(
+        AILimitStyle.money(amount), font: PaxTheme.Typography.time
+      )
+      label.font = PaxTheme.Typography.label(size: 11)
+      money.font = PaxTheme.Typography.label(size: 11)
+      let heading = AIUsageLayout.stack([label, NSView(), money], vertical: false)
+      heading.spacing = 3
+      let row = AIUsageLayout.stack([
+        heading, bar(ceiling > 0 ? (amount ?? 0) / ceiling : 0, color: color),
+      ])
+      row.spacing = 3
+      return row
+    }
     let body = AIUsageLayout.stack(rows)
     body.spacing = PaxTheme.Spacing.medium
     return body
@@ -229,27 +248,34 @@ import PaxUI
     let previous = summary.comparison
     let costChange =
       summary.days.count == 1
-      ? Self.change(summary.input.official, from: previous?.input.official) : nil
+      ? Self.change(summary.input.official, from: previous?.input.official, context: context) : nil
     let spend = summary.overSpend.official
     cards[0].apply(
-      title: "输入费用 · 官方", value: AILimitStyle.money(summary.input.official, precision: 2),
-      sub: summary.unpriced > 0 ? "\(summary.unpriced) 次未定价 · 小计" : costChange ?? "含普通输入与缓存",
+      title: context.text("session_limits.fe4606df06"),
+      value: AILimitStyle.money(summary.input.official, precision: 2),
+      sub: summary.unpriced > 0
+        ? context.text("session_limits.50b58e4cfa", ["arg0": String(describing: summary.unpriced)])
+        : costChange ?? context.text("session_limits.da092271da"),
       subColor: costChange != nil && summary.input.official < (previous?.input.official ?? 0)
         ? PaxTheme.DashboardColor.greenLabel : nil,
       evidence: costEvidence(summary),
       footer: footer(
-        "估算超限增费", value: AILimitStyle.plus(spend),
+        context.text("session_limits.8dad12266e"), value: AILimitStyle.plus(spend),
         color: spend > 0 ? PaxTheme.DashboardColor.redLabel : nil))
     cards[1].apply(
-      title: "费用倍率", value: AILimitStyle.multipleText(summary.multiple),
-      sub: "超限 / 安全", evidence: means(summary),
-      footer: footer("单次输入均费", value: "官方 $/次"))
+      title: context.text("session_limits.76c84b1e3a"),
+      value: AILimitStyle.multipleText(summary.multiple),
+      sub: context.text("session_limits.f54977dbae"), evidence: means(summary),
+      footer: footer(
+        context.text("session_limits.fe27ff0358"), value: context.text("session_limits.c7f649399a"))
+    )
     if let current = summary.current {
       let limit = current.limit
       let tone = limit == nil ? nil : AILimitStyle.bandLabels[current.band]
       let gauge = AIUsageLayout.stack([
         PaxText.label(
-          limit.map { "上限 " + AILimitStyle.k($0) } ?? "未设上限",
+          limit.map { context.text("session_limits.0c69edbc82") + AILimitStyle.k($0) }
+            ?? context.text("session_limits.0c2315db3a"),
           font: PaxTheme.Typography.caption(), secondary: true),
         bar(
           limit.map { Double(current.context) / Double($0) } ?? 0,
@@ -257,18 +283,22 @@ import PaxUI
       ])
       let status: String
       if let limit, current.context > limit {
-        status = "超限 +" + AILimitStyle.k(current.context - limit)
+        status = context.text("session_limits.b75bde28d7") + AILimitStyle.k(current.context - limit)
       } else {
-        status = limit == nil ? "未设上限" : AILimitStyle.bandNames[current.band]
+        status =
+          limit == nil
+          ? context.text("session_limits.0c2315db3a")
+          : AILimitStyle.bandNames(context: context)[current.band]
       }
       cards[2].apply(
-        title: "当前上下文", value: AILimitStyle.k(current.context),
+        title: context.text("session_limits.080bc981ec"), value: AILimitStyle.k(current.context),
         sub: status,
         color: tone, subColor: tone, evidence: gauge,
-        footer: footer("最近主会话请求", value: ""))
+        footer: footer(context.text("session_limits.8b01b9b98b"), value: ""))
       showActivity(cards[2])
     } else {
-      showActivity(AILimitActivityView(summary: summary, readout: readout))
+      showActivity(
+        AILimitActivityView(summary: summary, readout: readout, interfaceCopy: interfaceCopy))
     }
   }
 

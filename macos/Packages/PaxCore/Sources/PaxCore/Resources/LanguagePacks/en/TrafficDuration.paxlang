@@ -1,0 +1,7 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "traffic_duration.seconds": "{seconds}s"
+  }
+}

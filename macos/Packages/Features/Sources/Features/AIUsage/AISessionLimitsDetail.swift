@@ -4,21 +4,27 @@ import PaxUI
 
 /// A short hover answers where the input cost went; the bar has no click-to-pin action.
 @MainActor enum AILimitRowReadout {
-  static func view(_ row: AILimitListRow) -> NSView {
+  static func view(_ row: AILimitListRow, context: PresentationContext = .chinese) -> NSView {
     let title = AIUsageLayout.heading(row.title)
     title.lineBreakMode = .byTruncatingTail
     title.toolTip = row.title
     var items: [NSView] = [title]
     if row.lines != nil {
-      items += [headline(row), distribution(row), legend(row), AIUsageLayout.separator()]
-      items.append(comparison(row))
+      items += [
+        headline(row, context: context), distribution(row, context: context),
+        legend(row, context: context), AIUsageLayout.separator(),
+      ]
+      items.append(comparison(row, context: context))
     } else {
       items.append(
-        line("输入费用 · 官方", AILimitStyle.money(row.input.official, precision: 2)))
-      items.append(note("未设上下文上限，不比较安全与超限。"))
+        line(
+          context.text("session_limits.fe4606df06"),
+          AILimitStyle.money(row.input.official, precision: 2)))
+      items.append(note(context.text("session_limits.34c2069f05")))
     }
     if row.unpriced > 0 {
-      items.append(note("另有 \(row.unpriced) 次未定价，不计入费用与均值"))
+      items.append(
+        note(context.text("session_limits.04d7039876", ["arg0": String(describing: row.unpriced)])))
     }
     let column = AIUsageLayout.stack(items)
     column.spacing = PaxTheme.Spacing.medium
@@ -27,53 +33,80 @@ import PaxUI
     return column
   }
 
-  private static func headline(_ row: AILimitListRow) -> NSView {
+  private static func headline(_ row: AILimitListRow, context: PresentationContext = .chinese)
+    -> NSView
+  {
     let share = row.input.official > 0 ? "\(row.percents[2])%" : "—"
     let value = PaxText.label(share, font: PaxTheme.Typography.metric(size: 32, weight: .light))
-    let main = AIUsageLayout.stack([value, note("输入费用落在超限区间")])
+    let main = AIUsageLayout.stack([value, note(context.text("session_limits.735a68d800"))])
     main.widthAnchor.constraint(greaterThanOrEqualToConstant: PaxTheme.Spacing.regular * 10)
       .isActive = true
     let amount = PaxText.label(
       AILimitStyle.money(row.bands[2].money.official, precision: 2),
       font: PaxTheme.Typography.tableValue)
     amount.alignment = .right
-    let count = note("\(row.bands[2].requests) 次请求")
+    let count = PaxText.label(
+      context.text(
+        "session_limits.8a9318fa01", ["arg0": String(describing: row.bands[2].requests)]),
+      font: PaxTheme.Typography.caption(), secondary: true)
     count.alignment = .right
+    count.setContentCompressionResistancePriority(.required, for: .horizontal)
     let side = AIUsageLayout.stack([amount, count])
     return AIUsageLayout.stack([main, NSView(), side], vertical: false)
   }
 
-  private static func distribution(_ row: AILimitListRow) -> NSView {
+  private static func distribution(_ row: AILimitListRow, context: PresentationContext = .chinese)
+    -> NSView
+  {
     let bar = PaxShareBar(
       segments: (0..<3).map {
-        .init(AILimitStyle.bandNames[$0], value: row.bands[$0].money.official)
+        .init(AILimitStyle.bandNames(context: context)[$0], value: row.bands[$0].money.official)
       }, colors: AILimitStyle.bandColors, striped: [2])
     bar.heightAnchor.constraint(equalToConstant: PaxTheme.Spacing.tight).isActive = true
-    bar.setAccessibilityLabel("官方输入费用占比")
+    bar.setAccessibilityLabel(context.text("session_limits.41516f84b4"))
     bar.setAccessibilityValue(
-      (0..<3).map { AILimitStyle.bandNames[$0] + " \(row.percents[$0])%" }.joined(separator: "，"))
+      (0..<3).map { AILimitStyle.bandNames(context: context)[$0] + " \(row.percents[$0])%" }.joined(
+        separator: "，"))
     return bar
   }
 
-  private static func legend(_ row: AILimitListRow) -> NSView {
+  private static func legend(_ row: AILimitListRow, context: PresentationContext = .chinese)
+    -> NSView
+  {
     let legend = PaxSeriesLegend()
     legend.items = (0..<3).map {
       .init(
-        AILimitStyle.bandNames[$0] + " \(row.percents[$0])%", color: AILimitStyle.bandColors[$0])
+        AILimitStyle.bandNames(context: context)[$0] + " \(row.percents[$0])%",
+        color: AILimitStyle.bandColors[$0])
     }
     return legend
   }
 
-  private static func comparison(_ row: AILimitListRow) -> NSView {
+  private static func comparison(_ row: AILimitListRow, context: PresentationContext = .chinese)
+    -> NSView
+  {
     let safe = row.bands[0].average?.official
     let over = row.bands[2].average?.official
-    let multiple = safe == nil ? "参考 " : "超限 / 安全 "
-    var items: [NSView] = [line("单次输入均费 · 官方", multiple + AILimitStyle.multipleText(row.multiple))]
+    let multiple =
+      safe == nil
+      ? context.text("session_limits.70723ec02e") : context.text("session_limits.4808f83c53")
+    var items: [NSView] = [
+      line(
+        context.text("session_limits.60c50a593d"),
+        multiple + AILimitStyle.multipleText(row.multiple))
+    ]
     let scale = max(safe ?? 0, over ?? 0)
-    let edges = row.modelLines.count > 1 ? ["", "", ""] : AILimitStyle.edges(row.lines)
+    let edges =
+      row.modelLines.count > 1 ? ["", "", ""] : AILimitStyle.edges(row.lines, context: context)
     for (index, amount) in [(0, safe), (2, over)] {
-      let label = AILimitStyle.bandNames[index] + (edges[index].isEmpty ? "" : " " + edges[index])
-      items.append(line(label, AILimitStyle.money(amount) + (amount == nil ? "" : " / 次")))
+      let label =
+        AILimitStyle.bandNames(context: context)[index]
+        + (edges[index].isEmpty ? "" : " " + edges[index])
+      items.append(
+        line(
+          label,
+          AILimitStyle.money(amount)
+            + (amount == nil ? "" : context.text("session_limits.3f947bf4c7"))))
       if let amount {
         let bar = PaxShareBar(
           segments: [.init(label, value: amount)], colors: [AILimitStyle.bandColors[index]],
@@ -82,9 +115,13 @@ import PaxUI
         items.append(bar)
       }
     }
-    items.append(note("均费为实际值；DeepSeek倍率按同模型、同峰谷时段比较，不直接用两行相除。"))
+    items.append(note(context.text("session_limits.59eacd95bf")))
     if safe == nil {
-      items.append(note(row.multiple == .dash ? "缺少同模型、同峰谷时段基准或其他可比较安全样本" : "无安全样本，倍率采用模型参考费用"))
+      items.append(
+        note(
+          row.multiple == .dash
+            ? context.text("session_limits.0da663c5db") : context.text("session_limits.c189879528"))
+      )
     }
     let column = AIUsageLayout.stack(items)
     column.spacing = PaxTheme.Spacing.tight

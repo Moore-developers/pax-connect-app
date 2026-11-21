@@ -1,6 +1,6 @@
 // Package historystore 是历史数据的 SQLite I/O 壳：采集日志（journal 小时文件）、
 // 日志库 logs.db 与流量库 traffic.db 的打开、schema 版本、行级写入、分批清理、
-// 容量淘汰和损坏处理（history-storage §4–§7、§10）。
+// 时间保留和损坏处理（history-storage §4–§7、§10）。
 //
 // 负责什么：每个库一条写连接加最多 4 条只读连接；文件 0600、目录 0700、拒绝符号链接、
 // 校验属主；完整性检查失败时改名保留并重建。

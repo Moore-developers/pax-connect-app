@@ -5,6 +5,9 @@ import PaxUI
 /// A frozen failure list is confirmed once; daemon atomically rechecks every identity.
 @MainActor
 final class RouteTLSBatchController: RouteModalController {
+  override var localizedTitleKey: String? { "modal.route.tls_failed" }
+  override var localizedSubtitleKey: String? { "modal.route.tls_skip_note" }
+
   private let store: RouteWorkbenchStore
   private let frozen: [NodeProfile]
   private var task: Task<Void, Never>?
@@ -17,10 +20,12 @@ final class RouteTLSBatchController: RouteModalController {
   override func loadView() {
     super.loadView()
     pane.add(
-      NSTextField(wrappingLabelWithString: "这些线路证书校验未通过。确认跳过后无法验证服务器身份，连接仍加密并显示降级；地址或 SNI 变化后许可失效。")
+      NSTextField(wrappingLabelWithString: self.interfaceCopy.text("interface_detail.41b05f5224"))
     )
     for route in frozen {
-      let reason = route.testSummary?.error.map(ProductErrorPresentation.message) ?? "证书校验失败"
+      let reason =
+        route.testSummary?.error.map(ProductErrorPresentation.message)
+        ?? self.interfaceCopy.text("flow.certificate_failed")
       pane.add(
         NSTextField(
           wrappingLabelWithString:
@@ -30,9 +35,11 @@ final class RouteTLSBatchController: RouteModalController {
     actions(false)
   }
   private func actions(_ busy: Bool) {
-    let cancel = button("取消", #selector(close))
+    let cancel = button(self.interfaceCopy.text("common.cancel"), #selector(close))
     cancel.isEnabled = !busy
-    let save = button("确认跳过并重测", #selector(confirm), primary: true)
+    let save = button(
+      self.interfaceCopy.text("action.routes.confirm_skip_retest"), #selector(confirm),
+      primary: true)
     save.isEnabled = !busy && store.canConfirmCertificateFailures
     save.setAccessibilityIdentifier("confirm-tls-batch")
     pane.setActions([cancel, save])

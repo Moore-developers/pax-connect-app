@@ -1,12 +1,15 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 @MainActor
 final class AIUsageDateController: NSViewController {
+  private let context: PresentationContext
   private let store: AIUsageStore
   private var picker: PaxDateRangePicker?
   var onApply: (() -> Void)?
-  init(store: AIUsageStore) {
+  init(store: AIUsageStore, context: PresentationContext = .chinese) {
+    self.context = context
     self.store = store
     super.init(nibName: nil, bundle: nil)
   }
@@ -14,7 +17,7 @@ final class AIUsageDateController: NSViewController {
   override func loadView() {
     let picker = PaxDateRangePicker(
       start: store.start, end: store.end, calendar: store.calendar, now: store.now,
-      options: .init(maxDate: store.now, maxSpanDays: 31))
+      options: .init(maxDate: store.now, maxSpanDays: 31), copy: dateRangeCopy(context))
     self.picker = picker
     picker.onApply = { [weak self] range in
       guard let self else { return nil }

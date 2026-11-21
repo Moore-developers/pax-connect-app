@@ -28,6 +28,8 @@ class QuiesceTests(unittest.TestCase):
             module.quiesce(bundle, lambda: {3: bundle/'Contents/MacOS/pax-core'},
                            lambda pid, path: self.fail('must not terminate core'), lambda: next(times), lambda _: None)
 
+
+class BuildEntryTests(unittest.TestCase):
     def test_build_script_guards_before_xcodebuild(self):
         source = Path(__file__).with_name('build-app.sh').read_text()
         self.assertLess(source.index('quiesce-build-app.py'), source.index('xcodebuild -project'))

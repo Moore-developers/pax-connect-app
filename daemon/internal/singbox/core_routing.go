@@ -6,12 +6,40 @@ import (
 	"errors"
 	"github.com/sagernet/sing-box/experimental/paxobs"
 	"github.com/sagernet/sing-box/option"
+	"maps"
 	"reflect"
 )
 
 // UpdateRouting changes only matching for future connections. The instance, DNS,
 // outbounds and existing sockets remain owned by the same StartedService.
 func (r *CoreRuntime) UpdateRouting(ctx context.Context, profile string) error {
+	tags, err := fixedRoutingTags(profile)
+	if err != nil {
+		return err
+	}
+	effective, err := r.fixed.applyProfile(profile)
+	if err != nil {
+		return err
+	}
+	// Admit tracking for newly fixed routes before publishing either table.
+	// Concurrent matches retain a lease even during the table swap.
+	admitted := maps.Clone(r.fixed.tags)
+	maps.Copy(admitted, tags)
+	r.fixed.gate.configure(admitted)
+	sources := paxobs.RuleNames(r.ctx)
+	paxobs.SetRuleNames(r.ctx, r.fixed.applySources(profile, sources))
+	err = r.replaceRouting(ctx, effective)
+	paxobs.SetRuleNames(r.ctx, sources)
+	if err != nil {
+		r.fixed.gate.configure(r.fixed.tags)
+		return err
+	}
+	return r.fixed.configure(profile)
+}
+
+// replaceRouting commits effective tables; the original user intent remains in
+// fixed.baseProfile so fault and recovery never rewrite saved routing rules.
+func (r *CoreRuntime) replaceRouting(ctx context.Context, profile string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}

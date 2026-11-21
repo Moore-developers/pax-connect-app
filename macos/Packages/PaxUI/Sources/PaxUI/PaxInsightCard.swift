@@ -39,7 +39,14 @@ public struct PaxInsightModel: Equatable {
 
 /// 概览底部两张列表卡共用：标题、至多 3 行与空态，刷新失败在标题旁提示。
 public final class PaxInsightCard: PaxCard {
-  private let title: String
+  private var title: String
+  private var failedSuffix = " · 更新失败"
+  private var updateFailed = false
+  public func applyTitle(_ title: String, failedSuffix: String) {
+    self.title = title
+    self.failedSuffix = failedSuffix
+    titleLabel.stringValue = title + (updateFailed ? failedSuffix : "")
+  }
   private let titleLabel: NSTextField
   private var rows: [InsightRow] = []
   private var emptyView = PaxEmptyState(symbol: "checkmark.circle", title: "", caption: "")
@@ -59,6 +66,7 @@ public final class PaxInsightCard: PaxCard {
   public required init?(coder: NSCoder) { fatalError("代码构建") }
 
   public func apply(_ model: PaxInsightModel) {
+    updateFailed = model.updateFailed
     let items = Array(model.items.prefix(PaxTheme.Dashboard.insightRows))
     let existing = Dictionary(uniqueKeysWithValues: rows.map { ($0.item.id, $0) })
     let ids = Set(items.map(\.id))
@@ -83,7 +91,7 @@ public final class PaxInsightCard: PaxCard {
       addSubview(emptyView)
     }
     emptyView.isHidden = !items.isEmpty
-    titleLabel.stringValue = model.updateFailed ? title + " · 更新失败" : title
+    titleLabel.stringValue = title + (model.updateFailed ? failedSuffix : "")
     needsLayout = true
   }
 

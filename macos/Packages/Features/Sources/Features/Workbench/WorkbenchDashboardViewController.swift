@@ -5,7 +5,8 @@ import PaxUI
 
 /// 网络概览 v2。组件只收值与回调；真实数据按依赖区域更新，演示数据走 `refresh`。
 @MainActor
-public final class WorkbenchDashboardViewController: NSViewController {
+public final class WorkbenchDashboardViewController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   var detailTask: Task<Void, Never>?
   var pageVisible = false
   var refreshOnNextEntry = true
@@ -72,7 +73,7 @@ public final class WorkbenchDashboardViewController: NSViewController {
   var onboardingActive = false
   var currentAction: DashboardInsightProjection.Action?
   let notice = PaxRouteText.label("", font: PaxTheme.Typography.caption(), secondary: true)
-  private let mode = PaxTabs(["代理", "直连"], style: .mode)
+  let mode = PaxTabs(["代理", "直连"], style: .mode)
 
   public init(
     store: WorkbenchDemoStore, tooltip: PaxChartTooltipCoordinator = PaxChartTooltipCoordinator(),
@@ -181,6 +182,7 @@ public final class WorkbenchDashboardViewController: NSViewController {
     installAnalysis()
     installOverviewActions()
     bindRefresh()
+    applyDashboardLanguage()
     if store == nil {
       observeLiveRegions()
       installCalendarNotifications()
@@ -189,9 +191,12 @@ public final class WorkbenchDashboardViewController: NSViewController {
     }
   }
   private func makeHeader() -> NSView {
-    PaxPageHeader(
-      title: "网络概览",
+    let header = PaxPageHeader(
+      title: "",
       accessory: ProxyStatusAccessory(mode: mode, connection: liveConnection, presenter: self))
+    interfaceCopy.bind(header, key: "navigation.overview") { $0.apply(title: $1) }
+    interfaceCopy.onChange = { [weak self] in self?.applyDashboardLanguage() }
+    return header
   }
   private func observe() {
     withObservationTracking {
@@ -215,7 +220,7 @@ public final class WorkbenchDashboardViewController: NSViewController {
     let running = connection.status == .protected || connection.status == .degraded
     mode.selectedIndex = running || connection.status == .starting ? 0 : 1
     mode.isEnabled = connection.canToggleProxy
-    mode.toolTip = connection.proxyMessage
+    mode.toolTip = connection.proxyMessage(context: interfaceCopy.context)
   }
   public override func viewWillDisappear() {
     // The shell changes the selected telemetry page before switching its tab.
@@ -245,8 +250,11 @@ public final class WorkbenchDashboardViewController: NSViewController {
   }
   func showSubscription() {
     guard store != nil else { return }
-    let sheet = WorkbenchSheet(title: "添加订阅", explanation: "添加订阅以导入线路。")
-    sheet.addAction("添加线路") { [weak self, weak sheet] in
+    let sheet = WorkbenchSheet(
+      title: self.interfaceCopy.text("interface_detail.fa9d1a2012"),
+      explanation: self.interfaceCopy.text("interface_detail.f46d59707d"))
+    sheet.addAction(self.interfaceCopy.text("dashboard_value.add_route_action")) {
+      [weak self, weak sheet] in
       self?.store?.perform(.addSampleRoute)
       sheet?.dismissSheet()
     }

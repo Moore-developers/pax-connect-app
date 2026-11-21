@@ -139,6 +139,8 @@ extension ProductLog {
       snapshotVersion: proto.snapshotVersion,
       connection: proto.hasConnection ? ConnectionEvent(proto.connection) : nil
     )
+    messageText = proto.hasMessageText ? ProductText(proto.messageText) : nil
+    systemEvent = proto.hasSystemEvent ? SystemEvent(proto.systemEvent) : nil
     flow = proto.hasFlow ? FlowFact(proto.flow) : nil
     recordID = proto.recordID
     problemID = proto.problemID

@@ -135,17 +135,4 @@ import Testing
     let new = report(checks: [route("proxy"), physical("v4=9.9.9.9;v6=")])
     #expect(new.browser.checks?.filter { $0.kind.hasPrefix("rtc_") }.isEmpty == true)
   }
-  @Test("报告不含物理 IP，也不宣称防泄露验收通过")
-  func markdownRedaction() async {
-    let value = report(
-      addresses: ["9.9.9.9"], checks: [physical("v4=9.9.9.9;v6=7.7.7.7"), route("proxy")])
-    let store = EnvironmentDiagnosticStore(request: { _, _ in value }, openBrowser: { _ in true })
-    store.start()
-    for _ in 0..<100 where store.report == nil { await Task.yield() }
-    let text = P.markdown(store)
-    #expect(text.contains("WebRTC 暴露本机真实 IP"))
-    #expect(!text.contains("9.9.9.9"))
-    #expect(!text.contains("7.7.7.7"))
-    #expect(!text.contains("防泄露验收通过"))
-  }
 }

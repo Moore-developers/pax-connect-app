@@ -9,6 +9,7 @@ func dnsTrafficContent(
   _ snapshot: WorkbenchTrafficDetail, overview: Bool,
   tooltip: PaxChartTooltipCoordinator, onGroup: @escaping (String?) -> Void
 ) -> NSView {
+  let context = snapshot.context
   let stack = NSStackView()
   stack.orientation = .vertical
   stack.alignment = .leading
@@ -17,10 +18,13 @@ func dnsTrafficContent(
   if overview {
     stack.addArrangedSubview(
       PaxText.label(
-        "域名解析 · \(snapshot.connectionCount) 次查询",
+        context.text(
+          "traffic_details.257eada5ce", ["arg0": String(describing: snapshot.connectionCount)]),
         font: PaxTheme.Typography.label(size: PaxTheme.TrafficDetail.latencyValueFont)))
     stack.addArrangedSubview(
-      PaxRouteSectionHeading("解析耗时", symbol: "timer", detail: snapshot.latencyRangeText))
+      PaxRouteSectionHeading(
+        context.text("traffic_details.d824870c1d"), symbol: "timer",
+        detail: snapshot.latencyRangeText))
     stack.addArrangedSubview(snapshot.latencyView(tooltip: tooltip))
     stack.addArrangedSubview(
       PaxText.label(
@@ -28,27 +32,40 @@ func dnsTrafficContent(
       ))
     stack.addArrangedSubview(
       PaxText.label(
-        "全部解析记录，不受连接去向筛选；无独立字节证据，不计入连接流量。", font: PaxTheme.Typography.caption(), secondary: true,
+        context.text("traffic_details.3801e6ff63"), font: PaxTheme.Typography.caption(),
+        secondary: true,
         wrapping: true))
   } else if detail.dnsGroupID.isEmpty {
     let rows = detail.dnsGroups
     stack.addArrangedSubview(
       PaxText.label(
-        "按完整域名、类型和结果归组 · 已加载 \(rows.count) / \(detail.dnsGroupTotal) 组",
+        context.text(
+          "traffic_details.6e5ea2a2c3",
+          [
+            "arg0": String(describing: rows.count),
+            "arg1": String(describing: detail.dnsGroupTotal),
+          ]),
         font: PaxTheme.Typography.caption(), secondary: true))
     let table = dnsTable(
-      ["查询域名／类型", "结果／最近答案", "查询次数", "最近查询", "解析耗时"], count: rows.count,
+      [
+        context.text("traffic_details.184d0f8dce"), context.text("traffic_details.2bee44fe9d"),
+        context.text("traffic_details.f791185da5"), context.text("traffic_details.69b14664c4"),
+        context.text("traffic_details.d824870c1d"),
+      ], count: rows.count,
       identifier: "traffic-dns-groups")
     table.cellProvider = { id, column in
       guard let row = rows.first(where: { $0.id == id }) else { return nil }
       if column == 0 {
-        let name = PaxTrafficCells.objectButton(row.domain.isEmpty ? "域名未记录" : row.domain) {
+        let name = PaxTrafficCells.objectButton(
+          row.domain.isEmpty ? context.text("traffic_details.454f254d52") : row.domain
+        ) {
           onGroup(id)
         }
         let content = NSStackView(views: [
           name,
           PaxText.label(
-            row.queryType.isEmpty ? "类型未记录" : row.queryType, font: PaxTheme.Typography.caption(),
+            row.queryType.isEmpty ? context.text("traffic_details.4bf23113b5") : row.queryType,
+            font: PaxTheme.Typography.caption(),
             secondary: true),
         ])
         content.orientation = .vertical
@@ -60,8 +77,12 @@ func dnsTrafficContent(
       switch column {
       case 1:
         value =
-          row.result + "\n" + (row.answers.isEmpty ? "未记录答案" : row.answers.joined(separator: ", "))
-      case 2: value = "\(row.queries) 次"
+          row.result + "\n"
+          + (row.answers.isEmpty
+            ? context.text("traffic_details.d172baa8ac") : row.answers.joined(separator: ", "))
+      case 2:
+        value = context.text(
+          "traffic_details.8cc9b62351", ["arg0": String(describing: row.queries)])
       case 3: value = TrafficFormatting.dateMinute(row.lastAt)
       default:
         value = TrafficFormatting.milliseconds(row.latencyKnown ? Double(row.latencyMS) : nil)
@@ -75,27 +96,38 @@ func dnsTrafficContent(
     if let group = detail.dnsGroups.first {
       stack.addArrangedSubview(
         PaxText.label(
-          group.domain + " · " + group.queryType + " · " + group.result + " · \(group.queries) 次查询",
+          group.domain + " · " + group.queryType + " · " + group.result
+            + context.text(
+              "traffic_details.a04a1c8a3b", ["arg0": String(describing: group.queries)]),
           font: PaxTheme.Typography.caption(), wrapping: true))
     }
-    stack.addArrangedSubview(PaxTrafficCells.objectButton("返回全部查询分组") { onGroup(nil) })
+    stack.addArrangedSubview(
+      PaxTrafficCells.objectButton(context.text("traffic_details.770fe7655d")) { onGroup(nil) })
     let rows = detail.items
     let table = dnsTable(
-      ["时间", "查询域名／类型", "结果／答案", "来源", "解析耗时"], count: rows.count, identifier: "traffic-dns-queries"
+      [
+        context.text("traffic_details.8b6ff49851"), context.text("traffic_details.184d0f8dce"),
+        context.text("traffic_details.1fc0555696"), context.text("traffic_details.a488e93d69"),
+        context.text("traffic_details.d824870c1d"),
+      ], count: rows.count, identifier: "traffic-dns-queries"
     )
     table.cellProvider = { id, column in
       guard let f = rows.first(where: { $0.key == id }) else { return nil }
       let value: String
       switch column {
       case 0: value = TrafficFormatting.dateMinute(f.startedAt)
-      case 1: value = f.domain + "\n" + (f.dns?.queryType ?? "类型未记录")
+      case 1:
+        value = f.domain + "\n" + (f.dns?.queryType ?? context.text("traffic_details.4bf23113b5"))
       case 2:
         value =
           (f.dns?.result.isEmpty == false
             ? f.dns?.result ?? "" : FlowPresentation.failure(f.failure)) + "\n"
-          + (f.dns?.answers.joined(separator: ", ") ?? "答案未记录")
+          + (f.dns?.answers.joined(separator: ", ") ?? context.text("traffic_details.e94b9d24d9"))
       case 3:
-        value = f.process.isEmpty ? (f.ruleSource.isEmpty ? "来源未记录" : f.ruleSource) : f.process
+        value =
+          f.process.isEmpty
+          ? (f.ruleSource.isEmpty ? context.text("traffic_details.3b310b2975") : f.ruleSource)
+          : f.process
       default: value = TrafficFormatting.milliseconds(TrafficFormatting.responseLatency(f))
       }
       return dnsLabel(value)

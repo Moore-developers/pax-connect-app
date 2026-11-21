@@ -1,4 +1,5 @@
 import AppKit
+import PaxCore
 import PaxUI
 
 /// A section keeps its place while loading, without showing the previous session's values.
@@ -45,7 +46,7 @@ import PaxUI
     placeholder.isHidden = !value
   }
 
-  static func summary() -> NSView {
+  static func summary(context: PresentationContext = .chinese) -> NSView {
     let cards = (0..<3).map { _ in AIUsageLayout.card(NSView()) }
     let row = AIUsageLayout.stack(cards, vertical: false)
     row.spacing = PaxTheme.Spacing.regular
@@ -55,18 +56,18 @@ import PaxUI
       cards[2].widthAnchor.constraint(equalTo: cards[1].widthAnchor, multiplier: 1.25),
     ])
     row.setAccessibilityElement(true)
-    row.setAccessibilityLabel("会话汇总正在读取")
+    row.setAccessibilityLabel(context.text("session_limits.58ae51e405"))
     return row
   }
 
-  static func trend() -> NSView {
-    let title = AIUsageLayout.heading("趋势分析")
+  static func trend(context: PresentationContext = .chinese) -> NSView {
+    let title = AIUsageLayout.heading(context.text("session_limits.95b0287904"))
     title.heightAnchor.constraint(equalToConstant: PaxTheme.Dashboard.tabHeight).isActive = true
     let column = AIUsageLayout.stack([
       title, AIUsageLayout.card(NSView()),
     ])
     column.setAccessibilityElement(true)
-    column.setAccessibilityLabel("会话趋势正在读取")
+    column.setAccessibilityLabel(context.text("session_limits.0974440e85"))
     return column
   }
 }

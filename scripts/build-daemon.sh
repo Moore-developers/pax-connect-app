@@ -7,6 +7,7 @@
 # 共用协议传输标签；core 的 StartedService 必须有 with_clash_api。
 # pax_tun_guard 与 scripts/go.sh 保留固定 sing-tun 路由保护。
 set -euo pipefail
+python3 "$(dirname "$0")/language-browser-catalog.py" --check
 cd "$(dirname "$0")/.."
 
 VERSION="${VERSION:-0.1.0-dev}"

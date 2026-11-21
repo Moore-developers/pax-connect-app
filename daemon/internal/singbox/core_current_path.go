@@ -86,6 +86,9 @@ func (r *CoreRuntime) PrepareCurrentPath(ctx context.Context, q config.CurrentPa
 func (r *CoreRuntime) cancelCurrentPath(changed bool) {
 	if changed {
 		r.pathVersion.Add(1)
+		if r.fixedHealth != nil {
+			r.fixedHealth.invalidate(r.pathVersion.Load())
+		}
 	}
 	r.pathMu.Lock()
 	lease := r.pathLease

@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "browser.title": "Pax Connect · Browser Check",
+    "browser.sampling": "Checking the browser environment…",
+    "browser.hint": "Keep this page open. It will try to close 5 seconds after results are submitted.",
+    "browser.close": "Close",
+    "browser.keep": "Keep Open",
+    "browser.privacy_title": "Checks and Privacy",
+    "browser.privacy_checks": "Checks language, time zone, public IP, DNS, and WebRTC. View detailed results in Pax Connect.",
+    "browser.privacy_services": "IP lookup: icanhazip; DNS probes: bash.ws; STUN: Cloudflare and Google; egress echoes: Cloudflare, IPinfo, and IPIP. These services can see the network address used for this request.",
+    "browser.privacy_local": "Language, time zone, and browser readings are sent only to this Mac. No accounts, cookies, or browsing history are collected. Camera and microphone permissions are not requested.",
+    "browser.paused": "Automatic closing paused · {seconds} seconds remaining",
+    "browser.closing": "Closing…",
+    "browser.manual_close": "Results were submitted. The browser did not allow automatic closing. Close this tab manually.",
+    "browser.shortcut": "Shortcut: ⌘W",
+    "browser.countdown": "Trying to close automatically in {seconds} seconds",
+    "browser.kept": "This page will stay open. You can close it at any time.",
+    "browser.submitting": "Submitting check results…",
+    "browser.submitting_hint": "Trying to close 5 seconds after results are submitted.",
+    "browser.partial": "Browser check partially complete",
+    "browser.complete": "Browser check complete",
+    "browser.submitted": "Results sent. View them in Pax Connect.",
+    "browser.failed": "Results could not be submitted",
+    "browser.failed_hint": "The check may have stopped or timed out. Return to Pax Connect and run it again.",
+    "browser.custom_unavailable": "Custom text could not be loaded. The built-in language pack is in use."
+  }
+}

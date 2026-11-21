@@ -344,6 +344,7 @@ extension LogRecord {
   init(_ value: Pax_V1_LogRecord) {
     self.init()
     systemEvent = value.hasSystemEvent ? SystemEvent(value.systemEvent) : nil
+    titleText = value.hasTitleText ? ProductText(value.titleText) : nil
     categoryName = value.categoryName
     categorySymbol = value.categorySymbol
     operationFrom = value.operationFrom
@@ -369,6 +370,8 @@ extension SystemEvent {
     self.init()
     type = v.type
     name = v.name
+    nameText = v.hasNameText ? ProductText(v.nameText) : nil
+    category.nameText = v.category.hasNameText ? ProductText(v.category.nameText) : nil
     category.key = v.category.key
     category.name = v.category.name
     category.symbol = v.category.symbol
@@ -379,12 +382,17 @@ extension SystemEvent {
       var b = EventSection()
       b.kind = s.kind
       b.title = s.title
+      b.titleText = s.hasTitleText ? ProductText(s.titleText) : nil
       b.fields = s.fields.map { f in
         var v = EventField()
         v.label = f.label
         v.value = f.value
         v.before = f.before
         v.after = f.after
+        v.labelText = f.hasLabelText ? ProductText(f.labelText) : nil
+        v.valueText = f.hasValueText ? ProductText(f.valueText) : nil
+        v.beforeText = f.hasBeforeText ? ProductText(f.beforeText) : nil
+        v.afterText = f.hasAfterText ? ProductText(f.afterText) : nil
         return v
       }
       return b

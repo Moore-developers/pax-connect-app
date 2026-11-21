@@ -60,7 +60,7 @@ func eventProto(e config.HistoryEvent) *pb.ProductLog {
 		level = pb.LogLevel_LOG_LEVEL_ERROR
 	}
 	category := config.EventCategoryFor(e)
-	v := &pb.ProductLog{CategoryName: category.Name, CategorySymbol: category.Symbol, SystemEvent: systemEventProto(e.System), SystemCategory: category.Key, OperationFrom: e.OperationFrom, OperationTo: e.OperationTo, At: timestamppb.New(e.At), Level: level, Message: e.Title, OperationId: e.OperationID, EventId: e.ID, EventKind: e.Kind, Source: e.Source, Result: e.Result}
+	v := &pb.ProductLog{CategoryName: category.Name, CategorySymbol: category.Symbol, SystemEvent: systemEventProto(e.System), SystemCategory: category.Key, OperationFrom: e.OperationFrom, OperationTo: e.OperationTo, At: timestamppb.New(e.At), Level: level, Message: e.Title, MessageText: productTextProto(e.TitleText), OperationId: e.OperationID, EventId: e.ID, EventKind: e.Kind, Source: e.Source, Result: e.Result}
 	if f := e.Flow; f != nil {
 		v.ConnectionKey = f.Key
 		v.ApplicationId = f.ApplicationID

@@ -90,7 +90,7 @@ func TestJournalLossAppendBeforeAckCrossHourReplaysOnce(t *testing.T) {
 	}
 }
 
-func TestJournalCapacityEvictionPersistsLossAcrossRestart(t *testing.T) {
+func TestJournalLegacyCapacityLossReplaysAcrossRestart(t *testing.T) {
 	ctx := context.Background()
 	dir := historyDir(t)
 	j := mustJournal(t, dir)
@@ -99,9 +99,15 @@ func TestJournalCapacityEvictionPersistsLossAcrossRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	evicted, err := j.EvictOver(1<<30, 1)
-	if err != nil || len(evicted) != 2 {
-		t.Fatal(evicted, err)
+	// Simulate pending loss intents written by a release that still evicted by
+	// capacity. New writers must keep replaying these historical losses.
+	for i := range 2 {
+		j.mu.Lock()
+		_, err := j.loseLocked(ctx, baseHour.Add(time.Duration(i)*time.Hour), "evicted")
+		j.mu.Unlock()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	_ = j.Close()
 	restarted := mustJournal(t, dir)
@@ -141,7 +147,7 @@ func TestJournalLossManifestRejectsUnsafeOrInvalidState(t *testing.T) {
 	}
 }
 
-func TestConsumedCapacityEvictionDoesNotInventLoss(t *testing.T) {
+func TestDeleteConsumedJournalHoursDoesNotInventLoss(t *testing.T) {
 	ctx := context.Background()
 	j := mustJournal(t, historyDir(t))
 	for i := 0; i < 3; i++ {
@@ -149,10 +155,12 @@ func TestConsumedCapacityEvictionDoesNotInventLoss(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := j.EvictOverConsumed(ctx, 1<<30, 1, []time.Time{baseHour, baseHour.Add(time.Hour)}); err != nil {
-		t.Fatal(err)
+	for i := range 2 {
+		if err := j.DeleteHour(baseHour.Add(time.Duration(i) * time.Hour)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if losses, err := j.PendingLosses(ctx); err != nil || len(losses) != 0 {
-		t.Fatal("consumed eviction invented gap", losses, err)
+		t.Fatal("consumed deletion invented gap", losses, err)
 	}
 }

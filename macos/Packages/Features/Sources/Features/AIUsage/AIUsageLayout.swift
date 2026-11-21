@@ -89,14 +89,15 @@ enum AIUsageLayout {
   }
   /// Card head: icon tile, title with an optional second line, then trailing controls.
   static func cardHeader(
-    symbol: String, title: String, sub: NSView? = nil, trailing: [NSView] = []
+    symbol: String, title: String, sub: NSView? = nil, trailing: [NSView] = [],
+    titleField: NSTextField? = nil
   ) -> NSStackView {
     let tile = PaxIconTile(symbol)
     tile.translatesAutoresizingMaskIntoConstraints = false
     tile.widthAnchor.constraint(equalToConstant: PaxTheme.Dashboard.icon).isActive = true
     tile.heightAnchor.constraint(equalToConstant: PaxTheme.Dashboard.icon).isActive = true
     sub?.heightAnchor.constraint(equalToConstant: cardSubHeight).isActive = true
-    let title = heading(title)
+    let title = titleField ?? heading(title)
     let text = NSStackView(views: [title] + (sub.map { [$0] } ?? []))
     text.orientation = .vertical
     text.alignment = .leading

@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "session.kind.sessions": "会话",
+    "session.kind.models": "模型",
+    "session.kind.main": "主会话",
+    "session.kind.subagents": "子代理",
+    "session.empty.no_usage": "所选日期没有已记录用量",
+    "session.empty.no_main": "该会话没有主会话请求",
+    "session.empty.no_agents": "该会话没有子代理"
+  }
+}

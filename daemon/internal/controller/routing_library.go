@@ -41,6 +41,27 @@ func (c *Controller) ConfigureRoutingLibrary(store RoutingLibraryRepository, dec
 	l, _, err := store.Load()
 	c.routing = &routingLibraryOwner{geoReadGate: make(chan struct{}, 2), store: store, library: l, loadError: err, decode: decode, applicationQuery: c.localRoutingApplications}
 }
+
+// ConfigureClaudeRules saves the disabled settings once when upgrading the local library.
+func (c *Controller) ConfigureClaudeRules(ctx context.Context) error {
+	o := c.routing
+	if o == nil || o.loadError != nil {
+		return config.ErrRoutingLibrary
+	}
+	for _, p := range o.library.Packages {
+		if p.ID == config.ClaudePackageID {
+			return nil
+		}
+	}
+	next := o.library.Clone()
+	next.Packages = slices.Insert(next.Packages, next.BuiltInStart(), config.NewClaudeRoutingPackage())
+	next.Revision++
+	if err := o.store.Save(ctx, next); err != nil {
+		return err
+	}
+	o.library = next
+	return nil
+}
 func (c *Controller) QueryRoutingLibrary(ctx context.Context, _ *emptypb.Empty) (*pb.RoutingLibrarySnapshot, error) {
 	if c.routing == nil {
 		return nil, status.Error(codes.Unimplemented, "routing_library_unavailable")
@@ -83,9 +104,10 @@ func (c *Controller) routingLibrarySnapshot(message string) *pb.RoutingLibrarySn
 			out.Message = "本地规则已保存；当前为直连，开启代理后生效。"
 		}
 	}
+	out.MessageText = routingMessageText(out.Message)
 	for _, p := range l.Packages {
-		v := &pb.RoutingPackage{Id: p.ID, Name: p.Name, Kind: p.Kind, Destination: p.Destination, Enabled: p.Enabled, Source: p.Source, Version: p.Version, PreviousVersion: p.PreviousVersion, Automatic: p.Automatic, UpdatedUnix: p.LastChecked, UpdateMessage: c.routing.updateErrors[p.ID]}
-		rules := p.Rules
+		v := &pb.RoutingPackage{Id: p.ID, Name: p.Name, Kind: p.Kind, Destination: p.Destination, Enabled: p.Enabled, Source: p.Source, Version: p.Version, PreviousVersion: p.PreviousVersion, Automatic: p.Automatic, UpdatedUnix: p.LastChecked, UpdateMessage: c.routing.updateErrors[p.ID], UpdateText: routingMessageText(c.routing.updateErrors[p.ID])}
+		rules := p.RulesForMatching()
 		if p.Kind == "geo" {
 			rules = config.GeoBuiltinRules()
 			v.Version = c.geoDisplayVersion(p)
@@ -231,6 +253,49 @@ func (c *Controller) routingRouteTags(ctx context.Context) map[string]string {
 	}
 	return out
 }
+
+func (c *Controller) routingRouteNames() map[string]string {
+	if c.routes == nil {
+		return nil
+	}
+	names := make(map[string]string, len(c.routes.catalog.Routes))
+	for _, record := range c.routes.catalog.Routes {
+		names["route:"+record.Config.ID] = record.Config.Name
+	}
+	return names
+}
+
+// Existing references survive loss of availability. New assignments must
+// name a route that the catalog can resolve, even while the rule is disabled.
+func validateNewRoutingDestinations(old, next config.RoutingLibrary, available map[string]string) error {
+	previous := map[[2]string]string{}
+	for _, p := range old.Packages {
+		previous[[2]string{p.ID, ""}] = p.Destination
+		if p.Kind == "priority" {
+			for _, r := range p.Rules {
+				previous[[2]string{p.ID, r.ID}] = r.Destination
+			}
+		}
+	}
+	missing := func(packageID, ruleID, destination string) bool {
+		return strings.HasPrefix(destination, "route:") &&
+			destination != previous[[2]string{packageID, ruleID}] && available[destination] == ""
+	}
+	for _, p := range next.Packages {
+		if missing(p.ID, "", p.Destination) {
+			return errors.New("routing_route_unavailable")
+		}
+		if p.Kind == "priority" {
+			for _, r := range p.Rules {
+				if missing(p.ID, r.ID, r.Destination) {
+					return errors.New("routing_route_unavailable")
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func routingFailure(err error) error {
 	if status.Code(err) != codes.Unknown {
 		return err
@@ -258,7 +323,7 @@ func mutateRouting(l *config.RoutingLibrary, q *pb.RoutingMutationRequest, downl
 			return config.ErrRoutingLibrary
 		}
 		index = slices.IndexFunc(l.Packages, func(p config.RoutingPackage) bool { return p.ID == v.Id })
-		if v.Id == config.AdblockPackageID || (v.Kind != "local" && v.Kind != "subscription") {
+		if v.Id == config.AdblockPackageID || (v.Id == config.ClaudePackageID && index < 0) || (v.Kind != "local" && v.Kind != "subscription") {
 			return config.ErrRoutingLibrary
 		}
 		p := config.RoutingPackage{ID: v.Id, Name: strings.TrimSpace(v.Name), Kind: v.Kind, Destination: v.Destination, Enabled: true, Automatic: v.Kind == "subscription", Rules: []config.RoutingEntry{}, Source: v.Source}
@@ -283,11 +348,7 @@ func mutateRouting(l *config.RoutingLibrary, q *pb.RoutingMutationRequest, downl
 		if index >= 0 {
 			l.Packages[index] = p
 		} else {
-			at := len(l.Packages) - 1
-			if l.Packages[at-1].ID == config.AdblockPackageID {
-				at--
-			}
-			l.Packages = slices.Insert(l.Packages, at, p)
+			l.Packages = slices.Insert(l.Packages, l.BuiltInStart(), p)
 		}
 		return nil
 	}
@@ -297,7 +358,7 @@ func mutateRouting(l *config.RoutingLibrary, q *pb.RoutingMutationRequest, downl
 	p := &l.Packages[index]
 	switch q.Action {
 	case "delete_package":
-		if p.Kind == "priority" || p.Kind == "geo" || p.Kind == "adblock" {
+		if p.Kind == "priority" || p.BuiltIn() {
 			return config.ErrRoutingLibrary
 		}
 		l.Packages = slices.Delete(l.Packages, index, index+1)
@@ -315,11 +376,11 @@ func mutateRouting(l *config.RoutingLibrary, q *pb.RoutingMutationRequest, downl
 		if (q.Delta != 1 && q.Delta != -1) || index <= 0 || index >= len(l.Packages)-1 {
 			return config.ErrRoutingLibrary
 		}
-		if p.Kind == "adblock" {
+		if p.BuiltIn() {
 			return config.ErrRoutingLibrary
 		}
 		other := index + int(q.Delta)
-		if other <= 0 || other >= len(l.Packages)-1 || l.Packages[other].Kind == "adblock" {
+		if other <= 0 || other >= len(l.Packages)-1 || l.Packages[other].BuiltIn() {
 			return config.ErrRoutingLibrary
 		}
 		l.Packages[index], l.Packages[other] = l.Packages[other], l.Packages[index]
@@ -470,12 +531,16 @@ func (c *Controller) routingCommandEvidence(ctx context.Context, evidence *confi
 // commitRoutingLibrary is the one persistence/runtime commit path for local and Geo edits.
 func (c *Controller) commitRoutingLibrary(ctx context.Context, next config.RoutingLibrary, apps []config.RoutingApplication) error {
 	o := c.routing
-	var failure error
-	// Check references even while OFF. No proxy/core is needed to persist valid local rules.
-	if _, failure = config.CompileRouting(next, apps, c.routingRouteTags(ctx), true); failure != nil {
+	old := o.library
+	tags := c.routingRouteTags(ctx)
+	if failure := validateNewRoutingDestinations(old, next, tags); failure != nil {
 		return failure
 	}
-	old := o.library.Clone()
+	// Keep validating the match table while OFF as well.
+	if _, failure := config.CompileRouting(next, apps, tags, true); failure != nil {
+		return failure
+	}
+	var failure error
 	if failure = o.store.Save(ctx, next); failure != nil {
 		// A durability error can follow rename. Never keep a stale in-memory revision.
 		loaded, _, loadErr := o.store.Load()
@@ -495,7 +560,9 @@ func (c *Controller) commitRoutingLibrary(ctx context.Context, next config.Routi
 		if !ok {
 			failure = errors.New("routing_update_unavailable")
 		} else {
-			failure = runtime.UpdateRouting(ctx, next, apps, c.routingRouteTags(ctx))
+			configured := next
+			configured.RouteNames = c.routingRouteNames()
+			failure = runtime.UpdateRouting(ctx, configured, apps, tags)
 		}
 		// Routing can change the path used by a verification request. Withdraw old
 		// evidence for both success and an uncertain apply; never leave a stale pass.
@@ -507,7 +574,8 @@ func (c *Controller) commitRoutingLibrary(ctx context.Context, next config.Routi
 			restore := o.store.Save(recovery, old)
 			var runtimeRestore error
 			if ok {
-				runtimeRestore = runtime.UpdateRouting(recovery, old, apps, c.routingRouteTags(recovery))
+				old.RouteNames = c.routingRouteNames()
+				runtimeRestore = runtime.UpdateRouting(recovery, old, apps, tags)
 			}
 			if restore != nil || runtimeRestore != nil {
 				o.loadError = errors.New("routing_recovery_required")

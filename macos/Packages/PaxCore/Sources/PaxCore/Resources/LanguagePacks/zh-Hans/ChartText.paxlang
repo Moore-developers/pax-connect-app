@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "chart.missing": "未采集",
+    "chart.partial": "部分采集",
+    "chart.total": "合计 ",
+    "chart.range": "范围 ",
+    "chart.no_data": "暂无数据",
+    "chart.latest": "最新 ",
+    "chart.maximum": "最大 ",
+    "chart.samples": "最近 {count} 个有效样本",
+    "chart.gaps": "未采集 {count} 个时段",
+    "chart.coverage": "自 {time} 起有记录"
+  }
+}

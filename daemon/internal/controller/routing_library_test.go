@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -97,6 +98,62 @@ func TestRoutingManagementOffCommandsAndCAS(t *testing.T) {
 		t.Fatal("OFF editing required a core")
 	}
 }
+
+func TestRoutingEditsPreserveSavedUnavailableAssignments(t *testing.T) {
+	c, repo := routingController(t)
+	ctx := context.Background()
+	claude := config.NewClaudeRoutingPackage()
+	claude.Destination, claude.Enabled = "route:unloaded", true
+	if err := c.query(ctx, func(ctx context.Context) {
+		library := c.routing.library
+		library.Packages = slices.Insert(library.Packages, library.BuiltInStart(), claude)
+		c.routing.library = library
+		_ = repo.Save(ctx, library)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	v := saveRoutingPackage(t, c, 1, "direct", "direct")
+	if got := v.Packages[2]; !got.Enabled || got.Destination != claude.Destination {
+		t.Fatal("unrelated edit lost the saved Claude destination", got)
+	}
+	_, err := c.MutateRoutingLibrary(ctx, &pb.RoutingMutationRequest{
+		ExpectedRevision: v.Revision, Action: "save_rule", PackageId: "priority",
+		Rule: &pb.RoutingEntry{Id: "new", Method: "domain", Target: "new.example", Destination: claude.Destination},
+	})
+	if status.Code(err) != codes.FailedPrecondition || status.Convert(err).Message() != "routing_route_unavailable" {
+		t.Fatalf("new assignment to unavailable route returned %v", err)
+	}
+	saved, _, err := repo.Load()
+	if err != nil || saved.Revision != v.Revision || saved.Packages[2].Destination != claude.Destination {
+		t.Fatal("saved assignment changed", saved, err)
+	}
+}
+
+func TestRoutingReferenceKeepsRoutesRemovedBySubscriptionRefresh(t *testing.T) {
+	c, _ := routingController(t)
+	ctx := context.Background()
+	err := c.query(ctx, func(context.Context) {
+		claude := config.NewClaudeRoutingPackage()
+		claude.Destination, claude.Enabled = "route:a", true
+		library := c.routing.library
+		library.Packages = slices.Insert(library.Packages, library.BuiltInStart(), claude)
+		c.routing.library = library
+		next := config.NewCatalog()
+		for _, id := range []string{"a", "unreferenced"} {
+			next.Routes = append(next.Routes, config.RouteRecord{
+				Config: config.RouteConfig{NodeProfile: config.NodeProfile{ID: id}},
+				Origin: config.OriginSubscription, SourceRemoved: true,
+			})
+		}
+		if !c.pruneRemoved(ctx, &next) || len(next.Routes) != 1 || next.Routes[0].Config.ID != "a" {
+			t.Errorf("refresh did not preserve exactly the referenced route: %v", next.Routes)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRoutingSubscriptionFailureKeepsVersionAndRollbackPersists(t *testing.T) {
 	c, repo := routingController(t)
 	f := &fakeFetcher{}

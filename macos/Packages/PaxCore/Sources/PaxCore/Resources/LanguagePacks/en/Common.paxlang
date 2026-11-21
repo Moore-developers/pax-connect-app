@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "common.cancel": "Cancel",
+    "common.close": "Close",
+    "common.ok": "OK",
+    "common.unknown": "Unknown",
+    "common.proxy": "Proxy",
+    "common.direct": "Direct",
+    "common.selected": "Selected",
+    "common.unselected": "Not Selected",
+    "common.no_data": "No Data",
+    "common.more": "More",
+    "common.more_groups": "More Groups",
+    "common.all": "All",
+    "common.default": "Default"
+  }
+}

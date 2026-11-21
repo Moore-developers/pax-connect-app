@@ -5,7 +5,9 @@ import PaxUI
 
 /// Production measurement settings are saved by the daemon, not the demo store.
 @MainActor
-final class MeasurementSettingsViewController: NSViewController {
+final class MeasurementSettingsViewController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
+  private var feedback: (String, [String: String]) = ("settings.measurement.loading", [:])
   private let routes: RoutesStore
   private var baseline: MeasurementPreferences?
   private var task: Task<Void, Never>?
@@ -29,37 +31,56 @@ final class MeasurementSettingsViewController: NSViewController {
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     for mode in [latencyMode, downloadMode] {
-      mode.addItems(withTitles: ["使用默认值", "手动配置", "自动推荐"])
+      interfaceCopy.picker(
+        mode,
+        keys: [
+          "settings.measurement.default", "settings.measurement.manual",
+          "settings.measurement.auto",
+        ])
       mode.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
       mode.target = self
       mode.action = #selector(modeChanged)
     }
-    exitMode.addItems(withTitles: ["自动调度（上限8）", "手动上限"])
+    interfaceCopy.picker(
+      exitMode, keys: ["settings.measurement.exit_auto", "settings.measurement.exit_manual"])
     exitMode.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive = true
     exitMode.target = self
     exitMode.action = #selector(modeChanged)
     let entries: [(String, String, NSPopUpButton, NSTextField)] = [
-      ("HTTPS 延迟", "并发 1–100；默认按本机硬件确定。", latencyMode, latency),
-      ("出口 IP", "HTTP请求上限1–32；备用与补地区也计数。", exitMode, exit),
-      ("下载速度", "并发 1–8；默认 8，每批完成后自动继续。", downloadMode, download),
+      ("settings.measurement.latency", "settings.measurement.latency_detail", latencyMode, latency),
+      ("settings.measurement.exit", "settings.measurement.exit_detail", exitMode, exit),
+      (
+        "settings.measurement.download", "settings.measurement.download_detail", downloadMode,
+        download
+      ),
     ]
     let rows = entries.map { title, detail, mode, field in
       field.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.numberWidth).isActive = true
-      field.setAccessibilityLabel(title + "并发数")
+      interfaceCopy.bind(field, key: title + "_parallel") { $0.setAccessibilityLabel($1) }
       let controls = NSStackView(views: [mode, field])
       controls.spacing = PaxTheme.Spacing.tight
       controls.widthAnchor.constraint(
         equalToConstant: PaxTheme.Settings.pickerWidth + PaxTheme.Settings.numberWidth
           + PaxTheme.Spacing.tight
       ).isActive = true
-      return PaxPreferenceRow(title: title, detail: detail, control: controls, style: .compact)
+      return interfaceCopy.preference(title: title, detail: detail, control: controls)
     }
     latency.setAccessibilityIdentifier("measurement-latency-parallel")
     exit.setAccessibilityIdentifier("measurement-exit-parallel")
     download.setAccessibilityIdentifier("measurement-download-parallel")
-    latencyMode.setAccessibilityLabel("HTTPS 延迟模式")
-    exitMode.setAccessibilityLabel("出口 IP 模式")
-    downloadMode.setAccessibilityLabel("下载速度模式")
+    interfaceCopy.bind(latencyMode, key: "settings.measurement.latency_mode") {
+      $0.setAccessibilityLabel($1)
+    }
+    interfaceCopy.bind(exitMode, key: "settings.measurement.exit_mode") {
+      $0.setAccessibilityLabel($1)
+    }
+    interfaceCopy.bind(downloadMode, key: "settings.measurement.download_mode") {
+      $0.setAccessibilityLabel($1)
+    }
+    interfaceCopy.button(saveButton, key: "settings.measurement.save")
+    interfaceCopy.button(resetButton, key: "settings.measurement.reset")
+    interfaceCopy.button(retryButton, key: "settings.retry")
+    interfaceCopy.onChange = { [weak self] in self?.renderFeedback() }
     saveButton.setAccessibilityIdentifier("measurement-save")
     resetButton.setAccessibilityIdentifier("measurement-reset")
     retryButton.setAccessibilityIdentifier("measurement-retry")
@@ -69,8 +90,10 @@ final class MeasurementSettingsViewController: NSViewController {
     status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let actions = NSStackView(views: [status, retryButton, NSView(), resetButton, saveButton])
     actions.spacing = PaxTheme.Spacing.tight
-    view = PaxPreferenceGroup(
-      title: "测试并发", symbol: "speedometer", rows: rows, style: .compact, footer: actions)
+    view = interfaceCopy.group(
+      PaxPreferenceGroup(
+        title: "", symbol: "speedometer", rows: rows, style: .compact, footer: actions),
+      key: "settings.measurement.title")
     reloadPreferences()
     observe()
   }
@@ -81,6 +104,11 @@ final class MeasurementSettingsViewController: NSViewController {
       Task { @MainActor [weak self] in self?.observe() }
     }
   }
+  private func showFeedback(_ key: String, _ parameters: [String: String] = [:]) {
+    feedback = (key, parameters)
+    renderFeedback()
+  }
+  private func renderFeedback() { status.stringValue = interfaceCopy.text(feedback.0, feedback.1) }
   @objc private func modeChanged() { updateAvailability() }
   private func updateAvailability() {
     let available = routes.connected && baseline != nil && task == nil
@@ -103,10 +131,15 @@ final class MeasurementSettingsViewController: NSViewController {
         if case .preferences(let value) = try await routes.measurement(.preferences) {
           self?.baseline = value
           self?.render(value)
-          self?.status.stringValue = "出口上限影响待发请求；延迟和下载配置下批生效。"
+          self?.showFeedback("settings.measurement.note")
         }
       } catch {
-        self?.status.stringValue = "读取失败：" + ProductErrorPresentation.display(error)
+        self?.showFeedback(
+          "settings.read_failed",
+          [
+            "detail": ProductErrorPresentation.display(
+              error, context: self?.interfaceCopy.context ?? .chinese)
+          ])
         self?.retryButton.isHidden = false
       }
       self?.task = nil
@@ -132,7 +165,7 @@ final class MeasurementSettingsViewController: NSViewController {
       let e = UInt32(exit.stringValue), let d = UInt32(download.stringValue), (1...100).contains(l),
       (1...32).contains(e), (1...8).contains(d)
     else {
-      status.stringValue = "请填写有效范围内的整数"
+      showFeedback("settings.measurement.range_error")
       return
     }
     value.latency = l
@@ -149,11 +182,18 @@ final class MeasurementSettingsViewController: NSViewController {
         if case .preferences(let saved) = try await routes.measurement(.savePreferences(value)) {
           self?.baseline = saved
           self?.render(saved)
-          self?.status.stringValue =
+          self?.showFeedback(
             routes.capabilities.contains("measurement.exit_pool.v1")
-            ? "已保存；出口影响待发请求，延迟和下载下批生效" : "已保存，下批任务生效"
+              ? "settings.measurement.saved" : "settings.measurement.saved_next_batch")
         }
-      } catch { self?.status.stringValue = ProductErrorPresentation.display(error) }
+      } catch {
+        self?.showFeedback(
+          "settings.save_failed",
+          [
+            "detail": ProductErrorPresentation.display(
+              error, context: self?.interfaceCopy.context ?? .chinese)
+          ])
+      }
       self?.task = nil
       self?.updateAvailability()
     }

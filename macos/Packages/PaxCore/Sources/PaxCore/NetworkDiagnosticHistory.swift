@@ -22,7 +22,14 @@ import Foundation
   private let url: URL
   private var archive = Archive()
   private var readFailed = false
-  public private(set) var message: String?
+  private var messageValue: RetainedProductMessage?
+  public private(set) var message: String? {
+    get { messageValue?.original }
+    set { messageValue = newValue.map { RetainedProductMessage(original: $0) } }
+  }
+  public func message(context: PresentationContext) -> String? {
+    messageValue?.text(context: context)
+  }
   var environment: EnvironmentSnapshot? { archive.environment }
   var route: RouteSnapshot? { archive.route }
 
@@ -40,7 +47,7 @@ import Foundation
       return
     } catch {
       readFailed = true
-      message = "上次诊断记录无法读取，原文件已保留"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.f207ceeacd")
     }
   }
 
@@ -76,7 +83,7 @@ import Foundation
       try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
       message = nil
     } catch {
-      message = "检测完成，但上次诊断记录保存失败"
+      messageValue = RetainedProductMessage(key: "diagnostic_state.0bea129a33")
     }
   }
 }

@@ -9,18 +9,25 @@ import (
 	"strings"
 )
 
+func productTextProto(text *config.ProductText) *pb.ProductText {
+	if text == nil {
+		return nil
+	}
+	return &pb.ProductText{Code: text.Code, Params: text.Params}
+}
+
 func systemEventProto(e *config.SystemEvent) *pb.SystemEvent {
 	if e == nil {
 		return nil
 	}
-	v := &pb.SystemEvent{Type: e.Type, Name: e.Name, Result: e.Result, ErrorCode: e.ErrorCode, Category: &pb.EventCategory{Key: e.Category.Key, Name: e.Category.Name, Symbol: e.Category.Symbol}}
+	v := &pb.SystemEvent{Type: e.Type, Name: e.Name, NameText: productTextProto(e.NameText), Result: e.Result, ErrorCode: e.ErrorCode, Category: &pb.EventCategory{Key: e.Category.Key, Name: e.Category.Name, Symbol: e.Category.Symbol, NameText: productTextProto(e.Category.NameText)}}
 	if e.StartedAt != nil {
 		v.StartedAt = timestamppb.New(*e.StartedAt)
 	}
 	for _, s := range e.Sections {
-		block := &pb.EventSection{Kind: s.Kind, Title: s.Title}
+		block := &pb.EventSection{Kind: s.Kind, Title: s.Title, TitleText: productTextProto(s.TitleText)}
 		for _, f := range s.Fields {
-			block.Fields = append(block.Fields, &pb.EventField{Label: f.Label, Value: f.Value, Before: f.Before, After: f.After})
+			block.Fields = append(block.Fields, &pb.EventField{Label: f.Label, Value: f.Value, Before: f.Before, After: f.After, LabelText: productTextProto(f.LabelText), ValueText: productTextProto(f.ValueText), BeforeText: productTextProto(f.BeforeText), AfterText: productTextProto(f.AfterText)})
 		}
 		v.Sections = append(v.Sections, block)
 	}
@@ -29,6 +36,10 @@ func systemEventProto(e *config.SystemEvent) *pb.SystemEvent {
 
 // cloneSystemEvidence isolates asynchronous history writes from producer-owned slices.
 func cloneSystemEvidence(e config.HistoryEvent) (config.HistoryEvent, error) {
+	if err := config.ValidateProductText(e.TitleText); err != nil {
+		return e, err
+	}
+	e.TitleText = safeProductText(e.TitleText)
 	if err := config.ValidateSystemEvent(e.System); err != nil {
 		return e, err
 	}
@@ -49,11 +60,14 @@ func cloneSystemEvidence(e config.HistoryEvent) (config.HistoryEvent, error) {
 			}
 		}
 		e.System.ErrorCode = telemetry.ScrubEventText(e.System.ErrorCode)
+		e.System.NameText = safeProductText(e.System.NameText)
+		e.System.Category.NameText = safeProductText(e.System.Category.NameText)
 		e.System.Name = telemetry.ScrubEventText(e.System.Name)
 		e.System.Category.Name = telemetry.ScrubEventText(e.System.Category.Name)
 		for i := range e.System.Sections {
 			s := &e.System.Sections[i]
 			s.Title = telemetry.ScrubEventText(s.Title)
+			s.TitleText = safeProductText(s.TitleText)
 			for j := range s.Fields {
 				f := &s.Fields[j]
 				sensitive := false
@@ -64,13 +78,19 @@ func cloneSystemEvidence(e config.HistoryEvent) (config.HistoryEvent, error) {
 				}
 				if sensitive {
 					f.Value, f.Before, f.After = "[已省略敏感内容]", "", ""
+					f.ValueText, f.BeforeText, f.AfterText = nil, nil, nil
 				} else {
 					f.Value = telemetry.ScrubEventText(f.Value)
 					f.Before = telemetry.ScrubEventText(f.Before)
 					f.After = telemetry.ScrubEventText(f.After)
 				}
+				f.LabelText = safeProductText(f.LabelText)
+				f.ValueText = safeProductText(f.ValueText)
+				f.BeforeText = safeProductText(f.BeforeText)
+				f.AfterText = safeProductText(f.AfterText)
 			}
 		}
 	}
+	addEventTextSemantics(e.System)
 	return e, config.ValidateSystemEvent(e.System)
 }

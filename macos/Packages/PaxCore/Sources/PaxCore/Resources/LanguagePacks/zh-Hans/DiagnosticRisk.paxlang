@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "diagnostic.risk.open_ports": "公开资料记录开放端口",
+    "diagnostic.risk.known_vulnerabilities": "公开资料关联漏洞，尚未实测验证",
+    "diagnostic.risk.self_signed_certificate": "公开资料记录自签证书",
+    "diagnostic.risk.low_human_traffic": "来源估计人类流量低于 50%",
+    "diagnostic.risk.proxy_risk": "来源风险值达到 67",
+    "diagnostic.risk.marked": "来源标记为{label}",
+    "diagnostic.risk.not_listed": "该源已收录资料中未列出此项",
+    "diagnostic.risk.not_marked": "来源未标记此项",
+    "diagnostic.risk.unconfigured": "来源未配置，未检测",
+    "diagnostic.risk.unknown": "独立资料不足，未作判断",
+    "diagnostic.risk.missing": "缺少风险资料，不能判断",
+    "diagnostic.risk.no_judgment": "来源尚无有效判断",
+    "diagnostic.risk.no_flags": "已返回判断中未见标记",
+    "diagnostic.risk.marked_list": "来源标记：{labels}",
+    "diagnostic.risk.pending": "{count} 项待确认",
+    "diagnostic.risk.not_scan": "非实时扫描或账号风控结论"
+  }
+}

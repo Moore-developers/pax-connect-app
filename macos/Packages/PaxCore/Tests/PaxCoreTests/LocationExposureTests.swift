@@ -130,33 +130,6 @@ import Testing
     #expect(roundTrip.location?.apps.count == 3)
   }
 
-  @Test("报告依据只含状态、数量与浏览器名，不含应用名路径")
-  @MainActor func redactedReport() {
-    let env = local(scan())
-    let detail = EnvironmentDiagnosticPresentation.locationReportDetail(local: env)
-    let value = rows(env.location)[0].value
-    for secret in ["Notes", "Denied", "/Applications", "com.mini"] {
-      #expect(!detail.contains(secret) && !value.contains(secret))
-    }
-    #expect(detail.contains("系统定位：总开关开启；已授权 2 个应用，已拒绝 1 个\n浏览器定位：Chrome：未关闭"))
-    #expect(detail.contains("不代表已经获取或上传"))
-    #expect(rows(env.location)[0].detail.contains("/Applications/Notes.app"))
-    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    defer { try? FileManager.default.removeItem(at: folder) }
-    let history = NetworkDiagnosticHistory(url: folder.appendingPathComponent("latest.json"))
-    let report = EnvironmentDiagnosticReport(.with { $0.complete = true })
-    history.saveEnvironment(report, local: env)
-    let store = EnvironmentDiagnosticStore(
-      history: history, request: { _, _ in report }, openBrowser: { _ in true })
-    let markdown = EnvironmentDiagnosticPresentation.markdown(store)
-    #expect(markdown.components(separatedBy: "- 定位：").count == 2)
-    #expect(!markdown.contains("- 系统定位：") && !markdown.contains("- 浏览器定位："))
-    #expect(markdown.contains(detail))
-    for secret in ["Notes", "Denied", "/Applications", "com.mini"] {
-      #expect(!markdown.contains(secret))
-    }
-  }
-
   @Test("已保存的旧 JSON 含 profiles/allowedSites 仍可解码")
   func legacyProfileJSON() throws {
     let json = """

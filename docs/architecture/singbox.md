@@ -90,6 +90,8 @@ TrafficRoutingMatch是流量行可选的历史最近选择证据（at/rule/sourc
 
 手动代理配置沿用私有Document：socks/version=5、http、http+tls，认证不入NodeProfile；新增结果RouteSaveResult（routeID/created）经proto/Go/Swift对应映射。合同见[手动代理](../changes/pax-connect-network-control-plane/manual-proxy-routes.md)。
 
+产品展示含义使用可选ProductText及稳定诊断fact.kind，不传语言包或上游原文作业务指令。Goconfig、proto与Swift模型同步，原文字段保留兼容；具体合同见[协议§4](protocol.md)。
+
 ### 7.6 Geo 与 DNS 保护边界
 
 - `RuleSetManager` 只管理规则集的来源、缓存和版本，不生产连接、测速或日志数据。
@@ -101,9 +103,10 @@ IPv4-only网络：正式与测量共用的构建器使用ipv4_only解析策略�
 
 ### 7.7 上游补丁与构建边界
 
-- 上游补丁集中在 `patches/sing-box`（观测、观测质量、路由热更、DNS 热更 / 读者租约、Darwin 代理关闭归属）与 `patches/sing-tun`（路由保护）；每个补丁带源文件哈希清单，由 `scripts/prepare-box-module.py` / `prepare-tun-module.py` 校验上游版本与哈希后把依赖副本只准备到忽略目录 `.tools/`，不编辑全局模块缓存、不入库。升级内核必须复核补丁生命周期。
+- 上游补丁集中在 `patches/sing-box`（观测、观测质量、路由热更、DNS 热更 / 读者租约、macOS DNS 进程归属、Darwin 代理关闭归属）与 `patches/sing-tun`（路由保护）；每个补丁带源文件哈希清单，由 `scripts/prepare-box-module.py` / `prepare-tun-module.py` 校验上游版本与哈希后把依赖副本只准备到忽略目录 `.tools/`，不编辑全局模块缓存、不入库。升级内核必须复核补丁生命周期。
 - 所有正式构建与测试经 `scripts/go.sh`；真实 TUN 构建带 `pax_tun_guard` tag，普通 `go build` 的二进制不具备 TUN 启动能力。
 - 上游类型只允许出现在 `internal/singbox` 与补丁源码；观测数据以 Pax 标准值（`config` 的 Observation / FlowFact / HistoryEvent）穿过 core 边界，core 内部 RPC 只传有界 JSON 封套，App 只见 PaxClient 映射值。
+- 主动准入补丁`connection-gate.patch`与`routegate/`独立于paxobs，在匹配后、跟踪和拨号前登记取消。runtime持有策略；上游只调用无策略的准入接口。故障和恢复沿既有标准Observation/SystemEvent，不扩公共协议。
 
 ### 7.8 测量实例（用户 paxd，无 TUN）
 

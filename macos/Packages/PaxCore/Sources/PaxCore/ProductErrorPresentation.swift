@@ -3,239 +3,256 @@ import PaxClient
 
 /// 唯一产品错误文案入口；不呈现原始配置或上游错误。
 public enum ProductErrorPresentation {
-  public static func display(_ error: any Error) -> String {
-    if let product = error as? ProductError { return message(product) }
-    if let client = error as? ClientError { return client.message }
-    if let local = error as? any LocalizedError { return local.errorDescription ?? "操作未完成" }
-    return "操作未完成，请检查后台连接或设置"
+  public static func display(_ error: any Error) -> String { display(error, context: .chinese) }
+  public static func message(_ error: ProductError) -> String { message(error, context: .chinese) }
+  public static func display(_ error: any Error, context: PresentationContext) -> String {
+    if let product = error as? ProductError { return message(product, context: context) }
+    if let client = error as? ClientError { return message(client, context: context) }
+    if let local = error as? any LocalizedError {
+      return local.errorDescription ?? context.text("error.operation_incomplete")
+    }
+    return context.text("error.generic")
   }
-  public static func message(_ error: ProductError) -> String {
-    let detail = baseMessage(error)
+  public static func message(_ error: ProductError, context: PresentationContext)
+    -> String
+  {
+    let detail = baseMessage(error, context: context)
     return error.messageParams.contains("external_tun_stopped")
-      ? "第三方 TUN 已关闭，Pax 连接未完成。" + detail : detail
+      ? context.text("error.external_tun_stopped", ["detail": detail]) : detail
   }
-  private static func baseMessage(_ error: ProductError) -> String {
-    if let security = networkSecurityMessage(error) { return security }
-    if let path = currentPathError(error) { return path }
+  private static func baseMessage(_ error: ProductError, context: PresentationContext) -> String {
+    if let security = networkSecurityMessage(error, context: context) { return security }
+    if let path = currentPathError(error, context: context) { return path }
     return switch error.code {
-    case "history_converting": "正在转换"
-    case "history_building": "正在建立日志索引，完成后会自动显示"
-    case "history_expired": "相关记录已过期或已清除"
-    case "history_cursor_expired", "history_cleared": "记录已清理或读取已过期，请刷新"
-    case "history_query_busy": "记录较多，请缩小时间范围后重试"
-    case "history_capacity_reached": "记录存储达到上限，较早记录可能已淘汰"
-    case "settings_conflict": "日志设置已改变，请刷新后重试"
-    case "operation_expired": "操作已过期，请重新发起"
-    case "invalid_filter": "筛选条件无效，请重新选择"
+    case "history_converting": context.text("error.history_converting")
+    case "history_building": context.text("error.history_building")
+    case "history_expired": context.text("error.history_expired")
+    case "history_cursor_expired", "history_cleared": context.text("error.history_cursor_expired")
+    case "history_query_busy": context.text("error.history_query_busy")
+    case "history_capacity_reached": context.text("error.history_capacity_reached")
+    case "settings_conflict": context.text("error.settings_conflict")
+    case "operation_expired": context.text("error.operation_expired")
+    case "invalid_filter": context.text("error.invalid_filter")
 
-    case "chain_invalid": "组合引用无效，请重新选择两条不同的普通线路"
-    case "chain_name_invalid": "组合名称需为1–128个字"
-    case "chain_udp_required": "后置线路需要UDP，请选择支持UDP的前置线路"
-    case "chain_edit_required": "请通过组合编辑修改前置与后置线路"
-    case "route_referenced", "subscription_referenced": "该线路仍被组合引用，请先修改或删除组合"
-    case "subscription_match_ambiguous": "订阅中有无法唯一匹配的节点，原目录已保留"
-    case "history_cursor_stale": "历史记录已更新，请重新加载"
-    case "routing_library_invalid": "规则内容无效、重复或超出容量，请检查后重试"
-    case "routing_revision_conflict": "规则已在后台改变，请切回规则页读取最新配置后重试"
-    case "routing_route_unavailable": "指定线路不存在、尚未确认 TLS 或未载入当前内核；保留原规则，请先检查线路"
-    case "routing_application_unavailable": "应用已移动、删除或身份不可确认，请重新选择应用"
-    case "routing_processes_unavailable": "暂时无法读取近期有流量的应用和进程"
-    case "routing_source_invalid": "来源不是支持的 sing-box 规则集，或包含不支持的条件；保留原规则"
-    case "routing_update_unavailable", "routing_update_failed": "当前内核未确认规则更新，已尝试恢复原规则；请检查代理状态后重试"
-    case "routing_recovery_required": "规则保存或恢复无法确认，已暂停编辑；请重启 App 后检查配置"
-    case "routing_save_failed": "本地规则无法保存，原规则保留，请检查磁盘和文件权限"
-    case "routing_library_unavailable": "规则管理后台暂不可用，请重新连接"
-    case "routing_rules_unavailable": "当前分流规则暂时无法读取，请稍后重试"
-    case "icon_cache_unavailable": "日志已清除，但网站图标缓存清理失败，请重试清除"
-    case "history_store_failed": "测量历史无法保存或读取，当前线路仍可使用"
-    case "usage_sample_failed": "当前使用量暂不可读取，已保留历史记录；数据覆盖不完整"
-    case "usage_store_failed": "使用记录无法保存或读取，当前线路仍可使用"
-    case "history_unavailable", "usage_unavailable": "后台尚未提供历史记录"
-    case "latency_samples_incomplete": "稳定延迟样本不足，请重新测试；首次结果已保留"
-    case "exit_rate_limited": "出口查询服务限流，已暂停该服务"
-    case "exit_provider_auth_required": "出口查询服务要求授权，已暂停该服务"
-    case "exit_queue_full": "出口查询队列已满，请稍后重试"
-    case "exit_queue_timeout": "出口查询排队超时，请稍后重试"
-    case "exit_services_unavailable": "出口查询服务暂不可用或处于冷静期，请稍后重试"
-    case "exit_location_unavailable": "出口IP已获取，地区信息暂不可用"
-    case "catalog_stale": "线路目录已变化，草稿已保留；请重新打开分组窗口核对后保存"
-    case "group_invalid": "分组无效，订阅分组不能手动修改"
-    case "group_name_invalid": "分组名称需为 1–24 个字，不能重复或使用“全部”"
-    case "group_member_invalid": "分组成员已删除或隐藏，请重新核对；草稿已保留"
-    case "group_limit": "分组或成员数量达到上限，未保存任何变更"
+    case "chain_invalid": context.text("error.chain_invalid")
+    case "chain_name_invalid": context.text("error.chain_name_invalid")
+    case "chain_udp_required": context.text("error.chain_udp_required")
+    case "chain_edit_required": context.text("error.chain_edit_required")
+    case "route_referenced", "subscription_referenced": context.text("error.route_referenced")
+    case "subscription_match_ambiguous": context.text("error.subscription_match_ambiguous")
+    case "history_cursor_stale": context.text("error.history_cursor_stale")
+    case "routing_library_invalid": context.text("error.routing_library_invalid")
+    case "routing_revision_conflict": context.text("error.routing_revision_conflict")
+    case "routing_route_unavailable": context.text("error.routing_route_unavailable")
+    case "routing_application_unavailable": context.text("error.routing_application_unavailable")
+    case "routing_processes_unavailable": context.text("error.routing_processes_unavailable")
+    case "routing_source_invalid": context.text("error.routing_source_invalid")
+    case "routing_update_unavailable", "routing_update_failed":
+      context.text("error.routing_update_unavailable")
+    case "routing_recovery_required": context.text("error.routing_recovery_required")
+    case "routing_save_failed": context.text("error.routing_save_failed")
+    case "routing_library_unavailable": context.text("error.routing_library_unavailable")
+    case "routing_rules_unavailable": context.text("error.routing_rules_unavailable")
+    case "icon_cache_unavailable": context.text("error.icon_cache_unavailable")
+    case "history_store_failed": context.text("error.history_store_failed")
+    case "usage_sample_failed": context.text("error.usage_sample_failed")
+    case "usage_store_failed": context.text("error.usage_store_failed")
+    case "history_unavailable", "usage_unavailable": context.text("error.history_unavailable")
+    case "latency_samples_incomplete": context.text("error.latency_samples_incomplete")
+    case "exit_rate_limited": context.text("error.exit_rate_limited")
+    case "exit_provider_auth_required": context.text("error.exit_provider_auth_required")
+    case "exit_queue_full": context.text("error.exit_queue_full")
+    case "exit_queue_timeout": context.text("error.exit_queue_timeout")
+    case "exit_services_unavailable": context.text("error.exit_services_unavailable")
+    case "exit_location_unavailable": context.text("error.exit_location_unavailable")
+    case "catalog_stale": context.text("error.catalog_stale")
+    case "group_invalid": context.text("error.group_invalid")
+    case "group_name_invalid": context.text("error.group_name_invalid")
+    case "group_member_invalid": context.text("error.group_member_invalid")
+    case "group_limit": context.text("error.group_limit")
 
-    case "operation_busy": "操作进行中，请完成后修改证书设置"
-    case "route_in_use": "请先切换或关闭正在使用的线路"
-    case "route_stale", "preview_stale": "线路目录已变化，请重新核对"
-    case "route_not_selected": "请先选择一条线路"
-    case "route_not_hidden": "这条线路不在隐藏状态"
-    case "unsupported_field": "字段不受当前内核支持，或超出单节点可编辑范围"
-    case "request_conflict": "同一保存请求包含不同内容，请重新核对草稿"
-    case "request_invalid": "保存请求无效，请重新打开编辑器"
-    case "route_invalid": "连接字段无效，请检查协议与认证参数"
-    case "preview_owner_mismatch": "预览属于另一编辑会话，请重新预览"
-    case "empty_import_selection": "请勾选至少一条有效线路"
-    case "invalid_link", "invalid_port", "invalid_vmess", "conflicting_parameter": "链接格式或参数无效"
-    case "unsupported_protocol": "暂不支持此协议"
-    case "unsupported_transport": "暂不支持此传输组合"
-    case "invalid_base64": "内容不是有效分享链接或Base64订阅"
-    case "import_too_large": "导入内容超过2 MiB或1000条上限"
-    case "preview_expired": "预览已过期，请重新预览"
-    case "preview_limit": "预览数量已达上限，请先完成或取消现有预览"
-    case "invalid_preview_item": "预览条目无效，请重新预览"
-    case "catalog_limit": "线路数量已达上限"
-    case "exit_unavailable": "IP 地区查询不可用"
-    case "exit_query_failed": "IP 地区查询失败，请查看线路结果"
-    case "test_unavailable": "线路测试不可用"
-    case "route_test_failed": "线路测试未完成，请重试"
-    case "test_batch_invalid": "测试范围无效或超过上限，请缩小分组或搜索范围"
-    case "test_batch_partial": "整组测试完成，部分线路失败，请查看各线路结果"
-    case "physical_network_unavailable": "未能确认物理网络，请检查 Wi-Fi 或有线连接"
-    case "cf_ip_invalid": "请输入 Cloudflare 官方地址段内的 IPv4 或 IPv6"
-    case "cf_cache_invalid": "CF 历史文件不可读取，已保留原文件；请检查权限或恢复备份"
-    case "cf_cache_save_failed": "CF 测量已完成，但历史保存失败，请重试"
-    case "cf_tcp_unreachable": "此 CF IP 当前无法连接，已保留历史测量值，可重新测试"
-    case "cf_task_busy": "另一个 CF 任务正在运行，可等待或停止"
-    case "cf_monitor_stopping": "检测正在停止，请稍后再开启"
-    case "cf_candidate_limit": "请先选择已测候选；下载每次最多 20 个 IP"
-    case "cf_retest_required": "此候选在当前网络尚无可用证据，请先复测"
-    case "subscription_duplicate": "此地址已属于另一订阅，请在对应分组刷新"
-    case "subscription_replacement_incomplete": "新地址内容未完整解析，已保留原订阅地址和线路"
-    case "subscription_saved_route_unavailable": "上次更新使用的线路已不可用，请重新选择更新通道"
-    case "subscription_invalid": "请输入有效 HTTPS 地址和不超过 256 字符的请求标识"
-    case "cf_unavailable": "CF 候选功能未就绪，请检查后台版本和网络"
-    case "measurement_preferences_invalid": "测量配置无效或配置文件不可安全读取"
-    case "measurement_preferences_stale": "测量配置已变化，请重新读取后保存；草稿仍保留"
-    case "measurement_preferences_save_failed": "测量配置保存失败，原配置未改变"
-    case "assessment_unavailable": "请先准备至少两条可用线路，再评估并发"
-    case "assessment_unstable": "当前线路或网络不稳定，无法给出可靠推荐；保留默认值"
-    case "subscription_not_found": "订阅来源不存在或已被删除"
-    case "subscription_stale": "订阅来源已变化，请刷新后重试"
-    case "subscription_unavailable": "订阅功能不可用"
-    case "catalog_recovery_required": "线路选择恢复失败，请保持直连并重启后台核对目录"
-    case "route_prepare_failed": "目标线路准备失败，继续使用原线路"
-    case "route_prepare_timeout": "目标线路准备超时，继续使用原线路"
-    case "route_commit_failed": "线路切换失败，继续使用原线路"
-    case "runtime_switch_unavailable": "当前后台尚不支持运行中切换"
-    case "retired_generation_limit": "旧连接尚未结束，请稍后再切换"
-    case "route_connections_pending": "新线路可能已生效，旧连接清理尚未确认完成；请重试，仍失败时关闭代理再连接"
-    case "network_changed": "网络已变化，请重新尝试切换"
-    case "subscription_format_unsupported": "无法识别导入格式，请使用分享链接、Base64 订阅、Clash YAML 或 sing-box JSON"
-    case "subscription_provider_unsupported": "无法读取远程线路来源，请使用包含内联线路的配置"
-    case "exit_dns_failed": "出口服务域名解析失败"
-    case "exit_tls_failed": "出口服务证书验证失败"
-    case "exit_timeout": "出口查询超时"
-    case "exit_http_failed": "出口服务拒绝请求"
-    case "exit_response_invalid": "出口响应无效"
-    case "unsupported_protocol_anytls": "当前不支持 AnyTLS 协议"
-    case "unsupported_transport_xhttp": "当前不支持 XHTTP 传输"
-    case "download_failed": "下载测速失败，可重试"
-    case "download_incomplete": "下载未完成，不生成速度结果"
-    case "download_busy": "已有下载测速正在执行，请稍后重试"
-    case "measurement_store_uncertain": "测量记录已写入，但未确认保存完整；下次测量会重试"
-    case "measurement_store_failed": "测量记录无法保存或恢复，本次结果仅暂存，请检查后台数据目录"
-    case "subscription_in_use": "该订阅线路仍在运行或排空，请先停止代理或等待旧连接结束"
-    case "empty_import": "导入内容没有可识别的线路"
-    case "fetch_forbidden": "订阅服务器返回403，拒绝访问；请核对订阅权限或联系来源方"
-    case "fetch_dns_failed": "无法解析订阅域名，请检查DNS或网络"
-    case "fetch_tls_failed": "订阅服务器证书验证失败"
-    case "fetch_timeout": "订阅下载超时，请检查网络或稍后重试"
-    case "fetch_http_failed": "订阅服务器拒绝请求，请检查地址是否有效"
-    case "fetch_connection_failed": "无法连接订阅服务器，请检查当前网络"
-    case "fetch_failed": "订阅下载失败，请检查网络与来源"
-    case "fetch_scheme_unsupported": "订阅地址必须是 HTTPS"
-    case "fetch_target_disallowed": "订阅地址指向内网或保留地址，已拒绝访问"
-    case "fetch_redirect_limit": "订阅跳转次数过多"
-    case "fetch_too_large": "订阅内容过大"
-    case "fetch_url_invalid": "订阅地址无效"
-    case "runtime_switch_pending": "运行切换尚未接入，请关闭后选择"
-    case "catalog_invalid": "线路目录损坏或权限不安全"
-    case "profile_invalid": "本地调试线路缺失或无效，请准备线路"
-    case "config_invalid": "线路配置或内置分流规则无效"
-    case "tun_conflict": "另一个网络工具正在接管流量，请先关闭其TUN"
-    case "pax_cleanup_pending": "正在等待旧 Pax 连接释放，完成后重新连接"
-    case "runtime_observation_unavailable": "暂时无法确认实际使用的线路，请关闭代理后重新连接"
-    case "network_recovering": "正在等待网络并恢复当前线路"
-    case "tun_releasing": "正在关闭其它 TUN 并等待路由释放"
-    case "system_proxy_taken_over": "系统代理已被其它配置接管，Pax 已停止；点击代理可重新接管"
-    case "system_proxy_observation_unavailable": "暂时无法确认系统代理归属，正在重新检查"
-    case "system_proxy_mutation_pending": "macOS 仍在处理代理设置，完成后可重试；恢复记录已保留"
-    case "system_proxy_write_failed": "系统代理设置未完成，请重试连接"
-    case "mixed_port_in_use": "Pax 本地代理端口被占用，请关闭占用它的程序或调整端口"
-    case "mixed_unavailable": "Pax 本地代理入口不可用，已停止接管，请重试连接"
-    case "mixed_probe_failed": "本地代理入口转发验证失败，请重试或更换线路"
-    case "tun_taken_over": "其它应用已接管流量，Pax 已停止；点击代理可重新接管"
-    case "external_tun_active": "其它 TUN 正在接管流量"
-    case "tun_owner_unsupported": "未能确认该 TUN 的控制方式，请在对应应用中关闭 TUN 后重试"
-    case "tun_owner_changed": "TUN 所属进程已变化，请重新检测"
-    case "tun_owner_unavailable": "暂时无法确认 TUN 所属应用，请重试"
-    case "tun_stop_failed": "无法关闭第三方 TUN，请检查系统授权或在对应应用中关闭"
-    case "tun_stop_timeout": "第三方 TUN 尚未退出，请稍后重试"
-    case "tun_release_timeout": "第三方 TUN 已收到关闭请求，但路由释放尚未确认"
+    case "operation_busy": context.text("error.operation_busy")
+    case "route_in_use": context.text("error.route_in_use")
+    case "route_stale", "preview_stale": context.text("error.route_stale")
+    case "route_not_selected": context.text("error.route_not_selected")
+    case "route_not_hidden": context.text("error.route_not_hidden")
+    case "unsupported_field": context.text("error.unsupported_field")
+    case "request_conflict": context.text("error.request_conflict")
+    case "request_invalid": context.text("error.request_invalid")
+    case "route_invalid": context.text("error.route_invalid")
+    case "preview_owner_mismatch": context.text("error.preview_owner_mismatch")
+    case "empty_import_selection": context.text("error.empty_import_selection")
+    case "invalid_link", "invalid_port", "invalid_vmess", "conflicting_parameter":
+      context.text("error.invalid_link")
+    case "unsupported_protocol": context.text("error.unsupported_protocol")
+    case "unsupported_transport": context.text("error.unsupported_transport")
+    case "invalid_base64": context.text("error.invalid_base64")
+    case "import_too_large": context.text("error.import_too_large")
+    case "preview_expired": context.text("error.preview_expired")
+    case "preview_limit": context.text("error.preview_limit")
+    case "invalid_preview_item": context.text("error.invalid_preview_item")
+    case "catalog_limit": context.text("error.catalog_limit")
+    case "exit_unavailable": context.text("error.exit_unavailable")
+    case "exit_query_failed": context.text("error.exit_query_failed")
+    case "test_unavailable": context.text("error.test_unavailable")
+    case "route_test_failed": context.text("error.route_test_failed")
+    case "test_batch_invalid": context.text("error.test_batch_invalid")
+    case "test_batch_partial": context.text("error.test_batch_partial")
+    case "physical_network_unavailable": context.text("error.physical_network_unavailable")
+    case "cf_ip_invalid": context.text("error.cf_ip_invalid")
+    case "cf_cache_invalid": context.text("error.cf_cache_invalid")
+    case "cf_cache_save_failed": context.text("error.cf_cache_save_failed")
+    case "cf_tcp_unreachable": context.text("error.cf_tcp_unreachable")
+    case "cf_task_busy": context.text("error.cf_task_busy")
+    case "cf_monitor_stopping": context.text("error.cf_monitor_stopping")
+    case "cf_candidate_limit": context.text("error.cf_candidate_limit")
+    case "cf_retest_required": context.text("error.cf_retest_required")
+    case "subscription_duplicate": context.text("error.subscription_duplicate")
+    case "subscription_replacement_incomplete":
+      context.text("error.subscription_replacement_incomplete")
+    case "subscription_saved_route_unavailable":
+      context.text("error.subscription_saved_route_unavailable")
+    case "subscription_invalid": context.text("error.subscription_invalid")
+    case "cf_unavailable": context.text("error.cf_unavailable")
+    case "measurement_preferences_invalid": context.text("error.measurement_preferences_invalid")
+    case "measurement_preferences_stale": context.text("error.measurement_preferences_stale")
+    case "measurement_preferences_save_failed":
+      context.text("error.measurement_preferences_save_failed")
+    case "assessment_unavailable": context.text("error.assessment_unavailable")
+    case "assessment_unstable": context.text("error.assessment_unstable")
+    case "subscription_not_found": context.text("error.subscription_not_found")
+    case "subscription_stale": context.text("error.subscription_stale")
+    case "subscription_unavailable": context.text("error.subscription_unavailable")
+    case "catalog_recovery_required": context.text("error.catalog_recovery_required")
+    case "route_prepare_failed": context.text("error.route_prepare_failed")
+    case "route_prepare_timeout": context.text("error.route_prepare_timeout")
+    case "route_commit_failed": context.text("error.route_commit_failed")
+    case "runtime_switch_unavailable": context.text("error.runtime_switch_unavailable")
+    case "retired_generation_limit": context.text("error.retired_generation_limit")
+    case "route_connections_pending": context.text("error.route_connections_pending")
+    case "network_changed": context.text("error.network_changed")
+    case "subscription_format_unsupported": context.text("error.subscription_format_unsupported")
+    case "subscription_provider_unsupported":
+      context.text("error.subscription_provider_unsupported")
+    case "exit_dns_failed": context.text("error.exit_dns_failed")
+    case "exit_tls_failed": context.text("error.exit_tls_failed")
+    case "exit_timeout": context.text("error.exit_timeout")
+    case "exit_http_failed": context.text("error.exit_http_failed")
+    case "exit_response_invalid": context.text("error.exit_response_invalid")
+    case "unsupported_protocol_anytls": context.text("error.unsupported_protocol_anytls")
+    case "unsupported_transport_xhttp": context.text("error.unsupported_transport_xhttp")
+    case "download_failed": context.text("error.download_failed")
+    case "download_incomplete": context.text("error.download_incomplete")
+    case "download_busy": context.text("error.download_busy")
+    case "measurement_store_uncertain": context.text("error.measurement_store_uncertain")
+    case "measurement_store_failed": context.text("error.measurement_store_failed")
+    case "subscription_in_use": context.text("error.subscription_in_use")
+    case "empty_import": context.text("error.empty_import")
+    case "fetch_forbidden": context.text("error.fetch_forbidden")
+    case "fetch_dns_failed": context.text("error.fetch_dns_failed")
+    case "fetch_tls_failed": context.text("error.fetch_tls_failed")
+    case "fetch_timeout": context.text("error.fetch_timeout")
+    case "fetch_http_failed": context.text("error.fetch_http_failed")
+    case "fetch_connection_failed": context.text("error.fetch_connection_failed")
+    case "fetch_failed": context.text("error.fetch_failed")
+    case "fetch_scheme_unsupported": context.text("error.fetch_scheme_unsupported")
+    case "fetch_target_disallowed": context.text("error.fetch_target_disallowed")
+    case "fetch_redirect_limit": context.text("error.fetch_redirect_limit")
+    case "fetch_too_large": context.text("error.fetch_too_large")
+    case "fetch_url_invalid": context.text("error.fetch_url_invalid")
+    case "runtime_switch_pending": context.text("error.runtime_switch_pending")
+    case "catalog_invalid": context.text("error.catalog_invalid")
+    case "profile_invalid": context.text("error.profile_invalid")
+    case "config_invalid": context.text("error.config_invalid")
+    case "tun_conflict": context.text("error.tun_conflict")
+    case "pax_cleanup_pending": context.text("error.pax_cleanup_pending")
+    case "runtime_observation_unavailable": context.text("error.runtime_observation_unavailable")
+    case "network_recovering": context.text("error.network_recovering")
+    case "tun_releasing": context.text("error.tun_releasing")
+    case "system_proxy_taken_over": context.text("error.system_proxy_taken_over")
+    case "system_proxy_observation_unavailable":
+      context.text("error.system_proxy_observation_unavailable")
+    case "system_proxy_mutation_pending": context.text("error.system_proxy_mutation_pending")
+    case "system_proxy_write_failed": context.text("error.system_proxy_write_failed")
+    case "mixed_port_in_use": context.text("error.mixed_port_in_use")
+    case "mixed_unavailable": context.text("error.mixed_unavailable")
+    case "mixed_probe_failed": context.text("error.mixed_probe_failed")
+    case "tun_taken_over": context.text("error.tun_taken_over")
+    case "external_tun_active": context.text("error.external_tun_active")
+    case "tun_owner_unsupported": context.text("error.tun_owner_unsupported")
+    case "tun_owner_changed": context.text("error.tun_owner_changed")
+    case "tun_owner_unavailable": context.text("error.tun_owner_unavailable")
+    case "tun_stop_failed": context.text("error.tun_stop_failed")
+    case "tun_stop_timeout": context.text("error.tun_stop_timeout")
+    case "tun_release_timeout": context.text("error.tun_release_timeout")
     case "tun_conflict_other":
       if let owner = error.messageParams.first, !owner.isEmpty {
         error.messageParams.dropFirst().first == "network_extension"
-          ? "\(owner) 正在接管流量，请在系统设置 → VPN 中关闭后重试。"
-          : "\(owner) 正在接管流量，请在该应用中关闭 TUN 后重试。"
+          ? context.text("error.tun_conflict_vpn", ["owner": owner])
+          : context.text("error.tun_conflict_app", ["owner": owner])
       } else {
-        "检测到其它 TUN 正在接管流量，归属尚未确认；请在对应工具中手动关闭后重试。"
+        context.text("error.tun_conflict_unknown")
       }
-    case "pax_tun_stale": "检测到 Pax Connect 的旧TUN接口，请先关闭旧实例再重试"
-    case "ipv6_unavailable": "当前网络仅支持 IPv4，此线路或入口需要 IPv6"
-    case "network_observation_unavailable": "暂时无法确认系统路由状态，请检查网络后重试"
-    case "proxy_unreachable": "线路无法建立连接，请检查线路配置或网络"
-    case "test_runtime_failed": "线路测试实例初始化失败"
-    case "test_target_invalid": "测试目标配置无效"
-    case "route_test_timeout": "延迟测试超时（单条执行上限 20 秒）"
-    case "latency_timeout": "HTTPS 延迟测试超时（10 秒内未取得有效响应）"
-    case "node_dns_failed": "无法解析线路服务器地址"
-    case "node_connection_refused": "线路服务器拒绝连接"
-    case "node_connection_reset": "建立线路通道时连接被重置"
-    case "node_network_unreachable": "当前网络没有到线路服务器的可用路径"
-    case "node_connection_timeout": "连接线路服务器超时"
-    case "node_connection_closed": "建立线路通道时连接提前关闭"
-    case "node_connection_failed": "线路通道未能建立，认证或传输原因尚未确认"
-    case "proxy_authentication_failed": "代理认证被拒绝，请检查账号密码或服务商认证设置"
-    case "proxy_target_rejected": "代理服务器拒绝访问目标，请检查服务商访问限制"
-    case "node_ws_handshake_failed": wsHandshakeMessage(status: error.messageParams.first)
-    case "target_dns_failed": "代理通道内无法解析测试目标"
-    case "target_tls_failed": "测试目标的 HTTPS 证书校验失败"
-    case "target_http_failed": "测试目标返回 HTTP \(error.messageParams.first ?? "失败状态")"
-    case "target_connection_refused": "测试目标拒绝连接"
-    case "target_connection_reset": "请求测试目标时连接被重置"
-    case "target_network_unreachable": "没有到测试目标的可用路径"
-    case "target_connection_timeout": "等待测试目标响应超时"
-    case "target_connection_closed": "HTTPS 连接提前关闭，未完成本次请求"
-    case "download_body_interrupted": "下载已开始，但正文传输中途断开，本次不生成速度结果"
-    case "target_connection_failed": "测试目标请求未完成，不能据此确认线路服务器不可用"
-    case "tun_start_failed": "TUN启动失败，请检查后台服务权限"
-    case "core_required": "启动代理需要系统授权；线路管理、订阅与测速可正常使用。"
-    case "core_identity_mismatch": "运行中的代理内核与当前 App 不匹配，请退出其它 Pax Connect 实例后重试。"
-    case "core_selection_unknown": "尚未确认内核实际使用的线路，请关闭代理后重新连接。"
-    case "core_power_failed": "睡眠状态转发暂未完成，正在重试。"
-    case "core_unavailable": "代理内核没有响应，请退出并重新打开 App。"
+    case "pax_tun_stale": context.text("error.pax_tun_stale")
+    case "ipv6_unavailable": context.text("error.ipv6_unavailable")
+    case "network_observation_unavailable": context.text("error.network_observation_unavailable")
+    case "proxy_unreachable": context.text("error.proxy_unreachable")
+    case "test_runtime_failed": context.text("error.test_runtime_failed")
+    case "test_target_invalid": context.text("error.test_target_invalid")
+    case "route_test_timeout": context.text("error.route_test_timeout")
+    case "latency_timeout": context.text("error.latency_timeout")
+    case "node_dns_failed": context.text("error.node_dns_failed")
+    case "node_connection_refused": context.text("error.node_connection_refused")
+    case "node_connection_reset": context.text("error.node_connection_reset")
+    case "node_network_unreachable": context.text("error.node_network_unreachable")
+    case "node_connection_timeout": context.text("error.node_connection_timeout")
+    case "node_connection_closed": context.text("error.node_connection_closed")
+    case "node_connection_failed": context.text("error.node_connection_failed")
+    case "proxy_authentication_failed": context.text("error.proxy_authentication_failed")
+    case "proxy_target_rejected": context.text("error.proxy_target_rejected")
+    case "node_ws_handshake_failed":
+      wsHandshakeMessage(status: error.messageParams.first, context: context)
+    case "target_dns_failed": context.text("error.target_dns_failed")
+    case "target_tls_failed": context.text("error.target_tls_failed")
+    case "target_http_failed":
+      context.text(
+        "error.target_http_failed",
+        ["status": error.messageParams.first ?? context.text("error.http_failed_status")])
+    case "target_connection_refused": context.text("error.target_connection_refused")
+    case "target_connection_reset": context.text("error.target_connection_reset")
+    case "target_network_unreachable": context.text("error.target_network_unreachable")
+    case "target_connection_timeout": context.text("error.target_connection_timeout")
+    case "target_connection_closed": context.text("error.target_connection_closed")
+    case "download_body_interrupted": context.text("error.download_body_interrupted")
+    case "target_connection_failed": context.text("error.target_connection_failed")
+    case "tun_start_failed": context.text("error.tun_start_failed")
+    case "core_required": context.text("error.core_required")
+    case "core_identity_mismatch": context.text("error.core_identity_mismatch")
+    case "core_selection_unknown": context.text("error.core_selection_unknown")
+    case "core_power_failed": context.text("error.core_power_failed")
+    case "core_unavailable": context.text("error.core_unavailable")
     case "core_profile_start_failed":
       switch error.messageParams.first {
-      case "address_in_use": "代理内核启动资源被占用，请检查本地代理端口后重试。"
-      case "route_conflict": "系统路由冲突，可能有其它 TUN 正在接管；请关闭对应工具的 TUN 后重试。"
-      case "permission_denied": "代理内核权限不足，请检查系统授权后重试。"
-      case "resource_unavailable": "代理内核所需资源不可用，请退出并重新打开 App。"
-      case "configuration_rejected": "代理内核拒绝了当前配置，请检查线路配置和内置规则。"
-      default: "代理内核启动失败，尚未确认原因，请查看诊断记录后重试。"
+      case "address_in_use": context.text("error.address_in_use")
+      case "route_conflict": context.text("error.route_conflict")
+      case "permission_denied": context.text("error.permission_denied")
+      case "resource_unavailable": context.text("error.resource_unavailable")
+      case "configuration_rejected": context.text("error.configuration_rejected")
+      default: context.text("error.core_start_unknown")
       }
-    case "protection_unverified": "代理内核已启动，尚无当前连接的连通性验证结果。"
-    case "service_privileges_required": "启动代理需要具备系统权限的代理内核；线路管理、订阅与测速可正常使用。"
-    case "subscription_proxy_unavailable": "后台版本不支持通过线路更新订阅，请更新后台服务"
-    case "subscription_refresh_busy": "该订阅正在通过另一通道刷新，请等待完成后再切换更新方式"
-    case "route_selection_failed": "线路选择未完成，请检查后台连接后重试"
-    case "operation_cancelled": "操作已取消"
-    case "download_timeout": "下载测速超时（单条执行上限 30 秒）"
-    case "tun_missing": "TUN接口已消失"
-    case "route_lost": "路由被删除或由另一个网络工具接管"
-    case "health_check_pending": "线路已切换，正在后台验证网络保护"
-    case "dns_unprotected": "DNS接管或加密解析验证失败"
-    case "stop_failed": "网络接管尚未完全关闭，请重试关闭"
-    default: "代理操作未完成，请重试"
+    case "protection_unverified": context.text("error.protection_unverified")
+    case "service_privileges_required": context.text("error.service_privileges_required")
+    case "subscription_proxy_unavailable": context.text("error.subscription_proxy_unavailable")
+    case "subscription_refresh_busy": context.text("error.subscription_refresh_busy")
+    case "route_selection_failed": context.text("error.route_selection_failed")
+    case "operation_cancelled": context.text("error.operation_cancelled")
+    case "download_timeout": context.text("error.download_timeout")
+    case "tun_missing": context.text("error.tun_missing")
+    case "route_lost": context.text("error.route_lost")
+    case "health_check_pending": context.text("error.health_check_pending")
+    case "dns_unprotected": context.text("error.dns_unprotected")
+    case "stop_failed": context.text("error.stop_failed")
+    default: context.text("error.proxy_incomplete")
     }
   }
 }

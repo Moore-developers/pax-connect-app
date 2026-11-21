@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "about.versions": "版本信息",
+    "about.licenses": "开源许可",
+    "about.kernel": "网络内核",
+    "about.bundled_kernel": "内置 sing-box",
+    "about.bundled_daemon": "随包 daemon",
+    "about.bundled_daemon_detail": "应用内置的后台服务",
+    "about.running_daemon": "已连接 daemon",
+    "about.running_daemon_detail": "当前连接的后台服务",
+    "about.system": "操作系统",
+    "about.system_detail": "当前系统版本",
+    "about.architecture": "芯片架构",
+    "about.architecture_detail": "应用构建架构",
+    "about.version": "{version}（构建 {build}）",
+    "about.domain_rules": "域名规则来源",
+    "about.geodata_rules": "规则数据来源",
+    "about.geographic_data": "地理数据来源",
+    "about.gpl_later": "GPL v3 或后续版本",
+    "about.geolite_terms": "GeoLite2 数据条款",
+    "about.demo": "演示模式",
+    "about.disconnected": "未连接",
+    "about.version_unavailable": "随包版本信息不可用"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "messages": {
+    "status.more": "查看 {count} 项",
+    "status.dismiss": "关闭提示",
+    "status.dismiss_help": "仅关闭提示，不改变连接状态"
+  }
+}

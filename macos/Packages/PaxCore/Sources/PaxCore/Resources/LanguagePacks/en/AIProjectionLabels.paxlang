@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "usage.source.official_account": "Official account",
+    "usage.source.official_api": "Official API",
+    "usage.source.relay_api": "Third-party relay",
+    "usage.source.unknown": "Source unconfirmed",
+    "usage.legend.input": "Input",
+    "usage.legend.output": "Output",
+    "usage.legend.cache": "Cache",
+    "ai_period.custom": "Custom",
+    "ai_comparison.yesterday": "yesterday",
+    "ai_comparison.day_before": "the day before yesterday",
+    "ai_comparison.last_week": "last week",
+    "ai_comparison.last_month": "last month",
+    "ai_comparison.last_year": "the same period last year",
+    "ai_comparison.previous": "the previous period"
+  }
+}

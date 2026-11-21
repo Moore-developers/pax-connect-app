@@ -7,6 +7,7 @@ import AppKit
   public let chart: PaxTimeSeriesChart
   private let metric: NSTextField
   private let caption = PaxText.label("最新", font: PaxTheme.Typography.caption(), secondary: true)
+  private let emptyCaption: String?
   private let compact: Bool
   private var latest: String
   private var context: String
@@ -19,8 +20,10 @@ import AppKit
     series: PaxTimeSeries, latest: String, compact: Bool,
     tooltip: PaxChartTooltipCoordinator? = nil,
     context: String = "最新", title: String = "响应延迟", pinKey: String? = nil,
+    emptyCaption: String? = nil, copy: PaxTimeSeriesCopy = .init(),
     format: @escaping (Double?) -> String
   ) {
+    self.emptyCaption = emptyCaption
     self.compact = compact
     self.latest = latest
     self.context = context
@@ -28,6 +31,7 @@ import AppKit
     chart = PaxTimeSeriesChart(
       series: series, style: .latency(title: title) { format($0) },
       density: compact ? .compact : .regular)
+    chart.style.copy = copy
     metric = PaxText.label(
       latest,
       font: PaxTheme.Typography.metric(
@@ -91,7 +95,7 @@ import AppKit
   }
 
   private var defaultCaption: String {
-    chart.isHidden && context == "最新" ? "暂无有效延迟" : context
+    chart.isHidden ? emptyCaption ?? context : context
   }
 
   public override var isFlipped: Bool { true }

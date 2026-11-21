@@ -9,6 +9,16 @@ public enum TrafficRuleFormatting {
     else { return nil }
     return values
   }
+  static func unavailableRouteName(_ rule: String) -> String? {
+    guard let name = evidence(rule)?["UnavailableRoute"], !name.isEmpty else { return nil }
+    return name
+  }
+  public static func recordedRuleText(_ rule: String) -> String {
+    guard rule.hasPrefix("{"), let values = evidence(rule), values["UnavailableRoute"] != nil,
+      let method = values["Method"], let target = values["Target"]
+    else { return rule }
+    return method + "=" + target
+  }
   /// The old compiler labeled this built-in rule as Geo. Only exact recorded evidence qualifies.
   public static func isIPv4OnlyRule(rule: String, source: String) -> Bool {
     if let values = evidence(rule) {
@@ -18,31 +28,40 @@ public enum TrafficRuleFormatting {
     return rule == "builtin=IPv6 流量"
       && ["Pax 包：Geo 基础包", "Pax 包：Pax 内置规则"].contains(source)
   }
-  public static let ipv6Limitation =
-    "这次尝试使用 IPv6，但该次 Pax 连接仅使用 IPv4，因此未建立连接。其它 IPv4 记录单独统计，不代表应用整体被封禁。"
+  public static var ipv6Limitation: String { ipv6Limitation(context: .chinese) }
+  public static func ipv6Limitation(context: PresentationContext) -> String {
+    context.text("traffic_format.b25d11dbd2")
+  }
 
   /// Only the frozen match supplies identity; neither row names nor the current app catalog do.
-  public static func latestTitle(_ match: TrafficRoutingMatch?) -> String {
-    guard let match else { return "最近命中未记录" }
+  public static func latestTitle(
+    _ match: TrafficRoutingMatch?, context: PresentationContext = .chinese
+  ) -> String {
+    guard let match else { return context.text("traffic_format.b0c3b0dd64") }
     let rule = match.rule
     let source = match.source
-    if isIPv4OnlyRule(rule: rule, source: source) { return "IPv6 未启用" }
-    if rule == "final" { return "默认线路" }
+    if isIPv4OnlyRule(rule: rule, source: source) {
+      return context.text("traffic_format.96d388c1b2")
+    }
+    if rule == "final" { return context.text("traffic_format.6b1918f8e3") }
     let values = evidence(rule)
     let method = values?["Method"]
     let target = values?["Target"] ?? ""
-    let package = values?["Package"] ?? self.package(rule: rule, source: source)
+    let package =
+      values?["Package"]
+      ?? (source.hasPrefix("Pax 包：") ? String(source.dropFirst("Pax 包：".count)) : source)
     if package == "优先规则" {
       let applicationID =
         method == "application"
         ? target
         : rule.hasPrefix("application=") ? String(rule.dropFirst("application=".count)) : ""
       if !applicationID.isEmpty {
-        return "优先规则："
+        return context.text("traffic_format.b9a2180514")
           + (applicationID == match.applicationID && !match.application.isEmpty
             ? match.application : applicationID)
       }
-      return "优先规则：" + condition(rule: rule, source: source)
+      return context.text("traffic_format.b9a2180514")
+        + condition(rule: rule, source: source, context: context)
     }
     let normalized = rule.replacingOccurrences(of: "geosite_cn", with: "geosite-cn")
       .replacingOccurrences(of: "geoip_cn", with: "geoip-cn")
@@ -61,13 +80,13 @@ public enum TrafficRuleFormatting {
         || (["source", "builtin"].contains(method ?? "") && target == "中国域名 / IP 规则")
         || ["source=中国域名 / IP 规则", "builtin=中国域名 / IP 规则"].contains(rule))
     {
-      return "中国域名 / IP 规则"
+      return context.text("traffic_format.1096e4f64f")
     }
     if privateSource
       && (["ip_is_private", "ip_is_private=true", "builtin=局域网与私有网络地址"].contains(rule)
         || (method == "builtin" && target == "局域网与私有网络地址"))
     {
-      return "局域网规则"
+      return context.text("traffic_format.ade12b8aa7")
     }
     if googleSource
       && ([
@@ -76,30 +95,38 @@ public enum TrafficRuleFormatting {
       ].contains(rule)
         || (["builtin", "source"].contains(method ?? "") && target == "Google 服务经代理"))
     {
-      return "Google 服务规则"
+      return context.text("traffic_format.0fb42c8009")
     }
-    guard !rule.isEmpty else { return "最近命中未记录" }
+    guard !rule.isEmpty else { return context.text("traffic_format.b0c3b0dd64") }
     return (recordedPackage.isEmpty ? "" : recordedPackage + "：")
-      + condition(rule: rule, source: source)
+      + condition(rule: rule, source: source, context: context)
   }
-  public static func latestEvidence(_ match: TrafficRoutingMatch?) -> String {
-    let scope = "所选时间范围最近一次线路选择依据，不代表本行全部累计流量"
-    guard let match else { return scope + "\n最近命中未记录" }
+  public static func latestEvidence(
+    _ match: TrafficRoutingMatch?, context: PresentationContext = .chinese
+  ) -> String {
+    let scope = context.text("traffic_format.f304c496af")
+    guard let match else { return scope + context.text("traffic_format.ba747ac648") }
     let time = TrafficFormatting.dateAndClock(match.at)
     return [
-      scope, time.date + " " + time.clock, latestTitle(match),
-      "触发条件：" + condition(rule: match.rule, source: match.source),
-      "记录的规则：" + match.rule, "记录的来源：" + match.source,
+      scope, time.date + " " + time.clock, latestTitle(match, context: context),
+      context.text("traffic_format.2f43305a0c")
+        + condition(rule: match.rule, source: match.source, context: context),
+      context.text("traffic_format.ea33c4dd49") + recordedRuleText(match.rule),
+      context.text("traffic_format.2023d979df") + match.source,
     ].joined(separator: "\n")
   }
-  public static func package(rule: String, source: String) -> String {
-    if isIPv4OnlyRule(rule: rule, source: source) { return "Pax 内置规则" }
+  public static func package(rule: String, source: String, context: PresentationContext = .chinese)
+    -> String
+  {
+    if isIPv4OnlyRule(rule: rule, source: source) {
+      return context.text("traffic_format.4599a6baf8")
+    }
     if let values = evidence(rule), let name = values["Package"] { return name }
     let value = rule.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(
       of: "geosite_cn", with: "geosite-cn"
     ).replacingOccurrences(of: "geoip_cn", with: "geoip-cn")
-    if rule.isEmpty { return "未采集规则" }
-    if rule == "final" { return "无" }
+    if rule.isEmpty { return context.text("traffic_format.9896c2fedc") }
+    if rule == "final" { return context.text("traffic_format.484d556139") }
     if !source.hasPrefix("Pax 包："),
       ["rule_set=geosite-cn", "rule_set=[geosite-cn]"].contains(value)
     {
@@ -112,14 +139,16 @@ public enum TrafficRuleFormatting {
       return "Geo 基础包"
     }
     if source.hasPrefix("Pax 包：") { return String(source.dropFirst("Pax 包：".count)) }
-    return source.isEmpty || source == "内核规则" ? "历史规则（未记录包名）" : source
+    return source.isEmpty || source == "内核规则" ? context.text("traffic_format.079266bdfd") : source
   }
-  public static func summaryPackage(rule: String, source: String) -> String {
+  public static func summaryPackage(
+    rule: String, source: String, context: PresentationContext = .chinese
+  ) -> String {
     if isIPv4OnlyRule(rule: rule, source: source) {
-      return package(rule: rule, source: source)
+      return package(rule: rule, source: source, context: context)
     }
     if let values = evidence(rule), values["Method"] == "builtin", values["Target"] == "IPv6 流量" {
-      return package(rule: rule, source: source)
+      return package(rule: rule, source: source, context: context)
     }
     let builtin = [
       "rule_set=geosite-google", "rule_set=[geosite-google]", "ip_is_private", "ip_is_private=true",
@@ -133,49 +162,56 @@ public enum TrafficRuleFormatting {
     {
       return "Geo 基础包"
     }
-    return package(rule: rule, source: source)
+    return package(rule: rule, source: source, context: context)
   }
-  public static func condition(rule: String, source: String = "") -> String {
+  public static func condition(
+    rule: String, source: String = "", context: PresentationContext = .chinese
+  ) -> String {
     if let values = evidence(rule) {
-      let target = values["Target"] ?? "条件未记录"
+      let target = values["Target"] ?? context.text("traffic_format.a456dde4ec")
       switch values["Method"] {
-      case "domain": return "精确域名 " + target
-      case "domain_suffix": return "域名及子域 " + target
-      case "ip", "cidr": return "IP / 网段 " + target
-      case "application": return "应用身份 " + target
-      case "process": return "进程路径 " + target
+      case "domain": return context.text("traffic_format.21270ebee5") + target
+      case "domain_suffix": return context.text("traffic_format.ec3be5bad0") + target
+      case "ip", "cidr": return context.text("traffic_format.e71cb84455") + target
+      case "application": return context.text("traffic_format.878d0a58a8") + target
+      case "process": return context.text("traffic_format.6b112cc97c") + target
       default: return target
       }
     }
     let value = rule.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(
       of: "geosite_cn", with: "geosite-cn"
     ).replacingOccurrences(of: "geoip_cn", with: "geoip-cn")
-    if rule.isEmpty { return "历史没有保存命中依据" }
-    if rule == "final" { return "未命中任何规则，走当前线路" }
+    if rule.isEmpty { return context.text("traffic_format.595945ac3f") }
+    if rule == "final" { return context.text("traffic_format.f465077619") }
     if !source.hasPrefix("Pax 包："),
       ["rule_set=geosite-cn", "rule_set=[geosite-cn]"].contains(value)
     {
-      return "中国域名"
+      return context.text("traffic_format.15e39c6a73")
     }
     if !source.hasPrefix("Pax 包："), ["rule_set=geoip-cn", "rule_set=[geoip-cn]"].contains(value) {
-      return "中国 IP"
+      return context.text("traffic_format.6a13ef0a94")
     }
     if !source.hasPrefix("Pax 包："), ["ip_is_private", "ip_is_private=true"].contains(value) {
-      return "局域网及私有地址"
+      return context.text("traffic_format.0813baf380")
     }
     for prefix in ["builtin=", "source="] {
       if rule.hasPrefix(prefix) { return String(rule.dropFirst(prefix.count)) }
     }
     if rule.hasPrefix("application=") {
-      return "应用身份 " + String(rule.dropFirst("application=".count))
+      return context.text("traffic_format.878d0a58a8")
+        + String(rule.dropFirst("application=".count))
     }
     if rule.hasPrefix("process=") {
-      return "进程路径 " + String(rule.dropFirst("process=".count))
+      return context.text("traffic_format.6b112cc97c") + String(rule.dropFirst("process=".count))
     }
     var result = rule
     for (key, title) in [
-      ("domain_suffix=", "域名及子域 "), ("domain=", "域名 "), ("ip_cidr=", "IP / 网段 "),
-      ("process_path_regex=", "应用路径匹配 "), ("process_path=", "应用路径 "), ("process_name=", "进程 "),
+      ("domain_suffix=", context.text("traffic_format.ec3be5bad0")),
+      ("domain=", context.text("traffic_format.e81dba9c98")),
+      ("ip_cidr=", context.text("traffic_format.e71cb84455")),
+      ("process_path_regex=", context.text("traffic_format.d1a32bd7d8")),
+      ("process_path=", context.text("traffic_format.069cf829b0")),
+      ("process_name=", context.text("traffic_format.65b82773c8")),
     ] { result = result.replacingOccurrences(of: key, with: title) }
     return result
   }

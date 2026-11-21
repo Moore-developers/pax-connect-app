@@ -28,10 +28,10 @@ public final class PaxTabs: NSControl {
     }
   }
   private var buttons: [TabHitButton] = []
-  private let labels: [String]
+  private var labels: [String]
   private let symbols: [String?]
   private let counts: [Int?]
-  private let accessibilityLabels: [String]
+  private var accessibilityLabels: [String]
   private let style: Style
   var thumbPosition: CGFloat = 0
   var thumbRun: PaxThumbRun?
@@ -85,6 +85,27 @@ public final class PaxTabs: NSControl {
   }
   @available(*, unavailable)
   public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func apply(labels: [String], accessibilityLabels: [String] = []) {
+    guard labels.count == self.labels.count else { return }
+    if self.labels != labels { measuredWidths = nil }
+    self.labels = labels
+    self.accessibilityLabels = labels.indices.map { index in
+      accessibilityLabels.indices.contains(index)
+        ? accessibilityLabels[index]
+        : labels[index] + (counts[index].map { "（\($0)）" } ?? "")
+    }
+    for (index, button) in buttons.enumerated() {
+      button.title = labels[index] + (counts[index].map { "（\($0)）" } ?? "")
+      button.setAccessibilityLabel(self.accessibilityLabels[index])
+    }
+    setAccessibilityLabel(self.accessibilityLabels.joined(separator: " / "))
+    if self.accessibilityLabels.indices.contains(selectedIndex) {
+      setAccessibilityValue(self.accessibilityLabels[selectedIndex])
+    }
+    invalidateIntrinsicContentSize()
+    needsLayout = true
+    needsDisplay = true
+  }
   public override var isFlipped: Bool { true }
   public override var acceptsFirstResponder: Bool { isEnabled }
   public override var intrinsicContentSize: NSSize {
@@ -117,14 +138,17 @@ public final class PaxTabs: NSControl {
     }
     return content
   }
-  // Labels, counts, symbols and the measurement font are fixed for this instance.
-  private lazy var contentWidths: [CGFloat] = {
-    labels.indices.map { index in
+  private var measuredWidths: [CGFloat]?
+  private var contentWidths: [CGFloat] {
+    if let measuredWidths { return measuredWidths }
+    let widths = labels.indices.map { index in
       let width = text(at: index, selected: true).size().width
       let icon = symbols[index] == nil ? 0 : PaxTheme.Tabs.labelFont + PaxTheme.Tabs.iconGap
       return ceil(width + icon) + PaxTheme.Tabs.horizontalInset * 2
     }
-  }()
+    measuredWidths = widths
+    return widths
+  }
   private var segmentRects: [NSRect] {
     let inset = style == .mode ? PaxTheme.Dashboard.modePadding : PaxTheme.Dashboard.tabPadding
     let widths =

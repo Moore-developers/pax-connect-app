@@ -5,16 +5,22 @@ import PaxUI
 extension RouteDetailController {
   func usageRecords() {
     let upload = PaxRouteMetric(
-      title: "上传", symbol: "arrow.up.right", value: "—", color: PaxTheme.DashboardColor.amber,
+      title: self.interfaceCopy.text("dashboard.upload"), symbol: "arrow.up.right", value: "—",
+      color: PaxTheme.DashboardColor.amber,
       style: .usage)
     let download = PaxRouteMetric(
-      title: "下载", symbol: "arrow.down.left", value: "—", color: PaxTheme.DashboardColor.green,
+      title: self.interfaceCopy.text("dashboard.download"), symbol: "arrow.down.left", value: "—",
+      color: PaxTheme.DashboardColor.green,
       style: .usage)
     let connections = PaxRouteMetric(
-      title: "连接", symbol: "arrow.triangle.swap", value: "—", unit: "个", caption: "时间窗内新建",
+      title: self.interfaceCopy.text("interface_detail.a5574109f0"), symbol: "arrow.triangle.swap",
+      value: "—", unit: self.interfaceCopy.text("interface_detail.3a116815bc"),
+      caption: self.interfaceCopy.text("interface_detail.b5eb7f2d76"),
       color: PaxTheme.Color.textSecondary, style: .usage)
     let active = PaxRouteMetric(
-      title: "当前连接", symbol: "network", value: "—", unit: "个", caption: "最近实际采样",
+      title: self.interfaceCopy.text("interface_detail.e403ba5798"), symbol: "network", value: "—",
+      unit: self.interfaceCopy.text("interface_detail.3a116815bc"),
+      caption: self.interfaceCopy.text("interface_detail.fd68bb41e8"),
       color: PaxTheme.Color.healthy, style: .usage)
     let metrics = NSStackView()
     metrics.orientation = .vertical
@@ -42,21 +48,26 @@ extension RouteDetailController {
     chart.tooltipCoordinator = tooltip
     chart.heightAnchor.constraint(equalToConstant: PaxTheme.Routes.chartHeight).isActive = true
     let legend = NSStackView(views: [
-      PaxRouteText.label("流量趋势", font: PaxTheme.Typography.caption(), secondary: true), NSView(),
-      PaxRouteLegend([("上传", PaxTheme.DashboardColor.amber), ("下载", PaxTheme.DashboardColor.green)]
+      self.interfaceCopy.routeLabel(
+        "action.traffic.trend", font: PaxTheme.Typography.caption(), secondary: true), NSView(),
+      PaxRouteLegend([
+        (self.interfaceCopy.text("dashboard.upload"), PaxTheme.DashboardColor.amber),
+        (self.interfaceCopy.text("dashboard.download"), PaxTheme.DashboardColor.green),
+      ]
       ),
     ])
     let coverage = PaxRouteText.label("", font: PaxTheme.Typography.caption(), secondary: true)
     let more = PaxRouteButton(
-      "加载更多用量", symbol: "clock", style: .quiet, target: self, action: #selector(moreUsage))
+      self.interfaceCopy.text("action.usage.load_more"), symbol: "clock", style: .quiet,
+      target: self, action: #selector(moreUsage))
     items += [legend, chart, coverage, more]
     usageUpdater = { [weak self] in
       guard let self else { return }
-      let p = self.store.info(self.id)
+      let p = self.store.info(self.id, context: self.interfaceCopy.context)
       let hasData = p.uploadMB != nil && p.downloadMB != nil
       metrics.isHidden = !hasData
       status.isHidden = hasData
-      status.stringValue = self.store.dataCaption(self.id)
+      status.stringValue = self.store.dataCaption(self.id, context: self.interfaceCopy.context)
       upload.updateValue(
         p.uploadMB.map { TrafficFormatting.bytes(UInt64(max(0, $0 * 1_000_000))) } ?? "—")
       download.updateValue(
@@ -80,28 +91,48 @@ extension RouteDetailController {
         metrics.addArrangedSubview(row)
         row.widthAnchor.constraint(equalTo: metrics.widthAnchor).isActive = true
       }
-      connections.updateValue(p.windowConnections.map(String.init) ?? "—", unit: "个")
-      active.updateValue(p.activeConnections.map(String.init) ?? "—", unit: "个")
+      connections.updateValue(
+        p.windowConnections.map(String.init) ?? "—",
+        unit: self.interfaceCopy.text("interface_detail.3a116815bc"))
+      active.updateValue(
+        p.activeConnections.map(String.init) ?? "—",
+        unit: self.interfaceCopy.text("interface_detail.3a116815bc"))
       range.apply(
-        zip(periods, ["今日", "近7天", "近30天"]).map { .init(id: $0.0, title: $0.1) },
+        zip(
+          periods,
+          [
+            self.interfaceCopy.text("dashboard_value.today"),
+            self.interfaceCopy.text("interface_detail.6082bd2a63"),
+            self.interfaceCopy.text("interface_detail.afcd5fc44b"),
+          ]
+        ).map { .init(id: $0.0, title: $0.1) },
         selected: periods[self.usageRange])
       chart.pinKey = "route-usage-\(self.id)-\(self.usageRange)"
+      let context = self.interfaceCopy.context
       if let series = p.transferSamples {
-        chart.style = .traffic(
-          unit: routeUsageUnit(series.domain), formatValue: TrafficFormatting.megabytes)
+        var style = PaxTimeSeriesStyle.traffic(
+          unit: routeUsageUnit(series.domain, context: context),
+          title: context.text("action.traffic.trend"), upload: context.text("dashboard.upload"),
+          download: context.text("dashboard.download"), formatValue: TrafficFormatting.megabytes)
+        style.copy = timeSeriesCopy(context)
+        chart.style = style
         chart.series = series
       } else {
         chart.series = emptySeries
       }
       chart.isHidden = p.transferSamples == nil
       legend.isHidden = chart.isHidden
-      coverage.stringValue = self.store.isLive ? self.store.usageCoverageCaption(self.id) : "今日累计"
+      coverage.stringValue =
+        self.store.isLive
+        ? self.store.usageCoverageCaption(self.id, context: context)
+        : self.interfaceCopy.text("interface_detail.4fd86b9f0a")
       coverage.isHidden = !hasData
       more.isHidden = !self.store.hasMoreUsage(self.id)
     }
     usageUpdater?()
     section(
-      "使用记录", symbol: "arrow.up.arrow.down", views: items,
-      detail: store.isLive ? "" : "今日累计")
+      self.interfaceCopy.text("interface_detail.a57107ba0f"), symbol: "arrow.up.arrow.down",
+      views: items,
+      detail: store.isLive ? "" : self.interfaceCopy.text("interface_detail.4fd86b9f0a"))
   }
 }

@@ -34,8 +34,6 @@ public struct PaxUsageFilterGroup: Equatable {
 /// 「全部 / Profile / Profile 下的模型」分组菜单：两张趋势卡共用。
 @MainActor
 public enum PaxUsageFilterMenu {
-  private nonisolated static let allTitle = "全部"
-
   /// 下拉按钮宽度：随标题文字，限制在 112–240pt。
   @MainActor public static func pickerWidth(for picker: PaxRoutePicker) -> CGFloat {
     let title = (picker.displayTitle ?? "") as NSString
@@ -45,7 +43,7 @@ public enum PaxUsageFilterMenu {
 
   /// 按钮上的完整显示标题：全部、Profile 名，或「Profile 名 · 模型名」；选择不在分组内时回退为 id。
   public nonisolated static func displayTitle(
-    _ selection: PaxUsageFilter, groups: [PaxUsageFilterGroup]
+    _ selection: PaxUsageFilter, groups: [PaxUsageFilterGroup], allTitle: String = "全部"
   ) -> String {
     guard let profileID = selection.profileID else { return allTitle }
     let group = groups.first { $0.id == profileID }
@@ -56,7 +54,8 @@ public enum PaxUsageFilterMenu {
 
   /// 菜单内容不变则不重建，再选中并更新显示标题与 toolTip。
   public static func populate(
-    _ picker: PaxRoutePicker, groups: [PaxUsageFilterGroup], selection: PaxUsageFilter
+    _ picker: PaxRoutePicker, groups: [PaxUsageFilterGroup], selection: PaxUsageFilter,
+    allTitle: String = "全部"
   ) {
     var rows = [(title: allTitle, level: 0, value: PaxUsageFilter.all)]
     for group in groups {
@@ -82,7 +81,7 @@ public enum PaxUsageFilterMenu {
     }
     let index = rows.firstIndex { $0.value == selection } ?? 0
     if picker.indexOfSelectedItem != index { picker.selectItem(at: index) }
-    let title = displayTitle(selection, groups: groups)
+    let title = displayTitle(selection, groups: groups, allTitle: allTitle)
     picker.displayTitle = title
     picker.toolTip = title
   }

@@ -102,17 +102,31 @@ import Testing
     let environmentStore = EnvironmentDiagnosticStore(
       history: history, request: { _, _ in newer }, openBrowser: { _ in true })
     let newerRoute = route("new")
+    let (results, deliverResult) = AsyncStream.makeStream(of: NetworkDiagnosticReport.self)
+    let (starts, signalStart) = AsyncStream.makeStream(of: Void.self)
+    defer {
+      deliverResult.finish()
+      signalStart.finish()
+    }
+    // Keep the backend result pending until the test explicitly cancels the run.
     let networkStore = NetworkDiagnosticStore(
       currentEnvironment: environmentStore, history: history,
       run: { _, _ in
-        try? await Task.sleep(for: .milliseconds(80))
-        return newerRoute
+        signalStart.yield()
+        // A detached consumer models a backend that still responds after cancellation.
+        return await Task.detached {
+          var pending = results.makeAsyncIterator()
+          return await pending.next() ?? newerRoute
+        }.value
       })
     environmentStore.start()
     networkStore.start()
+    var starting = starts.makeAsyncIterator()
+    await starting.next()
     for _ in 0..<100 where environmentStore.report?.mac.ipv4 != "203.0.113.8" { await Task.yield() }
     #expect(environmentStore.report?.mac.ipv4 == "203.0.113.8")
     networkStore.retainLastResult()
+    deliverResult.yield(newerRoute)
     try await Task.sleep(for: .milliseconds(120))
     #expect(environmentStore.report?.mac.ipv4 == "203.0.113.4")
     #expect(networkStore.report?.targetRouteName == "old")

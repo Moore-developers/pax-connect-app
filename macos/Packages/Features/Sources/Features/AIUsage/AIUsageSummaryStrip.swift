@@ -250,18 +250,21 @@ extension AIUsageViewController {
   /// A single standard card with four equal segments and vertical dividers.
   func summaryStrip() -> NSView {
     var segments: [AIStatSegmentView] = []
-    for segment in store.overviewSegments {
+    for segment in store.overviewSegments(context: self.interfaceCopy.context) {
       let view = AIStatSegmentView(segment)
       let detail: AIUsageDetailController.Kind =
         segment.kind == .cost ? .cost : segment.kind == .requests ? .requests : .tokens
       let button = actions.overlay(
-        label: "查看" + segment.title, id: segment.accessibilityID
+        label: self.interfaceCopy.text("interface_detail.db8db05304") + segment.title,
+        id: segment.accessibilityID
       ) { [weak self, weak view] in self?.show(detail, anchor: view) }
       overlay(button, on: view, below: true)
       view.pillView.onClick = { [weak self, weak view] in self?.show(detail, anchor: view) }
       segments.append(view)
       contentRefreshers.append { [weak self, weak view] in
-        guard let value = self?.store.overviewSegments.first(where: { $0.kind == segment.kind })
+        guard
+          let value = self?.store.overviewSegments(context: self?.interfaceCopy.context ?? .chinese)
+            .first(where: { $0.kind == segment.kind })
         else { return }
         view?.apply(value)
       }

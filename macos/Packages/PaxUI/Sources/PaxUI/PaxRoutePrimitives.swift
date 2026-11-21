@@ -18,7 +18,7 @@ public final class PaxFeatureTag: NSView {
     }
   }
   public enum Style { case feature, current, protocolLabel }
-  private let title: String
+  private var title: String
   private let symbol: String?
   private let tone: Tone
   private let style: Style
@@ -43,6 +43,13 @@ public final class PaxFeatureTag: NSView {
     setAccessibilityLabel(title)
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public func applyTitle(_ title: String) {
+    guard self.title != title else { return }
+    self.title = title
+    setAccessibilityLabel(title)
+    invalidateIntrinsicContentSize()
+    needsDisplay = true
+  }
   public override var isFlipped: Bool { true }
   public override var intrinsicContentSize: NSSize {
     let text = (title as NSString).size(

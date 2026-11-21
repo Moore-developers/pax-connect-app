@@ -58,7 +58,7 @@ func (t *LogsTx) ClearLogTables(ctx context.Context) error {
 	t.columns.objects = nil
 	t.columns.events = nil
 	t.columns.optionIDs = nil
-	for _, table := range []string{"col_group_options", "col_option_values", "col_events", "col_connections", "col_event_index", "col_groups", "col_members", "col_objects", "col_answers", "col_raw", "col_sections", "col_fields", "col_identities", "col_traffic", "diagnostics"} {
+	for _, table := range []string{"col_group_options", "col_option_values", "col_events", "col_connections", "col_event_index", "col_groups", "col_members", "col_objects", "col_answers", "col_raw", "col_texts", "col_sections", "col_fields", "col_identities", "col_traffic", "diagnostics"} {
 		if _, err := t.tx.ExecContext(ctx, "DELETE FROM "+table); err != nil {
 			return fmt.Errorf("historystore: clear %s: %w", table, err)
 		}

@@ -16,13 +16,13 @@ enum AIUsageTrendFilter {
     return "__source:" + serviceSource.rawValue + "__"
   }
 
-  static func fallbackName(_ key: String) -> String? {
-    if key == harnessKey { return "DeepSeek 官方" }
-    if key == unassignedKey { return "来源待确认" }
+  static func fallbackName(_ key: String, context: PresentationContext) -> String? {
+    if key == harnessKey { return context.text("ai_usage.deepseek_official") }
+    if key == unassignedKey { return context.text("usage.source.unknown") }
     if key.hasPrefix("__source:"), key.hasSuffix("__"),
       let source = AIServiceSource(rawValue: String(key.dropFirst(9).dropLast(2)))
     {
-      return source.label
+      return source.label(context: context)
     }
     return nil
   }
@@ -51,7 +51,7 @@ enum AIUsageTrendFilter {
   /// Profile 与组内模型都按费用降序、Token 降序、名称 / id 升序；模型行不含合成模型，Profile 只要有请求就出现。
   /// 所选项已无请求时保留，挂在其 Profile 组下，Profile 也没有就补出该组。
   static func groups(
-    rows: [Row], selection: PaxUsageFilter,
+    rows: [Row], selection: PaxUsageFilter, context: PresentationContext,
     profileName: (String) -> String?, modelName: (String) -> String = { $0 }
   ) -> [PaxUsageFilterGroup] {
     struct Sum {
@@ -63,7 +63,8 @@ enum AIUsageTrendFilter {
       let key = profileKey(
         profileID: row.profileID, client: row.client, serviceSource: row.serviceSource)
       let name =
-        fallbackName(key) ?? profileName(key) ?? (row.profileName.isEmpty ? key : row.profileName)
+        fallbackName(key, context: context) ?? profileName(key)
+        ?? (row.profileName.isEmpty ? key : row.profileName)
       var entry = profiles[key] ?? (name, Sum(), [:])
       entry.sum.cost += row.cost
       entry.sum.tokens += row.tokens
@@ -93,7 +94,9 @@ enum AIUsageTrendFilter {
     if let wanted = selection.profileID {
       if !groups.contains(where: { $0.id == wanted }) {
         groups.append(
-          .init(id: wanted, name: fallbackName(wanted) ?? profileName(wanted) ?? wanted))
+          .init(
+            id: wanted,
+            name: fallbackName(wanted, context: context) ?? profileName(wanted) ?? wanted))
       }
       if let modelID = selection.modelID, let index = groups.firstIndex(where: { $0.id == wanted }),
         !groups[index].models.contains(where: { $0.id == modelID })

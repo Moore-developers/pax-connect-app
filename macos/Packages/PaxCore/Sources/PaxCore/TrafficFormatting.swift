@@ -9,37 +9,52 @@ public enum TrafficFormatting {
         TrafficRuleFormatting.isIPv4OnlyRule(rule: $0.rule, source: $0.source)
       }
   }
-  public static func connectionEvidence(_ row: TrafficRow) -> String {
-    if isIPv6LimitedPath(row) { return TrafficRuleFormatting.ipv6Limitation }
+  public static func connectionEvidence(_ row: TrafficRow, context: PresentationContext = .chinese)
+    -> String
+  {
+    if isIPv6LimitedPath(row) { return TrafficRuleFormatting.ipv6Limitation(context: context) }
     return
       row.exits.isEmpty
-      ? actualConnection(direction: row.direction, route: row.routeName)
+      ? actualConnection(direction: row.direction, route: row.routeName, context: context)
       : row.exits.map {
-        actualConnection(direction: $0.direction, route: $0.routeName) + " · \($0.connections) 个连接"
+        actualConnection(direction: $0.direction, route: $0.routeName, context: context)
+          + context.text("traffic_format.d3e2074222", ["arg0": String(describing: $0.connections)])
       }.joined(separator: "\n")
   }
-  public static func ruleEvidence(_ row: TrafficRow) -> String {
+  public static func ruleEvidence(_ row: TrafficRow, context: PresentationContext = .chinese)
+    -> String
+  {
     row.bases.map {
       TrafficRuleFormatting.package(rule: $0.rule, source: $0.source) + " · "
         + TrafficRuleFormatting.condition(rule: $0.rule, source: $0.source)
-        + " · \($0.connections) 个连接"
+        + context.text("traffic_format.d3e2074222", ["arg0": String(describing: $0.connections)])
     }.joined(separator: "\n")
   }
-  public static func actualConnections(_ row: TrafficRow) -> String {
+  public static func actualConnections(_ row: TrafficRow, context: PresentationContext = .chinese)
+    -> String
+  {
     guard !row.exits.isEmpty else {
-      return actualConnection(direction: row.direction, route: row.routeName)
+      return actualConnection(direction: row.direction, route: row.routeName, context: context)
     }
-    return row.exits.map { actualConnection(direction: $0.direction, route: $0.routeName) }.joined(
+    return row.exits.map {
+      actualConnection(direction: $0.direction, route: $0.routeName, context: context)
+    }.joined(
       separator: "\n")
   }
   public static func actualConnection(direction: String, route: String) -> String {
+    actualConnection(direction: direction, route: route, context: .chinese)
+  }
+  public static func actualConnection(
+    direction: String, route: String, context: PresentationContext
+  ) -> String {
     switch direction {
-    case "direct", "直连": return "直连"
-    case "blocked", "已阻断": return "已阻断"
+    case "direct", "直连": return context.text("common.direct")
+    case "blocked", "已阻断": return context.text("flow.blocked")
     case "proxy", "代理":
-      return route.isEmpty || route.hasPrefix("pax-node-") ? "代理线路名称未记录" : route
-    case "mixed": return "多个连接去向，见详情"
-    default: return "去向未记录"
+      return route.isEmpty || route.hasPrefix("pax-node-")
+        ? context.text("traffic.proxy_name_missing") : route
+    case "mixed": return context.text("traffic.mixed_destinations")
+    default: return context.text("traffic.direction_missing")
     }
   }
   public static func dateMinute(_ date: Date) -> String {
@@ -76,6 +91,9 @@ public enum TrafficFormatting {
       format: "%04d-%02d-%02d %02d:%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0,
       parts.hour ?? 0, parts.minute ?? 0)
   }
+  public static func logDateWithoutYear(_ date: Date) -> String {
+    String(logDate(date).dropFirst(5))
+  }
   public static func time(_ date: Date) -> String {
     date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).second(.twoDigits))
   }
@@ -106,18 +124,30 @@ public enum TrafficFormatting {
 }
 
 extension TrafficFormatting {
-  public static func connectionDuration(_ metrics: ConnectionMetrics) -> String {
+  public static func connectionDuration(
+    _ metrics: ConnectionMetrics, context: PresentationContext = .chinese
+  ) -> String {
     guard ["closed", "active", "observed"].contains(metrics.durationState) else { return "—" }
     let seconds = Double(metrics.durationMS) / 1000
     let text =
       seconds < 60
-      ? String(format: "%.1f秒", seconds)
+      ? context.text("traffic_duration.seconds", ["seconds": String(format: "%.1f", seconds)])
       : seconds < 3600
-        ? "\(Int(seconds) / 60)分\(Int(seconds) % 60)秒"
-        : "\(Int(seconds) / 3600)小时\(Int(seconds) / 60 % 60)分"
+        ? context.text(
+          "traffic_format.3717406cb2",
+          [
+            "arg0": String(describing: Int(seconds) / 60),
+            "arg1": String(describing: Int(seconds) % 60),
+          ])
+        : context.text(
+          "traffic_format.b44a73e31d",
+          [
+            "arg0": String(describing: Int(seconds) / 3600),
+            "arg1": String(describing: Int(seconds) / 60 % 60),
+          ])
     switch metrics.durationState {
-    case "active": return text + " · 未结束"
-    case "observed": return "已观测" + text
+    case "active": return text + context.text("traffic_format.d09dd1e6e4")
+    case "observed": return context.text("traffic_format.2aecd93622") + text
     default: return text
     }
   }
@@ -125,21 +155,27 @@ extension TrafficFormatting {
     guard ["complete", "partial"].contains(metrics.bytesState) else { return "—" }
     return "↑ " + bytes(metrics.upload) + " / ↓ " + bytes(metrics.download)
   }
-  public static func connectionMetricsNote(_ metrics: ConnectionMetrics) -> String {
-    let time = metrics.asOf.map(logDate) ?? "未知"
+  public static func connectionMetricsNote(
+    _ metrics: ConnectionMetrics, context: PresentationContext = .chinese
+  ) -> String {
+    let time = metrics.asOf.map(logDate) ?? context.text("traffic_format.4d8c1c5b42")
     let reasons = [
-      "observation_gap": "观测存在缺口",
-      "after_clear": "仅包含清除后的观测",
-      "historical_checkpoint": "历史截止时间无法精确还原",
-      "legacy_history": "旧历史缺少累计证据",
-      "missing_metrics": "未保存累计数据",
-      "missing_start": "未记录完整连接起点",
-      "counter_overflow": "计数超过可记录范围",
+      "observation_gap": context.text("traffic_format.c8786c5178"),
+      "after_clear": context.text("traffic_format.96554763bc"),
+      "historical_checkpoint": context.text("traffic_format.33446ca7d8"),
+      "legacy_history": context.text("traffic_format.6d0e886d90"),
+      "missing_metrics": context.text("traffic_format.c77be98933"),
+      "missing_start": context.text("traffic_format.2d957e9abe"),
+      "counter_overflow": context.text("traffic_format.4995141c93"),
     ]
     let state =
       metrics.bytesState == "partial"
-      ? "仅为已观测下界，存在缺口" : metrics.bytesState == "complete" ? "累计转发字节" : "累计数据未知"
-    let reason = metrics.reason.isEmpty ? "" : " · " + reasons[metrics.reason, default: "记录不完整"]
-    return state + " · 截至 " + time + reason
+      ? context.text("traffic_format.6b2461813f")
+      : metrics.bytesState == "complete"
+        ? context.text("traffic_format.d427994adb") : context.text("traffic_format.7decbfb05e")
+    let reason =
+      metrics.reason.isEmpty
+      ? "" : " · " + reasons[metrics.reason, default: context.text("traffic_format.4e9fcac3cb")]
+    return state + context.text("traffic_format.d487d80fbe") + time + reason
   }
 }

@@ -40,11 +40,11 @@ extension AIUsageLogView {
       lines.spacing = PaxTheme.Spacing.xs
       return lines
     case 2:
-      let text = request.sourceLabel
+      let text = request.sourceLabel(context: context)
       let label = PaxText.tableLabel(text)
       label.lineBreakMode = .byTruncatingTail
       label.alignment = .center
-      label.toolTip = text + "\n来源按本机配置与请求时间推定；终端私有配置和并行旧会话可能无法确认。"
+      label.toolTip = text + context.text("ai_logs.438595dea5")
       return label
     case 3:
       // Plain text, no tag background.
@@ -58,8 +58,8 @@ extension AIUsageLogView {
         numeric: true)
       speed.textColor = PaxTheme.Color.healthy
       let elapsed = request.elapsed.map { String(format: "%.1fs", $0) } ?? "—"
-      let timingLabel = secondary(elapsed + " 总耗时")
-      timingLabel.toolTip = "发送到结束；缺少可靠发送时间时显示—。TPS = 输出 Token ÷ 总耗时"
+      let timingLabel = secondary(elapsed + context.text("ai_logs.eca0f77e4a"))
+      timingLabel.toolTip = context.text("ai_logs.4336994cca")
       return AIUsageLogPairView(speed, timingLabel, centered: true)
     case 5:
       // Token above cost, both right-aligned in their own colors.
@@ -69,7 +69,7 @@ extension AIUsageLogView {
       let fee = PaxText.tableLabel("", numeric: true, alignment: .right)
       AIUsageCostDisplay.apply(
         fee, official: request.officialCostLabel,
-        channel: request.hasChannelEstimate ? request.costLabel : nil)
+        channel: request.hasChannelEstimate ? request.costLabel : nil, context: context)
       let lines = AIUsageLayout.stack([tokens, fee])
       lines.spacing = PaxTheme.Spacing.xs
       return lines
@@ -80,13 +80,20 @@ extension AIUsageLogView {
       return rate
     default:
       // ✓ on success; a short error on failure with the full reason in the tooltip.
-      let text = request.succeeded ? "✓" : AIUsageFormatting.failureBrief(request.errorMessage)
+      let text =
+        request.succeeded
+        ? "✓" : AIUsageFormatting.failureBrief(request.errorMessage, context: context)
       let label = PaxText.tableLabel(text)
       label.textColor = request.succeeded ? PaxTheme.Color.healthy : PaxTheme.Color.error
       label.lineBreakMode = .byTruncatingTail
       label.alignment = .center
-      label.toolTip = request.succeeded ? "成功" : request.errorMessage ?? "请求失败"
-      label.setAccessibilityLabel(request.succeeded ? "成功" : "失败 " + text)
+      label.toolTip =
+        request.succeeded
+        ? context.text("ai_logs.053461ce86")
+        : request.errorMessage ?? context.text("ai_logs.126fbf59cf")
+      label.setAccessibilityLabel(
+        request.succeeded
+          ? context.text("ai_logs.053461ce86") : context.text("ai_logs.d56ce478f8") + text)
       return label
     }
   }
@@ -118,14 +125,18 @@ enum AIUsageLogFormat {
   }
   /// The five summary cards, computed from the totals of every row matching the period and filters;
   /// the first card carries the period name.
-  static func stats(period: String, totals: AIUsageSummary) -> [Stat] {
+  static func stats(period: String, totals: AIUsageSummary, context: PresentationContext = .chinese)
+    -> [Stat]
+  {
     [
       .init(
-        title: period + " · 筛选结果", value: AIUsageFormatting.count(totals.count) + " 条",
+        title: period + context.text("ai_logs.e60e6f6e9d"),
+        value: AIUsageFormatting.count(totals.count) + context.text("ai_logs.6fb2840d56"),
         color: tokenColor),
       .init(title: "Token", value: AIUsageFormatting.tokens(totals.tokens), color: tokenColor),
       .init(
-        title: totals.hasChannelEstimate ? "官方费用 / 渠道费用" : "API 等值估算",
+        title: totals.hasChannelEstimate
+          ? context.text("ai_logs.4af36ad20b") : context.text("ai_logs.0bd0fec783"),
         value: totals.hasChannelEstimate
           ? AIUsageCostDisplay.text(
             official: totals.officialCostLabel, channel: totals.costLabel)
@@ -133,15 +144,20 @@ enum AIUsageLogFormat {
         color: AIUsageCostDisplay.officialColor,
         officialCost: totals.hasChannelEstimate ? totals.officialCostLabel : nil,
         channelCost: totals.hasChannelEstimate ? totals.costLabel : nil),
-      .init(title: "缓存率", value: AIUsageFormatting.percent(totals.cache), color: cacheColor),
       .init(
-        title: "成功", value: AIUsageFormatting.percent(totals.successRate),
+        title: context.text("ai_logs.2a4659b69b"), value: AIUsageFormatting.percent(totals.cache),
+        color: cacheColor),
+      .init(
+        title: context.text("ai_logs.053461ce86"),
+        value: AIUsageFormatting.percent(totals.successRate),
         color: PaxTheme.Color.healthy),
     ]
   }
   /// "今日 · 筛选结果 1,930 条 · Token 375.4M · …" plain text for tooltips and accessibility.
-  static func summary(period: String, totals: AIUsageSummary) -> String {
-    let items = stats(period: period, totals: totals)
+  static func summary(
+    period: String, totals: AIUsageSummary, context: PresentationContext = .chinese
+  ) -> String {
+    let items = stats(period: period, totals: totals, context: context)
     return items[0].title + " " + items[0].value
       + items.dropFirst().map { " · " + $0.title + " " + $0.value }.joined()
   }

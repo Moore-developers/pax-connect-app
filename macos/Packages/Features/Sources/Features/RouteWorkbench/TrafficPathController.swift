@@ -3,15 +3,15 @@ import Observation
 import PaxCore
 import PaxUI
 
-/// One scrolling report. The reading position never changes detection or export scope.
+/// One scrolling view for network diagnostic results.
 @MainActor final class TrafficPathController: RouteModalController {
+  override var localizedSubtitleKey: String? { "modal.network.environment_note" }
+  override var localizedTitleKey: String? { "routes.diagnostics" }
   private let store: TrafficPathStore
   private let connection: ConnectionStore?
   private var workbench: NetworkDiagnosticView?
-  private let progressView = NetworkDiagnosticProgressView()
+  private lazy var progressView = NetworkDiagnosticProgressView(context: interfaceCopy.context)
   private var refreshButton: PaxRouteButton?
-  private var exportButton: PaxRouteButton?
-  private var previewButton: PaxRouteButton?
   private var observedEnvironmentBoundary: String?
   private var observedBoundary: String?
   private var task: Task<Void, Never>?
@@ -28,7 +28,8 @@ import PaxUI
 
   override func loadView() {
     super.loadView()
-    let refresh = button("开始检测", #selector(recheck), primary: true)
+    let refresh = button(
+      self.interfaceCopy.text("action.diagnostic.start"), #selector(recheck), primary: true)
     refresh.setAccessibilityIdentifier("network-diagnostic-run")
     refreshButton = refresh
     pane.identityActions.insertArrangedSubview(refresh, at: 0)
@@ -37,21 +38,15 @@ import PaxUI
     progressView.onResize = { [weak self] in self?.pane.invalidateContentSize() }
     if let network = store.network {
       network.onlyDifferences = false
-      let content = NetworkDiagnosticView(store: network, connection: connection)
+      let content = NetworkDiagnosticView(
+        store: network, connection: connection, context: interfaceCopy.context)
       content.onResize = { [weak self] in self?.pane.invalidateContentSize() }
       workbench = content
       pane.add(content)
     } else {
-      pane.add(PaxRouteText.label("当前连接不支持网络诊断。", wrapping: true))
+      pane.add(self.interfaceCopy.routeLabel("action.diagnostic.unavailable", wrapping: true))
     }
-    let export = button("导出报告", #selector(exportReport))
-    exportButton = export
-    let preview = button("报告预览", #selector(previewReport))
-    previewButton = preview
-    pane.setActions([
-      button("关闭", #selector(close)), preview,
-      button("复制报告", #selector(copyReport)), export,
-    ])
+    pane.setActions([button(self.interfaceCopy.text("common.close"), #selector(close))])
     observe()
     task = Task { [weak self, store] in
       await store.refresh()
@@ -84,18 +79,23 @@ import PaxUI
     observedBoundary = boundary
     refreshButton?.title =
       network?.busy == true || environment?.busy == true
-      ? "停止检测" : environment?.report == nil && network?.report == nil ? "开始检测" : "重新检测"
+      ? self.interfaceCopy.text("interface_detail.605fca0de8")
+      : environment?.report == nil && network?.report == nil
+        ? self.interfaceCopy.text("action.diagnostic.start")
+        : self.interfaceCopy.text("interface_detail.a13550662f")
     refreshButton?.isEnabled = network != nil
     refreshButton?.isLoading = network?.busy == true || environment?.busy == true
-    exportButton?.isEnabled =
-      environment?.report != nil || network?.report != nil || store.report != nil
-    previewButton?.title = network?.preview == true ? "返回诊断" : "报告预览"
-    let messages = [network?.message, environment?.message].compactMap { $0 }
-    let historyMessages = ["显示上次线路检测结果，请按需重新检测", "显示上次环境检测结果，请按需重新检测"]
+    let messages = [
+      network?.message(context: interfaceCopy.context),
+      environment?.message(context: interfaceCopy.context),
+    ].compactMap { $0 }
+    let historical =
+      (network?.isShowingHistoryMessage ?? true) && (environment?.isShowingHistoryMessage ?? true)
     pane.status.stringValue =
-      network?.historyMessage
-      ?? (messages.allSatisfy { historyMessages.contains($0) }
-        ? "显示上次检测结果，可重新检测更新" : messages.joined(separator: "；"))
+      network?.historyMessage(context: interfaceCopy.context)
+      ?? (historical
+        ? interfaceCopy.text("interface_detail.f4d97d29fd")
+        : messages.joined(separator: interfaceCopy.context.language == .chinese ? "；" : "; "))
     pane.status.isHidden = false
     workbench?.apply()
   }
@@ -106,30 +106,6 @@ import PaxUI
       network.currentEnvironment?.cancel()
     } else {
       network.startAll()
-    }
-  }
-  @objc private func previewReport() {
-    guard let network = store.network else { return }
-    network.preview.toggle()
-    workbench?.apply()
-    pane.layoutSubtreeIfNeeded()
-    pane.bodyScroll.contentView.scroll(to: .zero)
-  }
-  private func reportText() -> String { workbench?.reportText() ?? "尚未检测" }
-  @objc private func copyReport() {
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(reportText(), forType: .string)
-  }
-  @objc private func exportReport() {
-    guard let window = view.window else { return }
-    let panel = NSSavePanel()
-    panel.nameFieldStringValue = "Pax-线路诊断.md"
-    let content = reportText()
-    panel.beginSheetModal(for: window) { [weak self] result in
-      guard result == .OK, let url = panel.url else { return }
-      do { try content.write(to: url, atomically: true, encoding: .utf8) } catch {
-        self?.showError(error)
-      }
     }
   }
   private func clear() {

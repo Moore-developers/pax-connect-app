@@ -211,7 +211,7 @@ func TestJournalSchemaMismatchStartsNewFile(t *testing.T) {
 	}
 }
 
-func TestJournalFilesDeleteAndEvictOver(t *testing.T) {
+func TestJournalFilesAndDeleteHour(t *testing.T) {
 	dir := historyDir(t)
 	ctx := context.Background()
 	j := mustJournal(t, dir)
@@ -225,14 +225,10 @@ func TestJournalFilesDeleteAndEvictOver(t *testing.T) {
 	if err != nil || len(files) != 5 || !files[0].Hour.Equal(baseHour) || files[0].Bytes <= 0 {
 		t.Fatalf("files: %+v %v", files, err)
 	}
-	evicted, err := j.EvictOver(1<<40, 3)
-	if err != nil || len(evicted) != 2 || !evicted[0].Equal(baseHour) {
-		t.Fatalf("file-count eviction: %v %v", evicted, err)
+	if err = j.DeleteHour(baseHour); err != nil {
+		t.Fatal(err)
 	}
-	if evicted, err = j.EvictOver(1, 6); err != nil || len(evicted) != 2 {
-		t.Fatalf("byte eviction must keep the newest file: %v %v", evicted, err)
-	}
-	if files, _ = j.Files(); len(files) != 1 || !files[0].Hour.Equal(baseHour.Add(4*time.Hour)) {
+	if files, err = j.Files(); err != nil || len(files) != 4 || !files[0].Hour.Equal(baseHour.Add(time.Hour)) {
 		t.Fatalf("remaining: %+v", files)
 	}
 	if err = j.DeleteHour(baseHour.Add(4 * time.Hour)); err != nil {

@@ -30,7 +30,7 @@ func limitBands(bands [3]aiusage.LimitBand) []*pb.AIUsageLimitBand {
 func limitRows(rows []aiusage.LimitRow) []*pb.AIUsageLimitRow {
 	var out []*pb.AIUsageLimitRow
 	for _, r := range rows {
-		v := &pb.AIUsageLimitRow{Id: r.ID, Cli: r.CLI, SessionId: r.Session, Title: r.Title, Model: r.Model, Effort: r.Effort, Emphasized: r.Emphasized, Note: r.Note, Lines: modelLimit(r.Lines), Multiple: r.Multiple, OverSpend: optionalLimitMoney(r.OverSpend), Unpriced: r.Unpriced}
+		v := &pb.AIUsageLimitRow{Id: r.ID, Cli: r.CLI, SessionId: r.Session, Title: r.Title, TitleSource: r.TitleSource, RawTitle: r.RawTitle, Model: r.Model, Effort: r.Effort, Emphasized: r.Emphasized, Note: r.Note, SessionCount: r.SessionCount, Lines: modelLimit(r.Lines), Multiple: r.Multiple, OverSpend: optionalLimitMoney(r.OverSpend), Unpriced: r.Unpriced}
 		v.Bands = limitBands(r.Bands)
 		for _, l := range r.ModelLines {
 			v.ModelLines = append(v.ModelLines, &pb.AIUsageLimitModelLine{Model: l.Model, Lines: modelLimit(l.Lines), Requests: l.Requests})

@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "zh-Hans",
+  "catalogVersion": "1",
+  "messages": {
+    "common.cancel": "取消",
+    "common.close": "关闭",
+    "common.ok": "好",
+    "common.unknown": "未知",
+    "common.proxy": "代理",
+    "common.direct": "直连",
+    "common.selected": "已选中",
+    "common.unselected": "未选中",
+    "common.no_data": "暂无数据",
+    "common.more": "更多",
+    "common.more_groups": "更多分组",
+    "common.all": "全部",
+    "common.default": "默认"
+  }
+}

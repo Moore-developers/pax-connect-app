@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import PaxCore
 import PaxUI
 
@@ -12,11 +13,16 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
   public static var loadingImage: NSImage { PaxMenuBarIcon.image(isActive: false) }
   public var onStatusChange: ((NSImage, String) -> Void)? { didSet { update() } }
   public var isTerminating = false { didSet { update() } }
+  private let language: InterfaceLanguageStore?
+  private var frozenContext = PresentationContext.chinese
+  private var context: PresentationContext {
+    session.isOpen ? frozenContext : language?.context ?? .chinese
+  }
   let session: MenuBarSession
   private let navigate: (Destination) -> Void
   private let quit: () -> Void
   private let selectedItem = NSMenuItem()
-  private let emptyRoutesItem = NSMenuItem(title: "暂无可用线路", action: nil, keyEquivalent: "")
+  private let emptyRoutesItem = NSMenuItem()
   private var routeItems: [NSMenuItem] = []
   private let statusItem = NSMenuItem()
   private let toggleItem = NSMenuItem()
@@ -26,8 +32,10 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
 
   public init(
     routes: RoutesStore, connection: ConnectionStore,
+    language: InterfaceLanguageStore? = nil,
     onNavigate: @escaping (Destination) -> Void, onQuit: @escaping () -> Void
   ) {
+    self.language = language
     session = MenuBarSession(routes: routes, connection: connection)
     navigate = onNavigate
     quit = onQuit
@@ -36,8 +44,10 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
   }
   public init(
     demo: WorkbenchDemoStore,
+    language: InterfaceLanguageStore? = nil,
     onNavigate: @escaping (Destination) -> Void, onQuit: @escaping () -> Void
   ) {
+    self.language = language
     session = MenuBarSession(routes: demo.catalog, connection: demo.connection, demo: demo)
     navigate = onNavigate
     quit = onQuit
@@ -50,8 +60,19 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
     session.onChange = { [weak self] in self?.update() }
     build()
     update()
+    observeLanguage()
+  }
+  private func observeLanguage() {
+    withObservationTracking {
+      _ = language?.context
+      if !session.isOpen { update() }
+    } onChange: { [weak self] in
+      Task { @MainActor in self?.observeLanguage() }
+    }
   }
   public func menuWillOpen(_ menu: NSMenu) {
+    frozenContext = language?.context ?? .chinese
+    session.context = frozenContext
     session.open()
     build()
     update()
@@ -74,13 +95,17 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
     menu.addItem(emptyRoutesItem)
     for row in session.recommendationRows { addRoute(row) }
     menu.addItem(.separator())
-    add("Dashboard", .dashboard, symbol: "square.grid.2x2")
-    add("导入线路", .importRoutes, symbol: "square.and.arrow.down")
-    add("全部线路", .routes, symbol: "point.3.connected.trianglepath.dotted")
-    add("流量分析", .traffic, symbol: "chart.xyaxis.line")
-    add("日志记录", .logs, symbol: "list.bullet.rectangle")
-    add("系统设置", .settings, symbol: "gearshape")
-    configure(problemItem, title: "查看连接问题…", action: #selector(showProblems))
+    add(context.text("navigation.overview"), .dashboard, symbol: "square.grid.2x2")
+    add(context.text("network_controls.415aab691b"), .importRoutes, symbol: "square.and.arrow.down")
+    add(
+      context.text("network_controls.34e6d4fac6"), .routes,
+      symbol: "point.3.connected.trianglepath.dotted")
+    add(context.text("network_controls.5545232cfb"), .traffic, symbol: "chart.xyaxis.line")
+    add(context.text("network_controls.5a2541624f"), .logs, symbol: "list.bullet.rectangle")
+    add(context.text("network_controls.68ea5dd4d7"), .settings, symbol: "gearshape")
+    configure(
+      problemItem, title: context.text("network_controls.99430bb999"),
+      action: #selector(showProblems))
     problemItem.image = icon("exclamationmark.triangle")
     menu.addItem(problemItem)
     menu.addItem(.separator())
@@ -118,21 +143,29 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
     menu.addItem(item)
   }
   private func update() {
+    session.context = context
     onStatusChange?(session.statusImage, "Pax Connect · " + session.status)
-    statusItem.title = "Pax Connect · " + (isTerminating ? "正在退出…" : session.status)
+    statusItem.title =
+      "Pax Connect · "
+      + (isTerminating ? context.text("network_controls.0ae60dd37b") : session.status)
     statusItem.image = session.statusImage
     toggleItem.image = icon(session.connection.proxyEnabled ? "pause.circle" : "play.circle")
-    toggleItem.title = session.connection.proxyEnabled ? "关闭代理" : "开启代理"
+    toggleItem.title =
+      session.connection.proxyEnabled
+      ? context.text("network_controls.4c3933d49f") : context.text("network_controls.7cca04973e")
     toggleItem.isEnabled = session.canToggle && !isTerminating
     feedbackItem.title = session.feedback ?? ""
     feedbackItem.isHidden = session.feedback == nil
     problemItem.isHidden = !session.hasProblem
     problemItem.isEnabled = !isTerminating
-    quitItem.title = session.connection.proxyEnabled ? "关闭代理并退出" : "退出 Pax Connect"
+    quitItem.title =
+      session.connection.proxyEnabled
+      ? context.text("network_controls.4f5458731a") : context.text("network_controls.a553ab0600")
     quitItem.isEnabled = !isTerminating
     for item in menu.items where item.action == #selector(openPage(_:)) {
       item.isEnabled = !isTerminating
     }
+    emptyRoutesItem.title = context.text("network_controls.f79a978d6b")
     emptyRoutesItem.isHidden = session.selectedRow != nil || !session.recommendationRows.isEmpty
     if let selected = session.selectedRow {
       selectedItem.isHidden = false
@@ -164,7 +197,9 @@ public final class MenuBarMenuController: NSObject, NSMenuDelegate {
     item.state = row.checked ? .on : .off
     item.isEnabled = row.enabled && !isTerminating
     item.toolTip = row.route.name + "；" + row.detail
-    item.setAccessibilityLabel(row.route.name + (row.checked ? "，当前线路，" : "，") + row.latency)
+    item.setAccessibilityLabel(
+      row.route.name + (row.checked ? context.text("network_controls.acfd7e498c") : "，")
+        + row.latency)
     item.representedObject = row.id
   }
   @objc private func selectRoute(_ sender: NSMenuItem) {

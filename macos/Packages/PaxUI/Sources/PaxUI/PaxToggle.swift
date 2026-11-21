@@ -9,6 +9,12 @@ public final class PaxToggle: NSView {
     get { toggle.state == .on }
     set { toggle.state = newValue ? .on : .off }
   }
+  public func apply(label title: String) {
+    label.stringValue = title
+    setAccessibilityLabel(title)
+    toggle.setAccessibilityLabel(title)
+    invalidateIntrinsicContentSize()
+  }
 
   public var target: AnyObject? {
     get { toggle.target }

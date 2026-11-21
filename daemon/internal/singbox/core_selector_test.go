@@ -3,10 +3,68 @@ package singbox
 import (
 	"context"
 	"encoding/json"
-	"pax-connect/daemon/internal/config"
+	"errors"
 	"reflect"
+	"strings"
 	"testing"
+
+	"pax-connect/daemon/internal/config"
 )
+
+func TestCoreCatalogProfileOmitsUnusableFixedRouteWithoutTakingDownCurrentRoute(t *testing.T) {
+	ctx := context.Background()
+	rules := testRules(t)
+	b := testProfile()
+	b.ID, b.IPv4Only = "b", true
+	a := b
+	a.ID, a.Server = "a", "2001:db8::1"
+	library := config.NewRoutingLibrary()
+	library.Packages[0].Rules = []config.RoutingEntry{
+		{ID: "fixed", Method: "domain", Target: "api.anthropic.com", Destination: "route:a", Enabled: true},
+	}
+	b.Routing = &library
+	raw, err := CoreCatalogProfile(ctx, []config.RouteConfig{a, b}, b, rules, "127.0.0.1:17890")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(raw, config.RuntimeTag(a)) || !strings.Contains(raw, config.RuntimeTag(b)) ||
+		!strings.Contains(raw, "\"no_drop\":true") {
+		t.Fatal("unusable candidate survived in the profile or lost its reject rule")
+	}
+	if _, err = ValidateCoreOptions(ctx, []byte(raw), t.TempDir(), 17890); err != nil {
+		t.Fatal("the core could not admit B with A rejected:", err)
+	}
+	if _, err = CoreCatalogProfile(ctx, []config.RouteConfig{a, b}, a, rules, "127.0.0.1:17890"); !errors.Is(err, config.ErrIPv6Unavailable) {
+		t.Fatalf("selecting unusable A should fail explicitly, got %v", err)
+	}
+}
+
+func TestCoreCatalogProfileOmitsRouteRejectedByNativeConstructor(t *testing.T) {
+	ctx := context.Background()
+	rules := testRules(t)
+	b := testProfile()
+	b.ID = "b"
+	a, err := config.RouteFromDocument([]byte(`{
+		"type":"vmess","tag":"A","server":"test.invalid","server_port":443,
+		"uuid":"00000000-0000-4000-8000-000000000001","packet_encoding":"unknown",
+		"transport":{"type":"ws","path":"/"}
+	}`), "a", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = ValidateRouteDocument(ctx, a.Document); err != nil {
+		t.Fatalf("fixture should decode like a saved legacy document: %v", err)
+	}
+	library := config.NewRoutingLibrary()
+	library.Packages[0].Rules = []config.RoutingEntry{
+		{ID: "fixed", Method: "domain", Target: "api.anthropic.com", Destination: "route:a", Enabled: true},
+	}
+	b.Routing = &library
+	raw, err := CoreCatalogProfile(ctx, []config.RouteConfig{a}, b, rules, "127.0.0.1:17890")
+	if err != nil || strings.Contains(raw, config.RuntimeTag(a)) || !strings.Contains(raw, "\"no_drop\":true") {
+		t.Fatalf("invalid outbound should be replaced by the matching reject: %v", err)
+	}
+}
 
 func TestCoreCatalogProfileBuildsSelectableRoutes(t *testing.T) {
 	a := testProfile()

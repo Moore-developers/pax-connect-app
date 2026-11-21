@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "catalogVersion": "1",
+  "messages": {
+    "diagnostic_basic.type.hosting": "Hosting / Datacenter",
+    "diagnostic_basic.type.isp": "Residential Network",
+    "diagnostic_basic.type.mobile": "Mobile Network",
+    "diagnostic_basic.type.business": "Business Network",
+    "diagnostic_basic.type.edu": "Education Network",
+    "diagnostic_basic.type.pseudo": "Suspected Residential Proxy",
+    "diagnostic_basic.type.native": "Registered and Inferred Usage Countries Match (Supplier Assessment)",
+    "diagnostic_basic.type.broadcast": "Registered and Inferred Usage Countries Differ (Supplier Assessment)",
+    "diagnostic_basic.missing": "Not Provided",
+    "diagnostic_basic.state.hit": "Flagged",
+    "diagnostic_basic.state.clear": "Not Flagged",
+    "diagnostic_basic.state.information": "Information",
+    "diagnostic_basic.state.unknown": "Unknown"
+  }
+}

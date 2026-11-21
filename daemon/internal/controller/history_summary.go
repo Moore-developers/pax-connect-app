@@ -92,5 +92,5 @@ func summaryRecord(row *pb.ProductLog, m config.ConnectionMetrics, at time.Time)
 		row.Message = row.SystemEvent.Name + "：" + status
 
 	}
-	return &pb.LogRecord{SystemEvent: row.SystemEvent, CategoryName: categoryName, CategorySymbol: categorySymbol, SystemCategory: row.SystemCategory, OperationFrom: row.OperationFrom, OperationTo: row.OperationTo, Kind: kind, RecordId: row.RecordId, EventId: row.EventId, Level: row.Level, Title: row.Message, Source: row.Source, Flow: row.Flow, Metrics: metricsProto(m), FirstAt: row.FirstAt, LastAt: row.LastAt, EventCount: row.Occurrences, AsOf: timestamppb.New(at)}
+	return &pb.LogRecord{SystemEvent: row.SystemEvent, CategoryName: categoryName, CategorySymbol: categorySymbol, SystemCategory: row.SystemCategory, OperationFrom: row.OperationFrom, OperationTo: row.OperationTo, Kind: kind, RecordId: row.RecordId, EventId: row.EventId, Level: row.Level, Title: row.Message, TitleText: row.MessageText, Source: row.Source, Flow: row.Flow, Metrics: metricsProto(m), FirstAt: row.FirstAt, LastAt: row.LastAt, EventCount: row.Occurrences, AsOf: timestamppb.New(at)}
 }

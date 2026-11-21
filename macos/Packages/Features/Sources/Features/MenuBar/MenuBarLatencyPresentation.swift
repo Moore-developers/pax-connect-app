@@ -7,10 +7,10 @@ struct MenuBarLatencyPresentation {
   let text: String
   let detail: String
 
-  init(route: NodeProfile) {
+  init(route: NodeProfile, context: PresentationContext = .chinese) {
     guard let summary = route.testSummary else {
-      text = "未测试"
-      detail = "尚无已完成的线路测试"
+      text = context.text("detail_controls.092b520558")
+      detail = context.text("detail_controls.cc66d1a9f7")
       return
     }
     let stale =
@@ -20,17 +20,21 @@ struct MenuBarLatencyPresentation {
     let current = summary.method == "https204-median-v3"
     let reading: String
     if !summary.success {
-      reading = summary.error.map(ProductErrorPresentation.message) ?? "测试失败"
+      reading =
+        summary.error.map(ProductErrorPresentation.message)
+        ?? context.text("detail_controls.77c9e582e8")
     } else if current && (summary.stableSamples != 3 || !summary.stableError.isEmpty) {
-      reading = "样本不足（\(summary.stableSamples)/3）"
+      reading = context.text(
+        "detail_controls.d59b5691ac", ["arg0": String(describing: summary.stableSamples)])
     } else {
       reading =
         MeasurementFormatting.latency(
-          Double(current ? summary.stableMS : summary.durationMS))?.text ?? "未测试"
+          Double(current ? summary.stableMS : summary.durationMS))?.text
+        ?? context.text("detail_controls.092b520558")
     }
-    text = reading + (stale || !current ? " · 历史" : "")
+    text = reading + (stale || !current ? context.text("detail_controls.c1eb2557f1") : "")
     detail =
       "\(reading)；\(MeasurementTimestamp.text(summary.at))；\(summary.method)"
-      + (stale ? "；配置已变更" : "")
+      + (stale ? context.text("detail_controls.4ea42c524c") : "")
   }
 }

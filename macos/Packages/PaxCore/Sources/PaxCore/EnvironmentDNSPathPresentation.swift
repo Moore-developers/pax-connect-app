@@ -23,74 +23,100 @@ extension EnvironmentDiagnosticPresentation {
   }
 
   /// Only exact-query transport observations can confirm a path; countries cannot.
-  public static func dnsPathAssessment(_ report: EnvironmentDiagnosticReport, waiting: Bool)
+  public static func dnsPathAssessment(
+    _ report: EnvironmentDiagnosticReport, waiting: Bool, context: PresentationContext = .chinese
+  )
     -> NetworkDiagnosticPresentation.Assessment
   {
     let mac = dnsPathState(report.mac)
     let browser = dnsPathState(report.browser)
     if [mac, browser].contains("bypass") {
-      return .init(text: "发现绕过代理 · 本轮海外 DNS 请求直接出站", tone: .difference)
+      return .init(text: context.text("environment_evidence.fb1a0abba6"), tone: .difference)
     }
     if mac == "proxy" && browser == "proxy" {
-      return .init(text: "本次 DNS 请求已确认经代理 · Mac 与浏览器均经代理", tone: .matching)
+      return .init(text: context.text("environment_evidence.1493c24466"), tone: .matching)
     }
     if mac != "unknown" && browser != "unknown" {
       return .init(
         text: mac == "policy_direct" && browser == "policy_direct"
-          ? "按 DNS 分流规则直连 · 本轮使用国内加密 DNS"
-          : "请求路径已确认 · 本轮包含代理与按规则直连的 DNS", tone: .information)
+          ? context.text("environment_evidence.aa49876090")
+          : context.text("environment_evidence.fd2c877e91"), tone: .information)
     }
     if mac == "proxy" || browser == "proxy" {
       return .init(
-        text: "部分已确认经代理 · " + (mac == "proxy" ? "浏览器" : "Mac") + "请求路径未确认",
+        text: context.text("environment_evidence.eae88c7670")
+          + (mac == "proxy" ? context.text("environment_evidence.e19c3b9e26") : "Mac")
+          + context.text("environment_evidence.8e50c04ce9"),
         tone: .pending)
     }
     return .init(
-      text: waiting ? "正在核对 DNS 请求路径" : "请求路径未确认 · 尚无完整的本轮 DNS 传输证据",
+      text: waiting
+        ? context.text("environment_evidence.0d092c6a3d")
+        : context.text("environment_evidence.19c14c203e"),
       tone: .pending)
   }
 
-  public static func dnsPathDetails(_ sample: EnvironmentDiagnosticReport.Sample, name: String)
+  public static func dnsPathDetails(
+    _ sample: EnvironmentDiagnosticReport.Sample, name: String,
+    context: PresentationContext = .chinese
+  )
     -> String
   {
-    var lines = [name + " DNS 请求路径"]
+    var lines = [name + context.text("environment_evidence.c1cd782403")]
     if let check = sample.checks?.first(where: { $0.kind == "dns_path" }),
       let coverage = try? JSONDecoder().decode(DNSCoverage.self, from: Data(check.value.utf8)),
       coverage.expected == 12, (0...12).contains(coverage.observed), coverage.unverified >= 0
     {
       let state: String
       switch dnsPathState(sample) {
-      case "proxy": state = "本轮解析已确认经代理路径处理"
-      case "policy_direct": state = "按 DNS 分流规则直连"
-      case "mixed": state = "经代理与按规则直连"
-      case "bypass": state = "海外 DNS 请求绕过代理"
-      default: state = "请求路径未确认"
+      case "proxy": state = context.text("environment_evidence.ac8b76972a")
+      case "policy_direct": state = context.text("environment_evidence.baba0195ed")
+      case "mixed": state = context.text("environment_evidence.4c1fd53512")
+      case "bypass": state = context.text("environment_evidence.e8d903bc08")
+      default: state = context.text("environment_evidence.8e50c04ce9")
       }
-      lines.append(state + " · 已关联 \(coverage.observed)/12 个测试域名")
-      if coverage.unverified > 0 { lines.append("另有 \(coverage.unverified) 条查询缺少上游响应证据") }
-      if check.state == "unavailable" { lines.append("Pax 未接管或本轮路径观测不可用") }
+      lines.append(
+        state
+          + context.text(
+            "environment_evidence.ea8ebc8528", ["arg0": String(describing: coverage.observed)]))
+      if coverage.unverified > 0 {
+        lines.append(
+          context.text(
+            "environment_evidence.1c4ab9aa3c", ["arg0": String(describing: coverage.unverified)]))
+      }
+      if check.state == "unavailable" {
+        lines.append(context.text("environment_evidence.453ef833f2"))
+      }
     } else {
-      lines.append("旧记录未采集或本轮尚无路径证据")
+      lines.append(context.text("environment_evidence.e68b61a00f"))
     }
     for check in sample.checks ?? [] where check.kind == "dns_upstream" {
       guard let upstream = try? JSONDecoder().decode(DNSUpstream.self, from: Data(check.value.utf8))
       else { continue }
       let direction: String
       switch check.state {
-      case "proxy": direction = "经代理"
+      case "proxy": direction = context.text("environment_evidence.c49b87cc96")
       case "remote_proxy":
-        let route = upstream.route.flatMap { $0.isEmpty ? nil : $0 } ?? "代理线路"
-        lines.append("域名已交由「" + route + "」解析 · 已收到代理连接响应；具体解析器由代理端选择")
+        let route =
+          upstream.route.flatMap { $0.isEmpty ? nil : $0 }
+          ?? context.text("environment_evidence.3306bcb123")
+        lines.append(
+          context.text("environment_evidence.ae619ec022") + route
+            + context.text("environment_evidence.e259aa6639"))
         continue
-      case "policy_direct": direction = "按规则直连"
-      case "bypass": direction = "绕过代理"
+      case "policy_direct": direction = context.text("environment_evidence.7108b256f4")
+      case "bypass": direction = context.text("environment_evidence.52e1d924db")
       default: continue
       }
       lines.append(
-        direction + " · " + (upstream.pool == "domestic" ? "国内" : "海外") + "加密 DNS · "
-          + upstream.server + " · 出站 " + upstream.outbound)
+        direction + " · "
+          + (upstream.pool == "domestic"
+            ? context.text("environment_evidence.cec69ce036")
+            : context.text("environment_evidence.0f5759bd0e"))
+          + context.text("environment_evidence.c091798197")
+          + upstream.server + context.text("environment_evidence.0868a21e0e") + upstream.outbound)
     }
-    lines.append("仅对应本轮测试域名；本机 DNS 上游响应与交由代理解析分别记录，未关联到的请求仍保留未知。")
+    lines.append(context.text("environment_evidence.640c70550a"))
     return lines.joined(separator: "\n")
   }
 }

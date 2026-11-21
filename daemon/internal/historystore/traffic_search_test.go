@@ -52,7 +52,7 @@ func TestSearchEvidenceSharesTransactionAndExactCutoff(t *testing.T) {
 	}
 }
 
-func TestSearchEvidenceRetentionAndCapacityUseBucketFrontier(t *testing.T) {
+func TestSearchEvidenceRetentionUsesBucketFrontier(t *testing.T) {
 	ctx := context.Background()
 	s := mustTraffic(t, historyDir(t))
 	at := baseHour
@@ -86,10 +86,11 @@ func TestSearchEvidenceRetentionAndCapacityUseBucketFrontier(t *testing.T) {
 	if err := s.Reader().QueryRow("SELECT count(*) FROM search_evidence").Scan(&n); err != nil || n != 5 {
 		t.Fatal(n, err)
 	}
-	if _, err := s.EvictOldest(ctx, 0, Limits{Rows: 2, Duration: time.Second}); err != nil {
-		t.Fatal(err)
+	cutoff := at.Add(4 * time.Hour)
+	if p, err := s.Prune(ctx, TrafficCutoffs{Aggregates: cutoff, Recent: cutoff}, Limits{Rows: 16, Duration: time.Second}); err != nil || p.More {
+		t.Fatal(p, err)
 	}
 	if err := s.Reader().QueryRow("SELECT count(*) FROM search_evidence").Scan(&n); err != nil || n != 0 {
-		t.Fatal("capacity left orphaned evidence", n, err)
+		t.Fatal("retention left expired evidence", n, err)
 	}
 }

@@ -5,15 +5,33 @@ import PaxUI
 
 /// Explicit discovery and displayed-IP tests; idle windows never poll or probe.
 @MainActor final class CFWorkspaceController: RouteModalController {
+  override var localizedTitleKey: String? { "modal.cf.workspace" }
+  override var localizedSubtitleKey: String? { "modal.cf.workspace_note" }
+
   private let workbench: RouteWorkbenchStore
   private let draft: RouteWorkbenchStore.Draft
   private let store: CFWorkspaceStore
   private let apply: (RouteWorkbenchStore.Candidate) -> Void
-  private let table = PaxCFRecordTable()
+  private lazy var table = PaxCFRecordTable(
+    columnTitles: (
+      interfaceCopy.text("cf.workspace.column.ip"),
+      interfaceCopy.text("cf.workspace.column.latency"),
+      interfaceCopy.text("cf.workspace.column.download"),
+      interfaceCopy.text("cf.workspace.column.location"),
+      interfaceCopy.text("cf.workspace.column.actions")
+    ),
+    configuredTitle: interfaceCopy.text("cf.workspace.row.configured"),
+    actionLabel: interfaceCopy.text("cf.workspace.row.actions"),
+    actionTitles: [
+      .latency: interfaceCopy.text("cf.workspace.row.latency"),
+      .download: interfaceCopy.text("cf.workspace.row.download"),
+      .both: interfaceCopy.text("cf.workspace.row.both"),
+      .location: interfaceCopy.text("cf.workspace.row.location"),
+    ])
   private let progress = PaxLoadingStateView()
   private let summary = PaxRouteText.label("", font: PaxTheme.Typography.caption(), secondary: true)
   private let search = PaxRouteSearchField()
-  private let testButton = PaxRouteButton("测试 IP", symbol: "waveform.path.ecg")
+  private let testButton = PaxRouteButton("", symbol: "waveform.path.ecg")
   private var moreButton: PaxRouteButton?
   private var useButton: PaxRouteButton?
   private var scanButton: PaxRouteButton?
@@ -41,25 +59,29 @@ import PaxUI
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
-    let scan = button("扫描网段", #selector(scan))
+    let scan = button(self.interfaceCopy.text("action.cf.scan_ranges"), #selector(scan))
     scanButton = scan
     scan.setAccessibilityIdentifier("cf-scan")
-    scan.widthAnchor.constraint(equalToConstant: PaxTheme.Routes.cfScanWidth).isActive = true
-    scan.toolTip = "在 CF 公布的网段中抽样发现 IP，再精测；计数表示本阶段候选 IP，不是网段数。"
+    if interfaceCopy.context.language == .chinese {
+      scan.widthAnchor.constraint(equalToConstant: PaxTheme.Routes.cfScanWidth).isActive = true
+    }
+    scan.toolTip = self.interfaceCopy.text("interface_detail.03e265fa31")
     testButton.target = self
     testButton.action = #selector(showTests)
+    testButton.title = interfaceCopy.text("cf.workspace.test")
     testButton.showsDisclosure = true
     testButton.setAccessibilityIdentifier("cf-test-menu")
-    let stop = button("停止", #selector(stopTask))
+    let stop = button(self.interfaceCopy.text("action.common.stop"), #selector(stopTask))
     stop.setAccessibilityIdentifier("cf-stop")
     stopButton = stop
-    search.placeholderString = "搜索 IP 或网段"
+    search.placeholderString = self.interfaceCopy.text("interface_detail.dbbceb38fe")
     search.sendsSearchStringImmediately = true
     search.target = self
     search.action = #selector(searchChanged)
     search.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.searchWidth).isActive = true
     let tools = NSStackView(views: [
-      search, NSView(), scan, testButton, button("导出…", #selector(exportRecords)), stop,
+      search, NSView(), scan, testButton,
+      button(self.interfaceCopy.text("action.common.export"), #selector(exportRecords)), stop,
     ])
     tools.spacing = PaxTheme.Spacing.tight
     tools.setAccessibilityIdentifier("cf-toolbar")
@@ -74,7 +96,7 @@ import PaxUI
     }
     table.onTest = { [weak self] ip, action in self?.testIP(ip, action: action) }
     pane.add(table)
-    let more = button("再显示 50 条", #selector(showMore))
+    let more = button(self.interfaceCopy.text("action.common.show_fifty"), #selector(showMore))
     moreButton = more
     summary.lineBreakMode = .byTruncatingTail
     summary.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -82,12 +104,13 @@ import PaxUI
     paging.spacing = PaxTheme.Spacing.tight
     pane.add(paging)
     pane.add(
-      PaxRouteText.label(
-        "只测试本页已显示的 IP；单轮测速，每个 IP 最多 8 MiB／正文采样 6 秒；并发沿用下载设置，可随时停止。地区是 IP 数据库估计，不代表 CF 实际接入机房；扫描或测试后补全本页地区。使用只填草稿，保存才生效。",
+      self.interfaceCopy.routeLabel(
+        "action.cf.test_note",
         font: PaxTheme.Typography.caption(), secondary: true, wrapping: true))
-    let use = button("验证并使用", #selector(useIP), primary: true)
+    let use = button(
+      self.interfaceCopy.text("action.cf.verify_use"), #selector(useIP), primary: true)
     useButton = use
-    pane.setActions([button("取消", #selector(close)), use])
+    pane.setActions([button(self.interfaceCopy.text("common.cancel"), #selector(close)), use])
     observe()
     observeTable()
     let cfStore = store
@@ -123,18 +146,32 @@ import PaxUI
     scanButton?.isEnabled = available
     scanButton?.title =
       running && ["scan", "discovery", "precision"].contains(workspace.phase)
-      ? (workspace.total > 0 ? "扫描网段（\(workspace.completed)/\(workspace.total)）" : "扫描网段（准备中）")
-      : "扫描网段"
+      ? (workspace.total > 0
+        ? self.interfaceCopy.text(
+          "interface_detail.6fda08f4da",
+          [
+            "arg0": String(describing: workspace.completed),
+            "arg1": String(describing: workspace.total),
+          ]) : self.interfaceCopy.text("interface_detail.637ce1f0ae"))
+      : self.interfaceCopy.text("action.cf.scan_ranges")
     testButton.isEnabled = available && workbench.hasCFSingleTests && !store.visibleRows.isEmpty
     stopButton?.isHidden = !store.canStopTask
     stopButton?.isEnabled = store.canStopTask
     // Measurements belong to their row; only initial loading and actual errors
     // use a page notice. Scan progress remains inside its toolbar button.
-    let message = !store.error.isEmpty ? store.error : store.loading ? "正在读取 IP 列表…" : ""
+    let failure = store.failure?.message(context: interfaceCopy.context)
+    let message =
+      failure ?? (store.loading ? interfaceCopy.text("interface_detail.e3cbebf9cc") : "")
     progress.apply(
-      !store.error.isEmpty ? .failure : store.loading ? .loading : .idle, message: message)
+      failure != nil ? .failure : store.loading ? .loading : .idle, message: message)
     summary.stringValue =
-      "当前入口：\(draft.server) · 已显示 \(store.visibleRows.count)/\(store.displayCount) 个 IP"
+      self.interfaceCopy.text(
+        "interface_detail.730b657f0a",
+        [
+          "arg0": String(describing: draft.server),
+          "arg1": String(describing: store.visibleRows.count),
+          "arg2": String(describing: store.displayCount),
+        ])
     moreButton?.isHidden = !store.canShowMore
     moreButton?.isEnabled = available
   }
@@ -144,9 +181,9 @@ import PaxUI
       store.visibleRows.map {
         CFRecordPresentation.row(
           $0, currentNetwork: store.workspace.currentNetwork, selected: store.selected,
-          pendingColumn: store.pendingColumn(for: $0))
+          pendingColumn: store.pendingColumn(for: $0), context: self.interfaceCopy.context)
       }, selected: store.selected, configured: draft.server, selectedIPs: store.selectedIPs,
-      empty: store.emptyMessage,
+      empty: store.emptyMessage(context: interfaceCopy.context),
       actionsEnabled: !store.busy && !store.taskRunning && !validating && workbench.hasCFSingleTests
     )
   }
@@ -160,13 +197,16 @@ import PaxUI
     menu.autoenablesItems = false
     let ips = store.displayedIPs
     let scope = NSMenuItem(
-      title: "本页已显示 · \(ips.count) 个 IP（不含隐藏项）", action: nil, keyEquivalent: "")
+      title: self.interfaceCopy.text(
+        "interface_detail.99bf78d41d", ["arg0": String(describing: ips.count)]), action: nil,
+      keyEquivalent: "")
     scope.isEnabled = false
     menu.addItem(scope)
     menu.addItem(.separator())
     for (title, action, symbol) in [
-      ("测试延迟", "check", "timer"), ("测试下载速度", "download", "arrow.down"),
-      ("查询 IP 地区", "locate", "globe"),
+      (self.interfaceCopy.text("action.routes.test_latency"), "check", "timer"),
+      (self.interfaceCopy.text("action.routes.test_download"), "download", "arrow.down"),
+      (self.interfaceCopy.text("action.routes.lookup_exit"), "locate", "globe"),
     ] {
       let item = NSMenuItem(title: title, action: #selector(testScope(_:)), keyEquivalent: "")
       item.target = self
@@ -217,7 +257,8 @@ import PaxUI
         await store.refresh()
         guard !Task.isCancelled else { return }
         guard candidate.measurement.failure == nil else {
-          throw RouteWorkbenchStore.EditError(candidate.measurement.failure ?? "线路验证失败")
+          throw RouteWorkbenchStore.EditError(
+            candidate.measurement.failure ?? self.interfaceCopy.text("interface_detail.3c0f3a6f7e"))
         }
         apply(candidate)
         close()

@@ -6,162 +6,172 @@ extension EnvironmentDiagnosticPresentation {
   struct LocationReading {
     let value: String
     let detail: String
-    /// States, counts and browser names only: no app name or path.
-    let reportDetail: String
     let tone: Tone
   }
 
-  private static let systemPath = "系统设置 › 隐私与安全性 › 定位服务"
-  private static let notScanned = "未扫描：系统服务、Safari 站点设置（需完全磁盘访问）、企业策略。"
-  private static let offNote = "系统定位已关闭，以下授权不生效"
+  private static func systemPath(context: PresentationContext) -> String {
+    context.text("environment_evidence.595da825fc")
+  }
+  private static func notScanned(context: PresentationContext) -> String {
+    context.text("environment_evidence.4a0a75ddd9")
+  }
+  private static func offNote(context: PresentationContext) -> String {
+    context.text("environment_evidence.792bc88ae7")
+  }
 
   /// One combined row after IPv6. `local` nil with a report means an old record.
   static func locationRows(
-    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool
+    _ report: EnvironmentDiagnosticReport?, local: NetworkDiagnosticEnvironment?, waiting: Bool,
+    context: PresentationContext = .chinese
   ) -> [Row] {
     let reading: LocationReading
     if local == nil && report == nil {
-      let text = waiting ? "正在检测…" : "尚未检测"
-      reading = .init(value: text, detail: "", reportDetail: "", tone: .pending)
+      let text =
+        waiting
+        ? context.text("environment_evidence.e8b970bc3e")
+        : context.text("environment_evidence.4d2966c438")
+      reading = .init(value: text, detail: "", tone: .pending)
     } else if let location = local?.location {
-      reading = locationReading(location)
+      reading = locationReading(location, context: context)
     } else if waiting {
-      reading = .init(value: "正在检测…", detail: "", reportDetail: "", tone: .pending)
+      reading = .init(
+        value: context.text("environment_evidence.e8b970bc3e"), detail: "",
+        tone: .pending)
     } else {
-      reading = .init(value: "旧记录未采集", detail: "", reportDetail: "", tone: .pending)
+      reading = .init(
+        value: context.text("environment_evidence.883b0ebcba"), detail: "",
+        tone: .pending)
     }
     return [
       Row(
         title: locationTitle, symbol: "location", value: reading.value, detail: reading.detail,
-        tone: reading.tone)
+        tone: reading.tone, context: context)
     ]
   }
 
-  /// Report variant of the combined location row's 依据.
-  public static func locationReportDetail(local: NetworkDiagnosticEnvironment?) -> String {
-    guard let location = local?.location else { return "旧记录未采集或尚未检测" }
-    return locationReading(location).reportDetail
-  }
-
-  private static func locationReading(_ location: LocationExposure) -> LocationReading {
-    let system = systemReading(location)
-    let browser = browserReading(location)
+  private static func locationReading(
+    _ location: LocationExposure, context: PresentationContext = .chinese
+  ) -> LocationReading {
+    let system = systemReading(location, context: context)
+    let browser = browserReading(location, context: context)
     let value: String
     switch location.systemEnabled {
     case nil:
-      value = "位置暴露风险待确认 · 无法读取系统定位开关"
+      value = context.text("environment_evidence.b11a791164")
     case false?:
-      value = "系统定位已关闭 · 应用与浏览器的定位授权不生效"
+      value = context.text("environment_evidence.f106e5fc38")
     case true?:
       if location.authorizationsReadable {
         let apps = location.apps.filter(\.allowed).count
         let browsers = location.browsers.filter { $0.authorization == .allowed }.count
         value =
           apps + browsers > 0
-          ? "存在位置暴露风险 · 已授权 \(apps) 个应用、\(browsers) 个浏览器"
-          : "存在潜在风险 · 系统定位已开启，未发现应用或浏览器授权"
+          ? context.text(
+            "environment_evidence.c9061d0a95",
+            ["arg0": String(describing: apps), "arg1": String(describing: browsers)])
+          : context.text("environment_evidence.fa8af21d10")
       } else {
-        value = "存在潜在风险 · 系统定位已开启，授权清单无法读取"
+        value = context.text("environment_evidence.e2e3bcc529")
       }
     }
-    let boundary = "授权表示具备获取位置的能力，不代表已经获取或上传。"
+    let boundary = context.text("environment_evidence.6bcac31928")
     return .init(
       value: value,
-      detail: "系统定位\n" + system.detail + "\n\n浏览器定位\n" + browser.detail + "\n" + boundary,
-      reportDetail: "系统定位：" + system.reportDetail + "\n浏览器定位：" + browser.reportDetail + "\n"
-        + boundary,
+      detail: context.text("environment_evidence.603ff31cb4") + system.detail
+        + context.text("environment_evidence.d9ac3d215a") + browser + "\n" + boundary,
       tone: system.tone)
   }
 
-  private static func systemReading(_ location: LocationExposure) -> (
-    detail: String, reportDetail: String, tone: Tone
-  ) {
+  private static func systemReading(
+    _ location: LocationExposure, context: PresentationContext = .chinese
+  ) -> (detail: String, tone: Tone) {
     let readable = location.authorizationsReadable
     let allowed = location.apps.filter(\.allowed)
     let denied = location.apps.filter { !$0.allowed }
     func line(_ app: LocationExposure.App) -> String {
-      app.name + (app.path.isEmpty ? "（" + app.bundleID + "，无路径）" : " · " + app.path)
+      app.name
+        + (app.path.isEmpty
+          ? "（" + app.bundleID + context.text("environment_evidence.5b5129748b") : " · " + app.path)
     }
     var lines: [String] = []
-    var counts = ""
     if readable {
       if !allowed.isEmpty {
-        lines.append("已授权定位的应用：\n" + allowed.map(line).joined(separator: "\n"))
+        lines.append(
+          context.text("environment_evidence.93fe8ce78a")
+            + allowed.map(line).joined(separator: "\n"))
       }
       if !denied.isEmpty {
-        lines.append("已明确拒绝的应用：\n" + denied.map(line).joined(separator: "\n"))
+        lines.append(
+          context.text("environment_evidence.e89b2a52ba") + denied.map(line).joined(separator: "\n")
+        )
       }
-      if lines.isEmpty { lines.append("没有应用被授权或拒绝定位") }
-      counts = "已授权 \(allowed.count) 个应用，已拒绝 \(denied.count) 个"
+      if lines.isEmpty { lines.append(context.text("environment_evidence.8d8b166fe3")) }
     } else {
-      lines.append("无法读取系统定位授权清单（/var/db/locationd/clients.plist），应用授权无法读取")
-      counts = "应用授权无法读取"
+      lines.append(context.text("environment_evidence.1f210c29e8"))
     }
-    let tail = "\n" + lines.joined(separator: "\n") + "\n系统服务未列出"
+    let tail =
+      "\n" + lines.joined(separator: "\n") + context.text("environment_evidence.a5ee3e61d7")
     switch location.systemEnabled {
     case nil:
       return (
-        "无法读取定位服务总开关，不视为已关闭。" + tail,
-        "总开关无法读取；" + counts, .pending
+        context.text("environment_evidence.aff8b8e614") + tail, .pending
       )
     case false?:
       return (
-        "定位服务总开关：关闭；保留的应用授权不生效" + tail,
-        "总开关关闭；" + counts, .information
+        context.text("environment_evidence.5e85cc61e1") + tail, .information
       )
     case true?:
       return (
-        "定位服务总开关：开启" + tail + "\n修改路径：" + systemPath,
-        "总开关开启；" + counts, .difference
+        context.text("environment_evidence.8c002edfc6") + tail
+          + context.text("environment_evidence.e109b1547b") + systemPath(context: context),
+        .difference
       )
     }
   }
 
-  private static let browserBoundary =
-    "不读取浏览器内的网站定位设置（macOS 应用数据保护）；系统授权的浏览器可由网站请求定位"
+  private static func browserBoundary(context: PresentationContext) -> String {
+    context.text("environment_evidence.c23c79dc0f")
+  }
 
-  private static func browserReading(_ location: LocationExposure) -> (
-    detail: String, reportDetail: String
-  ) {
+  private static func browserReading(
+    _ location: LocationExposure, context: PresentationContext = .chinese
+  ) -> String {
     guard location.authorizationsReadable else {
-      return (
-        "无法读取系统定位授权清单（/var/db/locationd/clients.plist），不视为已关闭。\n" + notScanned,
-        "授权清单无法读取"
-      )
+      return context.text("environment_evidence.13c210cfce") + notScanned(context: context)
     }
     let states = location.browsers.map { ($0, LocationExposure.state($0)) }
-    var lines = states.map { browser, state in browserLine(browser, state) }
-    if lines.isEmpty { lines = ["未发现可打开网页的浏览器"] }
-    let redacted = states.map { browser, state in browser.name + "：" + stateText(state) }
-    let reportDetail = (redacted.isEmpty ? ["未发现浏览器"] : redacted).joined(separator: "\n")
+    var lines = states.map { browser, state in browserLine(browser, state, context: context) }
+    if lines.isEmpty { lines = [context.text("environment_evidence.179d3b4394")] }
     if location.systemEnabled == false {
-      return (
-        offNote + "\n" + lines.joined(separator: "\n") + "\n" + notScanned,
-        offNote + "\n" + reportDetail
-      )
+      return offNote(context: context) + "\n" + lines.joined(separator: "\n") + "\n"
+        + notScanned(context: context)
     }
     let detail =
-      lines.joined(separator: "\n") + "\n修改路径：" + systemPath + "\n" + browserBoundary + "\n"
-      + notScanned
-    return (detail, reportDetail)
+      lines.joined(separator: "\n") + context.text("environment_evidence.e109b1547b")
+      + systemPath(context: context) + "\n" + browserBoundary(context: context) + "\n"
+      + notScanned(context: context)
+    return detail
   }
 
-  private static func stateText(_ state: LocationExposure.State) -> String {
+  private static func stateText(
+    _ state: LocationExposure.State, context: PresentationContext = .chinese
+  ) -> String {
     switch state {
-    case .open: "未关闭"
-    case .closed: "已关闭"
+    case .open: context.text("environment_evidence.4dbb226601")
+    case .closed: context.text("environment_evidence.6744b4c6a9")
     }
   }
 
   private static func browserLine(
-    _ browser: LocationExposure.Browser, _ state: LocationExposure.State
+    _ browser: LocationExposure.Browser, _ state: LocationExposure.State,
+    context: PresentationContext = .chinese
   ) -> String {
     let reason: String
     switch browser.authorization {
-    case .allowed: reason = "系统已授权定位"
-    case .denied: reason = "系统已拒绝"
-    case .none: reason = "系统未授权"
+    case .allowed: reason = context.text("environment_evidence.c3d72b1ab5")
+    case .denied: reason = context.text("environment_evidence.cdcaf965c8")
+    case .none: reason = context.text("environment_evidence.f886839eed")
     }
-    return browser.name + "：" + stateText(state) + "（" + reason + "）"
+    return browser.name + "：" + stateText(state, context: context) + "（" + reason + "）"
   }
 }

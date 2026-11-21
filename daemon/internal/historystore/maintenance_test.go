@@ -70,52 +70,22 @@ func TestPruneRespectsRowAndTimeLimits(t *testing.T) {
 	if n := count(t, l.Reader(), "SELECT count(*) FROM col_events"); n != 500 {
 		t.Fatalf("newer events touched: %d", n)
 	}
-}
-
-func TestEvictOldestShrinksLiveSizeBelowCapAndReports(t *testing.T) {
-	l := mustLogs(t, historyDir(t))
-	ctx := context.Background()
-	limits := Limits{Rows: 500, Duration: time.Second}
-	fillConnections(t, l, 0, 4000, strings.Repeat("d", 200))
-	live, err := l.LiveBytes(ctx)
-	if err != nil || live < 1<<20 {
-		t.Fatalf("live size %d %v", live, err)
-	}
-	if evicted, err := l.EvictOldest(ctx, live*2, limits); err != nil || evicted {
-		t.Fatalf("under the cap: evicted=%v %v", evicted, err)
-	}
-	if v, ok, _ := l.Meta(ctx, "capacity_evicted"); !ok || v != "0" {
-		t.Fatal("capacity_evicted set without eviction")
-	}
-	capBytes := live / 2
-	evicted, err := l.EvictOldest(ctx, capBytes, limits)
-	if err != nil || !evicted {
-		t.Fatalf("evicted=%v %v", evicted, err)
-	}
-	if after, _ := l.LiveBytes(ctx); after > capBytes {
-		t.Fatalf("live %d above cap %d", after, capBytes)
-	}
-	if v, ok, _ := l.Meta(ctx, "capacity_evicted"); !ok || v != "1" {
-		t.Fatal("capacity_evicted not recorded")
-	}
-	var oldest, newest int64
-	if err = l.Reader().QueryRow("SELECT min(last_activity_ms), max(last_activity_ms) FROM col_connections").Scan(&oldest, &newest); err != nil {
-		t.Fatal(err)
-	}
-	if oldest == 0 || newest != 3999 {
-		t.Fatalf("eviction must remove oldest first: min %d max %d", oldest, newest)
-	}
-	// Writes are still accepted after eviction, and vacuum plus checkpoint run on the idle writer.
-	fillConnections(t, l, 5000, 5010, "")
-	if err = l.IncrementalVacuum(ctx, 1<<20); err != nil {
+	// Returning expired pages to the filesystem must preserve the retained facts.
+	if err := l.IncrementalVacuum(ctx, 1<<20); err != nil {
 		t.Fatal(err)
 	}
 	if truncated, err := l.Checkpoint(ctx); err != nil || !truncated {
 		t.Fatalf("checkpoint: %v %v", truncated, err)
 	}
+	if n := count(t, l.Reader(), "SELECT count(*) FROM col_connections"); n != 500 {
+		t.Fatalf("reclaim changed retained connections: %d", n)
+	}
+	if n := count(t, l.Reader(), "SELECT count(*) FROM col_events"); n != 500 {
+		t.Fatalf("reclaim changed retained events: %d", n)
+	}
 }
 
-func TestTrafficEvictAndPruneByTable(t *testing.T) {
+func TestTrafficPruneByTable(t *testing.T) {
 	tr := mustTraffic(t, historyDir(t))
 	ctx := context.Background()
 	err := tr.Update(ctx, func(tx *TrafficTx) error {
@@ -143,7 +113,6 @@ func TestTrafficEvictAndPruneByTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	limits := Limits{Rows: 400, Duration: time.Second}
 	res, err := tr.Prune(ctx, TrafficCutoffs{Recent: time.UnixMilli(250000), ClosedMarks: time.UnixMilli(50)}, Limits{Rows: 10000, Duration: time.Second})
 	if err != nil || res.More {
 		t.Fatalf("prune: %+v %v", res, err)
@@ -169,17 +138,6 @@ func TestTrafficEvictAndPruneByTable(t *testing.T) {
 	}
 	if n := count(t, tr.Reader(), "SELECT count(*) FROM coverage_5m"); n != 2000 {
 		t.Fatalf("coverage after prune: %d", n)
-	}
-	live, _ := tr.LiveBytes(ctx)
-	evicted, err := tr.EvictOldest(ctx, live/2, limits)
-	if err != nil || !evicted {
-		t.Fatalf("evicted=%v %v", evicted, err)
-	}
-	if after, _ := tr.LiveBytes(ctx); after > live/2 {
-		t.Fatalf("live %d above cap %d", after, live/2)
-	}
-	if n := count(t, tr.Reader(), "SELECT count(*) FROM coverage_5m WHERE bucket_ms < (SELECT min(bucket_ms) FROM traffic_5m)"); n != 0 {
-		t.Fatal("coverage older than the aggregate frontier survived eviction")
 	}
 }
 

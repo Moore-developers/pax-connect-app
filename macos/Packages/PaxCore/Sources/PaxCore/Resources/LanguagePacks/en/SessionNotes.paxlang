@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "session_note.sessions": {
+      "one": "{count} session",
+      "other": "{count} sessions"
+    },
+    "session_note.more_models": {
+      "one": "{count} more model",
+      "other": "{count} more models"
+    },
+    "session_title.unavailable": "Session title temporarily unreadable",
+    "session_title.missing": "Source record removed",
+    "session_title.unsupported": "Session format not supported yet",
+    "session_title.indexing": "Indexing session title",
+    "session_title.unnamed": "Not yet named by the client",
+    "session_title.recent_message": "Latest message: ",
+    "session_chart.context_title": "Context tokens",
+    "session_chart.cost_title": "Input cost per request",
+    "session_chart.empty": "No recorded requests",
+    "session_title.unnamed_id": "Untitled session · {id}",
+    "session_title.recent_with_title": "Latest message: {title}"
+  }
+}

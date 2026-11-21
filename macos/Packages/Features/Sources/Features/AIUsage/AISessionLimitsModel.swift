@@ -137,13 +137,8 @@ struct AILimitFlat: Equatable {
 /// Which list the limits card shows.
 enum AILimitListKind: Equatable {
   case sessions, models, main, subagents
-  var title: String {
-    switch self {
-    case .sessions: "会话"
-    case .models: "模型"
-    case .main: "主会话"
-    case .subagents: "子代理"
-    }
+  func title(context: PresentationContext = .chinese) -> String {
+    context.text("session.kind." + String(describing: self))
   }
 }
 
@@ -185,6 +180,10 @@ struct AILimitList: Equatable {
   var kind: AILimitListKind
   var rows: [AILimitListRow]
   var emptyMessage = ""
+  func emptyText(context: PresentationContext) -> String {
+    let known = ["所选日期没有已记录用量": "no_usage", "该会话没有主会话请求": "no_main", "该会话没有子代理": "no_agents"]
+    return known[emptyMessage].map { context.text("session.empty." + $0) } ?? emptyMessage
+  }
 }
 
 /// Current context of a single session, coloured by its band.

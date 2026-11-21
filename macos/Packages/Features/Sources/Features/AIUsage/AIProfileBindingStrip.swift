@@ -5,7 +5,9 @@ import PaxUI
 extension AIUsageViewController {
   /// One card, one segment per CLI; reads the same projection as the overview client card.
   func bindingStrip() -> NSView {
-    let segments = store.clientRows(cost: false).filter { $0.client != .harness }.map(
+    let segments = store.clientRows(cost: false, context: self.interfaceCopy.context).filter {
+      $0.client != .harness
+    }.map(
       bindingSegment)
     let card = AIUsageLayout.segmentedCard(segments)
     if let content = card.contentView {
@@ -20,11 +22,11 @@ extension AIUsageViewController {
     let name = AIUsageLayout.label(row.client.rawValue, secondary: true)
     let heading = AIUsageLayout.stack([AIClientMark.view(row.client), name], vertical: false)
     heading.spacing = PaxTheme.Spacing.tight
-    let profileText = row.configurationText
+    let profileText = row.configurationText(context: self.interfaceCopy.context)
     let profile = PaxText.label(profileText, font: PaxTheme.Typography.section)
     profile.lineBreakMode = .byTruncatingTail
     profile.toolTip = profileText
-    let lines = store.cliCardLines(row.client)
+    let lines = store.cliCardLines(row.client, context: self.interfaceCopy.context)
     let usage = AIUsageLayout.label("", secondary: true, numeric: true)
     let recent = AIUsageLayout.label("", secondary: true, numeric: true)
     let costs = AIUsageLayout.label("", numeric: true)
@@ -39,16 +41,21 @@ extension AIUsageViewController {
     usage.setAccessibilityIdentifier("ai-strip-usage-" + row.client.code)
     recent.setAccessibilityIdentifier("ai-strip-recent-" + row.client.code)
     let badge = PaxBadge(
-      title: row.stateText, tone: AIUsageStore.tone(forState: row.stateText))
+      title: row.stateText, tone: AIUsageStore.tone(forState: row.stateCode))
     let unconfigured = row.unconfigured
     let button = actions.button(
-      unconfigured ? "去配置" : "切换…", enabled: store.configuration.available,
+      unconfigured
+        ? self.interfaceCopy.text("ai_usage.configure")
+        : self.interfaceCopy.text("profile_section.switch"), enabled: store.configuration.available,
       id: "ai-strip-" + row.client.code
     ) { [weak self] in
       guard let self else { return }
       self.presentWorkbenchModal(AIBindingController(store: self.store, client: row.client))
     }
-    let axName = (unconfigured ? "去配置 " : "切换 ") + row.client.rawValue
+    let axName =
+      (unconfigured
+        ? self.interfaceCopy.text("interface_detail.0f98ce9c8e")
+        : self.interfaceCopy.text("interface_detail.c85d957799")) + row.client.rawValue
     button.setAccessibilityLabel(axName)
     button.toolTip = axName
     button.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -59,24 +66,31 @@ extension AIUsageViewController {
     let body = AIUsageLayout.stack([top, profile, usage, costs, recent])
     body.spacing = PaxTheme.Spacing.tight
     body.setCustomSpacing(PaxTheme.Spacing.tight / 2, after: top)
-    usage.toolTip = "已绑定时为当前 Profile 的跨 CLI 用量；无 Profile 时为此 CLI 的全部来源用量。官方账号费用是 API 等值估算。"
-    costs.toolTip = AIUsageCostDisplay.explanation
+    usage.toolTip = self.interfaceCopy.text("interface_detail.83109953ec")
+    costs.toolTip = AIUsageCostDisplay.explanation(context: interfaceCopy.context)
     contentRefreshers.append { [weak self] in
       guard let self,
-        let next = self.store.clientRows(cost: false).first(where: { $0.client == row.client })
+        let next = self.store.clientRows(cost: false, context: self.interfaceCopy.context).first(
+          where: { $0.client == row.client })
       else { return }
-      let text = next.configurationText
+      let text = next.configurationText(context: self.interfaceCopy.context)
       profile.stringValue = text
       profile.toolTip = text
-      let lines = self.store.cliCardLines(row.client)
+      let lines = self.store.cliCardLines(row.client, context: self.interfaceCopy.context)
       usage.attributedStringValue = aiMetricText(lines.usageRuns)
       recent.attributedStringValue = aiMetricText(lines.recentRuns)
       costs.attributedStringValue = aiMetricText(lines.costRuns)
       costs.isHidden = lines.costRuns.isEmpty
-      badge.apply(title: next.stateText, tone: AIUsageStore.tone(forState: next.stateText))
-      button.title = next.unconfigured ? "去配置" : "切换…"
+      badge.apply(title: next.stateText, tone: AIUsageStore.tone(forState: next.stateCode))
+      button.title =
+        next.unconfigured
+        ? self.interfaceCopy.text("ai_usage.configure")
+        : self.interfaceCopy.text("profile_section.switch")
       button.isEnabled = self.store.configuration.available
-      button.setAccessibilityLabel((next.unconfigured ? "去配置 " : "切换 ") + row.client.rawValue)
+      button.setAccessibilityLabel(
+        (next.unconfigured
+          ? self.interfaceCopy.text("interface_detail.0f98ce9c8e")
+          : self.interfaceCopy.text("interface_detail.c85d957799")) + row.client.rawValue)
       button.toolTip = button.accessibilityLabel()
     }
     return body

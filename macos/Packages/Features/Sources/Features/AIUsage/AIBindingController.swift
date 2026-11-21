@@ -20,12 +20,14 @@ final class AIBindingController: WorkbenchModalController {
     self.store = store
     self.client = client
     self.targetProfile = targetProfile
-    super.init(title: client.rawValue + " 配置", style: .compact, symbol: client.symbol)
+    super.init(title: "", style: .compact, symbol: client.symbol)
   }
   override var maximumPresentationWidth: CGFloat? { Self.popoverWidth }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     super.loadView()
+    pane.applyTitle(
+      interfaceCopy.text("ai_usage.detail.configuration", ["client": client.rawValue]))
     render()
     observeAvailability()
   }
@@ -56,9 +58,11 @@ final class AIBindingController: WorkbenchModalController {
     let binding = store.bindings[client]
     var configurationRows: [NSView] = []
     let status = PaxBadge(
-      title: AIProfilesStore.stateLabel(binding),
-      tone: AIUsageStore.tone(forState: AIProfilesStore.stateLabel(binding)))
-    let recheck = actions.button("重新检查") { [weak self] in self?.recheck() }
+      title: AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context),
+      tone: AIUsageStore.tone(forState: binding?.state ?? ""))
+    let recheck = actions.button(self.interfaceCopy.text("action.profile.recheck")) { [weak self] in
+      self?.recheck()
+    }
     recheck.capsule = false
     let stateRow = AIUsageLayout.stack(
       [status, NSView()] + (store.preview ? [] : [recheck]), vertical: false)
@@ -69,33 +73,39 @@ final class AIBindingController: WorkbenchModalController {
     if !store.preview {
       switch binding?.state {
       case "ready", "changed":
-        let button = actions.button("导入") { [weak self] in self?.importForm() }
+        let button = actions.button(self.interfaceCopy.text("action.common.import")) {
+          [weak self] in self?.importForm()
+        }
         button.capsule = false
         configurationRows.append(
           PaxPreferenceRow(
-            title: "导入当前配置", detail: "仅保存到 Pax，不修改客户端。", control: button))
+            title: self.interfaceCopy.text("interface_detail.b1b6fffedb"),
+            detail: self.interfaceCopy.text("interface_detail.d6d612e184"), control: button))
       case "missing":
-        configurationRows.append(note("尚未配置 API。可选择已有 Profile，或先创建再应用。"))
+        configurationRows.append(note(self.interfaceCopy.text("interface_detail.a0ff626fc2")))
       case "account":
-        configurationRows.append(note("检测到官方账号配置。登录与订阅由客户端管理，本地用量无需 Profile 即可读取。"))
+        configurationRows.append(note(self.interfaceCopy.text("interface_detail.a46dd9cbed")))
       case "invalid", "recovery_required":
-        configurationRows.append(note("配置格式、权限或认证需要检查。未覆盖文件，处理后可重新检查。"))
+        configurationRows.append(note(self.interfaceCopy.text("interface_detail.93daea2046")))
       default: break
       }
     }
     pane.add(
       PaxPreferenceGroup(
-        title: "客户端配置", symbol: "terminal", rows: [AIUsageLayout.stack(configurationRows)]))
+        title: self.interfaceCopy.text("interface_detail.f92335ddcd"), symbol: "terminal",
+        rows: [AIUsageLayout.stack(configurationRows)]))
 
-    let accountHelp = actions.button("登录说明") { [weak self] in self?.showAccountHelp() }
+    let accountHelp = actions.button(self.interfaceCopy.text("action.profile.login_help")) {
+      [weak self] in self?.showAccountHelp()
+    }
     accountHelp.capsule = false
     pane.add(
       PaxPreferenceGroup(
-        title: "官方账号", symbol: "person.crop.circle",
+        title: self.interfaceCopy.text("interface_detail.57adc05c18"), symbol: "person.crop.circle",
         rows: [
           PaxPreferenceRow(
-            title: "在客户端管理登录",
-            detail: "订阅账号与 API 独立计费。Pax 读取本机日志，不需要账号 Profile。",
+            title: self.interfaceCopy.text("interface_detail.159900380f"),
+            detail: self.interfaceCopy.text("interface_detail.8c6a4fd295"),
             control: accountHelp)
         ]))
 
@@ -108,10 +118,10 @@ final class AIBindingController: WorkbenchModalController {
       let applied = current && binding?.state == "applied"
       let control: NSView
       if applied {
-        control = PaxBadge(title: "配置已写入", tone: .healthy)
+        control = PaxBadge(title: self.interfaceCopy.text("profile_state.applied"), tone: .healthy)
       } else {
         let button = actions.button(
-          "应用…",
+          self.interfaceCopy.text("action.profile.apply"),
           enabled: store.preview
             || (store.configuration.available && !store.configuration.loading
               && ["missing", "ready", "applied", "pending", "changed"].contains(
@@ -121,60 +131,74 @@ final class AIBindingController: WorkbenchModalController {
         if ["missing", "ready", "applied", "pending", "changed"].contains(binding?.state ?? "") {
           applyButtons.append(button)
         }
-        button.setAccessibilityLabel("应用 " + p.name)
+        button.setAccessibilityLabel(
+          self.interfaceCopy.text("interface_detail.d32f93aa8f") + p.name)
         control = button
       }
       let source =
-        p.kind == "native" ? "原生账号" : p.serviceSource.label + " · " + AIUsageStore.host(p.endpoint)
+        p.kind == "native"
+        ? self.interfaceCopy.text("interface_detail.d1d072d54a")
+        : p.serviceSource.label(context: self.interfaceCopy.context) + " · "
+          + AIUsageStore.host(p.endpoint)
       let detail =
         source + " · " + AIUsageFormatting.multiplier(p.multiplier)
-        + (current && !applied ? " · " + AIProfilesStore.stateLabel(binding) : "")
+        + (current && !applied
+          ? " · " + AIProfilesStore.stateLabel(binding, context: self.interfaceCopy.context) : "")
       return PaxPreferenceRow(title: p.name, detail: detail, control: control)
     }
     pane.add(
       PaxPreferenceGroup(
-        title: "可用 Profile", symbol: "square.stack",
-        rows: profileRows.isEmpty ? [note("暂无可用 Profile")] : profileRows))
+        title: self.interfaceCopy.text("interface_detail.943b60315f"), symbol: "square.stack",
+        rows: profileRows.isEmpty
+          ? [note(self.interfaceCopy.text("interface_detail.eddd397d9b"))] : profileRows))
     if !store.preview {
-      let create = actions.button("创建…") { [weak self] in self?.createForm() }
+      let create = actions.button(self.interfaceCopy.text("action.common.create_ellipsis")) {
+        [weak self] in self?.createForm()
+      }
       create.capsule = false
       pane.add(
         PaxPreferenceGroup(
-          title: "新增 Profile", symbol: "plus.circle",
+          title: self.interfaceCopy.text("interface_detail.42fa3c6538"), symbol: "plus.circle",
           rows: [
             PaxPreferenceRow(
-              title: "创建 Profile", detail: "保存 API 地址与 Key，稍后选择应用。", control: create)
+              title: self.interfaceCopy.text("interface_detail.4a548bc641"),
+              detail: self.interfaceCopy.text("interface_detail.ca15b55300"), control: create)
           ]))
     }
-    explanation.stringValue = "官方 API 和中转都使用地址与 Key；倍率仅用于本地估算。保存后再应用，当前会话是否采用以客户端为准。"
+    explanation.stringValue = self.interfaceCopy.text("interface_detail.db594d56e0")
     pane.add(explanation)
-    pane.setActions([actions.button("关闭") { [weak self] in self?.close() }])
+    pane.setActions([
+      actions.button(self.interfaceCopy.text("common.close")) { [weak self] in self?.close() }
+    ])
     pane.invalidateContentSize()
   }
   private func showAccountHelp() {
     pane.clear()
     let login =
       client == .codex
-      ? "停用 API 认证，恢复默认 OpenAI 服务。\n运行 codex login 后开启新会话，再重新检查。"
-      : "停用 API 地址与 Key，运行 /login 登录。\n开启新会话后，点「重新检查」。"
+      ? self.interfaceCopy.text("interface_detail.ae4e4b9dd0")
+      : self.interfaceCopy.text("interface_detail.df1038363d")
     pane.add(
       PaxPreferenceGroup(
-        title: "使用官方账号", symbol: "person.crop.circle",
+        title: self.interfaceCopy.text("interface_detail.4276678907"), symbol: "person.crop.circle",
         rows: [note(login)]))
     pane.add(
       PaxPreferenceGroup(
-        title: "改用 API", symbol: "key",
-        rows: [note("官方 API 与中转均使用地址和 Key。\n在客户端完成 API 认证，再选择 Profile 应用。")]))
+        title: self.interfaceCopy.text("interface_detail.9cbd309083"), symbol: "key",
+        rows: [note(self.interfaceCopy.text("interface_detail.e08dd04429"))]))
     pane.add(
       PaxPreferenceGroup(
-        title: "用量与费用", symbol: "chart.bar",
-        rows: [note("无需 Profile，自动读取本机 CLI 用量。\n费用为 API 等值估算，非订阅扣费；不含剩余额度。")]))
-    let recheck = actions.button("重新检查", primary: true) { [weak self] in self?.recheck() }
+        title: self.interfaceCopy.text("interface_detail.dcf264eaf4"), symbol: "chart.bar",
+        rows: [note(self.interfaceCopy.text("interface_detail.e55de60c0f"))]))
+    let recheck = actions.button(self.interfaceCopy.text("action.profile.recheck"), primary: true) {
+      [weak self] in self?.recheck()
+    }
     recheck.widthAnchor.constraint(
       greaterThanOrEqualToConstant: ceil(recheck.intrinsicContentSize.width) + PaxTheme.Spacing.xs
     ).isActive = true
     pane.setActions([
-      actions.button("返回") { [weak self] in self?.render() }, recheck,
+      actions.button(self.interfaceCopy.text("action.common.back")) { [weak self] in self?.render()
+      }, recheck,
     ])
     pane.invalidateContentSize()
   }
@@ -191,24 +215,29 @@ final class AIBindingController: WorkbenchModalController {
   }
   private func createForm() {
     pane.clear()
-    let name = field("名称", value: "", identifier: "ai-create-name")
-    let endpoint = field("API 地址", value: "https://", identifier: "ai-create-endpoint")
-    let rate = field("计费倍率", value: "1", identifier: "ai-create-rate")
-    let key = PaxRouteSecureField(placeholder: "输入 API Key")
+    let name = field(
+      self.interfaceCopy.text("profile_editor.name"), value: "", identifier: "ai-create-name")
+    let endpoint = field(
+      self.interfaceCopy.text("profile_editor.endpoint"), value: "https://",
+      identifier: "ai-create-endpoint")
+    let rate = field(
+      self.interfaceCopy.text("profile_editor.multiplier"), value: "1", identifier: "ai-create-rate"
+    )
+    let key = PaxRouteSecureField(placeholder: self.interfaceCopy.text("profile_editor.key_input"))
     key.setAccessibilityIdentifier("ai-create-key")
     for view in [name.0, endpoint.0, rate.0, note("API Key"), key] { pane.add(view) }
-    pane.add(note("保存仅写入 Pax。保存后再选择应用，不会立即改动客户端。费用按官方单价乘倍率估算。"))
+    pane.add(note(self.interfaceCopy.text("interface_detail.a15de3671b")))
     pane.add(explanation)
     explanation.stringValue = ""
     pane.setActions([
-      actions.button("返回") { [weak self] in
+      actions.button(self.interfaceCopy.text("action.common.back")) { [weak self] in
         key.stringValue = ""
         self?.render()
       },
-      actions.button("保存 Profile", primary: true) { [weak self] in
+      actions.button(self.interfaceCopy.text("profile_editor.save"), primary: true) { [weak self] in
         guard let self, !applying else { return }
         guard let multiplier = Double(rate.1.stringValue) else {
-          report("请填写有效倍率", failed: true)
+          report(self.interfaceCopy.text("interface_detail.847a995d32"), failed: true)
           return
         }
         let profile = AIProfile(
@@ -224,9 +253,11 @@ final class AIBindingController: WorkbenchModalController {
           if ok {
             key.stringValue = ""
             render()
-            report("Profile 已保存。请选择此配置应用到客户端。")
+            report(self.interfaceCopy.text("interface_detail.d9fd5776f7"))
           } else {
-            report(store.configuration.error ?? "保存失败", failed: true)
+            report(
+              store.configuration.error(context: interfaceCopy.context)
+                ?? self.interfaceCopy.text("profile_editor.save_failed"), failed: true)
           }
         }
       },
@@ -237,20 +268,28 @@ final class AIBindingController: WorkbenchModalController {
     guard let binding = store.bindings[client] else { return }
     pane.clear()
     let host = URL(string: binding.endpoint)?.host ?? client.rawValue
-    let name = field("名称", value: host, identifier: "ai-import-name")
-    let rate = field("计费倍率", value: "1", identifier: "ai-import-rate")
-    pane.add(note("从 " + client.rawValue + " 导入 · " + binding.endpoint))
-    pane.add(note("Key 已检测，仅由后台保存，不显示明文。导入不会改写客户端配置或已有历史费用。"))
+    let name = field(
+      self.interfaceCopy.text("profile_editor.name"), value: host, identifier: "ai-import-name")
+    let rate = field(
+      self.interfaceCopy.text("profile_editor.multiplier"), value: "1", identifier: "ai-import-rate"
+    )
+    pane.add(
+      note(
+        self.interfaceCopy.text("interface_detail.acbb76a2b1") + client.rawValue
+          + self.interfaceCopy.text("interface_detail.2c5cd6e679") + binding.endpoint))
+    pane.add(note(self.interfaceCopy.text("interface_detail.ffff3d9e3a")))
     pane.add(name.0)
     pane.add(rate.0)
     pane.add(explanation)
     explanation.stringValue = ""
     pane.setActions([
-      actions.button("返回") { [weak self] in self?.render() },
-      actions.button("确认导入", primary: true) { [weak self] in
+      actions.button(self.interfaceCopy.text("action.common.back")) { [weak self] in self?.render()
+      },
+      actions.button(self.interfaceCopy.text("action.profile.confirm_import"), primary: true) {
+        [weak self] in
         guard let self, !applying else { return }
         guard let multiplier = Double(rate.1.stringValue) else {
-          report("请填写有效倍率", failed: true)
+          report(self.interfaceCopy.text("interface_detail.847a995d32"), failed: true)
           return
         }
         applying = true
@@ -261,9 +300,12 @@ final class AIBindingController: WorkbenchModalController {
           applying = false
           if ok {
             render()
-            report("已导入到 Pax，客户端配置保持原样。")
+            report(self.interfaceCopy.text("interface_detail.d892ea1dfc"))
           } else {
-            report(store.configuration.error ?? "导入失败，请重新检查配置", failed: true)
+            report(
+              store.configuration.error(context: interfaceCopy.context)
+                ?? self.interfaceCopy.text("interface_detail.bff9ebfda6"),
+              failed: true)
           }
         }
       },
@@ -279,23 +321,32 @@ final class AIBindingController: WorkbenchModalController {
     }
     if store.bindings[client]?.state == "missing" {
       pane.clear()
-      pane.add(note("将把「" + profile.name + "」的 API 地址与 Key 写入 " + client.rawValue + "。"))
+      pane.add(
+        note(
+          self.interfaceCopy.text("interface_detail.7c59e47583") + profile.name
+            + self.interfaceCopy.text("interface_detail.eb3ff5d80f") + client.rawValue + "。"))
       pane.add(note(store.bindings[client]?.targetPath ?? ""))
       if store.bindings[client]?.requiresModel == true {
-        pane.add(note("模型 ID（首次配置必填）"))
-        model.placeholderString = "填写服务商提供的准确模型 ID"
+        pane.add(note(self.interfaceCopy.text("interface_detail.1ac3c024c6")))
+        model.placeholderString = self.interfaceCopy.text("interface_detail.d4fc4536ac")
         model.setAccessibilityIdentifier("ai-initialize-model")
         pane.add(model)
         if !profile.catalog.isEmpty {
-          pane.add(note("此服务已读取的模型：" + profile.catalog.prefix(8).map(\.id).joined(separator: "、")))
+          pane.add(
+            note(
+              self.interfaceCopy.text("interface_detail.3d91201ff6")
+                + profile.catalog.prefix(8).map(\.id).joined(separator: "、")))
         }
       }
-      pane.add(note("只创建或补充必要 API 设置，保留已有 MCP 等配置。账号登录或认证冲突会停止写入。"))
+      pane.add(note(self.interfaceCopy.text("interface_detail.1fae8249e2")))
       pane.add(explanation)
       explanation.stringValue = ""
       pane.setActions([
-        actions.button("返回") { [weak self] in self?.render() },
-        actions.button("创建并应用", primary: true) { [weak self] in
+        actions.button(self.interfaceCopy.text("action.common.back")) { [weak self] in
+          self?.render()
+        },
+        actions.button(self.interfaceCopy.text("action.profile.create_apply"), primary: true) {
+          [weak self] in
           self?.apply(profile, initialize: true)
         },
       ])
@@ -307,7 +358,7 @@ final class AIBindingController: WorkbenchModalController {
   private func apply(_ profile: AIProfile, initialize: Bool) {
     guard !applying else { return }
     applying = true
-    report("正在核对配置…")
+    report(self.interfaceCopy.text("interface_detail.a1e948d633"))
     Task { [weak self] in
       guard let self else { return }
       defer { applying = false }
@@ -316,15 +367,20 @@ final class AIBindingController: WorkbenchModalController {
         let plan = await store.configuration.plan(
           client, profile: profile, initialize: initialize, modelID: model.stringValue)
       else {
-        report(store.configuration.error ?? "无法生成写入计划，请重新检查", failed: true)
+        report(
+          store.configuration.error(context: interfaceCopy.context)
+            ?? self.interfaceCopy.text("interface_detail.e803e144d5"),
+          failed: true)
         return
       }
       let ok = await store.configuration.apply(plan)
       if ok {
         render()
-        report("配置已写入。请按客户端要求开启新会话；实际请求成功后，用量会自动显示。")
+        report(self.interfaceCopy.text("interface_detail.f13295200d"))
       } else {
-        report(store.configuration.error ?? "配置写入失败，请重试", failed: true)
+        report(
+          store.configuration.error(context: interfaceCopy.context)
+            ?? self.interfaceCopy.text("interface_detail.b387bce5c6"), failed: true)
       }
     }
   }

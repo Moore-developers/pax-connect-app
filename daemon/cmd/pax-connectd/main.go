@@ -161,6 +161,9 @@ func run(socketPath string, logger *slog.Logger, mixed string, ownerPID int) (re
 	if err := state.ConfigureAdblockRules(ctx, resources); err != nil {
 		return fmt.Errorf("adblock_baseline_invalid: %w", err)
 	}
+	if err := state.ConfigureClaudeRules(ctx); err != nil {
+		return fmt.Errorf("claude_baseline_invalid: %w", err)
+	}
 	rules := singbox.Rules{Directory: resources, GoogleHash: "992d7ba91ce9c6e1c248d9ef0d58b2a17281415526b6a560dce6368e4f72e1f2", GeositeHash: "2f4af0be08f2ff494a8fcdef992dc92a2267600ce26c9bba17421d1ce9a6715c", GeoIPHash: "ebee603fdf402314b44b9f653cdcf6d9cc9c41e84e2b3515e3123c5c920a93bc"}
 	core, err := coreSession(ownerPID, rules, mixed)
 	if err != nil {

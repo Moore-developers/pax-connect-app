@@ -31,10 +31,10 @@ final class AIStatCardView: NSView {
     setAccessibilityRole(.group)
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  func apply(_ item: AIUsageLogFormat.Stat) {
+  func apply(_ item: AIUsageLogFormat.Stat, context: PresentationContext = .chinese) {
     title.stringValue = item.title
     if let official = item.officialCost, let channel = item.channelCost {
-      AIUsageCostDisplay.apply(value, official: official, channel: channel)
+      AIUsageCostDisplay.apply(value, official: official, channel: channel, context: context)
     } else {
       value.attributedStringValue = NSAttributedString(
         string: item.value,
@@ -59,9 +59,11 @@ final class AIUsageLogSummaryView: NSStackView {
     setAccessibilityIdentifier("ai-log-summary")
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  func apply(period: String, totals: AIUsageSummary) {
-    for (card, item) in zip(cards, AIUsageLogFormat.stats(period: period, totals: totals)) {
-      card.apply(item)
+  func apply(period: String, totals: AIUsageSummary, context: PresentationContext = .chinese) {
+    for (card, item) in zip(
+      cards, AIUsageLogFormat.stats(period: period, totals: totals, context: context))
+    {
+      card.apply(item, context: context)
     }
   }
 }

@@ -13,15 +13,18 @@ extension AIUsageViewController {
     contentRefreshers.append { [weak self, weak tabs] in
       tabs?.selectedIndex = self?.store.profileMeasureCost == true ? 1 : 0
     }
-    let header = AIUsageLayout.cardHeader(symbol: "terminal", title: "客户端用量", trailing: [tabs])
-    let rows = store.clientRows(cost: store.profileMeasureCost)
+    let header = self.interfaceCopy.usageHeader(
+      symbol: "terminal", titleKey: "ai_usage.client_usage", trailing: [tabs])
+    let rows = store.clientRows(cost: store.profileMeasureCost, context: self.interfaceCopy.context)
     let total = rows.reduce(0) { $0 + $1.amount }
     var items: [NSView] = [header]
     let noticeHost = AIUsageLayout.stack([])
     var noticeKey = ""
     let updateNotice: () -> Void = { [weak self, weak noticeHost] in
       guard let self, let noticeHost else { return }
-      let key = self.store.bindingIssues.map { $0.client.rawValue + $0.label }.joined(
+      let key = self.store.bindingIssues(context: self.interfaceCopy.context).map {
+        $0.client.rawValue + $0.label
+      }.joined(
         separator: "|")
       guard key != noticeKey else { return }
       noticeKey = key
@@ -46,20 +49,25 @@ extension AIUsageViewController {
   }
 
   private func issueNotice() -> NSView? {
-    let issues = store.bindingIssues
+    let issues = store.bindingIssues(context: self.interfaceCopy.context)
     guard let first = issues.first else { return nil }
     let title: String
     let detail: String
     if issues.count == 1 {
       title = first.client.rawValue + " " + first.label
       detail =
-        first.client == .harness ? "DSH 用量按本地配置统计，独立于 Pax Profile 归属。" : "配置只影响后续会话；历史用量不重新归属。"
+        first.client == .harness
+        ? self.interfaceCopy.text("ai_usage.dsh_independent")
+        : self.interfaceCopy.text("ai_usage.future_sessions")
     } else {
-      title = "\(issues.count) 个 CLI 需要处理"
+      title = self.interfaceCopy.text(
+        "interface_detail.f4f220e9b8", ["arg0": String(describing: issues.count)])
       detail = issues.map(\.client.rawValue).joined(separator: "、")
     }
     let notice = PaxNotice(title: title, detail: detail, tone: .warning)
-    notice.setAction("去配置", identifier: "ai-configure-" + first.client.code)
+    notice.setAction(
+      self.interfaceCopy.text("ai_usage.configure"), identifier: "ai-configure-" + first.client.code
+    )
     notice.onAction = { [weak self, weak notice] in
       guard let self, let notice else { return }
       self.presentBinding(first.client, from: notice)
@@ -68,8 +76,10 @@ extension AIUsageViewController {
   }
 
   private func billingText(_ row: AIClientUsageRow) -> String {
-    if row.serviceSource == .officialAccount { return "官方账号 · API 等值估算，非订阅扣费" }
-    return row.configurationText + " · " + row.billedCostText
+    if row.serviceSource == .officialAccount {
+      return self.interfaceCopy.text("ai_usage.account_estimate")
+    }
+    return row.configurationText(context: self.interfaceCopy.context) + " · " + row.billedCostText
   }
 
   private func clientRow(_ row: AIClientUsageRow, total: Double) -> NSView {
@@ -78,26 +88,30 @@ extension AIUsageViewController {
     let amount = AIUsageLayout.label(row.value, numeric: true)
     let share = AIUsageLayout.label(row.shareText, secondary: true, numeric: true)
     share.isHidden = row.shareText.isEmpty
-    let heading: [NSView] = [AIClientMark.view(row.client), name, NSView(), amount, share]
-    let top = AIUsageLayout.stack(heading, vertical: false)
     let profile = AIUsageLayout.label(
       billingText(row), secondary: true)
     profile.lineBreakMode = .byTruncatingTail
+    profile.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let state = PaxFeatureTag(row.state ?? "", tone: row.needsAction ? .warning : .neutral)
     state.isHidden = row.state == nil
     let stateHost = AIUsageLayout.stack([state], vertical: false)
-    var meta: [NSView] = [profile, stateHost]
+    stateHost.isHidden = row.state == nil
+    let top = AIUsageLayout.stack(
+      [AIClientMark.view(row.client), name, stateHost, NSView(), amount, share], vertical: false)
     let requests = AIUsageLayout.label(row.requestsText, secondary: true, numeric: true)
     requests.setContentCompressionResistancePriority(.required, for: .horizontal)
-    meta += [NSView(), requests]
+    let meta = AIUsageLayout.stack([profile, NSView(), requests], vertical: false)
     let bar = PaxShareBar(
       segments: [.init(row.client.rawValue, value: row.amount)], colors: [PaxTheme.Routes.blue],
       total: total)
     let barHost = AIUsageLayout.stack([bar])
-    let body = AIUsageLayout.stack([top, barHost, AIUsageLayout.stack(meta, vertical: false)])
+    let body = AIUsageLayout.stack([top, barHost, meta])
     body.spacing = PaxTheme.Spacing.tight
     let button = actions.overlay(
-      label: row.client == .harness ? "查看 DSH 用量" : "管理 " + row.client.rawValue + " 的 Profile",
+      label: row.client == .harness
+        ? self.interfaceCopy.text("ai_usage.view_dsh")
+        : self.interfaceCopy.text("ai_usage.manage_prefix") + row.client.rawValue
+          + self.interfaceCopy.text("ai_usage.profile_suffix"),
       id: "ai-client-" + row.client.code
     ) { [weak self] in
       guard let self else { return }
@@ -113,11 +127,15 @@ extension AIUsageViewController {
     var denominator = total
     contentRefreshers.append { [weak self] in
       guard let self,
-        let next = self.store.clientRows(cost: self.store.profileMeasureCost).first(where: {
+        let next = self.store.clientRows(
+          cost: self.store.profileMeasureCost, context: self.interfaceCopy.context
+        ).first(where: {
           $0.client == row.client
         })
       else { return }
-      let total = self.store.clientRows(cost: self.store.profileMeasureCost).reduce(0) {
+      let total = self.store.clientRows(
+        cost: self.store.profileMeasureCost, context: self.interfaceCopy.context
+      ).reduce(0) {
         $0 + $1.amount
       }
       guard displayed != next || denominator != total else { return }
@@ -146,7 +164,8 @@ extension AIUsageViewController {
           segments: [.init(next.client.rawValue, value: next.amount)],
           colors: [PaxTheme.Routes.blue], total: total))
     }
-    body.toolTip = "所选时段内 \(row.client.rawValue) 的用量，点击查看"
+    body.toolTip = self.interfaceCopy.text(
+      "interface_detail.835ab983a9", ["arg0": String(describing: row.client.rawValue)])
     return body
   }
 }

@@ -4,7 +4,8 @@ import PaxCore
 import PaxUI
 
 @MainActor
-final class AIUsageViewController: NSViewController {
+final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
+  let interfaceCopy = InterfaceCopyBindings()
   let store: AIUsageStore
   let actions = AIUsageActions()
   let content = NSStackView()
@@ -87,13 +88,28 @@ final class AIUsageViewController: NSViewController {
     pageVisible = false
     syncRefreshPage()
   }
+  private func applyLanguage() {
+    tabs.applyMore(
+      title: interfaceCopy.text("common.more"),
+      accessibilityLabel: interfaceCopy.text("common.more"))
+    mode.apply(labels: [interfaceCopy.text("common.proxy"), interfaceCopy.text("common.direct")])
+    periods.apply(
+      labels: ["today", "yesterday", "week", "month", "year"].map {
+        interfaceCopy.text("ai_period." + $0)
+      })
+    logContent?.invalidateLanguage()
+    sessionContent?.invalidateLanguage()
+    render()
+  }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
   override func loadView() {
     view = WorkbenchSurface()
     view.setAccessibilityIdentifier("ai-usage-page")
     let header = PaxPageHeader(
-      title: "模型用量",
+      title: self.interfaceCopy.text("navigation.usage"),
       accessory: ProxyStatusAccessory(mode: mode, connection: connection, presenter: self))
+    interfaceCopy.bind(header, key: "navigation.usage") { $0.apply(title: $1) }
+    interfaceCopy.onChange = { [weak self] in self?.applyLanguage() }
     mode.onSelect = { [weak self] index in
       guard let self else { return }
       if let connection = self.connection {
@@ -109,7 +125,7 @@ final class AIUsageViewController: NSViewController {
     }
     dateButton.image = PaxRouteIcon.image("calendar")
     dateButton.trailingImage = PaxIcon.image("chevron.down", size: PaxTheme.DateRange.chevronSize)
-    dateButton.setAccessibilityLabel("选择模型用量日期")
+    dateButton.setAccessibilityLabel(self.interfaceCopy.text("action.usage.select_dates_ax"))
     dateButton.heightAnchor.constraint(equalToConstant: PaxTheme.Dashboard.tabHeight).isActive =
       true
     tabs.onSelect = { [weak self] id in
@@ -230,12 +246,20 @@ final class AIUsageViewController: NSViewController {
     item.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
   }
   private func render() {
+    mode.apply(labels: [interfaceCopy.text("common.proxy"), interfaceCopy.text("common.direct")])
+    periods.apply(
+      labels: ["today", "yesterday", "week", "month", "year"].map {
+        interfaceCopy.text("ai_period." + $0)
+      })
 
     periods.isHidden = store.page == .profiles
     dateButton.isHidden = store.page == .profiles
     tabs.apply(
-      zip(AIUsageStore.Page.allCases, ["概览", "会话分析", "Profile", "日志"]).map {
-        .init(id: $0.0.rawValue, title: $0.1)
+      zip(
+        AIUsageStore.Page.allCases,
+        ["ai_page.overview", "ai_page.sessions", "ai_page.profiles", "ai_page.logs"]
+      ).map {
+        .init(id: $0.0.rawValue, title: interfaceCopy.text($0.1))
       }, selected: store.page.rawValue)
     periods.selectedIndex = Self.selectablePeriods.firstIndex(of: store.period) ?? -1
     dateButton.title = dateLabel()
@@ -272,7 +296,7 @@ final class AIUsageViewController: NSViewController {
       // Demo entry only: the limits design runs on in-memory data (P07d-ai-session-limits).
       add(AISessionLimitsView(options: store.sessionOptions))
     case .sessions:
-      let analysis = AISessionLiveLimitsView(store: store)
+      let analysis = AISessionLiveLimitsView(store: store, interfaceCopy: interfaceCopy)
       sessionContent = analysis
       add(analysis)
     case .overview: renderOverview()
@@ -304,6 +328,7 @@ final class AIUsageViewController: NSViewController {
     presentPopover(controller, from: anchor)
   }
   func presentPopover(_ controller: WorkbenchModalController, from anchor: NSView) {
+    controller.interfaceCopy.apply(interfaceCopy.context)
     controller.loadViewIfNeeded()
     let width = controller.maximumPresentationWidth ?? AIBindingController.popoverWidth
     controller.view.setFrameSize(.init(width: width, height: 480))
@@ -329,7 +354,7 @@ final class AIUsageViewController: NSViewController {
       : AIUsageFormatting.date(lower) + " – " + AIUsageFormatting.date(upper)
   }
   @objc private func openDates() {
-    let controller = AIUsageDateController(store: store)
+    let controller = AIUsageDateController(store: store, context: interfaceCopy.context)
     let popover = NSPopover()
     popover.behavior = .transient
     popover.applyMotionPreference()

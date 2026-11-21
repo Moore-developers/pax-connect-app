@@ -104,40 +104,44 @@ func TestRetentionDeletesByAgeOnlyAfterEveryConsumerPassed(t *testing.T) {
 	}
 }
 
-func TestRetentionHardCapEvictsAndMarksUnconsumedRanges(t *testing.T) {
+func TestRetentionKeepsUnconsumedJournalPastFormerSizeAndCountCaps(t *testing.T) {
 	h := newIngestHarness(t)
-	cursors := h.fill(8) // two more files than the cap of 6
+	cursors := h.fill(8) // more than the former six-file cap
+	oldest := filepath.Join(h.dir, "journal", testEpoch.Format("2006010215")+".db")
+	// A sparse extension crosses the former 256MiB cap without allocating it.
+	if err := os.Truncate(oldest, 257<<20); err != nil {
+		t.Fatal(err)
+	}
 	h.register("logs", cursors[0])
 	h.register("traffic", cursors[1])
-	h.clock = testEpoch.Add(7*time.Hour + 30*time.Minute) // inside the newest file's hour; files 0 and 1 go by the cap, not by age
+	h.clock = testEpoch.Add(7*time.Hour + 30*time.Minute)
 	h.in.maintain(context.Background())
-	if got := h.hours(); !equalInts(got, []int{2, 3, 4, 5, 6, 7}) {
-		t.Fatalf("cap of %d files not enforced: %v", journalMaxFiles, got)
+	if got := h.hours(); !equalInts(got, []int{0, 1, 2, 3, 4, 5, 6, 7}) {
+		t.Fatalf("unconsumed journal files must survive size and file count: %v", got)
 	}
-	gaps := h.gaps()
-	if len(gaps) != 2 {
-		t.Fatalf("want a marker per unconsumed evicted file, got %+v", gaps)
+	if losses, err := h.journal.PendingLosses(context.Background()); err != nil || len(losses) != 0 {
+		t.Fatalf("capacity must not create loss intents: %+v %v", losses, err)
 	}
-	for i, g := range gaps {
-		hour := testEpoch.Add(time.Duration(i) * time.Hour)
-		if g.Reason != gapEvicted || g.FromMs != hour.UnixMilli() || g.ToMs != hour.Add(time.Hour).UnixMilli() {
-			t.Fatalf("gap %d %+v", i, g)
-		}
+	if gaps := h.gaps(); len(gaps) != 0 {
+		t.Fatalf("capacity must not create gaps: %+v", gaps)
 	}
 	cursor, _, err := h.journal.Cursor(context.Background())
 	if err != nil || cursor != cursors[7] {
-		t.Fatalf("a gap marker must carry the committed cursor, got %+v %v", cursor, err)
+		t.Fatalf("maintenance changed the committed cursor: %+v %v", cursor, err)
 	}
 }
 
-func TestRetentionEvictionWithoutUnconsumedRangeLeavesNoMarker(t *testing.T) {
+func TestRetentionDeletesConsumedOldFilesWithoutGap(t *testing.T) {
 	h := newIngestHarness(t)
 	cursors := h.fill(8)
 	h.register("logs", cursors[7])
 	h.clock = testEpoch.Add(7*time.Hour + 30*time.Minute)
 	h.in.maintain(context.Background())
+	if got := h.hours(); !equalInts(got, []int{5, 6, 7}) {
+		t.Fatalf("only consumed files ended at least two hours ago may be deleted: %v", got)
+	}
 	if len(h.gaps()) != 0 {
-		t.Fatalf("evicting consumed files must not report a gap: %+v", h.gaps())
+		t.Fatalf("deleting consumed files must not report a gap: %+v", h.gaps())
 	}
 }
 
@@ -199,18 +203,18 @@ func TestConsumerRegistrationIsSealedByStart(t *testing.T) {
 	}
 }
 
-func TestPreRegisteredZeroConsumersBlockAgeDeletionAndMarkEviction(t *testing.T) {
+func TestPreRegisteredZeroConsumersKeepAllJournalFiles(t *testing.T) {
 	h := newIngestHarness(t)
 	cursors := h.fill(8)
 	h.register(HistoryConsumerLogs, historystore.Cursor{})
 	h.register(HistoryConsumerTraffic, historystore.Cursor{})
-	h.clock = testEpoch.Add(7*time.Hour + 30*time.Minute) // files 2..4 are old enough for age deletion
+	h.clock = testEpoch.Add(7*time.Hour + 30*time.Minute)
 	h.in.maintain(context.Background())
-	if got := h.hours(); !equalInts(got, []int{2, 3, 4, 5, 6, 7}) {
-		t.Fatalf("only the hard cap may delete while consumers are at zero: %v", got)
+	if got := h.hours(); !equalInts(got, []int{0, 1, 2, 3, 4, 5, 6, 7}) {
+		t.Fatalf("consumers at zero must protect every journal file: %v", got)
 	}
-	if gaps := h.gaps(); len(gaps) != 2 || gaps[0].Reason != gapEvicted {
-		t.Fatalf("unconsumed evicted hours need markers: %+v", gaps)
+	if gaps := h.gaps(); len(gaps) != 0 {
+		t.Fatalf("unconsumed retained hours must not create gaps: %+v", gaps)
 	}
 	if cursor, _, _ := h.journal.Cursor(context.Background()); cursor != cursors[7] {
 		t.Fatalf("cursor %+v", cursor)

@@ -5,6 +5,9 @@ import PaxUI
 
 /// Formal entry: shared Store selection, inline list navigation and daemon limits projection.
 @MainActor final class AISessionLiveLimitsView: NSView {
+  let interfaceCopy: InterfaceCopyBindings
+  var context: PresentationContext { interfaceCopy.context }
+
   private let store: AIUsageStore
   private var data: AISessionStore? { store.data?.sessions }
   private let status = PaxInlineStatus()
@@ -24,10 +27,14 @@ import PaxUI
     summary: empty.summary,
     lists: [.init(kind: .main, rows: []), .init(kind: .subagents, rows: [])])
 
-  init(store: AIUsageStore) {
+  init(store: AIUsageStore, interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
+    self.interfaceCopy = interfaceCopy
+    let context = interfaceCopy.context
+
     self.store = store
     limits = AISessionLimitsView(
-      model: .init(sessions: [], all: Self.empty, single: [:]), options: store.sessionOptions)
+      model: .init(sessions: [], all: Self.empty, single: [:]), options: store.sessionOptions,
+      interfaceCopy: interfaceCopy)
     super.init(frame: .zero)
     setAccessibilityIdentifier("ai-session-analysis")
     limits.onSelect = { [weak self] id in
@@ -56,6 +63,11 @@ import PaxUI
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
 
+  func invalidateLanguage() {
+    rendered = nil
+    limits.invalidateLanguage()
+    refresh()
+  }
   func refresh() {
     guard let data else { return }
     let key = data.selected.first
@@ -65,7 +77,7 @@ import PaxUI
     let name = key.map(title)
     var notices: [String] = []
     if analysis?.truncated == true {
-      notices.append("结果超过容量限制，当前结果不代表完整统计；请缩小日期范围")
+      notices.append(context.text("session_limits.d41ba7e60d"))
     }
     let range = store.period.interval(
       now: store.now, start: store.start, end: store.end, calendar: store.calendar)
@@ -74,22 +86,24 @@ import PaxUI
       limits.resetListPosition()
     }
     if let retained = analysis?.retainedFrom, range.lowerBound < retained {
-      notices.append("所选范围超出明细保留期，仅统计 " + AIUsageFormatting.date(retained) + " 起的保留明细")
+      notices.append(
+        context.text("session_limits.c6de01a319") + AIUsageFormatting.date(retained)
+          + context.text("session_limits.0b88c067e2"))
     }
     if value?.agentsIncomplete == true {
-      notices.append("部分子代理记录缺失、未关联或仍在索引，代理统计可能不完整")
+      notices.append(context.text("session_limits.4372bdd28e"))
     }
-    if value?.summary.requests == 0 { notices.append("所选日期没有已记录用量") }
+    if value?.summary.requests == 0 { notices.append(context.text("session_limits.288b9bf9b1")) }
     limits.loadingStatus.isHidden = value != nil || data.error != nil || !data.limitsSupported
     let message =
       data.error
       ?? (!data.limitsSupported
-        ? "后台不支持会话上限分析，请更新后台"
+        ? context.text("session_limits.c7a455453e")
         : notices.isEmpty ? nil : notices.joined(separator: "；"))
     status.isHidden = message == nil
     status.apply(
       data.error == nil ? .idle : .failure, text: message ?? "",
-      action: data.error == nil ? nil : "重试")
+      action: data.error == nil ? nil : context.text("session_limits.b8784c8dd5"))
     limits.setLoading(value == nil || !data.limitsSupported)
     if rendered != value || renderedAll != all || renderedKey != key
       || renderedTitle != (name ?? "")
@@ -98,11 +112,14 @@ import PaxUI
       renderedAll = all
       renderedKey = key
       renderedTitle = name ?? ""
-      let allScope = all.map { AISessionLimitsMapping.scope($0, selected: false) } ?? Self.empty
+      let allScope =
+        all.map { AISessionLimitsMapping.scope($0, selected: false, context: context) }
+        ?? Self.empty
       let scope =
         key == nil
         ? allScope
-        : value.map { AISessionLimitsMapping.scope($0, selected: true) } ?? Self.emptyDetail
+        : value.map { AISessionLimitsMapping.scope($0, selected: true, context: context) }
+          ?? Self.emptyDetail
       let head = key.map { AILimitSessionHead(id: $0.id, cli: $0.cli, title: name ?? "") }
       let model = AISessionLimitsModel(
         sessions: head.map { [$0] } ?? [], all: allScope,
@@ -113,15 +130,18 @@ import PaxUI
 
   private func title(_ key: AISessionKey) -> String {
     if let entry = data?.catalog.selected, entry.key == key {
-      return AISessionPickerController.title(entry)
+      return AISessionPickerController.title(entry, context: context)
     }
     if let entry = data?.catalog.items.first(where: { $0.key == key }) {
-      return AISessionPickerController.title(entry)
+      return AISessionPickerController.title(entry, context: context)
     }
     let row = data?.current?.limits?.primary.first {
       $0.cli == key.cli && $0.sessionID == key.session
     }
-    return (row?.title ?? "未命名会话 · " + String(key.session.prefix(12))) + " · "
+    return
+      (row.map { AISessionLimitsMapping.title($0, context: context) } ?? context.text(
+        "session_limits.508c23d5d7") + String(key.session.prefix(12)))
+      + " · "
       + AIClientMark.shortName(key.cli)
   }
 }

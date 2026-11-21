@@ -28,7 +28,7 @@ func (c *Controller) pruneRemoved(ctx context.Context, next *config.Catalog) boo
 				protected[r.Config.ID] = true
 			}
 		}
-		if r.IsSubscription() && r.SourceRemoved && !r.Hidden && len(r.Overrides) == 0 && r.NameOverride == "" && !protected[r.Config.ID] {
+		if r.IsSubscription() && r.SourceRemoved && !r.Hidden && len(r.Overrides) == 0 && r.NameOverride == "" && !protected[r.Config.ID] && !c.routingReferences(r.Config.ID) {
 			if next.SelectedID == r.Config.ID {
 				next.SelectedID = ""
 			}

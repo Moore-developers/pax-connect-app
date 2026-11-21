@@ -42,6 +42,8 @@ type LimitFlat struct {
 // LimitRow is one independently judged session, model/effort, main line or agent.
 type LimitRow struct {
 	ID, CLI, Session, Title, Model, Effort, Note string
+	TitleSource, RawTitle                        string
+	SessionCount                                 *int64
 	Emphasized                                   bool
 	Bands                                        [3]LimitBand
 	Lines                                        *ModelLimit

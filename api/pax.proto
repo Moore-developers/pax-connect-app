@@ -6,6 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "traffic.proto";
 import "operation.proto";
 import "operation_context.proto";
+import "presentation.proto";
 import "route_edit.proto";
 import "privacy.proto";
 import "route_exit.proto";
@@ -345,7 +346,7 @@ message ProductLog {
   string record_id = 20; string problem_id = 21;
   uint64 occurrences = 22; uint64 related_connections = 23;
   google.protobuf.Timestamp first_at = 24; google.protobuf.Timestamp last_at = 25;
-  string category = 26; string operation_from=27;string operation_to=28;string system_category=29; SystemEvent system_event=30;string category_name=31;string category_symbol=32;
+  string category = 26; string operation_from=27;string operation_to=28;string system_category=29; SystemEvent system_event=30;string category_name=31;string category_symbol=32;ProductText message_text=33;
 }
 
 enum LogLevel {
@@ -597,10 +598,7 @@ message RouteUsageResponse {
 
 // Private history; opaque frozen cursors.
 
-message EventCategory {string key=1;string name=2;string symbol=3;}
-message EventField {string label=1;string value=2;string before=3;string after=4;}
-message EventSection {string kind=1;string title=2;repeated EventField fields=3;}
-message SystemEvent {string type=1;string name=2;EventCategory category=3;string result=4;string error_code=5;google.protobuf.Timestamp started_at=6;repeated EventSection sections=7;}
+
 message LogQuery {
  string dimension = 1; string object_id = 2; string search = 3;
  string level = 4; string route_id = 5;
@@ -677,7 +675,7 @@ message LogRecord {
  LogLevel level=4; string title=5; string source=6;
  FlowRecord flow=7; ConnectionMetrics metrics=8;
  google.protobuf.Timestamp first_at=9; google.protobuf.Timestamp last_at=10;
- uint64 event_count=11; google.protobuf.Timestamp as_of=12;string operation_from=13;string operation_to=14;string system_category=15; SystemEvent system_event=16; string category_name=17; string category_symbol=18;
+ uint64 event_count=11; google.protobuf.Timestamp as_of=12;string operation_from=13;string operation_to=14;string system_category=15; SystemEvent system_event=16; string category_name=17; string category_symbol=18;ProductText title_text=19;
 }
 
 // Anonymous same-origin favicon only. fetch=false never initiates network I/O.
@@ -698,7 +696,7 @@ message RoutingEntry { string id=1; string method=2; string target=3; string des
 message RoutingPackage {
  string id=1; string name=2; string kind=3; string destination=4; bool enabled=5;
  repeated RoutingEntry rules=6; string source=7; string version=8; string previous_version=9;
- bool automatic=10; string update_message=11;int64 updated_unix=12;
+ bool automatic=10; string update_message=11;int64 updated_unix=12;ProductText update_text=13;
 }
 message RoutingApplication {string id=1;string name=2;repeated string domains=3;}
 message RoutingProcessCandidates {
@@ -710,7 +708,7 @@ message RoutingProcessCandidates {
 message RoutingCandidateTraffic {string id=1;uint64 bytes=2;}
 message RoutingLibrarySnapshot {
  uint64 revision=1;repeated RoutingPackage packages=2;repeated RoutingApplication applications=3;
- repeated NodeProfile routes=4;string state=5;string message=6;
+ repeated NodeProfile routes=4;string state=5;string message=6;ProductText message_text=7;
 }
 message RoutingMutationRequest {
  uint64 expected_revision=1;string action=2;string package_id=3;string rule_id=4;
@@ -725,11 +723,7 @@ message GeoRulesPage {repeated RoutingEntry rules=1;uint32 total=2;uint32 next_o
 message StartConnectionDiagnosticRequest { bool recheck = 1; OperationContext context = 2; }
 message StartNetworkDiagnosticRequest { string mode = 1; OperationContext context = 2; }
 message StartEnvironmentSourcesRequest { string session_id = 1; OperationContext context = 2; }
-message EnvironmentDiagnosticRequest {
- string action = 1; // start, read, cancel, sources
- string session_id = 2;
- OperationContext context = 3;
-}
+
 
 // A non-secret draft; credentials are merged privately after route/config CAS.
 message StartCFValidationRequest {

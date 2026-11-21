@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "locale": "en",
+  "messages": {
+    "chart.missing": "Not collected",
+    "chart.partial": "Partially collected",
+    "chart.total": "Total ",
+    "chart.range": "Range ",
+    "chart.no_data": "No data",
+    "chart.latest": "Latest ",
+    "chart.maximum": "Maximum ",
+    "chart.samples": "Latest {count} valid samples",
+    "chart.gaps": "{count} periods not collected",
+    "chart.coverage": "Records since {time}"
+  }
+}

@@ -17,9 +17,17 @@ extension NetworkDiagnosticPresentation {
     ("IPLocate", "ipx.al"), ("ip2region", "ipx.al"),
   ]
 
+  public static func sourceName(_ name: String, providerID: String?, context: PresentationContext)
+    -> String
+  {
+    providerID == "ipx.al" && name == "Cloudflare 边缘"
+      ? context.text("diagnostic.source.cloudflare_edge") : name
+  }
+
   /// Fixed baseline plus any additional returned sources. No mutation of stored evidence.
   @MainActor public static func sourceRows(
-    _ report: NetworkDiagnosticReport?, onlyDifferences: Bool = false
+    _ report: NetworkDiagnosticReport?, onlyDifferences: Bool = false,
+    context: PresentationContext = .chinese
   ) -> [SourceRow] {
     let sources = report?.sources ?? []
     var used = Set<Int>()
@@ -31,17 +39,19 @@ extension NetworkDiagnosticPresentation {
       }) {
         used.insert(index)
         if let row = returnedSourceRow(
-          sources[index], report: report, onlyDifferences: onlyDifferences)
+          sources[index], report: report, onlyDifferences: onlyDifferences, context: context)
         {
           rows.append(row)
         }
       } else {
-        rows.append(missingSourceRow(expected.name, providerID: expected.provider, report: report))
+        rows.append(
+          missingSourceRow(
+            expected.name, providerID: expected.provider, report: report, context: context))
       }
     }
     for index in sources.indices where !used.contains(index) {
       if let row = returnedSourceRow(
-        sources[index], report: report, onlyDifferences: onlyDifferences)
+        sources[index], report: report, onlyDifferences: onlyDifferences, context: context)
       {
         rows.append(row)
       }
@@ -50,22 +60,27 @@ extension NetworkDiagnosticPresentation {
     where ["ip.sb", "geojs"].contains(provider.id)
       && !sources.contains(where: { $0.providerID == provider.id })
     {
-      rows.append(missingSourceRow(provider.id, providerID: provider.id, report: report))
+      rows.append(
+        missingSourceRow(provider.id, providerID: provider.id, report: report, context: context))
     }
     return rows
   }
 
-  @MainActor public static func sourceListOverview(_ report: NetworkDiagnosticReport?) -> Assessment
-  {
-    let summary = sourceOverview(report?.sources ?? [])
-    let missing = sourceRows(report).filter(\.unavailable).count
+  @MainActor public static func sourceListOverview(
+    _ report: NetworkDiagnosticReport?, context: PresentationContext = .chinese
+  ) -> Assessment {
+    let summary = sourceOverview(report?.sources ?? [], context: context)
+    let missing = sourceRows(report, context: context).filter(\.unavailable).count
     guard missing > 0 else { return summary }
-    return Assessment(text: summary.text + "；\(missing) 项未返回资料", tone: .pending)
+    return Assessment(
+      text: summary.text
+        + context.text("diagnostic_evidence.1d8c059331", ["arg0": String(describing: missing)]),
+      tone: .pending)
   }
 
   @MainActor private static func returnedSourceRow(
     _ source: NetworkDiagnosticReport.Source, report: NetworkDiagnosticReport?,
-    onlyDifferences: Bool
+    onlyDifferences: Bool, context: PresentationContext = .chinese
   ) -> SourceRow? {
     let all = report?.sources ?? []
     if onlyDifferences,
@@ -74,36 +89,52 @@ extension NetworkDiagnosticPresentation {
     {
       return nil
     }
-    let assessment = sourceAssessment(source, all: all)
+    let assessment = sourceAssessment(source, all: all, context: context)
     let detail = [
-      "国家：" + countryName(source.country), "城市：" + value(source.city),
-      "ASN：" + value(source.asn), "组织：" + value(source.org),
-      "来源更新时间：" + value(source.providerDate), providerDetails(report, id: source.providerID),
+      context.text("diagnostic_evidence.beedab4aae")
+        + countryName(source.country, context: context),
+      context.text("diagnostic_evidence.485cd74fe4") + value(source.city, context: context),
+      "ASN：" + value(source.asn, context: context),
+      context.text("diagnostic_evidence.992a5d4d3c") + value(source.org, context: context),
+      context.text("diagnostic_evidence.baca4484df") + value(source.providerDate, context: context),
+      providerDetails(report, id: source.providerID, context: context),
     ].joined(separator: "\n")
     return SourceRow(
-      title: source.name + (source.providerID == "ipx.al" ? " · 补充" : ""),
+      title: sourceName(source.name, providerID: source.providerID, context: context)
+        + (source.providerID == "ipx.al" ? context.text("diagnostic_evidence.aef5cea140") : ""),
       value: assessment.text, detail: detail, tone: assessment.tone, unavailable: false)
   }
 
   @MainActor private static func missingSourceRow(
-    _ name: String, providerID: String, report: NetworkDiagnosticReport?
+    _ name: String, providerID: String, report: NetworkDiagnosticReport?,
+    context: PresentationContext = .chinese
   ) -> SourceRow {
     let provider = report?.providers?.first { $0.id == providerID }
     let state: String
     if report == nil {
-      state = "尚未检测"
+      state = context.text("diagnostic_evidence.4d2966c438")
     } else if let provider {
       state =
         ["observed", "partial"].contains(provider.state)
-        ? "未返回本来源定位资料" : providerState(provider) + " · 本来源未取得资料"
+        ? context.text("diagnostic_evidence.a73b799126")
+        : providerState(provider, context: context) + context.text("diagnostic_evidence.5c90263f62")
     } else {
-      state = report?.providers == nil ? "旧记录未包含本来源资料" : "本次未请求该来源"
+      state =
+        report?.providers == nil
+        ? context.text("diagnostic_evidence.921b65493c")
+        : context.text("diagnostic_evidence.0ca4fc212d")
     }
-    let channelText = providerID == "ipx.al" ? "补充 · 经 ipx.al" : "直接查询 · " + providerID
+    let channelText =
+      providerID == "ipx.al"
+      ? context.text("diagnostic_evidence.2853d2265f")
+      : context.text("diagnostic_evidence.9c783c56dc") + providerID
     return SourceRow(
-      title: name + (providerID == "ipx.al" ? " · 补充" : ""), value: state,
-      detail: "获取渠道：" + channelText + "\n" + state + "\n"
-        + providerDetails(report, id: providerID) + "\n未取得资料，不参与来源对照与分歧统计。",
+      title: sourceName(name, providerID: providerID, context: context)
+        + (providerID == "ipx.al" ? context.text("diagnostic_evidence.aef5cea140") : ""),
+      value: state,
+      detail: context.text("diagnostic_evidence.b326e8192b") + channelText + "\n" + state + "\n"
+        + providerDetails(report, id: providerID, context: context)
+        + context.text("diagnostic_evidence.43d1fc457d"),
       tone: .pending, unavailable: true)
   }
 }
