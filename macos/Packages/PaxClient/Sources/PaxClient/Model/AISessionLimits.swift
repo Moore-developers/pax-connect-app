@@ -103,10 +103,12 @@ public struct AISessionLimitRow: Equatable, Sendable {
 public struct AISessionLimitCurrent: Equatable, Sendable {
   public let context: Int
   public let limit: Int?
+  public let nativeContextLimit: Int?
   public let band: Int
   init(_ p: Pax_V1_AIUsageLimitCurrent) {
     context = Int(p.context)
     limit = p.hasLimit ? Int(p.limit) : nil
+    nativeContextLimit = p.hasNativeContextLimit ? Int(p.nativeContextLimit) : nil
     band = Int(p.band)
   }
 }

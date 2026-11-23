@@ -55,7 +55,7 @@ import PaxUI
       context.text("session_limits.dd76a0c7b5"), font: PaxTheme.Typography.label(size: 10),
       secondary: true)
     let footerRow = AIUsageLayout.stack([status, NSView(), hint], vertical: false)
-    let footer = AILimitReadoutHost(footerRow, readout: readout) {
+    let footer = PaxHoverReadoutHost(footerRow, readout: readout.hover) {
       Self.summaryDetail(summary, complete: complete, singleDay: singleDay, context: context)
     }
     footer.setAccessibilityElement(true)
@@ -130,7 +130,7 @@ import PaxUI
         }.max() ?? 0)
       let columns = days.map { day -> NSView in
         let column = AILimitDayColumn(day: day, isCost: isCost, maximum: maximum)
-        let host = AILimitReadoutHost(column, readout: readout) {
+        let host = PaxHoverReadoutHost(column, readout: readout.hover) {
           Self.dayDetail(day, through: summary.observedThrough ?? .distantPast, context: context)
         }
         host.setAccessibilityElement(true)

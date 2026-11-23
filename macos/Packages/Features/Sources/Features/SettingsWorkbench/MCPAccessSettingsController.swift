@@ -7,7 +7,8 @@ import PaxUI
 @MainActor
 final class MCPAccessSettingsController: NSViewController, InterfaceLanguageConsumer {
   let interfaceCopy = InterfaceCopyBindings()
-  private var feedbackKey: String?
+  private var feedback: (key: String, clientID: String?)?
+  private var group: PaxPreferenceGroup?
   private var entryRow: PaxPreferenceRow?
   private var checkButton: PaxRouteButton?
   private var entryControlsWidth: NSLayoutConstraint?
@@ -16,10 +17,6 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
   private let actions: MCPAccessActions
   private let connection: ConnectionStore
   private let content = NSStackView()
-  private let feedback = PaxText.label(
-    "", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-  private let backend = PaxText.label(
-    "", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
   private let permission = PaxRoutePicker(style: .toolbar)
   private var report: MCPAccessReport?
   private var busy = false
@@ -44,8 +41,8 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
     interfaceCopy.onChange = { [weak self] in self?.updateCopy() }
     permission.widthAnchor.constraint(equalToConstant: PaxTheme.Settings.pickerWidth).isActive =
       true
-    observeBackend()
     render()
+    observeBackend()
   }
 
   override func viewWillAppear() {
@@ -55,9 +52,7 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
 
   private func observeBackend() {
     withObservationTracking {
-      backend.stringValue = interfaceCopy.text(
-        connection.connection == .connected
-          ? "settings.mcp.backend_ready" : "settings.mcp.backend_missing")
+      renderBackend()
     } onChange: { [weak self] in
       Task { @MainActor in self?.observeBackend() }
     }
@@ -89,7 +84,7 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
     entryControlsWidth = width
     updateEntryControlsWidth()
     let entry = PaxPreferenceRow(
-      title: "Pax MCP", detail: entryDescription, control: controls, style: .compact)
+      title: "Pax MCP", detail: "", control: controls, style: .compact)
     entryRow = entry
     var rows: [NSView] = [entry]
     for client in report?.clients ?? [] {
@@ -104,28 +99,22 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
       clientRows.append((client, row, button))
       rows.append(row)
     }
-    rows.append(
-      interfaceCopy.preference(
-        title: "settings.mcp.initial_permissions", detail: "settings.mcp.permissions_detail",
-        control: permission))
-    permission.isEnabled = !busy
-    let note = interfaceCopy.label(
-      "settings.mcp.note",
-      font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-    let footer = NSStackView(views: [backend, note, feedback])
-    footer.orientation = .vertical
-    footer.alignment = .leading
-    footer.spacing = PaxTheme.Spacing.tight
-    feedback.isHidden = feedback.stringValue.isEmpty
-    for item in footer.arrangedSubviews {
-      item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
+    let permissions = PaxPreferenceRow(title: "", detail: "", control: permission, style: .compact)
+    interfaceCopy.bind(permissions) { row, context in
+      row.apply(
+        title: context.text("settings.mcp.initial_permissions"),
+        detail: context.text("settings.mcp.permissions_detail") + " "
+          + context.text("settings.mcp.note"))
     }
-    let group = PaxPreferenceGroup(
-      title: self.interfaceCopy.text("settings.mcp.title"), symbol: "terminal", rows: rows,
-      style: .compact, footer: footer)
+    rows.append(permissions)
+    permission.isEnabled = !busy
+    let group = PaxPreferenceGroup(title: "", symbol: "terminal", rows: rows, style: .compact)
+    self.group = group
     interfaceCopy.group(group, key: "settings.mcp.title")
     content.addArrangedSubview(group)
     group.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
+    renderBackend()
+    renderFeedback()
   }
 
   private var entryDescription: String {
@@ -169,15 +158,18 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
     }
   }
 
-  private func setFeedback(_ key: String?) {
-    feedbackKey = key
-    updateCopy()
+  private func setFeedback(_ key: String?, client: MCPAccessReport.Client?) {
+    feedback = key.map { ($0, client?.id) }
+    renderFeedback()
   }
-  private func updateCopy() {
-    backend.stringValue = interfaceCopy.text(
+  private func renderBackend() {
+    let backend = interfaceCopy.text(
       connection.connection == .connected
         ? "settings.mcp.backend_ready" : "settings.mcp.backend_missing")
-    entryRow?.apply(title: "Pax MCP", detail: entryDescription)
+    group?.apply(summary: backend)
+  }
+  private func updateCopy() {
+    renderBackend()
     verifyButton?.title = interfaceCopy.text(
       report?.entry == "repair" ? "settings.mcp.repair" : "settings.mcp.verify")
     updateEntryControlsWidth()
@@ -185,10 +177,20 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
       row.apply(title: clientName(client), detail: clientDescription(client))
       button.title = buttonTitle(client)
     }
-    feedback.stringValue =
-      feedbackKey.map { $0 == "error" ? message(report?.error ?? "") : interfaceCopy.text($0) }
-      ?? ""
-    feedback.isHidden = feedback.stringValue.isEmpty
+    renderFeedback()
+  }
+  private func renderFeedback() {
+    let detail =
+      feedback.map {
+        $0.key == "error" ? message(report?.error ?? "") : interfaceCopy.text($0.key)
+      } ?? ""
+    let target = clientRows.first { $0.0.id == feedback?.clientID }?.1
+    let entry =
+      target == nil && !detail.isEmpty ? entryDescription + " · " + detail : entryDescription
+    entryRow?.apply(feedback: entry)
+    for (_, row, _) in clientRows {
+      row.apply(feedback: row === target ? detail : "")
+    }
   }
   private func updateEntryControlsWidth() {
     guard let checkButton, let verifyButton else { return }
@@ -209,7 +211,7 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
     guard !busy else { return }
     busy = true
     let allow = permission.indexOfSelectedItem == 1 ? "read,diagnose" : "read"
-    setFeedback(action == "inspect" ? nil : "settings.mcp.working")
+    setFeedback(action == "inspect" ? nil : "settings.mcp.working", client: client)
     render()
     Task { [weak self] in
       guard let self else { return }
@@ -221,16 +223,16 @@ final class MCPAccessSettingsController: NSViewController, InterfaceLanguageCons
         report = try await actions.run(action, client?.id ?? "", allow, client?.state ?? "")
         guard let report else { return }
         if !report.error.isEmpty {
-          setFeedback("error")
+          setFeedback("error", client: client)
         } else if action == "connect" {
-          setFeedback("settings.mcp.connected_feedback")
+          setFeedback("settings.mcp.connected_feedback", client: client)
         } else if action == "verify" {
-          setFeedback("settings.mcp.verified_feedback")
+          setFeedback("settings.mcp.verified_feedback", client: client)
         } else if action == "repair" {
-          setFeedback("settings.mcp.repaired_feedback")
+          setFeedback("settings.mcp.repaired_feedback", client: client)
         }
       } catch {
-        setFeedback("settings.mcp.check_failed")
+        setFeedback("settings.mcp.check_failed", client: client)
       }
     }
   }

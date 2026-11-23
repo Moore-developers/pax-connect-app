@@ -90,7 +90,7 @@ func indexAggregateConnections(ctx context.Context, r *historyRead, q *pb.Traffi
 		if row.Kind == "unknown" {
 			dimension = "unknown"
 		}
-		allowed[aggregateMemberKey(aggregateIdentity{Dimension: dimension, Object: row.ObjectId, Route: row.RouteId, Direction: row.Direction, RulePackage: row.Basis})] = row
+		allowed[r.trafficMemberKey(aggregateIdentity{Dimension: dimension, Object: row.ObjectId, Route: row.RouteId, Direction: row.Direction, RulePackage: row.Basis})] = row
 	}
 	if r.columnSnapshot != nil {
 		r.aggregateMemberKeys = map[string]string{}
@@ -108,7 +108,7 @@ func indexAggregateConnections(ctx context.Context, r *historyRead, q *pb.Traffi
 			return err
 		}
 		for _, identity := range aggregateIdentities(f.Fact) {
-			row := allowed[aggregateMemberKey(identity)]
+			row := allowed[r.trafficMemberKey(identity)]
 			if row == nil {
 				continue
 			}
@@ -137,6 +137,13 @@ func indexAggregateConnections(ctx context.Context, r *historyRead, q *pb.Traffi
 		return errors.New("history_query_busy")
 	}
 	return nil
+}
+
+func (r *historyRead) trafficMemberKey(i aggregateIdentity) string {
+	if r.groupApplications && i.Dimension == "application" {
+		i.Route, i.Direction = "", ""
+	}
+	return aggregateMemberKey(i)
 }
 
 func aggregateMemberKey(i aggregateIdentity) string {

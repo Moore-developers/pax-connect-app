@@ -6,7 +6,7 @@ extension RoutingWorkbenchStore {
   func trafficDetail(for row: TrafficRow) -> WorkbenchTrafficDetail {
     let lower = now.addingTimeInterval(-period.seconds)
     let hits = row.hits
-    let records = row.connections.map { connection in
+    var records = row.connections.map { connection in
       let application = applications.first { $0.id == connection.applicationID }
       let transfers = connection.transfers.filter { $0.at > lower && $0.at <= now }
       let hit = connection.hit
@@ -30,11 +30,47 @@ extension RoutingWorkbenchStore {
           source: hit.sourceID == nil ? "无" : hit.title,
           sourceKey: hit.sourceID != nil ? hits.firstIndex(of: hit).map(String.init) : nil))
     }
+    let statusDemo =
+      telemetry == nil && ProcessInfo.processInfo.environment["PAX_DEMO_TARGET_STATUS"] == "1"
+    if statusDemo, let template = records.first {
+      records = Self.demoTargetStatuses(template: template, at: now)
+    }
     return WorkbenchTrafficDetail(
-      id: row.id, name: row.name, identity: dimension.title + " · " + row.subtitle,
+      id: row.id, name: row.name + (statusDemo ? " · 模拟数据" : ""),
+      identity: dimension.title + " · " + row.subtitle,
       symbol: row.symbol,
       dimension: dimension == .system ? .system : dimension == .domain ? .domain : .application,
       capturedAt: now, lowerBound: lower, periodTitle: period.title, interruption: nil,
       recordingMessage: stateMessage, connections: records)
+  }
+}
+
+extension RoutingWorkbenchStore {
+  /// Opt-in offline fixture for the real target table, including mixed states on one target.
+  private static func demoTargetStatuses(template: WorkbenchTrafficRecord, at: Date)
+    -> [WorkbenchTrafficRecord]
+  {
+    let targets: [(name: String, count: Int, failed: Int, active: Int)] = [
+      ("download.deepseek.com", 45, 10, 1),
+      ("cdn.jjdsn.site", 12, 3, 2),
+      ("api.example.com", 6, 0, 6),
+      ("failed.example.com", 4, 4, 0),
+    ]
+    return targets.flatMap { target in
+      (0..<target.count).map { index in
+        let failed = index < target.failed
+        let active = index >= target.failed && index < target.failed + target.active
+        return WorkbenchTrafficRecord(
+          id: "target-status-\(target.name)-\(index)",
+          applicationID: template.applicationID, application: template.application,
+          process: template.process,
+          domain: target.name, ip: "203.0.113.8", routeID: template.routeID, route: template.route,
+          direction: template.direction, started: at.addingTimeInterval(-Double(10 + index)),
+          transport: "TCP", ended: !active, failure: failed ? "模拟连接失败" : nil,
+          establishmentMS: failed ? nil : 86, upload: failed ? 0 : 1024,
+          download: failed ? 0 : 2048,
+          hit: template.hit, port: 443)
+      }
+    }
   }
 }

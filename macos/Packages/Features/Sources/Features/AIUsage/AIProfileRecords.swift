@@ -8,58 +8,7 @@ private let tileSize: CGFloat = 30
 private let applyButtonWidth: CGFloat = 122
 private let applyWidth: CGFloat = applyButtonWidth * 2 + PaxTheme.Spacing.tight
 private let moreWidth: CGFloat = 40
-private let profileRowHeight: CGFloat = 88
-
-/// Two-line model summary; a click opens the Profile detail like the rest of the row.
-@MainActor
-final class AIProfileModelsLink: NSView {
-  var onOpen: (() -> Void)?
-  private let firstLabel = PaxText.tableLabel("", secondary: true)
-  private let secondLabel = PaxText.tableLabel("", secondary: true)
-  init(first: String, second: String?) {
-    super.init(frame: .zero)
-    let lines = [firstLabel, secondLabel]
-    firstLabel.stringValue = first
-    secondLabel.stringValue = second ?? ""
-    secondLabel.isHidden = second == nil
-    for line in lines {
-      line.lineBreakMode = .byTruncatingMiddle
-      line.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    }
-    let stack = AIUsageLayout.stack(lines)
-    stack.spacing = PaxTheme.Spacing.xs
-    stack.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(stack)
-    NSLayoutConstraint.activate([
-      stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-      stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-      stack.topAnchor.constraint(equalTo: topAnchor),
-      stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-    ])
-    setAccessibilityElement(true)
-    setAccessibilityRole(.button)
-    setAccessibilityLabel([first, second].compactMap { $0 }.joined(separator: "，"))
-    toolTip = ([first] + (second.map { [$0] } ?? [])).joined(separator: "\n")
-  }
-  @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
-  override var intrinsicContentSize: NSSize {
-    NSSize(
-      width: NSView.noIntrinsicMetric,
-      height: firstLabel.intrinsicContentSize.height
-        + (secondLabel.isHidden ? 0 : PaxTheme.Spacing.xs + secondLabel.intrinsicContentSize.height)
-    )
-  }
-  func apply(first: String, second: String?) {
-    firstLabel.stringValue = first
-    secondLabel.stringValue = second ?? ""
-    secondLabel.isHidden = second == nil
-    invalidateIntrinsicContentSize()
-    setAccessibilityLabel([first, second].compactMap { $0 }.joined(separator: "，"))
-    toolTip = [first, second].compactMap { $0 }.joined(separator: "\n")
-  }
-  override func mouseDown(with event: NSEvent) { onOpen?() }
-  override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
-}
+private let profileRowHeight: CGFloat = 96
 
 /// Square identity tile: shows a CLI mark.
 @MainActor
@@ -103,36 +52,26 @@ private final class AIProfileTableRecord {
 extension AIUsageViewController {
   func recordList() -> NSView {
     let columns: [PaxDataTable.Column] = [
-      .init("Profile", width: 160, growth: 3, symbol: "person.crop.circle", sortable: false),
+      .init(
+        "Profile", width: 136, growth: 1, symbol: "person.crop.circle",
+        inset: PaxTheme.Spacing.tight, sortable: false),
       .init(
         self.interfaceCopy.text("interface_detail.aa330a7323"),
-        width: applyWidth + PaxTheme.Spacing.xs * 2, growth: 0,
-        symbol: "terminal", inset: PaxTheme.Spacing.xs, sortable: false),
+        width: applyWidth + PaxTheme.Spacing.xs * 2, growth: 1,
+        alignment: .center, symbol: "terminal", inset: PaxTheme.Spacing.xs, sortable: false),
       .init(
-        self.interfaceCopy.text("session.kind.models"), width: 120, growth: 2, symbol: "sparkles",
-        sortable: false),
+        "", width: 147, growth: 1, alignment: .center, inset: PaxTheme.Spacing.xs, sortable: false,
+        contentLayout: .fill),
       .init(
-        "", width: 124, growth: 1,
-        alignment: .left,
-        symbol: "creditcard", sortable: false),
+        "", width: 147, growth: 1, alignment: .center, inset: PaxTheme.Spacing.xs, sortable: false,
+        contentLayout: .fill),
       .init(
-        self.interfaceCopy.text("ai_usage.column.tokens"), width: 80, numeric: true, growth: 1,
-        alignment: .center, sortable: false),
-      .init(
-        self.interfaceCopy.text("interface_detail.393e124155"), width: 68, numeric: true, growth: 1,
-        alignment: .center, sortable: false),
-      .init(
-        self.interfaceCopy.text("ai_usage.cache_rate"), width: 80, numeric: true, growth: 1,
-        alignment: .center, sortable: false),
-      .init(
-        "", width: moreWidth + PaxTheme.Spacing.xs * 2, growth: 0,
+        interfaceCopy.text("ai_workbench.actions"), width: 108, growth: 1,
         alignment: .center, inset: PaxTheme.Spacing.xs, sortable: false),
     ]
     let metrics = PaxDataTable.Metrics(rowHeight: profileRowHeight)
     let table = PaxDataTable(
-      columns: columns, metrics: metrics, selection: .browse, scrollMode: .fixedHeader)
-    let height = table.heightAnchor.constraint(equalToConstant: metrics.headerHeight)
-    height.isActive = true
+      columns: columns, metrics: metrics, selection: .browse, scrollMode: .page)
     var rows: [String: AIProfileTableRecord] = [:]
     table.cellProvider = { id, column in rows[id]?.cells[column] }
     let open: (String) -> Void = { [weak self] id in
@@ -153,13 +92,9 @@ extension AIUsageViewController {
       guard let self, let table else { return }
       let context = self.interfaceCopy.context
       table.setColumnTitle(context.text("interface_detail.aa330a7323"), at: 1)
-      table.setColumnTitle(context.text("session.kind.models"), at: 2)
-      table.setColumnTitle(
-        context.text("ai_usage.period_cost", ["period": self.store.period.label(context: context)]),
-        at: 3)
-      table.setColumnTitle(context.text("ai_usage.column.tokens"), at: 4)
-      table.setColumnTitle(context.text("interface_detail.393e124155"), at: 5)
-      table.setColumnTitle(context.text("ai_usage.cache_rate"), at: 6)
+      table.setColumnTitle(self.profilePeriodUsageTitle, at: 2)
+      table.setColumnTitle(context.text("ai_workbench.profile_lifetime"), at: 3)
+      table.setColumnTitle(context.text("ai_workbench.actions"), at: 4)
       let records = self.store.profileRecords(context: self.interfaceCopy.context)
       let keep = Set(records.map(\.id))
       rows = rows.filter { keep.contains($0.key) }
@@ -173,7 +108,6 @@ extension AIUsageViewController {
           rows[record.id] = self.recordRow(record, profile)
         }
       }
-      height.constant = metrics.headerHeight + CGFloat(max(1, records.count)) * metrics.rowHeight
       table.apply(
         rows: records.map { .init(id: $0.id, values: [$0.name]) },
         emptyMessage: self.interfaceCopy.text("interface_detail.6731ba9f57"), reloading: [])
@@ -181,6 +115,7 @@ extension AIUsageViewController {
     contentRefreshers.append(update)
     update()
     table.setTableIdentifier("ai-profile-list")
+    profileTable = table
     return table
   }
 
@@ -207,14 +142,6 @@ extension AIUsageViewController {
       [name, multiplier, NSView()],
       vertical: false)
     second.spacing = PaxTheme.Spacing.tight
-    let models = AIProfileModelsLink(first: r.modelsLine, second: r.topModelLine)
-    models.setAccessibilityIdentifier("ai-profile-models-" + r.id)
-    models.onOpen = { [weak self] in
-      guard let self else { return }
-      guard let current = self.store.profiles.first(where: { $0.id == p.id }) else { return }
-      self.presentWorkbenchModal(
-        AIProfileEditor(store: self.store, profile: current))
-    }
     let apply = AIUsageLayout.stack(applyButtons(p), vertical: false)
     apply.spacing = PaxTheme.Spacing.tight
     apply.widthAnchor.constraint(equalToConstant: applyWidth).isActive = true
@@ -237,61 +164,55 @@ extension AIUsageViewController {
     more.widthAnchor.constraint(equalToConstant: moreWidth).isActive = true
     more.setContentHuggingPriority(.required, for: .horizontal)
     more.setContentCompressionResistancePriority(.required, for: .horizontal)
-    let metrics = metricColumns(r)
-    var displayed = r
-    return AIProfileTableRecord(cells: [identity, apply, models] + metrics + [more]) {
-      next, profile in
-      guard displayed != next else { return }
-      let oldMultiplier = displayed.multiplier
-      displayed = next
+    let details = actions.button(
+      interfaceCopy.text("ai_workbench.details"), id: "ai-profile-details-" + r.id
+    ) { [weak self] in
+      guard let self, let current = self.store.profiles.first(where: { $0.id == p.id }) else {
+        return
+      }
+      self.presentWorkbenchModal(AIProfileEditor(store: self.store, profile: current))
+    }
+    details.capsule = false
+    interfaceCopy.button(details, key: "ai_workbench.details")
+    more.capsule = false
+    let operations = AIUsageLayout.stack([details, more], vertical: false)
+    operations.spacing = PaxTheme.Spacing.xs
+    let period = AIProfileUsageCell(alignment: .center)
+    let lifetime = AIProfileUsageCell(alignment: .center)
+    period.setAccessibilityIdentifier("ai-profile-period-" + r.id)
+    lifetime.setAccessibilityIdentifier("ai-profile-lifetime-" + r.id)
+    var displayedMultiplier = r.multiplier
+    let row = AIProfileTableRecord(
+      cells: [
+        identity, AIUsageLayout.wrapCentered(apply), period, lifetime,
+        AIUsageLayout.wrapCentered(operations),
+      ]
+    ) {
+      [weak self] next, profile in
+      guard let self else { return }
+      let context = self.interfaceCopy.context
       status.apply(title: next.statusText, tone: next.statusTone)
       source.stringValue = next.source
       source.toolTip =
-        next.isNative ? self.interfaceCopy.text("interface_detail.8e171fc12d") : profile.endpoint
+        next.isNative ? context.text("interface_detail.8e171fc12d") : profile.endpoint
       name.stringValue = next.name
       name.toolTip = next.name
       missing.isHidden = !next.missingKey
-      models.apply(first: next.modelsLine, second: next.topModelLine)
-      if oldMultiplier != next.multiplier {
+      if displayedMultiplier != next.multiplier {
+        displayedMultiplier = next.multiplier
         for child in multiplier.arrangedSubviews {
           multiplier.removeArrangedSubview(child)
           child.removeFromSuperview()
         }
         multiplier.addArrangedSubview(PaxFeatureTag(next.multiplier, tone: .blue))
       }
-      if let cost = metrics.first {
-        AIUsageCostDisplay.apply(
-          cost, official: next.costText, channel: next.channelCostText, stacked: true,
-          lineSpacing: PaxTheme.Spacing.xs, context: self.interfaceCopy.context)
-      }
-      for (label, value) in zip(
-        metrics.dropFirst(), [next.tokensText, next.requestsText, next.cacheText])
-      {
-        label.stringValue = value
-        label.toolTip = value
-      }
+      period.apply(
+        next.periodUsage, ready: self.store.periodUsageReady, showFees: true, context: context)
+      lifetime.apply(
+        next.lifetimeUsage, ready: self.store.lifetimeUsageReady, showFees: true, context: context)
     }
-  }
-
-  /// Values use the same column alignment as their native headers.
-  private func metricColumns(_ r: AIProfileRecord) -> [NSTextField] {
-    let cells: [(String, String, AICLICardLines.Run.Role)] = [
-      ("cost", r.costText, .cost), ("token", r.tokensText, .token),
-      ("request", r.requestsText, .request), ("cache", r.cacheText, .cache),
-    ]
-    return cells.map { cell in
-      let value = PaxText.tableLabel(
-        cell.1, numeric: true, alignment: cell.0 == "cost" ? .left : .center)
-      if cell.0 == "cost" {
-        AIUsageCostDisplay.apply(
-          value, official: r.costText, channel: r.channelCostText, stacked: true,
-          lineSpacing: PaxTheme.Spacing.xs, context: self.interfaceCopy.context)
-      } else if cell.0 != "token" {
-        value.textColor = aiMetricColor(cell.2)
-      }
-      value.setAccessibilityIdentifier("ai-profile-metric-" + r.id + "-" + cell.0)
-      return value
-    }
+    row.apply(r, p)
+    return row
   }
 
   private func applyButtons(_ p: AIProfile) -> [NSView] {
@@ -306,6 +227,7 @@ extension AIUsageViewController {
       case .claude: shortName = "Claude"
       case .codex: shortName = "Codex"
       case .harness: shortName = "DSH"
+      case .antigravity: shortName = "Antigravity"
       }
       let button = actions.button(shortName, enabled: supported) { [weak self] in
         guard let self else { return }

@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AIProfilesService_QueryAIProfiles_FullMethodName        = "/pax.v1.AIProfilesService/QueryAIProfiles"
+	AIProfilesService_ListAIProfileHistory_FullMethodName   = "/pax.v1.AIProfilesService/ListAIProfileHistory"
 	AIProfilesService_MutateAIProfile_FullMethodName        = "/pax.v1.AIProfilesService/MutateAIProfile"
 	AIProfilesService_PlanAIProfileApply_FullMethodName     = "/pax.v1.AIProfilesService/PlanAIProfileApply"
 	AIProfilesService_RefreshAIProfileModels_FullMethodName = "/pax.v1.AIProfilesService/RefreshAIProfileModels"
@@ -34,6 +35,7 @@ const (
 // Same-UID user-daemon only. No credential is returned in snapshots or plans.
 type AIProfilesServiceClient interface {
 	QueryAIProfiles(ctx context.Context, in *AIProfilesQuery, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
+	ListAIProfileHistory(ctx context.Context, in *AIProfileHistoryQuery, opts ...grpc.CallOption) (*AIProfileHistoryPage, error)
 	MutateAIProfile(ctx context.Context, in *AIProfileMutation, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
 	PlanAIProfileApply(ctx context.Context, in *AIProfilePlanRequest, opts ...grpc.CallOption) (*AIProfilePlan, error)
 	RefreshAIProfileModels(ctx context.Context, in *AIProfileModelsRequest, opts ...grpc.CallOption) (*AIProfilesWorkspace, error)
@@ -53,6 +55,16 @@ func (c *aIProfilesServiceClient) QueryAIProfiles(ctx context.Context, in *AIPro
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AIProfilesWorkspace)
 	err := c.cc.Invoke(ctx, AIProfilesService_QueryAIProfiles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIProfilesServiceClient) ListAIProfileHistory(ctx context.Context, in *AIProfileHistoryQuery, opts ...grpc.CallOption) (*AIProfileHistoryPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AIProfileHistoryPage)
+	err := c.cc.Invoke(ctx, AIProfilesService_ListAIProfileHistory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +128,7 @@ func (c *aIProfilesServiceClient) ApplyAIProfile(ctx context.Context, in *AIProf
 // Same-UID user-daemon only. No credential is returned in snapshots or plans.
 type AIProfilesServiceServer interface {
 	QueryAIProfiles(context.Context, *AIProfilesQuery) (*AIProfilesWorkspace, error)
+	ListAIProfileHistory(context.Context, *AIProfileHistoryQuery) (*AIProfileHistoryPage, error)
 	MutateAIProfile(context.Context, *AIProfileMutation) (*AIProfilesWorkspace, error)
 	PlanAIProfileApply(context.Context, *AIProfilePlanRequest) (*AIProfilePlan, error)
 	RefreshAIProfileModels(context.Context, *AIProfileModelsRequest) (*AIProfilesWorkspace, error)
@@ -133,6 +146,9 @@ type UnimplementedAIProfilesServiceServer struct{}
 
 func (UnimplementedAIProfilesServiceServer) QueryAIProfiles(context.Context, *AIProfilesQuery) (*AIProfilesWorkspace, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryAIProfiles not implemented")
+}
+func (UnimplementedAIProfilesServiceServer) ListAIProfileHistory(context.Context, *AIProfileHistoryQuery) (*AIProfileHistoryPage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAIProfileHistory not implemented")
 }
 func (UnimplementedAIProfilesServiceServer) MutateAIProfile(context.Context, *AIProfileMutation) (*AIProfilesWorkspace, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MutateAIProfile not implemented")
@@ -184,6 +200,24 @@ func _AIProfilesService_QueryAIProfiles_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AIProfilesServiceServer).QueryAIProfiles(ctx, req.(*AIProfilesQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIProfilesService_ListAIProfileHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AIProfileHistoryQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIProfilesServiceServer).ListAIProfileHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIProfilesService_ListAIProfileHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIProfilesServiceServer).ListAIProfileHistory(ctx, req.(*AIProfileHistoryQuery))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -288,6 +322,10 @@ var AIProfilesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryAIProfiles",
 			Handler:    _AIProfilesService_QueryAIProfiles_Handler,
+		},
+		{
+			MethodName: "ListAIProfileHistory",
+			Handler:    _AIProfilesService_ListAIProfileHistory_Handler,
 		},
 		{
 			MethodName: "MutateAIProfile",

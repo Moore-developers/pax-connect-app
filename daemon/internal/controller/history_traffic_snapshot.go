@@ -237,7 +237,7 @@ func (s *trafficSnapshot) searchMatches(ctx context.Context, from, until time.Ti
 		if direction != "" && direction != "all" && key.Dimension != "dns" && key.Direction != direction {
 			return nil
 		}
-		search.matched[searchKey(projectStoredIdentity(aggregateIdentity{Dimension: key.Dimension, Object: key.Object, Route: key.Route, Direction: key.Direction}))] = true
+		search.matched[search.key(projectStoredIdentity(aggregateIdentity{Dimension: key.Dimension, Object: key.Object, Route: key.Route, Direction: key.Direction}))] = true
 		return nil
 	}
 	boundary := until.Truncate(trafficBucket5m)

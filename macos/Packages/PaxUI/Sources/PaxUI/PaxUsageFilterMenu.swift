@@ -55,12 +55,13 @@ public enum PaxUsageFilterMenu {
   /// 菜单内容不变则不重建，再选中并更新显示标题与 toolTip。
   public static func populate(
     _ picker: PaxRoutePicker, groups: [PaxUsageFilterGroup], selection: PaxUsageFilter,
-    allTitle: String = "全部"
+    allTitle: String = "全部", includeModels: Bool = true
   ) {
+    let selection = includeModels ? selection : PaxUsageFilter(profileID: selection.profileID)
     var rows = [(title: allTitle, level: 0, value: PaxUsageFilter.all)]
     for group in groups {
       rows.append((group.name, 0, PaxUsageFilter(profileID: group.id)))
-      for model in group.models {
+      for model in group.models where includeModels {
         rows.append((model.name, 1, PaxUsageFilter(profileID: group.id, modelID: model.id)))
       }
     }

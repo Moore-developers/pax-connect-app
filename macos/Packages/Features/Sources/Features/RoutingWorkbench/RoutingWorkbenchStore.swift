@@ -343,12 +343,18 @@ final class RoutingWorkbenchStore {
         $0.process.hasPrefix("/usr/libexec/") || $0.process.hasPrefix("/usr/sbin/")
       }
     }
+    if direction != .all {
+      current = current.filter { $0.direction == direction }
+    }
     let groups = Dictionary(grouping: current) { connection in
       let identity: String
       switch dimension {
       case .application: identity = connection.applicationID ?? "unknown:" + connection.process
       case .domain: identity = connection.domain ?? "unknown:" + connection.ip
       case .system: identity = connection.process
+      }
+      if dimension == .application {
+        return "\(dimension.rawValue)|\(identity)"
       }
       return "\(dimension.rawValue)|\(identity)|\(connection.direction.rawValue)|"
         + (connection.routeID ?? "direct")
@@ -386,11 +392,17 @@ final class RoutingWorkbenchStore {
           label: TrafficFormatting.time($0.started) + " · "
             + TrafficFormatting.milliseconds($0.establishmentMS))
       }
+      let routeNames = ordered.reduce(into: [String]()) { result, connection in
+        let name = TrafficFormatting.actualConnection(
+          direction: connection.direction.title, route: connection.routeName)
+        if !name.isEmpty && !result.contains(name) { result.append(name) }
+      }
+      let sameDirection = ordered.dropFirst().allSatisfy { $0.direction == first.direction }
       let row = TrafficRow(
         id: id, name: session.scenario == .longText ? name + " · 长名称与身份展示检查" : name,
-        subtitle: subtitle, symbol: symbol, route: first.routeName,
-        direction: first.direction, connections: ordered, upload: upload, download: download,
-        establishment: establishment)
+        subtitle: subtitle, symbol: symbol, route: routeNames.joined(separator: "\n"),
+        direction: sameDirection ? first.direction : .unknown,
+        connections: ordered, upload: upload, download: download, establishment: establishment)
       let searchable =
         [
           name, subtitle, row.route, row.basisTitle,
@@ -403,7 +415,6 @@ final class RoutingWorkbenchStore {
         + row.hits.map(\.match)
         + row.hits.map(\.basis)
         + row.hits.map(\.title)
-      guard direction == .all || first.direction == direction else { return nil }
       guard
         query.isEmpty || searchable.joined(separator: " ").localizedCaseInsensitiveContains(query)
       else { return nil }

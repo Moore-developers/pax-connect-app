@@ -122,11 +122,41 @@ public nonisolated struct Pax_V1_HistoryState: @unchecked Sendable {
     set {_uniqueStorage()._logRemovalBeforeMs = newValue}
   }
 
+  /// Disk space allocated to the active SQLite files and their companions.
+  public var sqliteStorage: Pax_V1_SQLiteStorageUsage {
+    get {_storage._sqliteStorage ?? Pax_V1_SQLiteStorageUsage()}
+    set {_uniqueStorage()._sqliteStorage = newValue}
+  }
+  /// Returns true if `sqliteStorage` has been explicitly set.
+  public var hasSqliteStorage: Bool {_storage._sqliteStorage != nil}
+  /// Clears the value of `sqliteStorage`. Subsequent reads from it will return its default value.
+  public mutating func clearSqliteStorage() {_uniqueStorage()._sqliteStorage = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public nonisolated struct Pax_V1_SQLiteStorageUsage: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var logsBytes: UInt64 = 0
+
+  public var trafficBytes: UInt64 = 0
+
+  public var journalBytes: UInt64 = 0
+
+  public var aiUsageBytes: UInt64 = 0
+
+  public var profileEventsBytes: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 public nonisolated struct Pax_V1_FlowRecord: @unchecked Sendable {
@@ -371,6 +401,9 @@ public nonisolated struct Pax_V1_TrafficQuery: Sendable {
   /// Clears the value of `until`. Subsequent reads from it will return its default value.
   public mutating func clearUntil() {self._until = nil}
 
+  /// Application workbench projection. Aggregate across actual exits before ranking and paging.
+  public var groupApplications: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -453,6 +486,10 @@ public nonisolated struct Pax_V1_TrafficRoutingMatch: Sendable {
   /// Connection key includes the runtime session; lexical order breaks equal-time ties.
   public var identity: String = String()
 
+  public var direction: String = String()
+
+  public var routeName: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -474,7 +511,13 @@ public nonisolated struct Pax_V1_TrafficRow: @unchecked Sendable {
   /// Clears the value of `latestMatch`. Subsequent reads from it will return its default value.
   public mutating func clearLatestMatch() {_uniqueStorage()._latestMatch = nil}
 
-  /// Source/target rows: one recorded exit per object/exit/direction group.
+  /// Rejected attempts within a merged application row, included in failed_count.
+  public var blockedCount: UInt64 {
+    get {_storage._blockedCount}
+    set {_uniqueStorage()._blockedCount = newValue}
+  }
+
+  /// Recorded exits covered by the row, including blocked attempts.
   public var exits: [Pax_V1_TrafficExit] {
     get {_storage._exits}
     set {_uniqueStorage()._exits = newValue}
@@ -847,6 +890,24 @@ public nonisolated struct Pax_V1_TrafficDetailRequest: Sendable {
 
   public var dnsGroupID: String = String()
 
+  /// Full retained pool: filter before grouping/paging; target_group_id expands one group.
+  public var groupConnections: Bool = false
+
+  public var targetGroupID: String = String()
+
+  public var connectionSearch: String = String()
+
+  public var connectionExit: String = String()
+
+  public var connectionRule: String = String()
+
+  public var relatedID: String = String()
+
+  /// target / connections / bytes / exit; empty defaults to connections descending.
+  public var connectionSort: String = String()
+
+  public var connectionAscending: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -866,6 +927,8 @@ public nonisolated struct Pax_V1_TrafficBasis: Sendable {
   public var target: String = String()
 
   public var routeName: String = String()
+
+  public var direction: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -903,6 +966,111 @@ public nonisolated struct Pax_V1_TrafficLatencySample: Sendable {
   fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
+public nonisolated struct Pax_V1_TrafficConnectionGroup: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var target: String = String()
+
+  public var kind: String = String()
+
+  public var connections: UInt64 = 0
+
+  public var upload: UInt64 = 0
+
+  public var download: UInt64 = 0
+
+  public var bytesState: String = String()
+
+  public var lastAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_lastAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_lastAt = newValue}
+  }
+  /// Returns true if `lastAt` has been explicitly set.
+  public var hasLastAt: Bool {self._lastAt != nil}
+  /// Clears the value of `lastAt`. Subsequent reads from it will return its default value.
+  public mutating func clearLastAt() {self._lastAt = nil}
+
+  public var rules: [Pax_V1_TrafficBasis] = []
+
+  public var exits: [Pax_V1_TrafficExit] = []
+
+  /// Complete-pool evidence; response samples are the latest 60 valid retained observations.
+  public var recentResponses: [Pax_V1_TrafficResponsePoint] = []
+
+  public var validLatencyCount: UInt64 = 0
+
+  public var sources: [Pax_V1_TrafficConnectionSource] = []
+
+  public var addresses: [Pax_V1_TrafficConnectionAddress] = []
+
+  public var results: [Pax_V1_TrafficConnectionResult] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _lastAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+}
+
+public nonisolated struct Pax_V1_TrafficConnectionSource: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var applicationID: String = String()
+
+  public var application: String = String()
+
+  public var process: String = String()
+
+  public var kind: String = String()
+
+  public var connections: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_TrafficConnectionAddress: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var ip: String = String()
+
+  public var port: UInt32 = 0
+
+  public var transport: String = String()
+
+  public var connections: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_TrafficConnectionResult: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// active / closed / failed / unknown, based only on evidence at the frozen cutoff.
+  public var state: String = String()
+
+  public var failure: String = String()
+
+  public var connections: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Pax_V1_TrafficDetail: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -912,6 +1080,32 @@ public nonisolated struct Pax_V1_TrafficDetail: @unchecked Sendable {
   public var retainedConnectionCount: UInt64 {
     get {_storage._retainedConnectionCount}
     set {_uniqueStorage()._retainedConnectionCount = newValue}
+  }
+
+  public var connectionGroups: [Pax_V1_TrafficConnectionGroup] {
+    get {_storage._connectionGroups}
+    set {_uniqueStorage()._connectionGroups = newValue}
+  }
+
+  public var targetGroupTotal: UInt64 {
+    get {_storage._targetGroupTotal}
+    set {_uniqueStorage()._targetGroupTotal = newValue}
+  }
+
+  public var filteredConnectionCount: UInt64 {
+    get {_storage._filteredConnectionCount}
+    set {_uniqueStorage()._filteredConnectionCount = newValue}
+  }
+
+  /// Complete pool choices, independent of the active intersection filters.
+  public var connectionRules: [Pax_V1_TrafficBasis] {
+    get {_storage._connectionRules}
+    set {_uniqueStorage()._connectionRules = newValue}
+  }
+
+  public var connectionExits: [Pax_V1_TrafficExit] {
+    get {_storage._connectionExits}
+    set {_uniqueStorage()._connectionExits = newValue}
   }
 
   /// Same frozen selection as the list, up to 60 points (list carries its last 20).
@@ -1122,7 +1316,7 @@ fileprivate nonisolated let _protobuf_package = "pax.v1"
 
 nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HistoryState"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}clear_generation\0\u{3}coverage_start\0\u{1}partial\0\u{3}collection_state\0\u{3}error_code\0\u{3}capacity_evicted\0\u{3}logs_revision\0\u{3}traffic_revision\0\u{3}log_head_sequence\0\u{3}log_deletion_generation\0\u{3}traffic_deletion_generation\0\u{4}\u{2}journal_generation\0\u{3}summary_generation\0\u{3}aggregate_coverage_start\0\u{3}route_history_revision\0\u{3}log_removal_before_ms\0\u{b}quality_revision\0\u{c}\u{d}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{3}clear_generation\0\u{3}coverage_start\0\u{1}partial\0\u{3}collection_state\0\u{3}error_code\0\u{3}capacity_evicted\0\u{3}logs_revision\0\u{3}traffic_revision\0\u{3}log_head_sequence\0\u{3}log_deletion_generation\0\u{3}traffic_deletion_generation\0\u{4}\u{2}journal_generation\0\u{3}summary_generation\0\u{3}aggregate_coverage_start\0\u{3}route_history_revision\0\u{3}log_removal_before_ms\0\u{4}\u{2}sqlite_storage\0\u{b}log_storage_bytes\0\u{b}quality_revision\0\u{c}\u{13}\u{1}\u{c}\u{d}\u{1}")
 
   fileprivate class _StorageClass {
     var _revision: UInt64 = 0
@@ -1142,6 +1336,7 @@ nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf.
     var _aggregateCoverageStart: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
     var _routeHistoryRevision: UInt64 = 0
     var _logRemovalBeforeMs: Int64 = 0
+    var _sqliteStorage: Pax_V1_SQLiteStorageUsage? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -1169,6 +1364,7 @@ nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf.
       _aggregateCoverageStart = source._aggregateCoverageStart
       _routeHistoryRevision = source._routeHistoryRevision
       _logRemovalBeforeMs = source._logRemovalBeforeMs
+      _sqliteStorage = source._sqliteStorage
     }
   }
 
@@ -1204,6 +1400,7 @@ nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf.
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._aggregateCoverageStart) }()
         case 17: try { try decoder.decodeSingularUInt64Field(value: &_storage._routeHistoryRevision) }()
         case 18: try { try decoder.decodeSingularInt64Field(value: &_storage._logRemovalBeforeMs) }()
+        case 20: try { try decoder.decodeSingularMessageField(value: &_storage._sqliteStorage) }()
         default: break
         }
       }
@@ -1267,6 +1464,9 @@ nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf.
       if _storage._logRemovalBeforeMs != 0 {
         try visitor.visitSingularInt64Field(value: _storage._logRemovalBeforeMs, fieldNumber: 18)
       }
+      try { if let v = _storage._sqliteStorage {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1293,10 +1493,61 @@ nonisolated extension Pax_V1_HistoryState: SwiftProtobuf.Message, SwiftProtobuf.
         if _storage._aggregateCoverageStart != rhs_storage._aggregateCoverageStart {return false}
         if _storage._routeHistoryRevision != rhs_storage._routeHistoryRevision {return false}
         if _storage._logRemovalBeforeMs != rhs_storage._logRemovalBeforeMs {return false}
+        if _storage._sqliteStorage != rhs_storage._sqliteStorage {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_SQLiteStorageUsage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SQLiteStorageUsage"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}logs_bytes\0\u{3}traffic_bytes\0\u{3}journal_bytes\0\u{3}ai_usage_bytes\0\u{3}profile_events_bytes\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.logsBytes) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.trafficBytes) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.journalBytes) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.aiUsageBytes) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.profileEventsBytes) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.logsBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.logsBytes, fieldNumber: 1)
+    }
+    if self.trafficBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.trafficBytes, fieldNumber: 2)
+    }
+    if self.journalBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.journalBytes, fieldNumber: 3)
+    }
+    if self.aiUsageBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.aiUsageBytes, fieldNumber: 4)
+    }
+    if self.profileEventsBytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.profileEventsBytes, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_SQLiteStorageUsage, rhs: Pax_V1_SQLiteStorageUsage) -> Bool {
+    if lhs.logsBytes != rhs.logsBytes {return false}
+    if lhs.trafficBytes != rhs.trafficBytes {return false}
+    if lhs.journalBytes != rhs.journalBytes {return false}
+    if lhs.aiUsageBytes != rhs.aiUsageBytes {return false}
+    if lhs.profileEventsBytes != rhs.profileEventsBytes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1645,7 +1896,7 @@ nonisolated extension Pax_V1_DNSRecord: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 nonisolated extension Pax_V1_TrafficQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficQuery"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dimension\0\u{1}direction\0\u{1}window\0\u{1}search\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{1}until\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dimension\0\u{1}direction\0\u{1}window\0\u{1}search\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{1}until\0\u{3}group_applications\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1661,6 +1912,7 @@ nonisolated extension Pax_V1_TrafficQuery: SwiftProtobuf.Message, SwiftProtobuf.
       case 6: try { try decoder.decodeSingularStringField(value: &self.cursor) }()
       case 7: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
       case 8: try { try decoder.decodeSingularMessageField(value: &self._until) }()
+      case 9: try { try decoder.decodeSingularBoolField(value: &self.groupApplications) }()
       default: break
       }
     }
@@ -1695,6 +1947,9 @@ nonisolated extension Pax_V1_TrafficQuery: SwiftProtobuf.Message, SwiftProtobuf.
     try { if let v = self._until {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     } }()
+    if self.groupApplications != false {
+      try visitor.visitSingularBoolField(value: self.groupApplications, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1707,6 +1962,7 @@ nonisolated extension Pax_V1_TrafficQuery: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs.cursor != rhs.cursor {return false}
     if lhs.limit != rhs.limit {return false}
     if lhs._until != rhs._until {return false}
+    if lhs.groupApplications != rhs.groupApplications {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1813,7 +2069,7 @@ nonisolated extension Pax_V1_TrafficExit: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pax_V1_TrafficRoutingMatch: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficRoutingMatch"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}rule\0\u{1}source\0\u{3}application_id\0\u{1}application\0\u{1}identity\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}at\0\u{1}rule\0\u{1}source\0\u{3}application_id\0\u{1}application\0\u{1}identity\0\u{1}direction\0\u{3}route_name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1827,6 +2083,8 @@ nonisolated extension Pax_V1_TrafficRoutingMatch: SwiftProtobuf.Message, SwiftPr
       case 4: try { try decoder.decodeSingularStringField(value: &self.applicationID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.application) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.identity) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.direction) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.routeName) }()
       default: break
       }
     }
@@ -1855,6 +2113,12 @@ nonisolated extension Pax_V1_TrafficRoutingMatch: SwiftProtobuf.Message, SwiftPr
     if !self.identity.isEmpty {
       try visitor.visitSingularStringField(value: self.identity, fieldNumber: 6)
     }
+    if !self.direction.isEmpty {
+      try visitor.visitSingularStringField(value: self.direction, fieldNumber: 7)
+    }
+    if !self.routeName.isEmpty {
+      try visitor.visitSingularStringField(value: self.routeName, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1865,6 +2129,8 @@ nonisolated extension Pax_V1_TrafficRoutingMatch: SwiftProtobuf.Message, SwiftPr
     if lhs.applicationID != rhs.applicationID {return false}
     if lhs.application != rhs.application {return false}
     if lhs.identity != rhs.identity {return false}
+    if lhs.direction != rhs.direction {return false}
+    if lhs.routeName != rhs.routeName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1872,10 +2138,11 @@ nonisolated extension Pax_V1_TrafficRoutingMatch: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Pax_V1_TrafficRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficRow"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}object_id\0\u{1}name\0\u{3}route_id\0\u{3}route_name\0\u{1}direction\0\u{1}upload\0\u{1}download\0\u{1}connections\0\u{3}slowest_ms\0\u{3}establishment_known\0\u{1}basis\0\u{3}latency_samples\0\u{3}latency_known\0\u{3}slowest_latency_ms\0\u{1}bases\0\u{3}latest_latency_ms\0\u{3}latest_latency_at\0\u{1}kind\0\u{3}bytes_known\0\u{3}valid_latency_count\0\u{3}missing_latency_count\0\u{3}failed_count\0\u{3}earlier_count\0\u{3}latency_sampled\0\u{3}source_kind\0\u{3}source_label\0\u{3}source_evidence\0\u{3}p50_ms\0\u{3}p95_ms\0\u{3}latency_aggregated\0\u{3}last_active_at\0\u{3}recent_responses\0\u{3}recent_responses_state\0\u{3}recent_responses_error\0\u{1}exits\0\u{3}latest_match\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}object_id\0\u{1}name\0\u{3}route_id\0\u{3}route_name\0\u{1}direction\0\u{1}upload\0\u{1}download\0\u{1}connections\0\u{3}slowest_ms\0\u{3}establishment_known\0\u{1}basis\0\u{3}latency_samples\0\u{3}latency_known\0\u{3}slowest_latency_ms\0\u{1}bases\0\u{3}latest_latency_ms\0\u{3}latest_latency_at\0\u{1}kind\0\u{3}bytes_known\0\u{3}valid_latency_count\0\u{3}missing_latency_count\0\u{3}failed_count\0\u{3}earlier_count\0\u{3}latency_sampled\0\u{3}source_kind\0\u{3}source_label\0\u{3}source_evidence\0\u{3}p50_ms\0\u{3}p95_ms\0\u{3}latency_aggregated\0\u{3}last_active_at\0\u{3}recent_responses\0\u{3}recent_responses_state\0\u{3}recent_responses_error\0\u{1}exits\0\u{3}latest_match\0\u{3}blocked_count\0")
 
   fileprivate class _StorageClass {
     var _latestMatch: Pax_V1_TrafficRoutingMatch? = nil
+    var _blockedCount: UInt64 = 0
     var _exits: [Pax_V1_TrafficExit] = []
     var _recentResponses: [Pax_V1_TrafficResponsePoint] = []
     var _recentResponsesState: String = String()
@@ -1923,6 +2190,7 @@ nonisolated extension Pax_V1_TrafficRow: SwiftProtobuf.Message, SwiftProtobuf._M
 
     init(copying source: _StorageClass) {
       _latestMatch = source._latestMatch
+      _blockedCount = source._blockedCount
       _exits = source._exits
       _recentResponses = source._recentResponses
       _recentResponsesState = source._recentResponsesState
@@ -2014,6 +2282,7 @@ nonisolated extension Pax_V1_TrafficRow: SwiftProtobuf.Message, SwiftProtobuf._M
         case 35: try { try decoder.decodeSingularStringField(value: &_storage._recentResponsesError) }()
         case 36: try { try decoder.decodeRepeatedMessageField(value: &_storage._exits) }()
         case 37: try { try decoder.decodeSingularMessageField(value: &_storage._latestMatch) }()
+        case 38: try { try decoder.decodeSingularUInt64Field(value: &_storage._blockedCount) }()
         default: break
         }
       }
@@ -2137,6 +2406,9 @@ nonisolated extension Pax_V1_TrafficRow: SwiftProtobuf.Message, SwiftProtobuf._M
       try { if let v = _storage._latestMatch {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
       } }()
+      if _storage._blockedCount != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._blockedCount, fieldNumber: 38)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2147,6 +2419,7 @@ nonisolated extension Pax_V1_TrafficRow: SwiftProtobuf.Message, SwiftProtobuf._M
         let _storage = _args.0
         let rhs_storage = _args.1
         if _storage._latestMatch != rhs_storage._latestMatch {return false}
+        if _storage._blockedCount != rhs_storage._blockedCount {return false}
         if _storage._exits != rhs_storage._exits {return false}
         if _storage._recentResponses != rhs_storage._recentResponses {return false}
         if _storage._recentResponsesState != rhs_storage._recentResponsesState {return false}
@@ -2449,7 +2722,7 @@ nonisolated extension Pax_V1_TrafficPage: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pax_V1_TrafficDetailRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficDetailRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}row_id\0\u{3}connection_key\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{3}dns_group_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}row_id\0\u{3}connection_key\0\u{3}read_token\0\u{1}cursor\0\u{1}limit\0\u{3}dns_group_id\0\u{3}group_connections\0\u{3}target_group_id\0\u{3}connection_search\0\u{3}connection_exit\0\u{3}connection_rule\0\u{3}related_id\0\u{3}connection_sort\0\u{3}connection_ascending\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2463,6 +2736,14 @@ nonisolated extension Pax_V1_TrafficDetailRequest: SwiftProtobuf.Message, SwiftP
       case 4: try { try decoder.decodeSingularStringField(value: &self.cursor) }()
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.dnsGroupID) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.groupConnections) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.targetGroupID) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.connectionSearch) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.connectionExit) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.connectionRule) }()
+      case 12: try { try decoder.decodeSingularStringField(value: &self.relatedID) }()
+      case 13: try { try decoder.decodeSingularStringField(value: &self.connectionSort) }()
+      case 14: try { try decoder.decodeSingularBoolField(value: &self.connectionAscending) }()
       default: break
       }
     }
@@ -2487,6 +2768,30 @@ nonisolated extension Pax_V1_TrafficDetailRequest: SwiftProtobuf.Message, SwiftP
     if !self.dnsGroupID.isEmpty {
       try visitor.visitSingularStringField(value: self.dnsGroupID, fieldNumber: 6)
     }
+    if self.groupConnections != false {
+      try visitor.visitSingularBoolField(value: self.groupConnections, fieldNumber: 7)
+    }
+    if !self.targetGroupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.targetGroupID, fieldNumber: 8)
+    }
+    if !self.connectionSearch.isEmpty {
+      try visitor.visitSingularStringField(value: self.connectionSearch, fieldNumber: 9)
+    }
+    if !self.connectionExit.isEmpty {
+      try visitor.visitSingularStringField(value: self.connectionExit, fieldNumber: 10)
+    }
+    if !self.connectionRule.isEmpty {
+      try visitor.visitSingularStringField(value: self.connectionRule, fieldNumber: 11)
+    }
+    if !self.relatedID.isEmpty {
+      try visitor.visitSingularStringField(value: self.relatedID, fieldNumber: 12)
+    }
+    if !self.connectionSort.isEmpty {
+      try visitor.visitSingularStringField(value: self.connectionSort, fieldNumber: 13)
+    }
+    if self.connectionAscending != false {
+      try visitor.visitSingularBoolField(value: self.connectionAscending, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2497,6 +2802,14 @@ nonisolated extension Pax_V1_TrafficDetailRequest: SwiftProtobuf.Message, SwiftP
     if lhs.cursor != rhs.cursor {return false}
     if lhs.limit != rhs.limit {return false}
     if lhs.dnsGroupID != rhs.dnsGroupID {return false}
+    if lhs.groupConnections != rhs.groupConnections {return false}
+    if lhs.targetGroupID != rhs.targetGroupID {return false}
+    if lhs.connectionSearch != rhs.connectionSearch {return false}
+    if lhs.connectionExit != rhs.connectionExit {return false}
+    if lhs.connectionRule != rhs.connectionRule {return false}
+    if lhs.relatedID != rhs.relatedID {return false}
+    if lhs.connectionSort != rhs.connectionSort {return false}
+    if lhs.connectionAscending != rhs.connectionAscending {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2504,7 +2817,7 @@ nonisolated extension Pax_V1_TrafficDetailRequest: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Pax_V1_TrafficBasis: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficBasis"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rule\0\u{1}source\0\u{1}connections\0\u{1}target\0\u{3}route_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rule\0\u{1}source\0\u{1}connections\0\u{1}target\0\u{3}route_name\0\u{1}direction\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2517,6 +2830,7 @@ nonisolated extension Pax_V1_TrafficBasis: SwiftProtobuf.Message, SwiftProtobuf.
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.connections) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.target) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.routeName) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.direction) }()
       default: break
       }
     }
@@ -2538,6 +2852,9 @@ nonisolated extension Pax_V1_TrafficBasis: SwiftProtobuf.Message, SwiftProtobuf.
     if !self.routeName.isEmpty {
       try visitor.visitSingularStringField(value: self.routeName, fieldNumber: 5)
     }
+    if !self.direction.isEmpty {
+      try visitor.visitSingularStringField(value: self.direction, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2547,6 +2864,7 @@ nonisolated extension Pax_V1_TrafficBasis: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs.connections != rhs.connections {return false}
     if lhs.target != rhs.target {return false}
     if lhs.routeName != rhs.routeName {return false}
+    if lhs.direction != rhs.direction {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2611,12 +2929,256 @@ nonisolated extension Pax_V1_TrafficLatencySample: SwiftProtobuf.Message, SwiftP
   }
 }
 
+nonisolated extension Pax_V1_TrafficConnectionGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficConnectionGroup"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}target\0\u{1}kind\0\u{1}connections\0\u{1}upload\0\u{1}download\0\u{3}bytes_state\0\u{3}last_at\0\u{1}rules\0\u{1}exits\0\u{3}recent_responses\0\u{3}valid_latency_count\0\u{1}sources\0\u{1}addresses\0\u{1}results\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.target) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.connections) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.upload) }()
+      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.download) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.bytesState) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._lastAt) }()
+      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.rules) }()
+      case 10: try { try decoder.decodeRepeatedMessageField(value: &self.exits) }()
+      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.recentResponses) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.validLatencyCount) }()
+      case 13: try { try decoder.decodeRepeatedMessageField(value: &self.sources) }()
+      case 14: try { try decoder.decodeRepeatedMessageField(value: &self.addresses) }()
+      case 15: try { try decoder.decodeRepeatedMessageField(value: &self.results) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.target.isEmpty {
+      try visitor.visitSingularStringField(value: self.target, fieldNumber: 2)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 3)
+    }
+    if self.connections != 0 {
+      try visitor.visitSingularUInt64Field(value: self.connections, fieldNumber: 4)
+    }
+    if self.upload != 0 {
+      try visitor.visitSingularUInt64Field(value: self.upload, fieldNumber: 5)
+    }
+    if self.download != 0 {
+      try visitor.visitSingularUInt64Field(value: self.download, fieldNumber: 6)
+    }
+    if !self.bytesState.isEmpty {
+      try visitor.visitSingularStringField(value: self.bytesState, fieldNumber: 7)
+    }
+    try { if let v = self._lastAt {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
+    if !self.rules.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rules, fieldNumber: 9)
+    }
+    if !self.exits.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.exits, fieldNumber: 10)
+    }
+    if !self.recentResponses.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.recentResponses, fieldNumber: 11)
+    }
+    if self.validLatencyCount != 0 {
+      try visitor.visitSingularUInt64Field(value: self.validLatencyCount, fieldNumber: 12)
+    }
+    if !self.sources.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.sources, fieldNumber: 13)
+    }
+    if !self.addresses.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.addresses, fieldNumber: 14)
+    }
+    if !self.results.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.results, fieldNumber: 15)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficConnectionGroup, rhs: Pax_V1_TrafficConnectionGroup) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.target != rhs.target {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.connections != rhs.connections {return false}
+    if lhs.upload != rhs.upload {return false}
+    if lhs.download != rhs.download {return false}
+    if lhs.bytesState != rhs.bytesState {return false}
+    if lhs._lastAt != rhs._lastAt {return false}
+    if lhs.rules != rhs.rules {return false}
+    if lhs.exits != rhs.exits {return false}
+    if lhs.recentResponses != rhs.recentResponses {return false}
+    if lhs.validLatencyCount != rhs.validLatencyCount {return false}
+    if lhs.sources != rhs.sources {return false}
+    if lhs.addresses != rhs.addresses {return false}
+    if lhs.results != rhs.results {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_TrafficConnectionSource: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficConnectionSource"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}application_id\0\u{1}application\0\u{1}process\0\u{1}kind\0\u{1}connections\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.applicationID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.application) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.process) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.connections) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.applicationID.isEmpty {
+      try visitor.visitSingularStringField(value: self.applicationID, fieldNumber: 1)
+    }
+    if !self.application.isEmpty {
+      try visitor.visitSingularStringField(value: self.application, fieldNumber: 2)
+    }
+    if !self.process.isEmpty {
+      try visitor.visitSingularStringField(value: self.process, fieldNumber: 3)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 4)
+    }
+    if self.connections != 0 {
+      try visitor.visitSingularUInt64Field(value: self.connections, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficConnectionSource, rhs: Pax_V1_TrafficConnectionSource) -> Bool {
+    if lhs.applicationID != rhs.applicationID {return false}
+    if lhs.application != rhs.application {return false}
+    if lhs.process != rhs.process {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.connections != rhs.connections {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_TrafficConnectionAddress: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficConnectionAddress"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ip\0\u{1}port\0\u{1}transport\0\u{1}connections\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.ip) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.port) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.transport) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.connections) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.ip.isEmpty {
+      try visitor.visitSingularStringField(value: self.ip, fieldNumber: 1)
+    }
+    if self.port != 0 {
+      try visitor.visitSingularUInt32Field(value: self.port, fieldNumber: 2)
+    }
+    if !self.transport.isEmpty {
+      try visitor.visitSingularStringField(value: self.transport, fieldNumber: 3)
+    }
+    if self.connections != 0 {
+      try visitor.visitSingularUInt64Field(value: self.connections, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficConnectionAddress, rhs: Pax_V1_TrafficConnectionAddress) -> Bool {
+    if lhs.ip != rhs.ip {return false}
+    if lhs.port != rhs.port {return false}
+    if lhs.transport != rhs.transport {return false}
+    if lhs.connections != rhs.connections {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_TrafficConnectionResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficConnectionResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}state\0\u{1}failure\0\u{1}connections\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.state) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.failure) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.connections) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.state.isEmpty {
+      try visitor.visitSingularStringField(value: self.state, fieldNumber: 1)
+    }
+    if !self.failure.isEmpty {
+      try visitor.visitSingularStringField(value: self.failure, fieldNumber: 2)
+    }
+    if self.connections != 0 {
+      try visitor.visitSingularUInt64Field(value: self.connections, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficConnectionResult, rhs: Pax_V1_TrafficConnectionResult) -> Bool {
+    if lhs.state != rhs.state {return false}
+    if lhs.failure != rhs.failure {return false}
+    if lhs.connections != rhs.connections {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Pax_V1_TrafficDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrafficDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}summary\0\u{1}items\0\u{1}basis\0\u{3}next_cursor\0\u{3}read_token\0\u{3}as_of\0\u{1}from\0\u{1}history\0\u{1}related\0\u{1}timings\0\u{1}successful\0\u{1}failed\0\u{1}unmeasurable\0\u{1}earlier\0\u{3}timings_truncated\0\u{3}dns_groups\0\u{3}dns_group_id\0\u{3}dns_group_total\0\u{1}trend\0\u{3}aggregate_only\0\u{1}window\0\u{3}recent_responses\0\u{3}recent_responses_state\0\u{3}recent_responses_error\0\u{3}retained_connection_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}summary\0\u{1}items\0\u{1}basis\0\u{3}next_cursor\0\u{3}read_token\0\u{3}as_of\0\u{1}from\0\u{1}history\0\u{1}related\0\u{1}timings\0\u{1}successful\0\u{1}failed\0\u{1}unmeasurable\0\u{1}earlier\0\u{3}timings_truncated\0\u{3}dns_groups\0\u{3}dns_group_id\0\u{3}dns_group_total\0\u{1}trend\0\u{3}aggregate_only\0\u{1}window\0\u{3}recent_responses\0\u{3}recent_responses_state\0\u{3}recent_responses_error\0\u{3}retained_connection_count\0\u{3}connection_groups\0\u{3}target_group_total\0\u{3}filtered_connection_count\0\u{3}connection_rules\0\u{3}connection_exits\0")
 
   fileprivate class _StorageClass {
     var _retainedConnectionCount: UInt64 = 0
+    var _connectionGroups: [Pax_V1_TrafficConnectionGroup] = []
+    var _targetGroupTotal: UInt64 = 0
+    var _filteredConnectionCount: UInt64 = 0
+    var _connectionRules: [Pax_V1_TrafficBasis] = []
+    var _connectionExits: [Pax_V1_TrafficExit] = []
     var _recentResponses: [Pax_V1_TrafficResponsePoint] = []
     var _recentResponsesState: String = String()
     var _recentResponsesError: String = String()
@@ -2652,6 +3214,11 @@ nonisolated extension Pax_V1_TrafficDetail: SwiftProtobuf.Message, SwiftProtobuf
 
     init(copying source: _StorageClass) {
       _retainedConnectionCount = source._retainedConnectionCount
+      _connectionGroups = source._connectionGroups
+      _targetGroupTotal = source._targetGroupTotal
+      _filteredConnectionCount = source._filteredConnectionCount
+      _connectionRules = source._connectionRules
+      _connectionExits = source._connectionExits
       _recentResponses = source._recentResponses
       _recentResponsesState = source._recentResponsesState
       _recentResponsesError = source._recentResponsesError
@@ -2719,6 +3286,11 @@ nonisolated extension Pax_V1_TrafficDetail: SwiftProtobuf.Message, SwiftProtobuf
         case 23: try { try decoder.decodeSingularStringField(value: &_storage._recentResponsesState) }()
         case 24: try { try decoder.decodeSingularStringField(value: &_storage._recentResponsesError) }()
         case 25: try { try decoder.decodeSingularUInt64Field(value: &_storage._retainedConnectionCount) }()
+        case 26: try { try decoder.decodeRepeatedMessageField(value: &_storage._connectionGroups) }()
+        case 27: try { try decoder.decodeSingularUInt64Field(value: &_storage._targetGroupTotal) }()
+        case 28: try { try decoder.decodeSingularUInt64Field(value: &_storage._filteredConnectionCount) }()
+        case 29: try { try decoder.decodeRepeatedMessageField(value: &_storage._connectionRules) }()
+        case 30: try { try decoder.decodeRepeatedMessageField(value: &_storage._connectionExits) }()
         default: break
         }
       }
@@ -2806,6 +3378,21 @@ nonisolated extension Pax_V1_TrafficDetail: SwiftProtobuf.Message, SwiftProtobuf
       if _storage._retainedConnectionCount != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._retainedConnectionCount, fieldNumber: 25)
       }
+      if !_storage._connectionGroups.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._connectionGroups, fieldNumber: 26)
+      }
+      if _storage._targetGroupTotal != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._targetGroupTotal, fieldNumber: 27)
+      }
+      if _storage._filteredConnectionCount != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._filteredConnectionCount, fieldNumber: 28)
+      }
+      if !_storage._connectionRules.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._connectionRules, fieldNumber: 29)
+      }
+      if !_storage._connectionExits.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._connectionExits, fieldNumber: 30)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2816,6 +3403,11 @@ nonisolated extension Pax_V1_TrafficDetail: SwiftProtobuf.Message, SwiftProtobuf
         let _storage = _args.0
         let rhs_storage = _args.1
         if _storage._retainedConnectionCount != rhs_storage._retainedConnectionCount {return false}
+        if _storage._connectionGroups != rhs_storage._connectionGroups {return false}
+        if _storage._targetGroupTotal != rhs_storage._targetGroupTotal {return false}
+        if _storage._filteredConnectionCount != rhs_storage._filteredConnectionCount {return false}
+        if _storage._connectionRules != rhs_storage._connectionRules {return false}
+        if _storage._connectionExits != rhs_storage._connectionExits {return false}
         if _storage._recentResponses != rhs_storage._recentResponses {return false}
         if _storage._recentResponsesState != rhs_storage._recentResponsesState {return false}
         if _storage._recentResponsesError != rhs_storage._recentResponsesError {return false}

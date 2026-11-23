@@ -12,7 +12,7 @@ extension PaxDataTable.Metrics {
 // Public scrolling entry points share the table's single viewport.
 extension PaxDataTable {
   /// 将指定行滚入可见区域，返回表格容器坐标下的行矩形供浮层定位。
-  public func revealRow(_ id: String) -> NSRect? {
+  public func revealRow(_ id: String, select: Bool = false) -> NSRect? {
     guard let index = rows.firstIndex(where: { $0.id == id }) else { return nil }
     layoutSubtreeIfNeeded()
     if scrollMode == .fixedHeader {
@@ -20,6 +20,7 @@ extension PaxDataTable {
     } else {
       scrollToVisible(convert(table.rect(ofRow: index), from: table))
     }
+    if select { table.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false) }
     return convert(table.rect(ofRow: index), from: table)
   }
   public func revealFirstRow() { if !rows.isEmpty { table.scrollRowToVisible(0) } }

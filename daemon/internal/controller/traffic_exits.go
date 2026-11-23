@@ -25,6 +25,9 @@ func finishTrafficExits(row *pb.TrafficRow) {
 		if a.Upload+a.Download != b.Upload+b.Download {
 			return a.Upload+a.Download > b.Upload+b.Download
 		}
+		if a.Connections != b.Connections {
+			return a.Connections > b.Connections
+		}
 		if a.RouteId != b.RouteId {
 			return a.RouteId < b.RouteId
 		}

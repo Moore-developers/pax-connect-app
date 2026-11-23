@@ -28,8 +28,8 @@ type bucketKey struct {
 }
 
 // commitRows is the one write path: it stores rows and adds them to the hourly
-// buckets in the caller's transaction. A request seen again only ever updates a
-// stored Claude row or an explicitly associated Codex model (see refineClaude/refineCodex).
+// buckets in the caller's transaction. A repeated request may refine Claude output
+// and timing, an explicitly associated Codex model, or missing Antigravity metadata.
 // Evidenced Codex aliases share one counted request; retired markers never restore rows.
 // It returns the number of rows written or updated.
 func commitRows(ctx context.Context, tx *sql.Tx, rows []Request, attr attributor) (int, bool, error) {
@@ -66,7 +66,11 @@ func commitRows(ctx context.Context, tx *sql.Tx, rows []Request, attr attributor
 			return 0, false, e
 		}
 		if exists {
-			if next, ok := refineClaude(old, r); ok {
+			next, changed := refineClaude(old, r)
+			if r.CLI == antigravity {
+				next, changed = refineAntigravity(old, r)
+			}
+			if changed {
 				accumulate(grouped, old, -1)
 				if e = writeRequest(ctx, stmt, next); e != nil {
 					return 0, false, e

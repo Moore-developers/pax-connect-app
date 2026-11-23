@@ -59,7 +59,8 @@ extension AIUsageLogView {
       speed.textColor = PaxTheme.Color.healthy
       let elapsed = request.elapsed.map { String(format: "%.1fs", $0) } ?? "—"
       let timingLabel = secondary(elapsed + context.text("ai_logs.eca0f77e4a"))
-      timingLabel.toolTip = context.text("ai_logs.4336994cca")
+      timingLabel.toolTip = context.text(
+        request.client == .antigravity ? "ai_logs.antigravity_timing" : "ai_logs.4336994cca")
       return AIUsageLogPairView(speed, timingLabel, centered: true)
     case 5:
       // Token above cost, both right-aligned in their own colors.
@@ -67,9 +68,14 @@ extension AIUsageLogView {
         AIUsageFormatting.tokens(request.tokens), numeric: true)
       tokens.alignment = .right
       let fee = PaxText.tableLabel("", numeric: true, alignment: .right)
-      AIUsageCostDisplay.apply(
-        fee, official: request.officialCostLabel,
-        channel: request.hasChannelEstimate ? request.costLabel : nil, context: context)
+      if request.client == .antigravity && request.inputPrice == nil {
+        fee.stringValue = "—"
+        fee.toolTip = context.text("ai_usage.antigravity.no_rate")
+      } else {
+        AIUsageCostDisplay.apply(
+          fee, official: request.officialCostLabel,
+          channel: request.hasChannelEstimate ? request.costLabel : nil, context: context)
+      }
       let lines = AIUsageLayout.stack([tokens, fee])
       lines.spacing = PaxTheme.Spacing.xs
       return lines
@@ -104,7 +110,10 @@ enum AIUsageLogFormat {
   static let tokenColor = PaxTheme.Color.text
   static let cacheColor = PaxTheme.Chart.cacheLabel
   static func multiplier(_ request: AIRequest) -> String {
-    request.hasChannelEstimate ? AIUsageFormatting.multiplier(request.multiplier) : "—"
+    if request.client.isUsageOnly || request.hasChannelEstimate {
+      return AIUsageFormatting.multiplier(request.multiplier)
+    }
+    return "—"
   }
   /// Token count in the token color; the cache rate has its own column.
   static func tokenLine(_ request: AIRequest) -> NSAttributedString {
@@ -170,6 +179,7 @@ extension AIClient {
     case .claude: "Claude"
     case .codex: "Codex"
     case .harness: "DSH"
+    case .antigravity: "Antigravity"
     }
   }
 }

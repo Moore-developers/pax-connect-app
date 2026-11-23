@@ -29,7 +29,7 @@ func (c *Controller) columnPeriodRows(ctx context.Context, r *historyRead, q *pb
 	}
 	matched := map[trafficSearchKey]bool{}
 	for _, dim := range dimensions {
-		filter := historystore.ColumnTrafficFilter{Dimension: dim, Direction: q.Direction, From: r.from, Until: r.at, DetailAt: r.detailAt, Search: q.Search}
+		filter := historystore.ColumnTrafficFilter{Dimension: dim, Direction: q.Direction, From: r.from, Until: r.at, DetailAt: r.detailAt, Search: q.Search, GroupApplications: q.GroupApplications && dim == "application"}
 		groups, err := r.columnSnapshot.TrafficPeriodGroups(ctx, filter)
 		if err != nil {
 			return nil, err
@@ -46,6 +46,9 @@ func (c *Controller) columnPeriodRows(ctx context.Context, r *historyRead, q *pb
 			}
 			source := config.ClassifyTrafficSource(fact)
 			row := &pb.TrafficRow{Id: base[0].ID, ObjectId: g.Object, Name: base[0].Name, RouteId: fact.RouteID, RouteName: fact.RouteName, Direction: fact.Direction, Connections: g.Connections, SlowestMs: g.Establishment, EstablishmentKnown: g.EstablishmentKnown, Kind: "access", BytesKnown: true, SourceKind: source.Kind, SourceLabel: source.Label, SourceEvidence: source.Evidence, ValidLatencyCount: g.Valid, MissingLatencyCount: g.Missing, FailedCount: g.Failed, EarlierCount: g.Earlier, SlowestLatencyMs: g.Slowest, LatencyKnown: g.Valid > 0, LatencySampled: g.Valid > 256}
+			if filter.GroupApplications {
+				row.Id = r.trafficRowID(aggregateIdentity{Dimension: dim, Object: g.Object})
+			}
 			if !g.LastActive.IsZero() {
 				row.LastActiveAt = g.LastActive.UnixMilli()
 			}
@@ -87,7 +90,11 @@ func (c *Controller) columnPeriodRows(ctx context.Context, r *historyRead, q *pb
 				row.LatestLatencyAt, row.LatestLatencyMs = last.At, last.Milliseconds
 			}
 			if g.MatchesSearch {
-				matched[searchKey(aggregateIdentity{Dimension: dim, Object: g.Object, Route: g.Route, Direction: g.Direction})] = true
+				key := searchKey(aggregateIdentity{Dimension: dim, Object: g.Object, Route: g.Route, Direction: g.Direction})
+				if filter.GroupApplications {
+					key.route, key.direction = "", ""
+				}
+				matched[key] = true
 			}
 			if dim == "dns" {
 				r.dns = row

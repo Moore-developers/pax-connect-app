@@ -27,6 +27,8 @@ func modelLimit(model string) *ModelLimit {
 		v.Limit, v.Warn, base = 100000, 80000, .0011
 	case "deepseek-flash":
 		v.Limit, v.Warn = 300000, 250000
+	case "gemini-4-neon":
+		v.Limit, v.Warn, base = 350000, 300000, .034625
 	default:
 		if strings.HasPrefix(model, "gpt-") {
 			v.Limit, v.Warn = 272000, 250000

@@ -20,6 +20,7 @@ func (r *historyRead) columnTrafficFilter(id string) historystore.ColumnTrafficF
 	if len(parts) >= 4 {
 		f.Dimension, f.Object, f.Route, f.MemberDirection = parts[0], parts[1], parts[2], parts[3]
 	}
+	f.AnyExit = r.groupApplications && f.Dimension == "application"
 	if buckets, ok := r.ruleMemberBuckets[id]; ok {
 		f.Buckets = []int64{}
 		for at := range buckets {
@@ -152,6 +153,9 @@ func (r *historyRead) columnPeriodDetail(ctx context.Context, token string, q *p
 		b := bases[key]
 		if b == nil {
 			b = &pb.TrafficBasis{Rule: v.Rule, Source: v.Source, Target: v.Trigger, RouteName: v.RouteName}
+			if r.groupApplications {
+				b.Direction = v.Direction
+			}
 			bases[key] = b
 		}
 		if b.Target != v.Trigger {

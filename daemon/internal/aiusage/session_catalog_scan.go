@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func mergeCatalog(entries map[SessionKey]SessionCatalogEntry, v SessionCatalogEntry) {
@@ -81,6 +82,11 @@ func (s *Store) scanCatalog(ctx context.Context, files []source, sourceErrors ma
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if f.cli == antigravity {
+			key := SessionKey{antigravity, strings.TrimSuffix(filepath.Base(f.path), ".db")}
+			mergeCatalog(entries, SessionCatalogEntry{Key: key, LastActivity: f.info.ModTime().UnixMilli(), Status: "untitled"})
+			continue
+		}
 		c := readCatalogFile(ctx, f, cursors[f.path], &budget)
 		refreshAgentName(ctx, &c)
 		if c.Path == "" {
@@ -137,6 +143,15 @@ func (s *Store) scanCatalog(ctx context.Context, files []source, sourceErrors ma
 	}
 	for _, v := range index {
 		mergeCatalog(entries, v)
+	}
+	if code := antigravityCatalogTitles(ctx, s.catalogRoot(antigravity), entries); code != "" {
+		sourceStatus[antigravity] = code
+		for key, v := range entries {
+			if key.CLI == antigravity && previous[key].TitleSource == "antigravity.database" {
+				v.Title, v.TitleSource, v.Status = previous[key].Title, previous[key].TitleSource, "source_unavailable"
+				entries[key] = v
+			}
+		}
 	}
 	// Existing relations survive source removal; newly found DSH relations can
 	// require one bounded replay of a child file whose descriptor was absent.
@@ -301,7 +316,7 @@ func (s *Store) commitCatalog(ctx context.Context, previous, entries map[Session
 			}
 		}
 	}
-	for _, cli := range []string{"claude", "codex", "dsh"} {
+	for _, cli := range []string{"claude", "codex", "dsh", antigravity} {
 		result, e := tx.ExecContext(ctx, `INSERT INTO session_catalog_status VALUES(?,?) ON CONFLICT(cli) DO UPDATE SET error=excluded.error WHERE error<>excluded.error`, cli, sources[cli])
 		if e != nil {
 			return ErrUnavailable

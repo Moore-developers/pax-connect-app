@@ -58,7 +58,8 @@ func modelTariff(model string, at int64) (tariff, string) {
 // DSH is read-only usage: no Profile, multiplier 1.
 func (r *Request) attribute(a attributor) {
 	at := Attribution{Multiplier: 1}
-	if r.CLI != "dsh" && a.resolve != nil {
+	usageOnly := r.CLI == "dsh" || r.CLI == antigravity
+	if !usageOnly && a.resolve != nil {
 		at = a.resolve(r.CLI, time.UnixMilli(r.At))
 	}
 	// A process started before an observed route change may still use its old
@@ -69,12 +70,12 @@ func (r *Request) attribute(a attributor) {
 	if r.CLI == "codex" && at.ServiceSource == "official_account" && r.sourceProvider != "" && r.sourceProvider != "openai" {
 		at = Attribution{ServiceSource: "unknown", Multiplier: 1}
 	}
-	if r.CLI != "dsh" && at.ServiceSource == "" && at.ProfileID == "" {
+	if (r.CLI == antigravity || !usageOnly) && at.ServiceSource == "" && at.ProfileID == "" {
 		at.ServiceSource = "unknown"
 	}
 	r.Details.ServiceSource = at.ServiceSource
 	m := at.ForModel(r.Model)
-	if r.CLI != "dsh" && at.ProfileID != "" {
+	if !usageOnly && at.ProfileID != "" {
 		m = a.multiplier(at.ProfileID, r.Model, r.At, m)
 	}
 	r.ProfileID, r.ProfileName, r.Multiplier = at.ProfileID, at.ProfileName, m
@@ -97,6 +98,9 @@ func (r *Request) price() {
 		return
 	}
 	v, version := modelTariff(r.Model, r.At)
+	if r.CLI == antigravity {
+		v, version = r.antigravityTariff()
+	}
 	if version == "" {
 		return
 	}
@@ -125,7 +129,14 @@ func (r *Request) price() {
 	r.Details.Prices = [4]*float64{&v.input, &v.read, &write, &v.output}
 	tokens := [4]int64{max(0, r.Input-r.Read-r.Write), r.Read, r.Write, r.Output}
 	var total float64
+	if r.CLI == antigravity && v.short == 0 {
+		r.Details.CacheWritePrices = [2]*float64{}
+		r.Details.Prices[2] = nil
+	}
 	for i, p := range r.Details.Prices {
+		if p == nil {
+			continue
+		}
 		amount := float64(tokens[i]) * *p
 		r.Costs[i] = int64(math.Round(amount))
 		r.Details.Billed[i] = int64(math.Round(amount * r.Multiplier))

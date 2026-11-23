@@ -3,6 +3,8 @@
   "locale": "zh-Hans",
   "catalogVersion": "1",
   "messages": {
+    "traffic_details.application_blocked_count": "阻断 {count} 次",
+    "traffic_details.application_exit_separator": "、",
     "traffic_details.1e3d78c3da": "采集中断，状态未知",
     "traffic_details.73ee1fca67": "建立失败",
     "traffic_details.d79b1d0e5c": "已结束",

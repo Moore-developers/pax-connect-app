@@ -27,7 +27,8 @@ final class AIUsageStore {
     case logModel(String?)
     case logResult(Bool?)
     case resetLogFilters
-    case openLogs(model: String, profile: String?)
+    case openClientLogs(AIClient)
+    case openLogs(model: String?, profile: String?)
   }
   var configurableClients: [AIClient] { [.claude, .codex] }
   let preview: Bool
@@ -48,7 +49,9 @@ final class AIUsageStore {
     }
   }
   let configuration: AIProfilesStore
-  var profiles: [AIProfile] { configuration.workspace.profiles.filter { $0.nativeCLI != .harness } }
+  var profiles: [AIProfile] {
+    configuration.workspace.profiles.filter { $0.nativeCLI?.isUsageOnly != true }
+  }
   var bindings: [AIClient: AIBinding] { configuration.workspace.bindings }
   private(set) var page: Page = .overview
   private(set) var period: AIUsagePeriod = .today
@@ -101,14 +104,14 @@ final class AIUsageStore {
   }
   func logProfileOptions(context: PresentationContext) -> [(String, String)] {
     var names = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
-    for b in (data?.lifetime ?? []) where b.client != .harness {
+    for b in (data?.lifetime ?? []) where !b.client.isUsageOnly {
       let id = AIUsageTrendFilter.profileKey(
         profileID: b.profileID, client: b.client, serviceSource: b.serviceSource)
       if names[id] == nil {
         names[id] = AIUsageTrendFilter.fallbackName(id, context: context) ?? b.profileName
       }
     }
-    for request in requests where request.client != .harness {
+    for request in requests where !request.client.isUsageOnly {
       let id = AIUsageTrendFilter.profileKey(
         profileID: request.profileID, client: request.client, serviceSource: request.serviceSource)
       if names[id] == nil {
@@ -170,7 +173,8 @@ final class AIUsageStore {
     error = nil
     defer { syncUsage() }
     switch intent {
-    case .logCostRange, .logClient, .logProfile, .logModel, .logResult, .resetLogFilters, .openLogs:
+    case .logCostRange, .logClient, .logProfile, .logModel, .logResult, .resetLogFilters,
+      .openClientLogs, .openLogs:
       logPage = 0
     default: break
     }
@@ -206,13 +210,17 @@ final class AIUsageStore {
     case .logProfile(let value): logProfileID = value
     case .logModel(let value): logModelID = value
     case .logResult(let value): logResult = value
-    case .resetLogFilters:
+    case .openClientLogs, .resetLogFilters:
       minimumCost = nil
       maximumCost = nil
       logClient = nil
       logProfileID = nil
       logModelID = nil
       logResult = nil
+      if case .openClientLogs(let client) = intent {
+        logClient = client
+        page = .logs
+      }
     case .openLogs(let model, let profile):
       minimumCost = nil
       maximumCost = nil

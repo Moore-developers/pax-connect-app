@@ -96,9 +96,14 @@ func (c *Controller) publishHistory(ctx context.Context) {
 	defer cancel()
 	h := c.history
 	h.lastPublished = time.Now()
+	if h.storageDirectory != "" && h.lastPublished.Sub(h.storageSampledAt) >= historyStorageSampleInterval {
+		h.storageSampledAt = h.lastPublished
+		h.sqliteStorage = readSQLiteStorage(h.storageDirectory, h.storageOwner)
+	}
 	logMeta, hasLogs := c.logStateSnapshot()
 	trafficMeta := c.publishedTrafficMeta()
 	history := historyState(trafficMeta)
+	history.SqliteStorage = h.sqliteStorage
 	history.RouteHistoryRevision = c.routeHistoryRevision()
 	if hasLogs {
 		history = mergeLogHistory(history, logMeta)
@@ -136,6 +141,7 @@ func (c *Controller) publishHistory(ctx context.Context) {
 
 	}
 	trafficFailed := trafficChanged && traffic == nil
+	storageChanged := h.publishedHistory != nil && !proto.Equal(history.SqliteStorage, h.publishedHistory.SqliteStorage)
 	// Sequence/watermark-only commits do not create visible notifications.
 	relevantHistory := h.publishedHistory == nil || h.publishedHistory.LogsRevision != history.LogsRevision || h.publishedHistory.TrafficRevision != history.TrafficRevision || statusChanged || h.publishedHistory.RouteHistoryRevision != history.RouteHistoryRevision || h.publishedHistory.LogDeletionGeneration != history.LogDeletionGeneration || h.publishedHistory.TrafficDeletionGeneration != history.TrafficDeletionGeneration || h.publishedHistory.JournalGeneration != history.JournalGeneration || h.publishedHistory.SummaryGeneration != history.SummaryGeneration
 	settingsRevision := h.meta.SettingsRevision
@@ -143,7 +149,7 @@ func (c *Controller) publishHistory(ctx context.Context) {
 		settingsRevision = logMeta.SettingsRevision
 	}
 	settingsChanged := h.publishedSettingsRevision != settingsRevision
-	if !relevantHistory && !trafficChanged && !settingsChanged {
+	if !relevantHistory && !trafficChanged && !settingsChanged && !storageChanged {
 		return
 	}
 	c.mu.Lock()

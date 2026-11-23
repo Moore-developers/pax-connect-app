@@ -167,7 +167,9 @@ extension WorkbenchDashboardViewController {
     let session = telemetry.sessionGeneration
     let date = calendarIdentity
     let now = Date()
-    let start = Calendar.current.date(byAdding: .day, value: -6, to: date.day) ?? now
+    let start =
+      Calendar.current.date(
+        byAdding: .day, value: 1 - DashboardUsageProjection.dayCount, to: date.day) ?? now
     do {
       let page = try await sources.aiUsage(start, now.addingTimeInterval(3600))
       guard accepts(session, date: date), generation == (telemetry.aiUsage?.generation ?? 0),

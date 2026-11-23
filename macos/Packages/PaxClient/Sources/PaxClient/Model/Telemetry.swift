@@ -9,6 +9,7 @@ public struct HistoryState: Sendable, Equatable {
   public var logHeadSequence: UInt64 = 0
   public var logDeletionGeneration: UInt64 = 0
   public var logRemovalBeforeMs: Int64 = 0
+  public var sqliteStorage: SQLiteStorageUsage? = nil
   public var trafficDeletionGeneration: UInt64 = 0
   public var routeHistoryRevision: UInt64 = 0
   public var journalGeneration: String = ""
@@ -21,6 +22,18 @@ public struct HistoryState: Sendable, Equatable {
   public var collectionState: String = "idle"
   public var errorCode: String = ""
   public init() {}
+}
+
+public struct SQLiteStorageUsage: Sendable, Equatable {
+  public let logsBytes: UInt64
+  public let trafficBytes: UInt64
+  public let journalBytes: UInt64
+  public let aiUsageBytes: UInt64
+  public let profileEventsBytes: UInt64
+
+  public var totalBytes: UInt64 {
+    logsBytes + trafficBytes + journalBytes + aiUsageBytes + profileEventsBytes
+  }
 }
 
 extension HistoryState {
@@ -159,6 +172,7 @@ public struct TrafficFilter: Sendable, Equatable, Hashable {
   public var readToken: String = ""
   public var cursor: String = ""
   public var limit: UInt32 = 100
+  public var groupApplications = false
   public init() {}
 }
 
@@ -190,16 +204,18 @@ public struct TrafficExit: Sendable, Hashable {
   public var download: UInt64 = 0
   public init() {}
 }
-public struct TrafficRoutingMatch: Sendable, Equatable {
+public struct TrafficRoutingMatch: Sendable, Hashable {
   public var at: Date
   public var rule: String
   public var source: String
   public var applicationID: String
   public var application: String
   public var identity: String
+  public var direction = ""
+  public var routeName = ""
   public init(
     at: Date, rule: String, source: String, applicationID: String = "", application: String = "",
-    identity: String
+    identity: String, direction: String = "", routeName: String = ""
   ) {
     self.at = at
     self.rule = rule
@@ -207,6 +223,8 @@ public struct TrafficRoutingMatch: Sendable, Equatable {
     self.applicationID = applicationID
     self.application = application
     self.identity = identity
+    self.direction = direction
+    self.routeName = routeName
   }
 }
 
@@ -227,6 +245,7 @@ public struct TrafficRow: Sendable, Equatable {
   public var validLatencyCount: UInt64 = 0
   public var missingLatencyCount: UInt64 = 0
   public var failedCount: UInt64 = 0
+  public var blockedCount: UInt64 = 0
   public var earlierCount: UInt64 = 0
   public var latencySampled = false
   public var latestLatencyMS: UInt64 = 0
@@ -289,6 +308,7 @@ public struct TrafficPage: Sendable, Equatable {
 public struct TrafficBasis: Sendable, Equatable {
   public var target = ""
   public var routeName = ""
+  public var direction = ""
   public var rule: String = ""
   public var source: String = ""
   public var connections: UInt64 = 0
@@ -296,6 +316,11 @@ public struct TrafficBasis: Sendable, Equatable {
 }
 
 public struct TrafficDetail: Sendable, Equatable {
+  public var connectionGroups: [TrafficConnectionGroup] = []
+  public var targetGroupTotal: UInt64 = 0
+  public var filteredConnectionCount: UInt64 = 0
+  public var connectionRules: [TrafficBasis] = []
+  public var connectionExits: [TrafficExit] = []
   public var retainedConnectionCount: UInt64 = 0
   public var recentResponses: [TrafficResponsePoint] = []
   public var recentResponsesState = ""
@@ -325,6 +350,14 @@ public struct TrafficDetail: Sendable, Equatable {
 }
 
 public struct TrafficDetailQuery: Sendable, Equatable, Hashable {
+  public var groupConnections = false
+  public var targetGroupID = ""
+  public var connectionSearch = ""
+  public var connectionExit = ""
+  public var connectionRule = ""
+  public var relatedID = ""
+  public var connectionSort = ""
+  public var connectionAscending = false
   public var dnsGroupID = ""
   public var rowID: String = ""
   public var connectionKey: String = ""

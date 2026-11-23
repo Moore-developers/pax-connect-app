@@ -4,9 +4,11 @@ import AppKit
 public final class PaxPreferenceGroup: NSStackView {
   public enum Style { case standard, compact }
   private let titleField: NSTextField
+  private let summaryField = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
 
   public init(
-    title: String, symbol: String, rows: [NSView], style: Style = .standard, footer: NSView? = nil
+    title: String, symbol: String, rows: [NSView], style: Style = .standard,
+    headingAccessory: NSView? = nil, footer: NSView? = nil
   ) {
     titleField = PaxText.label(
       title, font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont, weight: .medium))
@@ -14,11 +16,16 @@ public final class PaxPreferenceGroup: NSStackView {
     orientation = .vertical
     alignment = .leading
     spacing = PaxTheme.Spacing.tight
-    let heading = NSStackView(views: [
-      NSImageView(image: PaxIcon.image(symbol, size: PaxTheme.Control.navigationIcon) ?? NSImage()),
-      titleField,
-      NSView(),
-    ])
+    titleField.setContentCompressionResistancePriority(.required, for: .horizontal)
+    summaryField.lineBreakMode = .byTruncatingTail
+    summaryField.isHidden = true
+    let heading = NSStackView(
+      views: [
+        NSImageView(
+          image: PaxIcon.image(symbol, size: PaxTheme.Control.navigationIcon) ?? NSImage()),
+        titleField,
+      ] + (headingAccessory.map { [$0] } ?? []) + [summaryField, NSView()])
+    heading.alignment = .centerY
     heading.spacing = PaxTheme.Spacing.tight
     let body = NSStackView()
     body.orientation = .vertical
@@ -67,4 +74,9 @@ public final class PaxPreferenceGroup: NSStackView {
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
   public func apply(title: String) { titleField.stringValue = title }
+  public func apply(summary: String) {
+    summaryField.stringValue = summary
+    summaryField.toolTip = summary.isEmpty ? nil : summary
+    summaryField.isHidden = summary.isEmpty
+  }
 }

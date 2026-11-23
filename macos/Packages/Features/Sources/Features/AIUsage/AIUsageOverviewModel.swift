@@ -82,6 +82,7 @@ struct AIClientUsageRow: Equatable {
   let billedCostText: String
   let shareText: String
   let requestsText: String
+  let hasUsage: Bool
   let amount: Double
 }
 
@@ -297,25 +298,27 @@ extension AIUsageStore {
       let used = sum.count > 0
       return AIClientUsageRow(
         client: client, serviceSource: source,
-        profileName: client == .harness
-          ? context.text("ai_projection.2736dc3b8c")
-          : source == .officialAccount
-            ? context.text("ai_projection.57adc05c18")
-            : profile?.name ?? source.label(context: context),
+        profileName: client == .antigravity
+          ? context.text("ai_usage.antigravity.local")
+          : client == .harness
+            ? context.text("ai_projection.2736dc3b8c")
+            : source == .officialAccount
+              ? context.text("ai_projection.57adc05c18")
+              : profile?.name ?? source.label(context: context),
         multiplier: source == .officialAccount
           ? nil
           : client == .harness
             ? AIUsageFormatting.multiplier(1)
             : profile.map { AIUsageFormatting.multiplier($0.multiplier) },
-        state: states[client],
-        stateCode: binding?.state ?? "",
-        stateText: client == .harness
+        state: client == .antigravity ? context.text("profile_state.read_only") : states[client],
+        stateCode: client.isUsageOnly ? "read_only" : binding?.state ?? "",
+        stateText: client.isUsageOnly
           ? context.text("ai_projection.3b5ec3533b")
           : configuration.available
             ? AIProfilesStore.stateLabel(binding, context: context)
             : context.text("ai_projection.2c72fe1c46"),
         needsAction: Self.actionStates.contains(binding?.state ?? ""),
-        unconfigured: client != .harness
+        unconfigured: !client.isUsageOnly
           && binding?.state == "missing",
         value: used
           ? (cost
@@ -330,7 +333,7 @@ extension AIUsageStore {
           ? context.text("ai_projection.2f1240019d", ["arg0": String(describing: sum.count)])
             + AIUsageFormatting.percent(sum.successRate)
           : Self.idleText(lastUsed: lastUsed(client), context: context),
-        amount: used ? amount : 0)
+        hasUsage: used, amount: used ? amount : 0)
     }
   }
 

@@ -7,15 +7,15 @@ extension WorkbenchDashboardViewController {
   static func makeAnalysisCard() -> PaxTrafficAnalysisCard {
     PaxTrafficAnalysisCard(
       periodTitle: RoutingWorkbenchStore.Period.day.title,
-      dimensions: RoutingWorkbenchStore.Dimension.allCases.map(\.title))
+      dimensions: ["应用", "域名", "系统"])
   }
   func installAnalysis() {
     analysisList.onOpen = { [weak self] id in self?.showRequest(id) }
     analysis.onDimension = { [weak self] index in
-      if let value = RoutingWorkbenchStore.Dimension(rawValue: index) {
-        self?.detailTask?.cancel()
-        self?.changeAnalysis(.dimension(value))
-      }
+      guard let self else { return }
+      self.detailTask?.cancel()
+      guard let dimension = RoutingWorkbenchStore.Dimension(rawValue: index) else { return }
+      self.changeAnalysis(.dimension(dimension))
     }
     analysis.onFilter = { [weak self] index in
       if let value = RoutingWorkbenchStore.Direction(rawValue: index) {
@@ -69,7 +69,7 @@ extension WorkbenchDashboardViewController {
     presentWorkbenchModal(
       WorkbenchTrafficDetailController(
         snapshot: analysisStore.trafficDetail(for: row), tooltip: tooltip,
-        icons: analysisList.icons))
+        icons: analysisList.icons, ruleStore: analysisStore))
   }
 }
 
@@ -87,7 +87,8 @@ extension RoutingTrafficList {
       emptyMessage: "", limit: PaxTheme.Dashboard.maximumRows,
       minimumRows: PaxTheme.Dashboard.minimumRows)
     card.apply(
-      dimensionIndex: store.dimension.rawValue, filterIndex: min(2, store.direction.rawValue),
+      dimensionIndex: store.dimension.rawValue,
+      filterIndex: min(2, store.direction.rawValue),
       accessibilityTitle: context.text("dashboard.analysis_rows", ["count": String(count)]),
       emptyMessage: count == 0 ? message : nil, controlsEnabled: enabled)
     if changed { activeTable.preparePageRows() }

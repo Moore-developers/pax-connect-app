@@ -10,7 +10,20 @@ final class LogHistorySettingsController: NSViewController, InterfaceLanguageCon
   private let telemetry: TelemetryStore
   private let retention = PaxRoutePicker(style: .toolbar)
   private let retentionHours: [UInt32] = [1, 12, 24]
-  private let status = PaxText.label("", font: PaxTheme.Typography.caption(), wrapping: true)
+  private enum Action { case retention, clear }
+  private var feedbackAction: Action?
+  private var retentionRow: PaxPreferenceRow?
+  private var historyRow: PaxPreferenceRow?
+  private var group: PaxPreferenceGroup?
+  private let storageReadout = PaxHoverReadout()
+  private let storageLabel = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
+  private lazy var storageHost = PaxHoverReadoutHost(storageLabel, readout: storageReadout) {
+    [weak self] in
+    guard let self, telemetry.connected, let storage = telemetry.history.sqliteStorage else {
+      return nil
+    }
+    return LogStorageReadout.view(storage, context: interfaceCopy.context)
+  }
   private lazy var clear = PaxRouteButton("清除日志…", target: self, action: #selector(clearHistory))
   init(telemetry: TelemetryStore) {
     self.telemetry = telemetry
@@ -31,27 +44,27 @@ final class LogHistorySettingsController: NSViewController, InterfaceLanguageCon
     retention.action = #selector(changeRetention)
     retention.selectItem(at: 2)
     retention.setAccessibilityIdentifier("history-retention")
-    let note = interfaceCopy.label(
-      "settings.logs.note",
-      font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-    let footer = NSStackView(views: [note, status])
-    footer.orientation = .vertical
-    footer.alignment = .leading
-    footer.spacing = PaxTheme.Spacing.tight
-    for item in footer.arrangedSubviews {
-      item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
+    let retentionRow = interfaceCopy.preference(
+      title: "settings.logs.retention", detail: "settings.logs.retention_detail", control: retention
+    )
+    let historyRow = interfaceCopy.preference(
+      title: "settings.logs.history", detail: "settings.logs.history_detail", control: clear)
+    self.retentionRow = retentionRow
+    self.historyRow = historyRow
+    storageHost.setAccessibilityElement(true)
+    storageHost.setAccessibilityRole(.button)
+    storageHost.setAccessibilityIdentifier("history-storage-readout")
+    storageHost.setContentCompressionResistancePriority(.required, for: .horizontal)
+    storageLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+    interfaceCopy.onChange = { [weak self] in
+      self?.storageReadout.close()
+      self?.render()
     }
     let group = PaxPreferenceGroup(
-      title: "", symbol: "internaldrive",
-      rows: [
-        interfaceCopy.preference(
-          title: "settings.logs.retention", detail: "settings.logs.retention_detail",
-          control: retention),
-        interfaceCopy.preference(
-          title: "settings.logs.history", detail: "settings.logs.history_detail", control: clear),
-      ], style: .compact, footer: footer)
+      title: "", symbol: "internaldrive", rows: [retentionRow, historyRow], style: .compact,
+      headingAccessory: storageHost)
+    self.group = group
     view = interfaceCopy.group(group, key: "settings.logs.title")
-    interfaceCopy.onChange = { [weak self] in self?.render() }
     observe()
   }
   private func observe() {
@@ -67,19 +80,24 @@ final class LogHistorySettingsController: NSViewController, InterfaceLanguageCon
     retention.selectItem(
       at: retentionHours.firstIndex(of: telemetry.settings.logRetentionHours) ?? 2)
     let context = interfaceCopy.context
-    let message = telemetry.message(context: context)
-    status.stringValue = message.isEmpty ? telemetry.qualityMessage(context: context) : message
-    status.isHidden = status.stringValue.isEmpty
+    let storage = telemetry.connected ? telemetry.history.sqliteStorage : nil
+    let size = storage.map { TrafficFormatting.bytes($0.totalBytes) } ?? "—"
+    let total = context.text("settings.logs.storage_size", ["size": size])
+    storageLabel.stringValue = total
+    storageHost.setAccessibilityLabel(total)
+    storageHost.setAccessibilityHelp(
+      storage.map { LogStorageReadout.accessibilityText($0, context: context) })
+    if storage == nil { storageReadout.close() }
+    group?.apply(summary: telemetry.qualityMessage(context: context))
+    let message = telemetry.available ? telemetry.message(context: context) : ""
+    retentionRow?.apply(feedback: feedbackAction == .retention ? message : "")
+    historyRow?.apply(feedback: feedbackAction == .clear ? message : "")
   }
   @objc private func changeRetention() {
     guard retentionHours.indices.contains(retention.indexOfSelectedItem) else { return }
     let hours = retentionHours[retention.indexOfSelectedItem]
     let save: @MainActor () -> Void = { [weak self] in
-      guard let self else { return }
-      Task {
-        _ = await self.telemetry.saveRetention(hours)
-        self.render()
-      }
+      self?.perform(.retention) { await $0.saveRetention(hours) }
     }
     if hours < telemetry.settings.logRetentionHours {
       confirm(
@@ -98,8 +116,19 @@ final class LogHistorySettingsController: NSViewController, InterfaceLanguageCon
       detail: interfaceCopy.text("settings.logs.clear_detail"),
       action: interfaceCopy.text("settings.logs.clear_confirm")
     ) { [weak self] in
-      guard let self else { return }
-      Task { _ = await self.telemetry.clearLogs() }
+      self?.perform(.clear) { await $0.clearLogs() }
+    }
+  }
+  private func perform(
+    _ action: Action, operation: @escaping @MainActor (TelemetryStore) async -> Bool
+  ) {
+    guard telemetry.available, !telemetry.busy else { return }
+    feedbackAction = nil
+    render()
+    Task {
+      _ = await operation(telemetry)
+      feedbackAction = action
+      render()
     }
   }
   private func confirm(

@@ -21,6 +21,255 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type AntigravityModelsQuery struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AntigravityModelsQuery) Reset() {
+	*x = AntigravityModelsQuery{}
+	mi := &file_ai_usage_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AntigravityModelsQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AntigravityModelsQuery) ProtoMessage() {}
+
+func (x *AntigravityModelsQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_usage_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AntigravityModelsQuery.ProtoReflect.Descriptor instead.
+func (*AntigravityModelsQuery) Descriptor() ([]byte, []int) {
+	return file_ai_usage_proto_rawDescGZIP(), []int{0}
+}
+
+type AntigravityModels struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Models        []*AntigravityModel    `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
+	Rates         []*AntigravityRate     `protobuf:"bytes,2,rep,name=rates,proto3" json:"rates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AntigravityModels) Reset() {
+	*x = AntigravityModels{}
+	mi := &file_ai_usage_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AntigravityModels) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AntigravityModels) ProtoMessage() {}
+
+func (x *AntigravityModels) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_usage_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AntigravityModels.ProtoReflect.Descriptor instead.
+func (*AntigravityModels) Descriptor() ([]byte, []int) {
+	return file_ai_usage_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AntigravityModels) GetModels() []*AntigravityModel {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+func (x *AntigravityModels) GetRates() []*AntigravityRate {
+	if x != nil {
+		return x.Rates
+	}
+	return nil
+}
+
+type AntigravityModel struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Official plan IDs: free_plus, pro, ultra, enterprise.
+	Plans         []string `protobuf:"bytes,3,rep,name=plans,proto3" json:"plans,omitempty"`
+	Kind          string   `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`                            // model, orchestrator, tool
+	RetiredOn     string   `protobuf:"bytes,5,opt,name=retired_on,json=retiredOn,proto3" json:"retired_on,omitempty"` // YYYY-MM-DD
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AntigravityModel) Reset() {
+	*x = AntigravityModel{}
+	mi := &file_ai_usage_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AntigravityModel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AntigravityModel) ProtoMessage() {}
+
+func (x *AntigravityModel) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_usage_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AntigravityModel.ProtoReflect.Descriptor instead.
+func (*AntigravityModel) Descriptor() ([]byte, []int) {
+	return file_ai_usage_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AntigravityModel) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AntigravityModel) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AntigravityModel) GetPlans() []string {
+	if x != nil {
+		return x.Plans
+	}
+	return nil
+}
+
+func (x *AntigravityModel) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *AntigravityModel) GetRetiredOn() string {
+	if x != nil {
+		return x.RetiredOn
+	}
+	return ""
+}
+
+type AntigravityRate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModelId       string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Input         float64                `protobuf:"fixed64,2,opt,name=input,proto3" json:"input,omitempty"`
+	CacheRead     float64                `protobuf:"fixed64,3,opt,name=cache_read,json=cacheRead,proto3" json:"cache_read,omitempty"`
+	CacheWrite    *float64               `protobuf:"fixed64,4,opt,name=cache_write,json=cacheWrite,proto3,oneof" json:"cache_write,omitempty"`
+	Output        float64                `protobuf:"fixed64,5,opt,name=output,proto3" json:"output,omitempty"`
+	EffectiveOn   string                 `protobuf:"bytes,6,opt,name=effective_on,json=effectiveOn,proto3" json:"effective_on,omitempty"` // YYYY-MM-DD when published
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AntigravityRate) Reset() {
+	*x = AntigravityRate{}
+	mi := &file_ai_usage_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AntigravityRate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AntigravityRate) ProtoMessage() {}
+
+func (x *AntigravityRate) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_usage_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AntigravityRate.ProtoReflect.Descriptor instead.
+func (*AntigravityRate) Descriptor() ([]byte, []int) {
+	return file_ai_usage_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AntigravityRate) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *AntigravityRate) GetInput() float64 {
+	if x != nil {
+		return x.Input
+	}
+	return 0
+}
+
+func (x *AntigravityRate) GetCacheRead() float64 {
+	if x != nil {
+		return x.CacheRead
+	}
+	return 0
+}
+
+func (x *AntigravityRate) GetCacheWrite() float64 {
+	if x != nil && x.CacheWrite != nil {
+		return *x.CacheWrite
+	}
+	return 0
+}
+
+func (x *AntigravityRate) GetOutput() float64 {
+	if x != nil {
+		return x.Output
+	}
+	return 0
+}
+
+func (x *AntigravityRate) GetEffectiveOn() string {
+	if x != nil {
+		return x.EffectiveOn
+	}
+	return ""
+}
+
 // revision 随可见查询结果变化加一；generation 在删除/重建/重新定价时加一（protocol.md §4.2）。
 type AIUsageState struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
@@ -39,7 +288,7 @@ type AIUsageState struct {
 
 func (x *AIUsageState) Reset() {
 	*x = AIUsageState{}
-	mi := &file_ai_usage_proto_msgTypes[0]
+	mi := &file_ai_usage_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -51,7 +300,7 @@ func (x *AIUsageState) String() string {
 func (*AIUsageState) ProtoMessage() {}
 
 func (x *AIUsageState) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[0]
+	mi := &file_ai_usage_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -64,7 +313,7 @@ func (x *AIUsageState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageState.ProtoReflect.Descriptor instead.
 func (*AIUsageState) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{0}
+	return file_ai_usage_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AIUsageState) GetRevision() uint64 {
@@ -137,7 +386,7 @@ type AIUsageQuery struct {
 
 func (x *AIUsageQuery) Reset() {
 	*x = AIUsageQuery{}
-	mi := &file_ai_usage_proto_msgTypes[1]
+	mi := &file_ai_usage_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -149,7 +398,7 @@ func (x *AIUsageQuery) String() string {
 func (*AIUsageQuery) ProtoMessage() {}
 
 func (x *AIUsageQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[1]
+	mi := &file_ai_usage_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -162,7 +411,7 @@ func (x *AIUsageQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageQuery.ProtoReflect.Descriptor instead.
 func (*AIUsageQuery) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{1}
+	return file_ai_usage_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AIUsageQuery) GetFromMs() int64 {
@@ -208,7 +457,7 @@ type AIUsageSummaryQuery struct {
 
 func (x *AIUsageSummaryQuery) Reset() {
 	*x = AIUsageSummaryQuery{}
-	mi := &file_ai_usage_proto_msgTypes[2]
+	mi := &file_ai_usage_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -220,7 +469,7 @@ func (x *AIUsageSummaryQuery) String() string {
 func (*AIUsageSummaryQuery) ProtoMessage() {}
 
 func (x *AIUsageSummaryQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[2]
+	mi := &file_ai_usage_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +482,7 @@ func (x *AIUsageSummaryQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageSummaryQuery.ProtoReflect.Descriptor instead.
 func (*AIUsageSummaryQuery) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{2}
+	return file_ai_usage_proto_rawDescGZIP(), []int{6}
 }
 
 type AIUsageTotals struct {
@@ -259,7 +508,7 @@ type AIUsageTotals struct {
 
 func (x *AIUsageTotals) Reset() {
 	*x = AIUsageTotals{}
-	mi := &file_ai_usage_proto_msgTypes[3]
+	mi := &file_ai_usage_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -271,7 +520,7 @@ func (x *AIUsageTotals) String() string {
 func (*AIUsageTotals) ProtoMessage() {}
 
 func (x *AIUsageTotals) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[3]
+	mi := &file_ai_usage_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -284,7 +533,7 @@ func (x *AIUsageTotals) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageTotals.ProtoReflect.Descriptor instead.
 func (*AIUsageTotals) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{3}
+	return file_ai_usage_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AIUsageTotals) GetCount() int64 {
@@ -400,7 +649,7 @@ type AIUsageBucket struct {
 
 func (x *AIUsageBucket) Reset() {
 	*x = AIUsageBucket{}
-	mi := &file_ai_usage_proto_msgTypes[4]
+	mi := &file_ai_usage_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -412,7 +661,7 @@ func (x *AIUsageBucket) String() string {
 func (*AIUsageBucket) ProtoMessage() {}
 
 func (x *AIUsageBucket) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[4]
+	mi := &file_ai_usage_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -425,7 +674,7 @@ func (x *AIUsageBucket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageBucket.ProtoReflect.Descriptor instead.
 func (*AIUsageBucket) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{4}
+	return file_ai_usage_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AIUsageBucket) GetAtMs() int64 {
@@ -489,7 +738,7 @@ type AIUsageLastUsed struct {
 
 func (x *AIUsageLastUsed) Reset() {
 	*x = AIUsageLastUsed{}
-	mi := &file_ai_usage_proto_msgTypes[5]
+	mi := &file_ai_usage_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -501,7 +750,7 @@ func (x *AIUsageLastUsed) String() string {
 func (*AIUsageLastUsed) ProtoMessage() {}
 
 func (x *AIUsageLastUsed) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[5]
+	mi := &file_ai_usage_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -514,7 +763,7 @@ func (x *AIUsageLastUsed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLastUsed.ProtoReflect.Descriptor instead.
 func (*AIUsageLastUsed) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{5}
+	return file_ai_usage_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AIUsageLastUsed) GetCli() string {
@@ -543,7 +792,7 @@ type AIUsageBuckets struct {
 
 func (x *AIUsageBuckets) Reset() {
 	*x = AIUsageBuckets{}
-	mi := &file_ai_usage_proto_msgTypes[6]
+	mi := &file_ai_usage_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +804,7 @@ func (x *AIUsageBuckets) String() string {
 func (*AIUsageBuckets) ProtoMessage() {}
 
 func (x *AIUsageBuckets) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[6]
+	mi := &file_ai_usage_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,7 +817,7 @@ func (x *AIUsageBuckets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageBuckets.ProtoReflect.Descriptor instead.
 func (*AIUsageBuckets) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{6}
+	return file_ai_usage_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AIUsageBuckets) GetBuckets() []*AIUsageBucket {
@@ -622,7 +871,7 @@ type AIUsageLogQuery struct {
 
 func (x *AIUsageLogQuery) Reset() {
 	*x = AIUsageLogQuery{}
-	mi := &file_ai_usage_proto_msgTypes[7]
+	mi := &file_ai_usage_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +883,7 @@ func (x *AIUsageLogQuery) String() string {
 func (*AIUsageLogQuery) ProtoMessage() {}
 
 func (x *AIUsageLogQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[7]
+	mi := &file_ai_usage_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +896,7 @@ func (x *AIUsageLogQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLogQuery.ProtoReflect.Descriptor instead.
 func (*AIUsageLogQuery) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{7}
+	return file_ai_usage_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AIUsageLogQuery) GetFromMs() int64 {
@@ -750,7 +999,7 @@ type AIUsageUnitPrice struct {
 
 func (x *AIUsageUnitPrice) Reset() {
 	*x = AIUsageUnitPrice{}
-	mi := &file_ai_usage_proto_msgTypes[8]
+	mi := &file_ai_usage_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -762,7 +1011,7 @@ func (x *AIUsageUnitPrice) String() string {
 func (*AIUsageUnitPrice) ProtoMessage() {}
 
 func (x *AIUsageUnitPrice) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[8]
+	mi := &file_ai_usage_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -775,7 +1024,7 @@ func (x *AIUsageUnitPrice) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageUnitPrice.ProtoReflect.Descriptor instead.
 func (*AIUsageUnitPrice) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{8}
+	return file_ai_usage_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AIUsageUnitPrice) GetValue() float64 {
@@ -823,7 +1072,7 @@ type AIUsageRequest struct {
 
 func (x *AIUsageRequest) Reset() {
 	*x = AIUsageRequest{}
-	mi := &file_ai_usage_proto_msgTypes[9]
+	mi := &file_ai_usage_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -835,7 +1084,7 @@ func (x *AIUsageRequest) String() string {
 func (*AIUsageRequest) ProtoMessage() {}
 
 func (x *AIUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[9]
+	mi := &file_ai_usage_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +1097,7 @@ func (x *AIUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageRequest.ProtoReflect.Descriptor instead.
 func (*AIUsageRequest) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{9}
+	return file_ai_usage_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AIUsageRequest) GetId() string {
@@ -1068,7 +1317,7 @@ type AIUsageLogs struct {
 
 func (x *AIUsageLogs) Reset() {
 	*x = AIUsageLogs{}
-	mi := &file_ai_usage_proto_msgTypes[10]
+	mi := &file_ai_usage_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1080,7 +1329,7 @@ func (x *AIUsageLogs) String() string {
 func (*AIUsageLogs) ProtoMessage() {}
 
 func (x *AIUsageLogs) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[10]
+	mi := &file_ai_usage_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1093,7 +1342,7 @@ func (x *AIUsageLogs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLogs.ProtoReflect.Descriptor instead.
 func (*AIUsageLogs) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{10}
+	return file_ai_usage_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AIUsageLogs) GetRequests() []*AIUsageRequest {
@@ -1157,7 +1406,7 @@ type RepriceAIUsageRequest struct {
 
 func (x *RepriceAIUsageRequest) Reset() {
 	*x = RepriceAIUsageRequest{}
-	mi := &file_ai_usage_proto_msgTypes[11]
+	mi := &file_ai_usage_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1169,7 +1418,7 @@ func (x *RepriceAIUsageRequest) String() string {
 func (*RepriceAIUsageRequest) ProtoMessage() {}
 
 func (x *RepriceAIUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[11]
+	mi := &file_ai_usage_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1182,7 +1431,7 @@ func (x *RepriceAIUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepriceAIUsageRequest.ProtoReflect.Descriptor instead.
 func (*RepriceAIUsageRequest) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{11}
+	return file_ai_usage_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RepriceAIUsageRequest) GetProfileId() string {
@@ -1244,7 +1493,7 @@ type RepriceAIUsageResult struct {
 
 func (x *RepriceAIUsageResult) Reset() {
 	*x = RepriceAIUsageResult{}
-	mi := &file_ai_usage_proto_msgTypes[12]
+	mi := &file_ai_usage_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1256,7 +1505,7 @@ func (x *RepriceAIUsageResult) String() string {
 func (*RepriceAIUsageResult) ProtoMessage() {}
 
 func (x *RepriceAIUsageResult) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[12]
+	mi := &file_ai_usage_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1269,7 +1518,7 @@ func (x *RepriceAIUsageResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepriceAIUsageResult.ProtoReflect.Descriptor instead.
 func (*RepriceAIUsageResult) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{12}
+	return file_ai_usage_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RepriceAIUsageResult) GetRequests() int64 {
@@ -1340,7 +1589,7 @@ type AIUsageAnalysisQuery struct {
 
 func (x *AIUsageAnalysisQuery) Reset() {
 	*x = AIUsageAnalysisQuery{}
-	mi := &file_ai_usage_proto_msgTypes[13]
+	mi := &file_ai_usage_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1352,7 +1601,7 @@ func (x *AIUsageAnalysisQuery) String() string {
 func (*AIUsageAnalysisQuery) ProtoMessage() {}
 
 func (x *AIUsageAnalysisQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[13]
+	mi := &file_ai_usage_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1365,7 +1614,7 @@ func (x *AIUsageAnalysisQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageAnalysisQuery.ProtoReflect.Descriptor instead.
 func (*AIUsageAnalysisQuery) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{13}
+	return file_ai_usage_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AIUsageAnalysisQuery) GetFromMs() int64 {
@@ -1427,7 +1676,7 @@ type AIUsageSessionKey struct {
 
 func (x *AIUsageSessionKey) Reset() {
 	*x = AIUsageSessionKey{}
-	mi := &file_ai_usage_proto_msgTypes[14]
+	mi := &file_ai_usage_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1439,7 +1688,7 @@ func (x *AIUsageSessionKey) String() string {
 func (*AIUsageSessionKey) ProtoMessage() {}
 
 func (x *AIUsageSessionKey) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[14]
+	mi := &file_ai_usage_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1452,7 +1701,7 @@ func (x *AIUsageSessionKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageSessionKey.ProtoReflect.Descriptor instead.
 func (*AIUsageSessionKey) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{14}
+	return file_ai_usage_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AIUsageSessionKey) GetCli() string {
@@ -1487,7 +1736,7 @@ type AISessionCatalogQuery struct {
 
 func (x *AISessionCatalogQuery) Reset() {
 	*x = AISessionCatalogQuery{}
-	mi := &file_ai_usage_proto_msgTypes[15]
+	mi := &file_ai_usage_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1499,7 +1748,7 @@ func (x *AISessionCatalogQuery) String() string {
 func (*AISessionCatalogQuery) ProtoMessage() {}
 
 func (x *AISessionCatalogQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[15]
+	mi := &file_ai_usage_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1512,7 +1761,7 @@ func (x *AISessionCatalogQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AISessionCatalogQuery.ProtoReflect.Descriptor instead.
 func (*AISessionCatalogQuery) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{15}
+	return file_ai_usage_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AISessionCatalogQuery) GetCli() string {
@@ -1580,7 +1829,7 @@ type AISessionCatalogEntry struct {
 
 func (x *AISessionCatalogEntry) Reset() {
 	*x = AISessionCatalogEntry{}
-	mi := &file_ai_usage_proto_msgTypes[16]
+	mi := &file_ai_usage_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1592,7 +1841,7 @@ func (x *AISessionCatalogEntry) String() string {
 func (*AISessionCatalogEntry) ProtoMessage() {}
 
 func (x *AISessionCatalogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[16]
+	mi := &file_ai_usage_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1605,7 +1854,7 @@ func (x *AISessionCatalogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AISessionCatalogEntry.ProtoReflect.Descriptor instead.
 func (*AISessionCatalogEntry) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{16}
+	return file_ai_usage_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AISessionCatalogEntry) GetKey() *AIUsageSessionKey {
@@ -1660,7 +1909,7 @@ type AISessionCatalogCount struct {
 
 func (x *AISessionCatalogCount) Reset() {
 	*x = AISessionCatalogCount{}
-	mi := &file_ai_usage_proto_msgTypes[17]
+	mi := &file_ai_usage_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1672,7 +1921,7 @@ func (x *AISessionCatalogCount) String() string {
 func (*AISessionCatalogCount) ProtoMessage() {}
 
 func (x *AISessionCatalogCount) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[17]
+	mi := &file_ai_usage_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1685,7 +1934,7 @@ func (x *AISessionCatalogCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AISessionCatalogCount.ProtoReflect.Descriptor instead.
 func (*AISessionCatalogCount) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{17}
+	return file_ai_usage_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AISessionCatalogCount) GetCli() string {
@@ -1712,7 +1961,7 @@ type AISessionCatalogSource struct {
 
 func (x *AISessionCatalogSource) Reset() {
 	*x = AISessionCatalogSource{}
-	mi := &file_ai_usage_proto_msgTypes[18]
+	mi := &file_ai_usage_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1724,7 +1973,7 @@ func (x *AISessionCatalogSource) String() string {
 func (*AISessionCatalogSource) ProtoMessage() {}
 
 func (x *AISessionCatalogSource) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[18]
+	mi := &file_ai_usage_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1737,7 +1986,7 @@ func (x *AISessionCatalogSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AISessionCatalogSource.ProtoReflect.Descriptor instead.
 func (*AISessionCatalogSource) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{18}
+	return file_ai_usage_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AISessionCatalogSource) GetCli() string {
@@ -1773,7 +2022,7 @@ type AISessionCatalogPage struct {
 
 func (x *AISessionCatalogPage) Reset() {
 	*x = AISessionCatalogPage{}
-	mi := &file_ai_usage_proto_msgTypes[19]
+	mi := &file_ai_usage_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1785,7 +2034,7 @@ func (x *AISessionCatalogPage) String() string {
 func (*AISessionCatalogPage) ProtoMessage() {}
 
 func (x *AISessionCatalogPage) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[19]
+	mi := &file_ai_usage_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1798,7 +2047,7 @@ func (x *AISessionCatalogPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AISessionCatalogPage.ProtoReflect.Descriptor instead.
 func (*AISessionCatalogPage) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{19}
+	return file_ai_usage_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AISessionCatalogPage) GetItems() []*AISessionCatalogEntry {
@@ -1897,7 +2146,7 @@ type AIUsageAnalysisRow struct {
 
 func (x *AIUsageAnalysisRow) Reset() {
 	*x = AIUsageAnalysisRow{}
-	mi := &file_ai_usage_proto_msgTypes[20]
+	mi := &file_ai_usage_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1909,7 +2158,7 @@ func (x *AIUsageAnalysisRow) String() string {
 func (*AIUsageAnalysisRow) ProtoMessage() {}
 
 func (x *AIUsageAnalysisRow) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[20]
+	mi := &file_ai_usage_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1922,7 +2171,7 @@ func (x *AIUsageAnalysisRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageAnalysisRow.ProtoReflect.Descriptor instead.
 func (*AIUsageAnalysisRow) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{20}
+	return file_ai_usage_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AIUsageAnalysisRow) GetCli() string {
@@ -2063,7 +2312,7 @@ type AIUsageAnalysis struct {
 
 func (x *AIUsageAnalysis) Reset() {
 	*x = AIUsageAnalysis{}
-	mi := &file_ai_usage_proto_msgTypes[21]
+	mi := &file_ai_usage_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2075,7 +2324,7 @@ func (x *AIUsageAnalysis) String() string {
 func (*AIUsageAnalysis) ProtoMessage() {}
 
 func (x *AIUsageAnalysis) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[21]
+	mi := &file_ai_usage_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2088,7 +2337,7 @@ func (x *AIUsageAnalysis) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageAnalysis.ProtoReflect.Descriptor instead.
 func (*AIUsageAnalysis) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{21}
+	return file_ai_usage_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *AIUsageAnalysis) GetRows() []*AIUsageAnalysisRow {
@@ -2170,7 +2419,7 @@ type AIUsageContextUsage struct {
 
 func (x *AIUsageContextUsage) Reset() {
 	*x = AIUsageContextUsage{}
-	mi := &file_ai_usage_proto_msgTypes[22]
+	mi := &file_ai_usage_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2182,7 +2431,7 @@ func (x *AIUsageContextUsage) String() string {
 func (*AIUsageContextUsage) ProtoMessage() {}
 
 func (x *AIUsageContextUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[22]
+	mi := &file_ai_usage_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2195,7 +2444,7 @@ func (x *AIUsageContextUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageContextUsage.ProtoReflect.Descriptor instead.
 func (*AIUsageContextUsage) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{22}
+	return file_ai_usage_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *AIUsageContextUsage) GetCli() string {
@@ -2289,7 +2538,7 @@ type AIUsageContextBand struct {
 
 func (x *AIUsageContextBand) Reset() {
 	*x = AIUsageContextBand{}
-	mi := &file_ai_usage_proto_msgTypes[23]
+	mi := &file_ai_usage_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2301,7 +2550,7 @@ func (x *AIUsageContextBand) String() string {
 func (*AIUsageContextBand) ProtoMessage() {}
 
 func (x *AIUsageContextBand) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[23]
+	mi := &file_ai_usage_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2314,7 +2563,7 @@ func (x *AIUsageContextBand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageContextBand.ProtoReflect.Descriptor instead.
 func (*AIUsageContextBand) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{23}
+	return file_ai_usage_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *AIUsageContextBand) GetInput() int64 {
@@ -2372,7 +2621,7 @@ type AIUsageLimitMoney struct {
 
 func (x *AIUsageLimitMoney) Reset() {
 	*x = AIUsageLimitMoney{}
-	mi := &file_ai_usage_proto_msgTypes[24]
+	mi := &file_ai_usage_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2384,7 +2633,7 @@ func (x *AIUsageLimitMoney) String() string {
 func (*AIUsageLimitMoney) ProtoMessage() {}
 
 func (x *AIUsageLimitMoney) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[24]
+	mi := &file_ai_usage_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2397,7 +2646,7 @@ func (x *AIUsageLimitMoney) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitMoney.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitMoney) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{24}
+	return file_ai_usage_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *AIUsageLimitMoney) GetOfficial() float64 {
@@ -2435,7 +2684,7 @@ type AIUsageModelLimit struct {
 
 func (x *AIUsageModelLimit) Reset() {
 	*x = AIUsageModelLimit{}
-	mi := &file_ai_usage_proto_msgTypes[25]
+	mi := &file_ai_usage_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2447,7 +2696,7 @@ func (x *AIUsageModelLimit) String() string {
 func (*AIUsageModelLimit) ProtoMessage() {}
 
 func (x *AIUsageModelLimit) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[25]
+	mi := &file_ai_usage_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2460,7 +2709,7 @@ func (x *AIUsageModelLimit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageModelLimit.ProtoReflect.Descriptor instead.
 func (*AIUsageModelLimit) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{25}
+	return file_ai_usage_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *AIUsageModelLimit) GetModel() string {
@@ -2516,7 +2765,7 @@ type AIUsageLimitBand struct {
 
 func (x *AIUsageLimitBand) Reset() {
 	*x = AIUsageLimitBand{}
-	mi := &file_ai_usage_proto_msgTypes[26]
+	mi := &file_ai_usage_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2528,7 +2777,7 @@ func (x *AIUsageLimitBand) String() string {
 func (*AIUsageLimitBand) ProtoMessage() {}
 
 func (x *AIUsageLimitBand) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[26]
+	mi := &file_ai_usage_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2541,7 +2790,7 @@ func (x *AIUsageLimitBand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitBand.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitBand) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{26}
+	return file_ai_usage_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *AIUsageLimitBand) GetRequests() int64 {
@@ -2576,7 +2825,7 @@ type AIUsageLimitModelLine struct {
 
 func (x *AIUsageLimitModelLine) Reset() {
 	*x = AIUsageLimitModelLine{}
-	mi := &file_ai_usage_proto_msgTypes[27]
+	mi := &file_ai_usage_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2588,7 +2837,7 @@ func (x *AIUsageLimitModelLine) String() string {
 func (*AIUsageLimitModelLine) ProtoMessage() {}
 
 func (x *AIUsageLimitModelLine) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[27]
+	mi := &file_ai_usage_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2601,7 +2850,7 @@ func (x *AIUsageLimitModelLine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitModelLine.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitModelLine) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{27}
+	return file_ai_usage_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *AIUsageLimitModelLine) GetModel() string {
@@ -2637,7 +2886,7 @@ type AIUsageLimitFlat struct {
 
 func (x *AIUsageLimitFlat) Reset() {
 	*x = AIUsageLimitFlat{}
-	mi := &file_ai_usage_proto_msgTypes[28]
+	mi := &file_ai_usage_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2649,7 +2898,7 @@ func (x *AIUsageLimitFlat) String() string {
 func (*AIUsageLimitFlat) ProtoMessage() {}
 
 func (x *AIUsageLimitFlat) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[28]
+	mi := &file_ai_usage_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2662,7 +2911,7 @@ func (x *AIUsageLimitFlat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitFlat.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitFlat) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{28}
+	return file_ai_usage_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *AIUsageLimitFlat) GetLimit() int64 {
@@ -2721,7 +2970,7 @@ type AIUsageLimitRow struct {
 
 func (x *AIUsageLimitRow) Reset() {
 	*x = AIUsageLimitRow{}
-	mi := &file_ai_usage_proto_msgTypes[29]
+	mi := &file_ai_usage_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2733,7 +2982,7 @@ func (x *AIUsageLimitRow) String() string {
 func (*AIUsageLimitRow) ProtoMessage() {}
 
 func (x *AIUsageLimitRow) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[29]
+	mi := &file_ai_usage_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2746,7 +2995,7 @@ func (x *AIUsageLimitRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitRow.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitRow) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{29}
+	return file_ai_usage_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *AIUsageLimitRow) GetId() string {
@@ -2876,17 +3125,19 @@ func (x *AIUsageLimitRow) GetRawTitle() string {
 }
 
 type AIUsageLimitCurrent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       int64                  `protobuf:"varint,1,opt,name=context,proto3" json:"context,omitempty"`
-	Limit         *int64                 `protobuf:"varint,2,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
-	Band          int32                  `protobuf:"varint,3,opt,name=band,proto3" json:"band,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Context int64                  `protobuf:"varint,1,opt,name=context,proto3" json:"context,omitempty"`
+	Limit   *int64                 `protobuf:"varint,2,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	Band    int32                  `protobuf:"varint,3,opt,name=band,proto3" json:"band,omitempty"`
+	// Latest request's capacity as recorded by the native client, independent of the cost preset.
+	NativeContextLimit *int64 `protobuf:"varint,4,opt,name=native_context_limit,json=nativeContextLimit,proto3,oneof" json:"native_context_limit,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AIUsageLimitCurrent) Reset() {
 	*x = AIUsageLimitCurrent{}
-	mi := &file_ai_usage_proto_msgTypes[30]
+	mi := &file_ai_usage_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2898,7 +3149,7 @@ func (x *AIUsageLimitCurrent) String() string {
 func (*AIUsageLimitCurrent) ProtoMessage() {}
 
 func (x *AIUsageLimitCurrent) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[30]
+	mi := &file_ai_usage_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2911,7 +3162,7 @@ func (x *AIUsageLimitCurrent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitCurrent.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitCurrent) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{30}
+	return file_ai_usage_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *AIUsageLimitCurrent) GetContext() int64 {
@@ -2931,6 +3182,13 @@ func (x *AIUsageLimitCurrent) GetLimit() int64 {
 func (x *AIUsageLimitCurrent) GetBand() int32 {
 	if x != nil {
 		return x.Band
+	}
+	return 0
+}
+
+func (x *AIUsageLimitCurrent) GetNativeContextLimit() int64 {
+	if x != nil && x.NativeContextLimit != nil {
+		return *x.NativeContextLimit
 	}
 	return 0
 }
@@ -2962,7 +3220,7 @@ type AIUsageLimitSummary struct {
 
 func (x *AIUsageLimitSummary) Reset() {
 	*x = AIUsageLimitSummary{}
-	mi := &file_ai_usage_proto_msgTypes[31]
+	mi := &file_ai_usage_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2974,7 +3232,7 @@ func (x *AIUsageLimitSummary) String() string {
 func (*AIUsageLimitSummary) ProtoMessage() {}
 
 func (x *AIUsageLimitSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[31]
+	mi := &file_ai_usage_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2987,7 +3245,7 @@ func (x *AIUsageLimitSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitSummary.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitSummary) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{31}
+	return file_ai_usage_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AIUsageLimitSummary) GetInput() *AIUsageLimitMoney {
@@ -3118,7 +3376,7 @@ type AIUsageLimitDay struct {
 
 func (x *AIUsageLimitDay) Reset() {
 	*x = AIUsageLimitDay{}
-	mi := &file_ai_usage_proto_msgTypes[32]
+	mi := &file_ai_usage_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3130,7 +3388,7 @@ func (x *AIUsageLimitDay) String() string {
 func (*AIUsageLimitDay) ProtoMessage() {}
 
 func (x *AIUsageLimitDay) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[32]
+	mi := &file_ai_usage_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3143,7 +3401,7 @@ func (x *AIUsageLimitDay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitDay.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitDay) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{32}
+	return file_ai_usage_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *AIUsageLimitDay) GetAtMs() int64 {
@@ -3208,7 +3466,7 @@ type AIUsageLimitComparison struct {
 
 func (x *AIUsageLimitComparison) Reset() {
 	*x = AIUsageLimitComparison{}
-	mi := &file_ai_usage_proto_msgTypes[33]
+	mi := &file_ai_usage_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3220,7 +3478,7 @@ func (x *AIUsageLimitComparison) String() string {
 func (*AIUsageLimitComparison) ProtoMessage() {}
 
 func (x *AIUsageLimitComparison) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[33]
+	mi := &file_ai_usage_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3233,7 +3491,7 @@ func (x *AIUsageLimitComparison) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitComparison.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitComparison) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{33}
+	return file_ai_usage_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *AIUsageLimitComparison) GetInput() *AIUsageLimitMoney {
@@ -3283,7 +3541,7 @@ type AIUsageLimitRequest struct {
 
 func (x *AIUsageLimitRequest) Reset() {
 	*x = AIUsageLimitRequest{}
-	mi := &file_ai_usage_proto_msgTypes[34]
+	mi := &file_ai_usage_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3295,7 +3553,7 @@ func (x *AIUsageLimitRequest) String() string {
 func (*AIUsageLimitRequest) ProtoMessage() {}
 
 func (x *AIUsageLimitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[34]
+	mi := &file_ai_usage_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3308,7 +3566,7 @@ func (x *AIUsageLimitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitRequest.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitRequest) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{34}
+	return file_ai_usage_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *AIUsageLimitRequest) GetRequest() *AIUsageAnalysisRow {
@@ -3353,7 +3611,7 @@ type AIUsageLimitSwitch struct {
 
 func (x *AIUsageLimitSwitch) Reset() {
 	*x = AIUsageLimitSwitch{}
-	mi := &file_ai_usage_proto_msgTypes[35]
+	mi := &file_ai_usage_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3365,7 +3623,7 @@ func (x *AIUsageLimitSwitch) String() string {
 func (*AIUsageLimitSwitch) ProtoMessage() {}
 
 func (x *AIUsageLimitSwitch) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[35]
+	mi := &file_ai_usage_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3378,7 +3636,7 @@ func (x *AIUsageLimitSwitch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitSwitch.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitSwitch) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{35}
+	return file_ai_usage_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *AIUsageLimitSwitch) GetIndex() int64 {
@@ -3437,7 +3695,7 @@ type AIUsageLimitTrend struct {
 
 func (x *AIUsageLimitTrend) Reset() {
 	*x = AIUsageLimitTrend{}
-	mi := &file_ai_usage_proto_msgTypes[36]
+	mi := &file_ai_usage_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3449,7 +3707,7 @@ func (x *AIUsageLimitTrend) String() string {
 func (*AIUsageLimitTrend) ProtoMessage() {}
 
 func (x *AIUsageLimitTrend) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[36]
+	mi := &file_ai_usage_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3462,7 +3720,7 @@ func (x *AIUsageLimitTrend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageLimitTrend.ProtoReflect.Descriptor instead.
 func (*AIUsageLimitTrend) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{36}
+	return file_ai_usage_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *AIUsageLimitTrend) GetRequests() []*AIUsageLimitRequest {
@@ -3521,7 +3779,7 @@ type AIUsageSessionLimits struct {
 
 func (x *AIUsageSessionLimits) Reset() {
 	*x = AIUsageSessionLimits{}
-	mi := &file_ai_usage_proto_msgTypes[37]
+	mi := &file_ai_usage_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3533,7 +3791,7 @@ func (x *AIUsageSessionLimits) String() string {
 func (*AIUsageSessionLimits) ProtoMessage() {}
 
 func (x *AIUsageSessionLimits) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_usage_proto_msgTypes[37]
+	mi := &file_ai_usage_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3546,7 +3804,7 @@ func (x *AIUsageSessionLimits) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AIUsageSessionLimits.ProtoReflect.Descriptor instead.
 func (*AIUsageSessionLimits) Descriptor() ([]byte, []int) {
-	return file_ai_usage_proto_rawDescGZIP(), []int{37}
+	return file_ai_usage_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AIUsageSessionLimits) GetSummary() *AIUsageLimitSummary {
@@ -3588,7 +3846,28 @@ var File_ai_usage_proto protoreflect.FileDescriptor
 
 const file_ai_usage_proto_rawDesc = "" +
 	"\n" +
-	"\x0eai_usage.proto\x12\x06pax.v1\"\x9a\x02\n" +
+	"\x0eai_usage.proto\x12\x06pax.v1\"\x18\n" +
+	"\x16AntigravityModelsQuery\"t\n" +
+	"\x11AntigravityModels\x120\n" +
+	"\x06models\x18\x01 \x03(\v2\x18.pax.v1.AntigravityModelR\x06models\x12-\n" +
+	"\x05rates\x18\x02 \x03(\v2\x17.pax.v1.AntigravityRateR\x05rates\"\x7f\n" +
+	"\x10AntigravityModel\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05plans\x18\x03 \x03(\tR\x05plans\x12\x12\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x1d\n" +
+	"\n" +
+	"retired_on\x18\x05 \x01(\tR\tretiredOn\"\xd2\x01\n" +
+	"\x0fAntigravityRate\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x14\n" +
+	"\x05input\x18\x02 \x01(\x01R\x05input\x12\x1d\n" +
+	"\n" +
+	"cache_read\x18\x03 \x01(\x01R\tcacheRead\x12$\n" +
+	"\vcache_write\x18\x04 \x01(\x01H\x00R\n" +
+	"cacheWrite\x88\x01\x01\x12\x16\n" +
+	"\x06output\x18\x05 \x01(\x01R\x06output\x12!\n" +
+	"\feffective_on\x18\x06 \x01(\tR\veffectiveOnB\x0e\n" +
+	"\f_cache_write\"\x9a\x02\n" +
 	"\fAIUsageState\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x12 \n" +
 	"\vbackfilling\x18\x02 \x01(\bR\vbackfilling\x12\x18\n" +
@@ -3899,12 +4178,14 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\ftitle_source\x18\x11 \x01(\tR\vtitleSource\x12\x1b\n" +
 	"\traw_title\x18\x12 \x01(\tR\brawTitleB\v\n" +
 	"\t_multipleB\x10\n" +
-	"\x0e_session_count\"h\n" +
+	"\x0e_session_count\"\xb8\x01\n" +
 	"\x13AIUsageLimitCurrent\x12\x18\n" +
 	"\acontext\x18\x01 \x01(\x03R\acontext\x12\x19\n" +
 	"\x05limit\x18\x02 \x01(\x03H\x00R\x05limit\x88\x01\x01\x12\x12\n" +
-	"\x04band\x18\x03 \x01(\x05R\x04bandB\b\n" +
-	"\x06_limit\"\xb9\x05\n" +
+	"\x04band\x18\x03 \x01(\x05R\x04band\x125\n" +
+	"\x14native_context_limit\x18\x04 \x01(\x03H\x01R\x12nativeContextLimit\x88\x01\x01B\b\n" +
+	"\x06_limitB\x17\n" +
+	"\x15_native_context_limit\"\xb9\x05\n" +
 	"\x13AIUsageLimitSummary\x12/\n" +
 	"\x05input\x18\x01 \x01(\v2\x19.pax.v1.AIUsageLimitMoneyR\x05input\x128\n" +
 	"\n" +
@@ -3976,12 +4257,13 @@ const file_ai_usage_proto_rawDesc = "" +
 	"\aprimary\x18\x02 \x03(\v2\x17.pax.v1.AIUsageLimitRowR\aprimary\x125\n" +
 	"\tsecondary\x18\x03 \x03(\v2\x17.pax.v1.AIUsageLimitRowR\tsecondary\x12/\n" +
 	"\x05trend\x18\x04 \x01(\v2\x19.pax.v1.AIUsageLimitTrendR\x05trend\x12+\n" +
-	"\x11agents_incomplete\x18\x05 \x01(\bR\x10agentsIncomplete2\xcc\x03\n" +
+	"\x11agents_incomplete\x18\x05 \x01(\bR\x10agentsIncomplete2\xa0\x04\n" +
 	"\x0eAIUsageService\x12M\n" +
 	"\x0eListAISessions\x12\x1d.pax.v1.AISessionCatalogQuery\x1a\x1c.pax.v1.AISessionCatalogPage\x12M\n" +
 	"\x14QueryAIUsageAnalysis\x12\x1c.pax.v1.AIUsageAnalysisQuery\x1a\x17.pax.v1.AIUsageAnalysis\x12C\n" +
 	"\x13QueryAIUsageBuckets\x12\x14.pax.v1.AIUsageQuery\x1a\x16.pax.v1.AIUsageBuckets\x12G\n" +
-	"\x10SummarizeAIUsage\x12\x1b.pax.v1.AIUsageSummaryQuery\x1a\x16.pax.v1.AIUsageBuckets\x12?\n" +
+	"\x10SummarizeAIUsage\x12\x1b.pax.v1.AIUsageSummaryQuery\x1a\x16.pax.v1.AIUsageBuckets\x12R\n" +
+	"\x15ListAntigravityModels\x12\x1e.pax.v1.AntigravityModelsQuery\x1a\x19.pax.v1.AntigravityModels\x12?\n" +
 	"\x0fListAIUsageLogs\x12\x17.pax.v1.AIUsageLogQuery\x1a\x13.pax.v1.AIUsageLogs\x12M\n" +
 	"\x0eRepriceAIUsage\x12\x1d.pax.v1.RepriceAIUsageRequest\x1a\x1c.pax.v1.RepriceAIUsageResultB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
 
@@ -3997,115 +4279,123 @@ func file_ai_usage_proto_rawDescGZIP() []byte {
 	return file_ai_usage_proto_rawDescData
 }
 
-var file_ai_usage_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_ai_usage_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_ai_usage_proto_goTypes = []any{
-	(*AIUsageState)(nil),           // 0: pax.v1.AIUsageState
-	(*AIUsageQuery)(nil),           // 1: pax.v1.AIUsageQuery
-	(*AIUsageSummaryQuery)(nil),    // 2: pax.v1.AIUsageSummaryQuery
-	(*AIUsageTotals)(nil),          // 3: pax.v1.AIUsageTotals
-	(*AIUsageBucket)(nil),          // 4: pax.v1.AIUsageBucket
-	(*AIUsageLastUsed)(nil),        // 5: pax.v1.AIUsageLastUsed
-	(*AIUsageBuckets)(nil),         // 6: pax.v1.AIUsageBuckets
-	(*AIUsageLogQuery)(nil),        // 7: pax.v1.AIUsageLogQuery
-	(*AIUsageUnitPrice)(nil),       // 8: pax.v1.AIUsageUnitPrice
-	(*AIUsageRequest)(nil),         // 9: pax.v1.AIUsageRequest
-	(*AIUsageLogs)(nil),            // 10: pax.v1.AIUsageLogs
-	(*RepriceAIUsageRequest)(nil),  // 11: pax.v1.RepriceAIUsageRequest
-	(*RepriceAIUsageResult)(nil),   // 12: pax.v1.RepriceAIUsageResult
-	(*AIUsageAnalysisQuery)(nil),   // 13: pax.v1.AIUsageAnalysisQuery
-	(*AIUsageSessionKey)(nil),      // 14: pax.v1.AIUsageSessionKey
-	(*AISessionCatalogQuery)(nil),  // 15: pax.v1.AISessionCatalogQuery
-	(*AISessionCatalogEntry)(nil),  // 16: pax.v1.AISessionCatalogEntry
-	(*AISessionCatalogCount)(nil),  // 17: pax.v1.AISessionCatalogCount
-	(*AISessionCatalogSource)(nil), // 18: pax.v1.AISessionCatalogSource
-	(*AISessionCatalogPage)(nil),   // 19: pax.v1.AISessionCatalogPage
-	(*AIUsageAnalysisRow)(nil),     // 20: pax.v1.AIUsageAnalysisRow
-	(*AIUsageAnalysis)(nil),        // 21: pax.v1.AIUsageAnalysis
-	(*AIUsageContextUsage)(nil),    // 22: pax.v1.AIUsageContextUsage
-	(*AIUsageContextBand)(nil),     // 23: pax.v1.AIUsageContextBand
-	(*AIUsageLimitMoney)(nil),      // 24: pax.v1.AIUsageLimitMoney
-	(*AIUsageModelLimit)(nil),      // 25: pax.v1.AIUsageModelLimit
-	(*AIUsageLimitBand)(nil),       // 26: pax.v1.AIUsageLimitBand
-	(*AIUsageLimitModelLine)(nil),  // 27: pax.v1.AIUsageLimitModelLine
-	(*AIUsageLimitFlat)(nil),       // 28: pax.v1.AIUsageLimitFlat
-	(*AIUsageLimitRow)(nil),        // 29: pax.v1.AIUsageLimitRow
-	(*AIUsageLimitCurrent)(nil),    // 30: pax.v1.AIUsageLimitCurrent
-	(*AIUsageLimitSummary)(nil),    // 31: pax.v1.AIUsageLimitSummary
-	(*AIUsageLimitDay)(nil),        // 32: pax.v1.AIUsageLimitDay
-	(*AIUsageLimitComparison)(nil), // 33: pax.v1.AIUsageLimitComparison
-	(*AIUsageLimitRequest)(nil),    // 34: pax.v1.AIUsageLimitRequest
-	(*AIUsageLimitSwitch)(nil),     // 35: pax.v1.AIUsageLimitSwitch
-	(*AIUsageLimitTrend)(nil),      // 36: pax.v1.AIUsageLimitTrend
-	(*AIUsageSessionLimits)(nil),   // 37: pax.v1.AIUsageSessionLimits
+	(*AntigravityModelsQuery)(nil), // 0: pax.v1.AntigravityModelsQuery
+	(*AntigravityModels)(nil),      // 1: pax.v1.AntigravityModels
+	(*AntigravityModel)(nil),       // 2: pax.v1.AntigravityModel
+	(*AntigravityRate)(nil),        // 3: pax.v1.AntigravityRate
+	(*AIUsageState)(nil),           // 4: pax.v1.AIUsageState
+	(*AIUsageQuery)(nil),           // 5: pax.v1.AIUsageQuery
+	(*AIUsageSummaryQuery)(nil),    // 6: pax.v1.AIUsageSummaryQuery
+	(*AIUsageTotals)(nil),          // 7: pax.v1.AIUsageTotals
+	(*AIUsageBucket)(nil),          // 8: pax.v1.AIUsageBucket
+	(*AIUsageLastUsed)(nil),        // 9: pax.v1.AIUsageLastUsed
+	(*AIUsageBuckets)(nil),         // 10: pax.v1.AIUsageBuckets
+	(*AIUsageLogQuery)(nil),        // 11: pax.v1.AIUsageLogQuery
+	(*AIUsageUnitPrice)(nil),       // 12: pax.v1.AIUsageUnitPrice
+	(*AIUsageRequest)(nil),         // 13: pax.v1.AIUsageRequest
+	(*AIUsageLogs)(nil),            // 14: pax.v1.AIUsageLogs
+	(*RepriceAIUsageRequest)(nil),  // 15: pax.v1.RepriceAIUsageRequest
+	(*RepriceAIUsageResult)(nil),   // 16: pax.v1.RepriceAIUsageResult
+	(*AIUsageAnalysisQuery)(nil),   // 17: pax.v1.AIUsageAnalysisQuery
+	(*AIUsageSessionKey)(nil),      // 18: pax.v1.AIUsageSessionKey
+	(*AISessionCatalogQuery)(nil),  // 19: pax.v1.AISessionCatalogQuery
+	(*AISessionCatalogEntry)(nil),  // 20: pax.v1.AISessionCatalogEntry
+	(*AISessionCatalogCount)(nil),  // 21: pax.v1.AISessionCatalogCount
+	(*AISessionCatalogSource)(nil), // 22: pax.v1.AISessionCatalogSource
+	(*AISessionCatalogPage)(nil),   // 23: pax.v1.AISessionCatalogPage
+	(*AIUsageAnalysisRow)(nil),     // 24: pax.v1.AIUsageAnalysisRow
+	(*AIUsageAnalysis)(nil),        // 25: pax.v1.AIUsageAnalysis
+	(*AIUsageContextUsage)(nil),    // 26: pax.v1.AIUsageContextUsage
+	(*AIUsageContextBand)(nil),     // 27: pax.v1.AIUsageContextBand
+	(*AIUsageLimitMoney)(nil),      // 28: pax.v1.AIUsageLimitMoney
+	(*AIUsageModelLimit)(nil),      // 29: pax.v1.AIUsageModelLimit
+	(*AIUsageLimitBand)(nil),       // 30: pax.v1.AIUsageLimitBand
+	(*AIUsageLimitModelLine)(nil),  // 31: pax.v1.AIUsageLimitModelLine
+	(*AIUsageLimitFlat)(nil),       // 32: pax.v1.AIUsageLimitFlat
+	(*AIUsageLimitRow)(nil),        // 33: pax.v1.AIUsageLimitRow
+	(*AIUsageLimitCurrent)(nil),    // 34: pax.v1.AIUsageLimitCurrent
+	(*AIUsageLimitSummary)(nil),    // 35: pax.v1.AIUsageLimitSummary
+	(*AIUsageLimitDay)(nil),        // 36: pax.v1.AIUsageLimitDay
+	(*AIUsageLimitComparison)(nil), // 37: pax.v1.AIUsageLimitComparison
+	(*AIUsageLimitRequest)(nil),    // 38: pax.v1.AIUsageLimitRequest
+	(*AIUsageLimitSwitch)(nil),     // 39: pax.v1.AIUsageLimitSwitch
+	(*AIUsageLimitTrend)(nil),      // 40: pax.v1.AIUsageLimitTrend
+	(*AIUsageSessionLimits)(nil),   // 41: pax.v1.AIUsageSessionLimits
 }
 var file_ai_usage_proto_depIdxs = []int32{
-	3,  // 0: pax.v1.AIUsageBucket.totals:type_name -> pax.v1.AIUsageTotals
-	4,  // 1: pax.v1.AIUsageBuckets.buckets:type_name -> pax.v1.AIUsageBucket
-	0,  // 2: pax.v1.AIUsageBuckets.state:type_name -> pax.v1.AIUsageState
-	5,  // 3: pax.v1.AIUsageBuckets.last_used:type_name -> pax.v1.AIUsageLastUsed
-	8,  // 4: pax.v1.AIUsageRequest.component_prices:type_name -> pax.v1.AIUsageUnitPrice
-	9,  // 5: pax.v1.AIUsageLogs.requests:type_name -> pax.v1.AIUsageRequest
-	3,  // 6: pax.v1.AIUsageLogs.totals:type_name -> pax.v1.AIUsageTotals
-	0,  // 7: pax.v1.AIUsageLogs.state:type_name -> pax.v1.AIUsageState
-	0,  // 8: pax.v1.RepriceAIUsageResult.state:type_name -> pax.v1.AIUsageState
-	14, // 9: pax.v1.AIUsageAnalysisQuery.sessions:type_name -> pax.v1.AIUsageSessionKey
-	14, // 10: pax.v1.AISessionCatalogQuery.selected:type_name -> pax.v1.AIUsageSessionKey
-	14, // 11: pax.v1.AISessionCatalogEntry.key:type_name -> pax.v1.AIUsageSessionKey
-	16, // 12: pax.v1.AISessionCatalogPage.items:type_name -> pax.v1.AISessionCatalogEntry
-	17, // 13: pax.v1.AISessionCatalogPage.counts:type_name -> pax.v1.AISessionCatalogCount
-	18, // 14: pax.v1.AISessionCatalogPage.sources:type_name -> pax.v1.AISessionCatalogSource
-	16, // 15: pax.v1.AISessionCatalogPage.selected:type_name -> pax.v1.AISessionCatalogEntry
-	3,  // 16: pax.v1.AIUsageAnalysisRow.totals:type_name -> pax.v1.AIUsageTotals
-	20, // 17: pax.v1.AIUsageAnalysis.rows:type_name -> pax.v1.AIUsageAnalysisRow
-	0,  // 18: pax.v1.AIUsageAnalysis.state:type_name -> pax.v1.AIUsageState
-	20, // 19: pax.v1.AIUsageAnalysis.requests:type_name -> pax.v1.AIUsageAnalysisRow
-	22, // 20: pax.v1.AIUsageAnalysis.context_usage:type_name -> pax.v1.AIUsageContextUsage
-	37, // 21: pax.v1.AIUsageAnalysis.limits:type_name -> pax.v1.AIUsageSessionLimits
-	23, // 22: pax.v1.AIUsageContextUsage.bands:type_name -> pax.v1.AIUsageContextBand
-	23, // 23: pax.v1.AIUsageContextUsage.subagent_bands:type_name -> pax.v1.AIUsageContextBand
-	24, // 24: pax.v1.AIUsageLimitBand.money:type_name -> pax.v1.AIUsageLimitMoney
-	25, // 25: pax.v1.AIUsageLimitModelLine.lines:type_name -> pax.v1.AIUsageModelLimit
-	24, // 26: pax.v1.AIUsageLimitFlat.cost:type_name -> pax.v1.AIUsageLimitMoney
-	24, // 27: pax.v1.AIUsageLimitFlat.over_spend:type_name -> pax.v1.AIUsageLimitMoney
-	26, // 28: pax.v1.AIUsageLimitRow.bands:type_name -> pax.v1.AIUsageLimitBand
-	25, // 29: pax.v1.AIUsageLimitRow.lines:type_name -> pax.v1.AIUsageModelLimit
-	27, // 30: pax.v1.AIUsageLimitRow.model_lines:type_name -> pax.v1.AIUsageLimitModelLine
-	24, // 31: pax.v1.AIUsageLimitRow.over_spend:type_name -> pax.v1.AIUsageLimitMoney
-	28, // 32: pax.v1.AIUsageLimitRow.flat:type_name -> pax.v1.AIUsageLimitFlat
-	24, // 33: pax.v1.AIUsageLimitSummary.input:type_name -> pax.v1.AIUsageLimitMoney
-	24, // 34: pax.v1.AIUsageLimitSummary.over_spend:type_name -> pax.v1.AIUsageLimitMoney
-	30, // 35: pax.v1.AIUsageLimitSummary.current:type_name -> pax.v1.AIUsageLimitCurrent
-	26, // 36: pax.v1.AIUsageLimitSummary.bands:type_name -> pax.v1.AIUsageLimitBand
-	32, // 37: pax.v1.AIUsageLimitSummary.days:type_name -> pax.v1.AIUsageLimitDay
-	33, // 38: pax.v1.AIUsageLimitSummary.comparison:type_name -> pax.v1.AIUsageLimitComparison
-	24, // 39: pax.v1.AIUsageLimitDay.input:type_name -> pax.v1.AIUsageLimitMoney
-	24, // 40: pax.v1.AIUsageLimitComparison.input:type_name -> pax.v1.AIUsageLimitMoney
-	20, // 41: pax.v1.AIUsageLimitRequest.request:type_name -> pax.v1.AIUsageAnalysisRow
-	25, // 42: pax.v1.AIUsageLimitRequest.lines:type_name -> pax.v1.AIUsageModelLimit
-	34, // 43: pax.v1.AIUsageLimitTrend.requests:type_name -> pax.v1.AIUsageLimitRequest
-	25, // 44: pax.v1.AIUsageLimitTrend.lines:type_name -> pax.v1.AIUsageModelLimit
-	35, // 45: pax.v1.AIUsageLimitTrend.switches:type_name -> pax.v1.AIUsageLimitSwitch
-	31, // 46: pax.v1.AIUsageSessionLimits.summary:type_name -> pax.v1.AIUsageLimitSummary
-	29, // 47: pax.v1.AIUsageSessionLimits.primary:type_name -> pax.v1.AIUsageLimitRow
-	29, // 48: pax.v1.AIUsageSessionLimits.secondary:type_name -> pax.v1.AIUsageLimitRow
-	36, // 49: pax.v1.AIUsageSessionLimits.trend:type_name -> pax.v1.AIUsageLimitTrend
-	15, // 50: pax.v1.AIUsageService.ListAISessions:input_type -> pax.v1.AISessionCatalogQuery
-	13, // 51: pax.v1.AIUsageService.QueryAIUsageAnalysis:input_type -> pax.v1.AIUsageAnalysisQuery
-	1,  // 52: pax.v1.AIUsageService.QueryAIUsageBuckets:input_type -> pax.v1.AIUsageQuery
-	2,  // 53: pax.v1.AIUsageService.SummarizeAIUsage:input_type -> pax.v1.AIUsageSummaryQuery
-	7,  // 54: pax.v1.AIUsageService.ListAIUsageLogs:input_type -> pax.v1.AIUsageLogQuery
-	11, // 55: pax.v1.AIUsageService.RepriceAIUsage:input_type -> pax.v1.RepriceAIUsageRequest
-	19, // 56: pax.v1.AIUsageService.ListAISessions:output_type -> pax.v1.AISessionCatalogPage
-	21, // 57: pax.v1.AIUsageService.QueryAIUsageAnalysis:output_type -> pax.v1.AIUsageAnalysis
-	6,  // 58: pax.v1.AIUsageService.QueryAIUsageBuckets:output_type -> pax.v1.AIUsageBuckets
-	6,  // 59: pax.v1.AIUsageService.SummarizeAIUsage:output_type -> pax.v1.AIUsageBuckets
-	10, // 60: pax.v1.AIUsageService.ListAIUsageLogs:output_type -> pax.v1.AIUsageLogs
-	12, // 61: pax.v1.AIUsageService.RepriceAIUsage:output_type -> pax.v1.RepriceAIUsageResult
-	56, // [56:62] is the sub-list for method output_type
-	50, // [50:56] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	2,  // 0: pax.v1.AntigravityModels.models:type_name -> pax.v1.AntigravityModel
+	3,  // 1: pax.v1.AntigravityModels.rates:type_name -> pax.v1.AntigravityRate
+	7,  // 2: pax.v1.AIUsageBucket.totals:type_name -> pax.v1.AIUsageTotals
+	8,  // 3: pax.v1.AIUsageBuckets.buckets:type_name -> pax.v1.AIUsageBucket
+	4,  // 4: pax.v1.AIUsageBuckets.state:type_name -> pax.v1.AIUsageState
+	9,  // 5: pax.v1.AIUsageBuckets.last_used:type_name -> pax.v1.AIUsageLastUsed
+	12, // 6: pax.v1.AIUsageRequest.component_prices:type_name -> pax.v1.AIUsageUnitPrice
+	13, // 7: pax.v1.AIUsageLogs.requests:type_name -> pax.v1.AIUsageRequest
+	7,  // 8: pax.v1.AIUsageLogs.totals:type_name -> pax.v1.AIUsageTotals
+	4,  // 9: pax.v1.AIUsageLogs.state:type_name -> pax.v1.AIUsageState
+	4,  // 10: pax.v1.RepriceAIUsageResult.state:type_name -> pax.v1.AIUsageState
+	18, // 11: pax.v1.AIUsageAnalysisQuery.sessions:type_name -> pax.v1.AIUsageSessionKey
+	18, // 12: pax.v1.AISessionCatalogQuery.selected:type_name -> pax.v1.AIUsageSessionKey
+	18, // 13: pax.v1.AISessionCatalogEntry.key:type_name -> pax.v1.AIUsageSessionKey
+	20, // 14: pax.v1.AISessionCatalogPage.items:type_name -> pax.v1.AISessionCatalogEntry
+	21, // 15: pax.v1.AISessionCatalogPage.counts:type_name -> pax.v1.AISessionCatalogCount
+	22, // 16: pax.v1.AISessionCatalogPage.sources:type_name -> pax.v1.AISessionCatalogSource
+	20, // 17: pax.v1.AISessionCatalogPage.selected:type_name -> pax.v1.AISessionCatalogEntry
+	7,  // 18: pax.v1.AIUsageAnalysisRow.totals:type_name -> pax.v1.AIUsageTotals
+	24, // 19: pax.v1.AIUsageAnalysis.rows:type_name -> pax.v1.AIUsageAnalysisRow
+	4,  // 20: pax.v1.AIUsageAnalysis.state:type_name -> pax.v1.AIUsageState
+	24, // 21: pax.v1.AIUsageAnalysis.requests:type_name -> pax.v1.AIUsageAnalysisRow
+	26, // 22: pax.v1.AIUsageAnalysis.context_usage:type_name -> pax.v1.AIUsageContextUsage
+	41, // 23: pax.v1.AIUsageAnalysis.limits:type_name -> pax.v1.AIUsageSessionLimits
+	27, // 24: pax.v1.AIUsageContextUsage.bands:type_name -> pax.v1.AIUsageContextBand
+	27, // 25: pax.v1.AIUsageContextUsage.subagent_bands:type_name -> pax.v1.AIUsageContextBand
+	28, // 26: pax.v1.AIUsageLimitBand.money:type_name -> pax.v1.AIUsageLimitMoney
+	29, // 27: pax.v1.AIUsageLimitModelLine.lines:type_name -> pax.v1.AIUsageModelLimit
+	28, // 28: pax.v1.AIUsageLimitFlat.cost:type_name -> pax.v1.AIUsageLimitMoney
+	28, // 29: pax.v1.AIUsageLimitFlat.over_spend:type_name -> pax.v1.AIUsageLimitMoney
+	30, // 30: pax.v1.AIUsageLimitRow.bands:type_name -> pax.v1.AIUsageLimitBand
+	29, // 31: pax.v1.AIUsageLimitRow.lines:type_name -> pax.v1.AIUsageModelLimit
+	31, // 32: pax.v1.AIUsageLimitRow.model_lines:type_name -> pax.v1.AIUsageLimitModelLine
+	28, // 33: pax.v1.AIUsageLimitRow.over_spend:type_name -> pax.v1.AIUsageLimitMoney
+	32, // 34: pax.v1.AIUsageLimitRow.flat:type_name -> pax.v1.AIUsageLimitFlat
+	28, // 35: pax.v1.AIUsageLimitSummary.input:type_name -> pax.v1.AIUsageLimitMoney
+	28, // 36: pax.v1.AIUsageLimitSummary.over_spend:type_name -> pax.v1.AIUsageLimitMoney
+	34, // 37: pax.v1.AIUsageLimitSummary.current:type_name -> pax.v1.AIUsageLimitCurrent
+	30, // 38: pax.v1.AIUsageLimitSummary.bands:type_name -> pax.v1.AIUsageLimitBand
+	36, // 39: pax.v1.AIUsageLimitSummary.days:type_name -> pax.v1.AIUsageLimitDay
+	37, // 40: pax.v1.AIUsageLimitSummary.comparison:type_name -> pax.v1.AIUsageLimitComparison
+	28, // 41: pax.v1.AIUsageLimitDay.input:type_name -> pax.v1.AIUsageLimitMoney
+	28, // 42: pax.v1.AIUsageLimitComparison.input:type_name -> pax.v1.AIUsageLimitMoney
+	24, // 43: pax.v1.AIUsageLimitRequest.request:type_name -> pax.v1.AIUsageAnalysisRow
+	29, // 44: pax.v1.AIUsageLimitRequest.lines:type_name -> pax.v1.AIUsageModelLimit
+	38, // 45: pax.v1.AIUsageLimitTrend.requests:type_name -> pax.v1.AIUsageLimitRequest
+	29, // 46: pax.v1.AIUsageLimitTrend.lines:type_name -> pax.v1.AIUsageModelLimit
+	39, // 47: pax.v1.AIUsageLimitTrend.switches:type_name -> pax.v1.AIUsageLimitSwitch
+	35, // 48: pax.v1.AIUsageSessionLimits.summary:type_name -> pax.v1.AIUsageLimitSummary
+	33, // 49: pax.v1.AIUsageSessionLimits.primary:type_name -> pax.v1.AIUsageLimitRow
+	33, // 50: pax.v1.AIUsageSessionLimits.secondary:type_name -> pax.v1.AIUsageLimitRow
+	40, // 51: pax.v1.AIUsageSessionLimits.trend:type_name -> pax.v1.AIUsageLimitTrend
+	19, // 52: pax.v1.AIUsageService.ListAISessions:input_type -> pax.v1.AISessionCatalogQuery
+	17, // 53: pax.v1.AIUsageService.QueryAIUsageAnalysis:input_type -> pax.v1.AIUsageAnalysisQuery
+	5,  // 54: pax.v1.AIUsageService.QueryAIUsageBuckets:input_type -> pax.v1.AIUsageQuery
+	6,  // 55: pax.v1.AIUsageService.SummarizeAIUsage:input_type -> pax.v1.AIUsageSummaryQuery
+	0,  // 56: pax.v1.AIUsageService.ListAntigravityModels:input_type -> pax.v1.AntigravityModelsQuery
+	11, // 57: pax.v1.AIUsageService.ListAIUsageLogs:input_type -> pax.v1.AIUsageLogQuery
+	15, // 58: pax.v1.AIUsageService.RepriceAIUsage:input_type -> pax.v1.RepriceAIUsageRequest
+	23, // 59: pax.v1.AIUsageService.ListAISessions:output_type -> pax.v1.AISessionCatalogPage
+	25, // 60: pax.v1.AIUsageService.QueryAIUsageAnalysis:output_type -> pax.v1.AIUsageAnalysis
+	10, // 61: pax.v1.AIUsageService.QueryAIUsageBuckets:output_type -> pax.v1.AIUsageBuckets
+	10, // 62: pax.v1.AIUsageService.SummarizeAIUsage:output_type -> pax.v1.AIUsageBuckets
+	1,  // 63: pax.v1.AIUsageService.ListAntigravityModels:output_type -> pax.v1.AntigravityModels
+	14, // 64: pax.v1.AIUsageService.ListAIUsageLogs:output_type -> pax.v1.AIUsageLogs
+	16, // 65: pax.v1.AIUsageService.RepriceAIUsage:output_type -> pax.v1.RepriceAIUsageResult
+	59, // [59:66] is the sub-list for method output_type
+	52, // [52:59] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_ai_usage_proto_init() }
@@ -4113,28 +4403,29 @@ func file_ai_usage_proto_init() {
 	if File_ai_usage_proto != nil {
 		return
 	}
-	file_ai_usage_proto_msgTypes[1].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[7].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[8].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[9].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[3].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[5].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[11].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[12].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[13].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[25].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[15].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[17].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[29].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[30].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[31].OneofWrappers = []any{}
-	file_ai_usage_proto_msgTypes[32].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[33].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[34].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[35].OneofWrappers = []any{}
 	file_ai_usage_proto_msgTypes[36].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[37].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[38].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[39].OneofWrappers = []any{}
+	file_ai_usage_proto_msgTypes[40].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ai_usage_proto_rawDesc), len(file_ai_usage_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   38,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -36,6 +36,7 @@
     "ai_logs.dc02b05846": "；仍显示上次有效筛选结果",
     "ai_logs.438595dea5": "\n来源按本机配置与请求时间推定；终端私有配置和并行旧会话可能无法确认。",
     "ai_logs.eca0f77e4a": " 总耗时",
+    "ai_logs.antigravity_timing": "Antigravity 记录首 Token 等待与流式传输时长。TPS = 输出 Token ÷ 两段合计耗时。",
     "ai_logs.4336994cca": "发送到结束；缺少可靠发送时间时显示—。TPS = 输出 Token ÷ 总耗时",
     "ai_logs.126fbf59cf": "请求失败",
     "ai_logs.d56ce478f8": "失败 ",

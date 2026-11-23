@@ -6,14 +6,13 @@ import UniformTypeIdentifiers
 
 @MainActor final class InterfaceLanguageSettingsController: NSViewController {
   private let language: InterfaceLanguageStore
-  private let picker = PaxRoutePicker(style: .toolbar)
-  private let status = PaxText.label("", font: PaxTheme.Typography.caption(), wrapping: true)
-  private let source = PaxText.label("", font: PaxTheme.Typography.caption(), wrapping: true)
+  private let picker = PaxRoutePicker(style: .toolbar, fitsMenuTitles: true)
+  private var packFeedback = ""
   private var group: PaxPreferenceGroup?
   private var languageRow: PaxPreferenceRow?
   private var packRow: PaxPreferenceRow?
   private lazy var actions = PaxRouteButton(
-    "", symbol: "ellipsis", target: self, action: #selector(showActions))
+    "", target: self, action: #selector(showActions))
 
   init(language: InterfaceLanguageStore) {
     self.language = language
@@ -32,15 +31,8 @@ import UniformTypeIdentifiers
     let actionRow = PaxPreferenceRow(title: "", detail: "", control: actions, style: .compact)
     languageRow = row
     packRow = actionRow
-    let footer = NSStackView(views: [source, status])
-    footer.orientation = .vertical
-    footer.alignment = .leading
-    footer.spacing = PaxTheme.Spacing.tight
-    for field in [source, status] {
-      field.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
-    }
     let group = PaxPreferenceGroup(
-      title: "", symbol: "globe", rows: [row, actionRow], style: .compact, footer: footer)
+      title: "", symbol: "globe", rows: [row, actionRow], style: .compact)
     self.group = group
     view = group
     observe()
@@ -55,27 +47,27 @@ import UniformTypeIdentifiers
   private func render() {
     let c = language.context
     group?.apply(title: c.text("settings.interface.title"))
-    let title = c.language == .english ? "Language" : "界面语言 / Language"
+    group?.apply(
+      summary: language.choice == .system
+        ? c.text("settings.interface.current", ["language": languageName(c.language, context: c)])
+        : "")
+    let title = c.language == .english ? "Language" : "语言"
     languageRow?.apply(title: title, detail: c.text("settings.interface.description"))
     picker.setAccessibilityLabel(title)
     for (index, choice) in InterfaceLanguageChoice.allCases.enumerated() {
       let title = c.language == .english ? englishTitle(choice) : choice.fixedTitle
       picker.item(at: index)?.title = title
     }
-    picker.invalidateIntrinsicContentSize()
     picker.selectItem(at: InterfaceLanguageChoice.allCases.firstIndex(of: language.choice) ?? 0)
-    let pack = language.installed[c.language]
+    picker.invalidateIntrinsicContentSize()
     let label =
       c.customVersion.map {
         c.text("settings.interface.custom") + ($0.isEmpty ? "" : " · " + $0)
       } ?? c.text("settings.interface.builtin")
     packRow?.apply(title: c.text("settings.interface.pack"), detail: label)
+    renderPackFeedback()
     actions.title = c.text("settings.interface.actions")
     actions.isEnabled = !language.changingPack
-    source.stringValue = c.text(
-      "settings.interface.current", ["language": languageName(c.language, context: c)])
-    if pack?.problem != nil { status.stringValue = c.text("settings.interface.pack_problem") }
-    status.isHidden = status.stringValue.isEmpty
   }
   private func englishTitle(_ choice: InterfaceLanguageChoice) -> String {
     switch choice {
@@ -95,7 +87,7 @@ import UniformTypeIdentifiers
     guard InterfaceLanguageChoice.allCases.indices.contains(picker.indexOfSelectedItem) else {
       return
     }
-    status.stringValue = ""
+    showPackFeedback("")
     language.choose(InterfaceLanguageChoice.allCases[picker.indexOfSelectedItem])
   }
   @objc private func showActions() {
@@ -171,10 +163,13 @@ import UniformTypeIdentifiers
       Task {
         do {
           try await self.language.install(candidate)
-          self.status.stringValue = self.language.context.text(
-            "settings.interface.installed",
-            ["language": self.languageName(candidate.pack.locale, context: self.language.context)])
-          self.status.isHidden = false
+          let current = self.language.context
+          self.showPackFeedback(
+            current.text(
+              "settings.interface.installed",
+              [
+                "language": self.languageName(candidate.pack.locale, context: current)
+              ]))
         } catch { self.failed(error, context: context) }
       }
     }
@@ -192,15 +187,23 @@ import UniformTypeIdentifiers
       Task {
         do {
           try await self.language.restore(context.language)
-          self.status.stringValue = self.language.context.text("settings.interface.restored")
-          self.status.isHidden = false
+          self.showPackFeedback(self.language.context.text("settings.interface.restored"))
         } catch { self.failed(error, context: context) }
       }
     }
   }
   private func failed(_ error: any Error, context: PresentationContext) {
-    status.stringValue =
-      context.text("settings.interface.failed") + ": " + error.localizedDescription
-    status.isHidden = false
+    showPackFeedback(context.text("settings.interface.failed") + ": " + error.localizedDescription)
+  }
+  private func showPackFeedback(_ message: String) {
+    packFeedback = message
+    renderPackFeedback()
+  }
+  private func renderPackFeedback() {
+    let c = language.context
+    let problem = language.installed[c.language]?.problem != nil
+    packRow?.apply(
+      feedback: packFeedback.isEmpty && problem
+        ? c.text("settings.interface.pack_problem") : packFeedback)
   }
 }

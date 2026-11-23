@@ -3,7 +3,7 @@
   "locale": "zh-Hans",
   "catalogVersion": "1",
   "messages": {
-    "settings.mcp.title": "AI 客户端接入",
+    "settings.mcp.title": "MCP 接入",
     "settings.mcp.read": "仅查询",
     "settings.mcp.diagnose": "查询与诊断",
     "settings.mcp.permissions_ax": "新接入客户端权限",

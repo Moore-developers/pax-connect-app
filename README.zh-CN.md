@@ -72,7 +72,7 @@ Pax Connect 是独立的第三方客户端，不是 sing-box 官方产品。它*
 
 **AI 工具**
 
-- 本机用量：Claude Code、Codex、DeepSeek Harness，读取各自的本地日志（`~/.claude`、`~/.codex`、`~/.dsh`）。
+- 本机用量：Claude Code、Codex、DeepSeek Harness 与 Antigravity（App 会话 SQLite 版）。
 - 会话分析，区分主会话与子代理。
 - 把配置应用到 Claude Code 的 `settings.json` 和 Codex 的 `config.toml`。
 

@@ -30,6 +30,86 @@ public nonisolated struct Pax_V1_AIProfilesQuery: Sendable {
   public init() {}
 }
 
+public nonisolated struct Pax_V1_AIProfileHistoryQuery: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var cli: String = String()
+
+  public var before: Pax_V1_AIProfileHistoryCursor {
+    get {_before ?? Pax_V1_AIProfileHistoryCursor()}
+    set {_before = newValue}
+  }
+  /// Returns true if `before` has been explicitly set.
+  public var hasBefore: Bool {self._before != nil}
+  /// Clears the value of `before`. Subsequent reads from it will return its default value.
+  public mutating func clearBefore() {self._before = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _before: Pax_V1_AIProfileHistoryCursor? = nil
+}
+
+public nonisolated struct Pax_V1_AIProfileHistoryCursor: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var atNs: Int64 = 0
+
+  public var rowID: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_AIProfileHistoryEvent: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var atMs: Int64 = 0
+
+  public var kind: String = String()
+
+  public var profileID: String = String()
+
+  public var profileName: String = String()
+
+  public var serviceSource: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_AIProfileHistoryPage: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var events: [Pax_V1_AIProfileHistoryEvent] = []
+
+  public var next: Pax_V1_AIProfileHistoryCursor {
+    get {_next ?? Pax_V1_AIProfileHistoryCursor()}
+    set {_next = newValue}
+  }
+  /// Returns true if `next` has been explicitly set.
+  public var hasNext: Bool {self._next != nil}
+  /// Clears the value of `next`. Subsequent reads from it will return its default value.
+  public mutating func clearNext() {self._next = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _next: Pax_V1_AIProfileHistoryCursor? = nil
+}
+
 public nonisolated struct Pax_V1_AIProfileModelsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -290,6 +370,169 @@ nonisolated extension Pax_V1_AIProfilesQuery: SwiftProtobuf.Message, SwiftProtob
   }
 
   public static func ==(lhs: Pax_V1_AIProfilesQuery, rhs: Pax_V1_AIProfilesQuery) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AIProfileHistoryQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AIProfileHistoryQuery"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cli\0\u{1}before\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.cli) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._before) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.cli.isEmpty {
+      try visitor.visitSingularStringField(value: self.cli, fieldNumber: 1)
+    }
+    try { if let v = self._before {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AIProfileHistoryQuery, rhs: Pax_V1_AIProfileHistoryQuery) -> Bool {
+    if lhs.cli != rhs.cli {return false}
+    if lhs._before != rhs._before {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AIProfileHistoryCursor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AIProfileHistoryCursor"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}at_ns\0\u{3}row_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.atNs) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.rowID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.atNs != 0 {
+      try visitor.visitSingularInt64Field(value: self.atNs, fieldNumber: 1)
+    }
+    if self.rowID != 0 {
+      try visitor.visitSingularInt64Field(value: self.rowID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AIProfileHistoryCursor, rhs: Pax_V1_AIProfileHistoryCursor) -> Bool {
+    if lhs.atNs != rhs.atNs {return false}
+    if lhs.rowID != rhs.rowID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AIProfileHistoryEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AIProfileHistoryEvent"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}at_ms\0\u{1}kind\0\u{3}profile_id\0\u{3}profile_name\0\u{3}service_source\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.atMs) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.profileID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.profileName) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.serviceSource) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.atMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.atMs, fieldNumber: 1)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 2)
+    }
+    if !self.profileID.isEmpty {
+      try visitor.visitSingularStringField(value: self.profileID, fieldNumber: 3)
+    }
+    if !self.profileName.isEmpty {
+      try visitor.visitSingularStringField(value: self.profileName, fieldNumber: 4)
+    }
+    if !self.serviceSource.isEmpty {
+      try visitor.visitSingularStringField(value: self.serviceSource, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AIProfileHistoryEvent, rhs: Pax_V1_AIProfileHistoryEvent) -> Bool {
+    if lhs.atMs != rhs.atMs {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.profileID != rhs.profileID {return false}
+    if lhs.profileName != rhs.profileName {return false}
+    if lhs.serviceSource != rhs.serviceSource {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AIProfileHistoryPage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AIProfileHistoryPage"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}events\0\u{1}next\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.events) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._next) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.events.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.events, fieldNumber: 1)
+    }
+    try { if let v = self._next {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AIProfileHistoryPage, rhs: Pax_V1_AIProfileHistoryPage) -> Bool {
+    if lhs.events != rhs.events {return false}
+    if lhs._next != rhs._next {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

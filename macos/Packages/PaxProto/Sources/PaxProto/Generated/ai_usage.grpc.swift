@@ -72,6 +72,19 @@ public enum Pax_V1_AIUsageService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "ListAntigravityModels" metadata.
+        public enum ListAntigravityModels: Sendable {
+            /// Request type for "ListAntigravityModels".
+            public typealias Input = Pax_V1_AntigravityModelsQuery
+            /// Response type for "ListAntigravityModels".
+            public typealias Output = Pax_V1_AntigravityModels
+            /// Descriptor for "ListAntigravityModels".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.AIUsageService"),
+                method: "ListAntigravityModels",
+                type: .unary
+            )
+        }
         /// Namespace for "ListAIUsageLogs" metadata.
         public enum ListAIUsageLogs: Sendable {
             /// Request type for "ListAIUsageLogs".
@@ -104,6 +117,7 @@ public enum Pax_V1_AIUsageService: Sendable {
             QueryAIUsageAnalysis.descriptor,
             QueryAIUsageBuckets.descriptor,
             SummarizeAIUsage.descriptor,
+            ListAntigravityModels.descriptor,
             ListAIUsageLogs.descriptor,
             RepriceAIUsage.descriptor
         ]
@@ -203,6 +217,25 @@ extension Pax_V1_AIUsageService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AIUsageBuckets>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIUsageBuckets>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "ListAntigravityModels" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AntigravityModelsQuery` message.
+        ///   - serializer: A serializer for `Pax_V1_AntigravityModelsQuery` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_AntigravityModels` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func listAntigravityModels<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AntigravityModelsQuery>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AntigravityModelsQuery>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AntigravityModels>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AntigravityModels>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ListAIUsageLogs" method.
@@ -388,6 +421,36 @@ extension Pax_V1_AIUsageService {
             )
         }
 
+        /// Call the "ListAntigravityModels" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AntigravityModelsQuery` message.
+        ///   - serializer: A serializer for `Pax_V1_AntigravityModelsQuery` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_AntigravityModels` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func listAntigravityModels<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AntigravityModelsQuery>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AntigravityModelsQuery>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AntigravityModels>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AntigravityModels>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_AIUsageService.Method.ListAntigravityModels.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "ListAIUsageLogs" method.
         ///
         /// - Parameters:
@@ -552,6 +615,31 @@ extension Pax_V1_AIUsageService.ClientProtocol {
             request: request,
             serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_AIUsageSummaryQuery>(),
             deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_AIUsageBuckets>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ListAntigravityModels" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_AntigravityModelsQuery` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func listAntigravityModels<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_AntigravityModelsQuery>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AntigravityModels>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.listAntigravityModels(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_AntigravityModelsQuery>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_AntigravityModels>(),
             options: options,
             onResponse: handleResponse
         )
@@ -725,6 +813,35 @@ extension Pax_V1_AIUsageService.ClientProtocol {
             metadata: metadata
         )
         return try await self.summarizeAIUsage(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ListAntigravityModels" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func listAntigravityModels<Result>(
+        _ message: Pax_V1_AntigravityModelsQuery,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AntigravityModels>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_AntigravityModelsQuery>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.listAntigravityModels(
             request: request,
             options: options,
             onResponse: handleResponse

@@ -6,6 +6,7 @@ import PaxUI
 @MainActor
 class WorkbenchModalController: NSViewController, InterfaceLanguageConsumer {
   let interfaceCopy = InterfaceCopyBindings()
+  var onDismissed: (() -> Void)?
   let pane: PaxDialogView
   var maximumPresentationWidth: CGFloat? { nil }
   var alignsToTrailingEdge: Bool { false }

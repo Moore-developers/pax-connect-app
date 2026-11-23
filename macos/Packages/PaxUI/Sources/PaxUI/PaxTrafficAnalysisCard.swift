@@ -239,13 +239,14 @@ public final class PaxTrafficAnalysisCard: PaxCard {
   public var onDimension: ((Int) -> Void)?
   public var onFilter: ((Int) -> Void)?
   private let heading = PaxCardHeading("流量分析", symbol: "arrow.triangle.branch")
+  private let hint = PaxText.label("", secondary: true)
   private let dimension: PaxTabs
   private let filter = PaxTabs(["全部", "代理", "直连"])
   private let empty = PaxText.label("", font: PaxTheme.Typography.caption(), secondary: true)
   private var table: PaxDataTable?
   public var preferredHeight: CGFloat {
     PaxTheme.Dashboard.headerHeight + (table?.intrinsicContentSize.height ?? 0)
-      + PaxTheme.Layout.cardBorder * 2
+      + PaxTheme.Dashboard.inset
   }
   public override var isFlipped: Bool { true }
   public init(periodTitle: String, dimensions: [String]) {
@@ -253,7 +254,7 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     heading.text = "流量分析 · " + periodTitle
     super.init(insets: NSEdgeInsets())
     clipsContent = true
-    for v in [heading, dimension, filter, empty] { addSubview(v) }
+    for v in [heading, dimension, filter, hint, empty] { addSubview(v) }
     empty.alignment = .center
     dimension.onSelect = { [weak self] in self?.onDimension?($0) }
     filter.onSelect = { [weak self] in self?.onFilter?($0) }
@@ -262,7 +263,8 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     setAccessibilityIdentifier("workbench-traffic-table")
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
-  public func applyCopy(title: String, dimensions: [String], directions: [String]) {
+  public func applyCopy(title: String, dimensions: [String], directions: [String], hint: String) {
+    self.hint.stringValue = hint
     heading.text = title
     dimension.apply(labels: dimensions)
     filter.apply(labels: directions)
@@ -273,6 +275,13 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     guard next !== table else { return }
     table?.removeFromSuperview()
     table = next
+    next.wantsLayer = true
+    next.layer?.cornerRadius = 10
+    next.layer?.borderWidth = 1
+    effectiveAppearance.performAsCurrentDrawingAppearance {
+      next.layer?.borderColor = PaxTheme.CurrentRoute.line.cgColor
+    }
+    next.layer?.masksToBounds = true
     addSubview(next, positioned: .below, relativeTo: empty)
     needsLayout = true
   }
@@ -295,18 +304,22 @@ public final class PaxTrafficAnalysisCard: PaxCard {
     let d = PaxTheme.Dashboard.self
     let fw = filter.intrinsicContentSize.width
     let dw = dimension.intrinsicContentSize.width
+    let hw = hint.intrinsicContentSize.width
+    hint.frame = NSRect(x: bounds.width - d.inset - hw, y: d.inset + 4, width: hw, height: 22)
     filter.frame = NSRect(
-      x: bounds.width - d.inset - fw, y: d.inset, width: fw, height: d.tabHeight)
+      x: hint.frame.minX - 10 - fw, y: d.inset, width: fw, height: d.tabHeight)
     dimension.frame = NSRect(
-      x: filter.frame.minX - PaxTheme.Spacing.medium - dw, y: d.inset, width: dw,
+      x: d.inset + d.icon + d.titleGap
+        + ceil((heading.text as NSString).size(withAttributes: [.font: heading.titleFont]).width)
+        + 12, y: d.inset, width: dw,
       height: d.tabHeight)
     heading.frame = NSRect(
       x: d.inset, y: d.inset,
-      width: max(1, dimension.frame.minX - d.inset - PaxTheme.Spacing.medium), height: d.icon)
+      width: max(1, dimension.frame.minX - d.inset), height: d.icon)
     table?.frame = NSRect(
-      x: PaxTheme.Layout.cardBorder, y: d.headerHeight,
-      width: bounds.width - PaxTheme.Layout.cardBorder * 2,
-      height: max(0, bounds.height - d.headerHeight - PaxTheme.Layout.cardBorder))
+      x: d.inset, y: d.headerHeight,
+      width: bounds.width - d.inset * 2,
+      height: max(0, bounds.height - d.headerHeight - d.inset))
     empty.frame = NSRect(
       x: d.inset, y: d.headerHeight + d.tableHeader + d.rowHeight * 2,
       width: bounds.width - d.inset * 2, height: d.rowHeight)

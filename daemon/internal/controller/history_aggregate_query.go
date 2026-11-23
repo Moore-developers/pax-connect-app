@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ func mergeAggregate(to *aggregateBucket, from aggregateBucket) {
 	}
 }
 func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuery) (*historyRead, string, error) {
-	signature := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search, q.Until.String()})
+	signature := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search, q.Until.String(), strconv.FormatBool(q.GroupApplications)})
 	if q.ReadToken != "" {
 		r, e := c.readTokens.read(q.ReadToken, "traffic", signature)
 		return r, q.ReadToken, e
@@ -102,10 +103,10 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 	if e != nil {
 		return nil, "", e
 	}
-	r := &historyRead{detailAt: detailAt, at: at, from: from, kind: "traffic", signature: signature, dimension: q.Dimension, meta: c.publishedTrafficMeta(), aggregate: true, window: q.Window, aggregateTrend: map[string][]*pb.TrafficPoint{}}
+	r := &historyRead{detailAt: detailAt, at: at, from: from, kind: "traffic", signature: signature, dimension: q.Dimension, groupApplications: q.GroupApplications, meta: c.publishedTrafficMeta(), aggregate: true, window: q.Window, aggregateTrend: map[string][]*pb.TrafficPoint{}}
 	groups := map[string]*aggregateProjection{}
 	network := map[int64]*aggregateBucket{}
-	search := newTrafficSearch(q.Search)
+	search := newTrafficSearch(q.Search, q.GroupApplications)
 	systemTotals := map[trafficSearchKey]aggregateBucket{}
 	unknownPendingMatch := false
 	err := func() error {
@@ -160,7 +161,7 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 			if !match {
 				return nil
 			}
-			id := aggregateRowID(i)
+			id := r.trafficRowID(i)
 			r.addRuleMemberBucket(id, v)
 			g := groups[id]
 			kind, label, evidence := i.Kind, i.Name, ""
@@ -188,13 +189,24 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 				}
 			}
 			if summarizesTrafficDimension(i.Dimension) {
-				addTrafficExit(g.row, i.Route, i.RouteName, i.Direction, v.Upload, v.Download, v.Connections)
+				exitConnections := v.Connections
+				if q.GroupApplications && i.Dimension == "application" && i.Direction == "blocked" {
+					exitConnections = v.Failed
+				}
+				addTrafficExit(g.row, i.Route, i.RouteName, i.Direction, v.Upload, v.Download, exitConnections)
 			}
-			g.bases = mergeRoutingBases(g.bases, v.Bases)
+			bases := v.Bases
+			if q.GroupApplications && i.Dimension == "application" {
+				bases = applicationRoutingBases(v)
+			}
+			g.bases = mergeRoutingBases(g.bases, bases)
 			g.row.Upload += v.Upload
 			g.row.Download += v.Download
 			g.row.Connections += v.Connections
 			g.row.FailedCount += v.Failed
+			if q.GroupApplications && i.Dimension == "application" && i.Direction == "blocked" {
+				g.row.BlockedCount += v.Failed
+			}
 			g.row.SlowestLatencyMs = max(g.row.SlowestLatencyMs, v.Maximum)
 			mergeHistogram(g.histogram, v.Latency)
 			if !v.LatestAt.IsZero() && (g.row.LatestLatencyAt == nil || !v.LatestAt.Before(g.row.LatestLatencyAt.AsTime())) {
@@ -330,6 +342,13 @@ func (c *Controller) aggregateTrafficRead(ctx context.Context, q *pb.TrafficQuer
 func mergedRowDimension(dimension string) bool {
 	return dimension == "unknown" || dimension == "dns"
 }
+func (r *historyRead) trafficRowID(i aggregateIdentity) string {
+	if r.groupApplications && i.Dimension == "application" {
+		i.Route, i.Direction, i.Kind = "", "", "app"
+	}
+	return aggregateRowID(i)
+}
+
 func aggregateRowID(i aggregateIdentity) string {
 	if i.Dimension == "domain" || i.Dimension == "ip" {
 		i.Kind = "mixed"

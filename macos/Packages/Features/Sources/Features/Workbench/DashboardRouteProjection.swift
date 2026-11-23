@@ -68,7 +68,13 @@ enum DashboardRouteProjection {
         trendEmpty: context.text("dashboard_value.no_routes"))
     }
     var model = PaxCurrentRouteModel(
-      name: route.name, badge: badge, tags: [route.protocolName.uppercased()])
+      name: route.name, badge: badge,
+      tags: [
+        [
+          route.protocolName.uppercased(),
+          route.security.lowercased() == "reality" ? "Reality" : route.security.uppercased(),
+        ].filter { !$0.isEmpty && $0 != "NONE" }.joined(separator: " · ")
+      ])
     model.exitIP = exitIP
     model.exitRegion = exitRegion
     let all = samples(history, route: route)
@@ -96,7 +102,7 @@ enum DashboardRouteProjection {
         model.delta =
           change == 0
           ? context.text("dashboard_value.unchanged")
-          : "\(change > 0 ? "↑" : "↓") \(abs(change)) ms"
+          : "\(change > 0 ? "+" : "-")\(abs(change)) ms"
       } else {
         model.delta = context.text("dashboard_value.first_measurement")
         model.firstMeasurement = true

@@ -27,6 +27,11 @@ extension DaemonConnection {
       throw ClientError.classify(error)
     } catch { throw ClientError.classify(error) }
   }
+  public func antigravityModels() async throws -> AntigravityModels {
+    try await usageRPC { service, options in
+      AntigravityModels(try await service.listAntigravityModels(.init(), options: options))
+    }
+  }
   public func aiUsageBuckets(
     from: Date, to: Date, granularity: String, revision: UInt64?, timezone: String? = nil
   )

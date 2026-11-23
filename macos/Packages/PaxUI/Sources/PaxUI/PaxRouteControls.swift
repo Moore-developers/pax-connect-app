@@ -232,6 +232,7 @@ public enum PaxRouteText {
 public final class PaxRoutePicker: NSPopUpButton {
   public enum Style { case form, toolbar, filter }
   private let style: Style
+  private let fitsMenuTitles: Bool
   /// 非 nil 时按钮上画它，菜单项仍显示各自标题。
   public var displayTitle: String? { didSet { needsDisplay = true } }
   private var controlHeight: CGFloat {
@@ -239,8 +240,9 @@ public final class PaxRoutePicker: NSPopUpButton {
       ? PaxTheme.Routes.fieldHeight
       : style == .filter ? PaxTheme.Control.filterHeight : PaxTheme.Routes.controlHeight
   }
-  public init(style: Style = .form) {
+  public init(style: Style = .form, fitsMenuTitles: Bool = false) {
     self.style = style
+    self.fitsMenuTitles = fitsMenuTitles
     super.init(frame: .zero, pullsDown: false)
     focusRingType = .none
     isBordered = false
@@ -248,10 +250,19 @@ public final class PaxRoutePicker: NSPopUpButton {
     heightAnchor.constraint(equalToConstant: controlHeight).isActive = true
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  private var titleFont: NSFont { font ?? PaxTheme.Typography.caption() }
+  private var titleChromeWidth: CGFloat {
+    PaxTheme.Routes.controlInset * 3 + PaxTheme.Routes.metaFont
+  }
   public override var intrinsicContentSize: NSSize {
-    NSSize(
-      width: super.intrinsicContentSize.width + PaxTheme.Routes.controlInset,
-      height: controlHeight)
+    let intrinsicWidth = super.intrinsicContentSize.width + PaxTheme.Routes.controlInset
+    guard fitsMenuTitles else { return NSSize(width: intrinsicWidth, height: controlHeight) }
+    let textWidth =
+      itemTitles.map {
+        ($0 as NSString).size(withAttributes: [.font: titleFont]).width
+      }.max() ?? 0
+    let width = max(intrinsicWidth, ceil(textWidth) + titleChromeWidth)
+    return NSSize(width: width, height: controlHeight)
   }
   public override func draw(_ dirtyRect: NSRect) {
     let c = PaxTheme.Routes.self
@@ -263,16 +274,20 @@ public final class PaxRoutePicker: NSPopUpButton {
     c.line.setStroke()
     shape.lineWidth = PaxTheme.Layout.cardBorder
     shape.stroke()
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineBreakMode = .byTruncatingTail
     let attrs: [NSAttributedString.Key: Any] = [
-      .font: font ?? PaxTheme.Typography.caption(),
+      .font: titleFont,
       .foregroundColor: isEnabled ? c.text : PaxTheme.Color.textDisabled,
+      .paragraphStyle: paragraph,
     ]
     let shown = (displayTitle ?? titleOfSelectedItem ?? "") as NSString
     let size = shown.size(withAttributes: attrs)
     shown.draw(
       in: NSRect(
         x: c.controlInset, y: (bounds.height - size.height) / 2,
-        width: bounds.width - c.controlInset * 3, height: size.height), withAttributes: attrs)
+        width: max(0, bounds.width - titleChromeWidth), height: size.height),
+      withAttributes: attrs)
     if let image = PaxRouteIcon.image("chevron.down", size: c.metaFont) {
       PaxRouteDrawing.icon(
         image,

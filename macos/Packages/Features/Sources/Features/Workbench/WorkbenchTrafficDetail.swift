@@ -45,6 +45,7 @@ struct WorkbenchTrafficRecord: Equatable, Identifiable {
   func target(context: PresentationContext) -> String {
     domain ?? (ip.isEmpty ? context.text("traffic_details.947d020039") : ip)
   }
+  var rawIP: String? = nil
   var sourceNote = ""
 }
 
@@ -220,11 +221,16 @@ struct WorkbenchTrafficDetail: Identifiable {
           context.text("traffic_details.7851c3fac4")
           + TrafficRuleFormatting.recordedRuleText(saved.rule)
           + context.text("traffic_details.563cd1e4d3") + saved.source
+        let route =
+          saved.direction.isEmpty
+          ? saved.routeName
+          : TrafficFormatting.actualConnection(
+            direction: saved.direction, route: saved.routeName, context: context)
         let ipv6 = TrafficRuleFormatting.isIPv4OnlyRule(rule: saved.rule, source: saved.source)
         if ipv6,
           let index = result.firstIndex(where: {
             TrafficRuleFormatting.isIPv4OnlyRule(rule: $0.hit.condition, source: $0.hit.source)
-              && $0.target == saved.target && $0.route == saved.routeName
+              && $0.target == saved.target && $0.route == route
           })
         {
           let old = result[index]
@@ -238,7 +244,7 @@ struct WorkbenchTrafficDetail: Identifiable {
               hit: .init(
                 condition: saved.rule, kind: context.text("traffic_details.3fcb97b8dc"),
                 source: saved.source),
-              count: Int(saved.connections), target: saved.target, route: saved.routeName,
+              count: Int(saved.connections), target: saved.target, route: route,
               rawEvidence: [raw]))
         }
       }

@@ -140,6 +140,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
         self.navigation.select(2)
         var q = TrafficDetailQuery()
         q.connectionKey = key
+        q.groupConnections = true
         Task { [weak self] in
           do {
             let detail = try await telemetry.trafficDetail(q)
@@ -147,7 +148,8 @@ public final class WorkbenchShellViewController: NSSplitViewController {
             self.routing?.presentWorkbenchModal(
               WorkbenchTrafficDetailController(
                 detail: detail, dimension: .application, telemetry: telemetry,
-                tooltip: self.tooltip, icons: self.routing?.objectIcons
+                tooltip: self.tooltip, icons: self.routing?.objectIcons,
+                ruleStore: self.routing?.store, connectionKey: key
               ))
           } catch {
             let context = self?.language?.context ?? .chinese
@@ -206,14 +208,16 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       self?.updateOnboarding()
     }
     let sidebar = NSSplitViewItem(sidebarWithViewController: navigation)
+    sidebar.canCollapse = false
     sidebar.minimumThickness = PaxTheme.Navigation.widthRange.lowerBound
     sidebar.maximumThickness = PaxTheme.Navigation.widthRange.upperBound
     sidebar.preferredThicknessFraction =
       PaxTheme.Navigation.width / PaxTheme.Layout.defaultWindow.width
     addSplitViewItem(sidebar)
+    let body = NSViewController()
+    body.addChild(pages)
+    let content: NSView
     if menuConnection != nil {
-      let body = NSViewController()
-      body.addChild(pages)
       let stack = NSStackView(views: [gettingStarted, pages.view])
       stack.orientation = .vertical
       stack.spacing = 0
@@ -223,11 +227,15 @@ public final class WorkbenchShellViewController: NSSplitViewController {
         child.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
       }
       gettingStarted.setContentHuggingPriority(.required, for: .vertical)
-      body.view = stack
-      addSplitViewItem(NSSplitViewItem(viewController: body))
+      content = stack
     } else {
-      addSplitViewItem(NSSplitViewItem(viewController: pages))
+      content = pages.view
     }
+    body.view = WorkbenchBodyViewport(
+      content: content,
+      minimumWidth: PaxTheme.Layout.minimumWindow.width - PaxTheme.Navigation.width
+        - splitView.dividerThickness)
+    addSplitViewItem(NSSplitViewItem(viewController: body))
   }
   @available(*, unavailable)
   public required init?(coder: NSCoder) { fatalError("代码构建") }
@@ -247,6 +255,12 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   }
   public func showRoutes() {
     navigation.select(1)
+  }
+  func showRules(packageID: String) {
+    navigation.select(2)
+    routing?.store.selectedPackageID = packageID
+    routing?.store.perform(.tab(.rules))
+    routing?.store.perform(.search(""))
   }
   public func showTrafficAnalysis() {
     navigation.select(2)

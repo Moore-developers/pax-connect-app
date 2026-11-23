@@ -12,6 +12,7 @@ public final class AIProfilesStore {
   public func error(context: PresentationContext) -> String? {
     errorMeaning.map { ProductTextPresentation.text($0, original: "—", context: context) }
   }
+  public private(set) var historySupported = false
   public private(set) var available: Bool
   private let connection: DaemonConnection?
   private var backendConnected = true
@@ -27,16 +28,27 @@ public final class AIProfilesStore {
   public func consume(_ update: ConnectionUpdate) {
     guard connection != nil else { return }
     switch update {
-    case .ready:
+    case .ready(let handshake, _):
+      historySupported = handshake.capabilities.contains("ai.profiles.history.v1")
       backendConnected = true
       available = true
     case .connecting, .retrying, .failed, .disconnected:
+      historySupported = false
       backendGeneration += 1
       backendConnected = false
       available = false
       cancelRefresh()
     case .events: break
     }
+  }
+  public func clientHistory(_ client: AIClient, before: AIProfileHistoryPage.Cursor?)
+    async throws -> AIProfileHistoryPage
+  {
+    guard historySupported, let connection else { throw ClientError.unavailable }
+    let generation = backendGeneration
+    let page = try await connection.aiProfileHistory(client, before: before)
+    guard generation == backendGeneration, !Task.isCancelled else { throw CancellationError() }
+    return page
   }
   public func refresh() async {
     guard let connection, backendConnected, !mutating else { return }
@@ -157,7 +169,7 @@ public final class AIProfilesStore {
   public func importCurrent(
     _ cli: AIClient, name: String? = nil, multiplier: Double = 1, initialize: Bool = false
   ) async -> Bool {
-    guard cli != .harness, let connection, let binding = workspace.bindings[cli] else {
+    guard !cli.isUsageOnly, let connection, let binding = workspace.bindings[cli] else {
       return false
     }
     return await commit {
@@ -189,7 +201,7 @@ public final class AIProfilesStore {
       errorMeaning = ProductText(code: "profile_error.backend_disconnected")
       return nil
     }
-    guard cli != .harness, let connection, let binding = workspace.bindings[cli] else {
+    guard !cli.isUsageOnly, let connection, let binding = workspace.bindings[cli] else {
       errorMeaning = ProductText(code: "profile_error.client_unavailable")
       return nil
     }
@@ -218,7 +230,7 @@ public final class AIProfilesStore {
     }
   }
   public func apply(_ plan: AIProfilePlan) async -> Bool {
-    guard plan.cli != .harness, let connection else { return false }
+    guard !plan.cli.isUsageOnly, let connection else { return false }
     let success = await commit { try await connection.applyAIProfile(plan) }
     if !success {
       let meaning = errorMeaning
@@ -228,7 +240,7 @@ public final class AIProfilesStore {
     return success
   }
   public func previewBind(_ cli: AIClient, profile: AIProfile) {
-    guard cli != .harness, connection == nil, available else { return }
+    guard !cli.isUsageOnly, connection == nil, available else { return }
     workspace.bindings[cli] = .init(profileID: profile.id, state: "applied")
   }
 }

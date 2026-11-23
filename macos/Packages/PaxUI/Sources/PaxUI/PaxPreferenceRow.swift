@@ -6,6 +6,8 @@ public final class PaxPreferenceRow: NSView {
 
   private let detailField: NSTextField
   private let titleField: NSTextField
+  private let feedbackField = PaxText.label(
+    "", font: PaxTheme.Typography.caption(), secondary: true)
   private let currentField = PaxText.label("", font: PaxTheme.Typography.caption())
   public init(title: String, detail: String, control: NSView, style: Style = .standard) {
     detailField = PaxText.label(
@@ -13,13 +15,20 @@ public final class PaxPreferenceRow: NSView {
     titleField = PaxText.label(
       title, font: PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont))
     super.init(frame: .zero)
+    detailField.isHidden = detail.isEmpty
     currentField.textColor = PaxTheme.Color.accent
     currentField.isHidden = true
-    let copy = NSStackView(views: [titleField, detailField, currentField])
+    titleField.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+    feedbackField.lineBreakMode = .byTruncatingTail
+    feedbackField.isHidden = true
+    let heading = NSStackView(views: [titleField, feedbackField, NSView()])
+    heading.alignment = .centerY
+    heading.spacing = PaxTheme.Spacing.tight
+    let copy = NSStackView(views: [heading, detailField, currentField])
     copy.orientation = .vertical
     copy.alignment = .leading
     copy.spacing = PaxTheme.Spacing.xs
-    for field in [titleField, detailField, currentField] {
+    for field in [heading, detailField, currentField] {
       field.widthAnchor.constraint(equalTo: copy.widthAnchor).isActive = true
       field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
@@ -57,9 +66,16 @@ public final class PaxPreferenceRow: NSView {
   public func apply(title: String, detail: String) {
     titleField.stringValue = title
     detailField.stringValue = detail
+    detailField.isHidden = detail.isEmpty
+  }
+  public func apply(feedback: String) {
+    feedbackField.stringValue = feedback
+    feedbackField.toolTip = feedback.isEmpty ? nil : feedback
+    feedbackField.isHidden = feedback.isEmpty
   }
   public func apply(detail: String, currentValue: String?) {
     detailField.stringValue = detail
+    detailField.isHidden = detail.isEmpty
     currentField.stringValue = currentValue.map { "当前：" + $0 } ?? ""
     currentField.isHidden = currentValue == nil
   }

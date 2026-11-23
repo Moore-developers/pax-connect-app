@@ -70,6 +70,8 @@
     "session_limits.0c69edbc82": "Limit ",
     "session_limits.0c2315db3a": "No limit set",
     "session_limits.b75bde28d7": "Over limit +",
+    "session_limits.antigravity_reference": "Official reference price",
+    "session_limits.native_context_limit": "Native capacity {tokens}",
     "session_limits.080bc981ec": "Current context",
     "session_limits.8b01b9b98b": "Latest main-session request",
     "session_limits.26fdd367e9": "No daily records yet",

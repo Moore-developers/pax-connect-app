@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -15,7 +16,7 @@ import (
 // periodTrafficRead keeps retained connection/latency evidence for hour/day consumers,
 // while byte totals and charts come from traffic.db's five-minute buckets.
 func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) (*historyRead, string, error) {
-	signature := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search, q.Until.String()})
+	signature := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search, q.Until.String(), strconv.FormatBool(q.GroupApplications)})
 	if q.ReadToken != "" {
 		r, e := c.readTokens.read(q.ReadToken, "traffic", signature)
 		return r, q.ReadToken, e
@@ -30,7 +31,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 		return nil, "", err
 	}
 	defer func() { _ = snap.read.Close() }()
-	r := &historyRead{at: at, from: from, kind: "traffic", signature: signature, dimension: q.Dimension, window: q.Window, meta: snap.meta, flows: map[string][]*pb.FlowRecord{}}
+	r := &historyRead{at: at, from: from, kind: "traffic", signature: signature, dimension: q.Dimension, groupApplications: q.GroupApplications, window: q.Window, meta: snap.meta, flows: map[string][]*pb.FlowRecord{}}
 	if err = c.freezeTrafficConnections(ctx, r, ""); err != nil {
 		r.recentResponsesState, r.recentResponsesError = "failed", trafficLogEvidenceError(err)
 		r.meta.Partial, r.meta.Error = true, r.recentResponsesError
@@ -56,14 +57,15 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	}
 	type key struct{ object, route, direction string }
 	keyFor := func(object, route, direction string) key {
-		if mergedRowDimension(q.Dimension) {
+		if r.groupApplications || mergedRowDimension(q.Dimension) {
 			route, direction = "", ""
 		}
 		return key{object, route, direction}
 	}
 	exitRows := map[key]*pb.TrafficRow{}
 	sums := map[key]aggregateBucket{}
-	search := newTrafficSearch(q.Search)
+	blocked := map[key]uint64{}
+	search := newTrafficSearch(q.Search, q.GroupApplications)
 	for key := range columnMatches {
 		search.matched[key] = true
 	}
@@ -73,11 +75,11 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 	points := map[int64]*pb.TrafficPoint{}
 	for _, v := range buckets {
 		i := v.Identity
-		r.addRuleMemberBucket(aggregateRowID(i), v)
 		match := i.Dimension == q.Dimension || q.Dimension == "" && i.Dimension == "domain" || q.Dimension == "application" && i.Dimension == "unknown" || q.Dimension == "system" && i.Dimension == "dns"
 		if !match || q.Direction != "" && q.Direction != "all" && i.Direction != q.Direction && i.Dimension != "dns" {
 			continue
 		}
+		r.addRuleMemberBucket(r.trafficRowID(i), v)
 		search.observeBucket(v)
 		k := keyFor(i.Object, i.Route, i.Direction)
 		if i.Dimension == "unknown" || i.Dimension == "dns" {
@@ -87,17 +89,28 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 			if exitRows[k] == nil {
 				exitRows[k] = &pb.TrafficRow{}
 			}
-			addTrafficExit(exitRows[k], i.Route, i.RouteName, i.Direction, v.Upload, v.Download, v.Connections)
+			exitConnections := v.Connections
+			if q.GroupApplications && i.Dimension == "application" && i.Direction == "blocked" {
+				exitConnections = v.Failed
+			}
+			addTrafficExit(exitRows[k], i.Route, i.RouteName, i.Direction, v.Upload, v.Download, exitConnections)
 		}
 		sum := sums[k]
 		sum.Identity = i
 		sum.At = v.At
 		sum.Connections += v.Connections
-		sum.Bases = mergeRoutingBases(sum.Bases, v.Bases)
+		bases := v.Bases
+		if q.GroupApplications && i.Dimension == "application" {
+			bases = applicationRoutingBases(v)
+		}
+		sum.Bases = mergeRoutingBases(sum.Bases, bases)
 		sum.Failed += v.Failed
 		sum.Upload += v.Upload
 		sum.Download += v.Download
 		sums[k] = sum
+		if q.GroupApplications && i.Dimension == "application" && i.Direction == "blocked" {
+			blocked[k] += v.Failed
+		}
 	}
 	for _, v := range values {
 		for _, id := range aggregateIdentities(v.Fact) {
@@ -121,7 +134,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 			continue
 		}
 		i := v.Identity
-		row := &pb.TrafficRow{Id: aggregateRowID(i), ObjectId: i.Object, Name: storedAggregateName(i), RouteId: i.Route, RouteName: i.RouteName, Direction: i.Direction, Basis: i.RulePackage, Connections: v.Connections, FailedCount: v.Failed, Kind: "access", BytesKnown: true, SourceKind: i.Kind, SourceLabel: storedAggregateName(i), LastActiveAt: min(v.At.Add(5*time.Minute).UnixMilli(), at.UnixMilli())}
+		row := &pb.TrafficRow{Id: r.trafficRowID(i), ObjectId: i.Object, Name: storedAggregateName(i), RouteId: i.Route, RouteName: i.RouteName, Direction: i.Direction, Basis: i.RulePackage, Connections: v.Connections, FailedCount: v.Failed, Kind: "access", BytesKnown: true, SourceKind: i.Kind, SourceLabel: storedAggregateName(i), LastActiveAt: min(v.At.Add(5*time.Minute).UnixMilli(), at.UnixMilli())}
 		r.setRecentRow(row)
 		switch i.Dimension {
 		case "unknown":
@@ -195,7 +208,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 		}
 		v := sums[k]
 		if summarizesTrafficDimension(q.Dimension) && row.Kind != "unknown" && row.Kind != "dns" {
-			r.ruleMemberBuckets[row.Id] = r.ruleMemberBuckets[aggregateRowID(v.Identity)]
+			r.ruleMemberBuckets[row.Id] = r.ruleMemberBuckets[r.trafficRowID(v.Identity)]
 			if r.columnSnapshot != nil {
 				// Actual response samples are selected lazily from the frozen SQL
 				// relation after bucket membership has been finalized.
@@ -216,6 +229,9 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 			r.setRecentRow(row)
 		}
 		row.Upload, row.Download, row.Connections = v.Upload, v.Download, v.Connections
+		if q.GroupApplications && row.Kind != "unknown" {
+			row.FailedCount, row.BlockedCount = v.Failed, blocked[k]
+		}
 		if exits := exitRows[k]; exits != nil {
 			row.Exits = exits.Exits
 			finishTrafficExits(row)
@@ -257,7 +273,7 @@ func (c *Controller) periodTrafficRead(ctx context.Context, q *pb.TrafficQuery) 
 		if q.Direction != "" && q.Direction != "all" && v.Identity.Direction != q.Direction && v.Identity.Dimension != "dns" {
 			continue
 		}
-		if !allowed[keyFor(v.Identity.Object, v.Identity.Route, v.Identity.Direction)] {
+		if (q.GroupApplications && v.Identity.Dimension != "application") || !allowed[keyFor(v.Identity.Object, v.Identity.Route, v.Identity.Direction)] {
 			continue
 		}
 		bin := v.At.Truncate(5 * time.Minute).Unix()

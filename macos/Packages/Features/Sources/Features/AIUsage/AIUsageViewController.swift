@@ -9,6 +9,7 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
   let store: AIUsageStore
   let actions = AIUsageActions()
   let content = NSStackView()
+  weak var profileTable: PaxDataTable?
   var sessionContent: AISessionLiveLimitsView?
   var logContent: AIUsageLogView?
   var refreshMeasuresOnly = false
@@ -208,12 +209,14 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
         store.start, store.end, store.measureCost, store.trendFilter, store.profileMeasureCost,
         store.logClient,
         store.logProfileID, store.logModelID, store.logResult, store.configuration.loading,
-        store.configuration.error, store.configuration.available
+        store.configuration.error, store.configuration.available,
+        store.configuration.historySupported
       )
       _ = (
         store.data?.buckets, store.data?.lifetime, store.data?.logs, store.data?.state,
-        store.data?.costRangeSupported,
+        store.data?.costRangeSupported, store.data?.antigravityModelsSupported,
         store.data?.error, store.data?.loading, store.data?.lastUsed,
+        store.data?.bucketsLoaded, store.data?.lifetimeLoaded,
         store.data?.sessions?.current, store.data?.sessions?.detail, store.data?.sessions?.selected,
         store.data?.sessions?.error, store.data?.sessions?.loading,
         store.data?.sessions?.limitsSupported
@@ -252,8 +255,6 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
         interfaceCopy.text("ai_period." + $0)
       })
 
-    periods.isHidden = store.page == .profiles
-    dateButton.isHidden = store.page == .profiles
     tabs.apply(
       zip(
         AIUsageStore.Page.allCases,
@@ -305,8 +306,11 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
     }
     // A different subpage installs a new set of controls.
     Task { @MainActor [weak self] in
-      self?.view.layoutSubtreeIfNeeded()
-      self?.view.window?.recalculateKeyViewLoop()
+      guard let self else { return }
+      self.view.layoutSubtreeIfNeeded()
+      self.scroll.contentView.scroll(to: .zero)
+      self.scroll.reflectScrolledClipView(self.scroll.contentView)
+      self.view.window?.recalculateKeyViewLoop()
     }
   }
   func show(_ kind: AIUsageDetailController.Kind, anchor: NSView? = nil) {

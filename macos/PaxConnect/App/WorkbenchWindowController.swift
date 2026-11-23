@@ -10,6 +10,7 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
   private var liveRefresh: PaxRefresh?
   private let store: WorkbenchDemoStore?
   private let shell: WorkbenchShellViewController
+  private let workbenchWindow: WorkbenchWindow
   private var workbenchRoot: NSViewController?
 
   convenience init(language: InterfaceLanguageStore? = nil) {
@@ -36,17 +37,17 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
   private init(shell: WorkbenchShellViewController, store: WorkbenchDemoStore?) {
     self.shell = shell
     self.store = store
-    let window = NSWindow(
+    let window = WorkbenchWindow(
       contentRect: NSRect(origin: .zero, size: PaxTheme.Layout.defaultWindow),
       styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
       backing: .buffered, defer: false)
     window.appearance = NSAppearance(named: .aqua)
     window.title = "Pax Connect"
-    window.minSize = PaxTheme.Layout.minimumWindow
     window.backgroundColor = PaxTheme.Color.workspace
     window.titlebarAppearsTransparent = true
     window.titleVisibility = .hidden
     window.center()
+    workbenchWindow = window
     super.init(window: window)
     window.delegate = self
     let root = NSViewController()
@@ -57,6 +58,7 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
     root.view.addSubview(shell.view)
     if let content = shell.splitViewItems.last?.viewController.view {
       let dragArea = WorkbenchTitlebarDragArea()
+      window.extendedTitlebar = dragArea
       dragArea.translatesAutoresizingMaskIntoConstraints = false
       root.view.addSubview(dragArea)
       NSLayoutConstraint.activate([
@@ -69,7 +71,10 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
     }
     workbenchRoot = root
     contentViewController = root
-    fitOversizedWindow()
+    window.fitToScreen()
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(screenParametersChanged),
+      name: NSApplication.didChangeScreenParametersNotification, object: nil)
     let environment = ProcessInfo.processInfo.environment
     if let name = environment["PAX_DEMO_SCENARIO"],
       let preset = WorkbenchDemoStore.Scenario(rawValue: name)
@@ -102,29 +107,31 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
   func windowDidChangeOcclusionState(_ notification: Notification) {
     liveRefresh?.setWindowVisible(window?.occlusionState.contains(.visible) ?? false)
   }
-  func windowDidChangeScreen(_ notification: Notification) {
-    fitOversizedWindow()
+  func windowDidChangeScreen(_ notification: Notification) { workbenchWindow.scheduleScreenFit() }
+  func windowDidMove(_ notification: Notification) { workbenchWindow.scheduleScreenFit() }
+  func windowDidResize(_ notification: Notification) { workbenchWindow.scheduleScreenFit() }
+  func windowWillStartLiveResize(_ notification: Notification) {
+    workbenchWindow.resumeNormalSizing()
   }
+  func windowDidEndLiveResize(_ notification: Notification) { workbenchWindow.scheduleScreenFit() }
+  func windowWillEnterFullScreen(_ notification: Notification) {
+    workbenchWindow.prepareForFullScreen()
+  }
+  func windowDidEnterFullScreen(_ notification: Notification) {
+    workbenchWindow.fullScreenTransitionFinished()
+  }
+  func windowDidExitFullScreen(_ notification: Notification) {
+    workbenchWindow.fullScreenTransitionFinished()
+  }
+  func windowDidFailToEnterFullScreen(_ window: NSWindow) {
+    workbenchWindow.fullScreenTransitionFinished()
+  }
+  @objc private func screenParametersChanged() { workbenchWindow.scheduleScreenFit() }
   func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
-    guard !sender.styleMask.contains(.fullScreen), let visible = sender.screen?.visibleFrame
-    else { return frameSize }
-    return NSSize(
-      width: min(frameSize.width, visible.width), height: min(frameSize.height, visible.height))
+    workbenchWindow.boundedResize(frameSize)
   }
   func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame: NSRect) -> NSRect {
     window.screen?.visibleFrame ?? defaultFrame
-  }
-  private func fitOversizedWindow() {
-    guard let window, !window.styleMask.contains(.fullScreen),
-      let screen = window.screen ?? NSScreen.main
-    else { return }
-    let visible = screen.visibleFrame
-    var frame = window.frame
-    guard frame.width > visible.width || frame.height > visible.height else { return }
-    frame.size = windowWillResize(window, to: frame.size)
-    frame.origin.x = min(max(frame.minX, visible.minX), visible.maxX - frame.width)
-    frame.origin.y = min(max(frame.minY, visible.minY), visible.maxY - frame.height)
-    window.setFrame(frame, display: true)
   }
   @objc private func showAbout() {
     window?.deminiaturize(nil)
@@ -143,11 +150,8 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
     }
     return true
   }
-  @objc private func minimumSize() { window?.setContentSize(PaxTheme.Layout.minimumWindow) }
-  @objc private func designSize() {
-    window?.setContentSize(PaxTheme.Layout.defaultWindow)
-    fitOversizedWindow()
-  }
+  @objc private func minimumSize() { workbenchWindow.resize(to: PaxTheme.Layout.minimumWindow) }
+  @objc private func designSize() { workbenchWindow.resize(to: PaxTheme.Layout.defaultWindow) }
   var menuDemoStore: WorkbenchDemoStore? { store }
   func openMenuDestination(_ destination: MenuBarMenuController.Destination) {
     guard let window else { return }
@@ -170,8 +174,14 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
     controller.presentedViewControllers?.isEmpty == false
       || controller.children.contains(where: hasPresentedController)
   }
-  func showDashboard() { contentViewController = workbenchRoot }
-  func showSetup(_ controller: DaemonSetupViewController) { contentViewController = controller }
+  func showDashboard() {
+    contentViewController = workbenchRoot
+    workbenchWindow.fitToScreen()
+  }
+  func showSetup(_ controller: DaemonSetupViewController) {
+    contentViewController = controller
+    workbenchWindow.fitToScreen()
+  }
   func stopDemo() { store?.cancelPendingAction() }
 
   @objc private func previewScenario(_ sender: NSMenuItem) {
@@ -288,23 +298,5 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
   }
   @objc private func previewRouting(_ sender: NSMenuItem) {
     if let scene = sender.representedObject as? String { shell.previewRouting(scene) }
-  }
-}
-
-/// Extends the transparent title bar over the workspace's empty top inset.
-private final class WorkbenchTitlebarDragArea: NSView {
-  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-  override func mouseDown(with event: NSEvent) {
-    guard let window, !window.styleMask.contains(.fullScreen) else { return }
-    if event.clickCount == 1 {
-      window.performDrag(with: event)
-    } else if event.clickCount == 2 {
-      switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
-      case "Minimize": window.miniaturize(nil)
-      case "Maximize", "Zoom", nil: window.zoom(nil)
-      default: break
-      }
-    }
   }
 }

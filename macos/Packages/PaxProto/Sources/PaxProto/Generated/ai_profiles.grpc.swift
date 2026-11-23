@@ -33,6 +33,19 @@ public enum Pax_V1_AIProfilesService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "ListAIProfileHistory" metadata.
+        public enum ListAIProfileHistory: Sendable {
+            /// Request type for "ListAIProfileHistory".
+            public typealias Input = Pax_V1_AIProfileHistoryQuery
+            /// Response type for "ListAIProfileHistory".
+            public typealias Output = Pax_V1_AIProfileHistoryPage
+            /// Descriptor for "ListAIProfileHistory".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.AIProfilesService"),
+                method: "ListAIProfileHistory",
+                type: .unary
+            )
+        }
         /// Namespace for "MutateAIProfile" metadata.
         public enum MutateAIProfile: Sendable {
             /// Request type for "MutateAIProfile".
@@ -101,6 +114,7 @@ public enum Pax_V1_AIProfilesService: Sendable {
         /// Descriptors for all methods in the "pax.v1.AIProfilesService" service.
         public static let descriptors: [GRPCCore.MethodDescriptor] = [
             QueryAIProfiles.descriptor,
+            ListAIProfileHistory.descriptor,
             MutateAIProfile.descriptor,
             PlanAIProfileApply.descriptor,
             RefreshAIProfileModels.descriptor,
@@ -146,6 +160,25 @@ extension Pax_V1_AIProfilesService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AIProfilesWorkspace>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfilesWorkspace>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "ListAIProfileHistory" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AIProfileHistoryQuery` message.
+        ///   - serializer: A serializer for `Pax_V1_AIProfileHistoryQuery` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_AIProfileHistoryPage` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func listAIProfileHistory<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AIProfileHistoryQuery>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AIProfileHistoryQuery>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AIProfileHistoryPage>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfileHistoryPage>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "MutateAIProfile" method.
@@ -287,6 +320,36 @@ extension Pax_V1_AIProfilesService {
             try await self.client.unary(
                 request: request,
                 descriptor: Pax_V1_AIProfilesService.Method.QueryAIProfiles.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "ListAIProfileHistory" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_AIProfileHistoryQuery` message.
+        ///   - serializer: A serializer for `Pax_V1_AIProfileHistoryQuery` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_AIProfileHistoryPage` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func listAIProfileHistory<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_AIProfileHistoryQuery>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_AIProfileHistoryQuery>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_AIProfileHistoryPage>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfileHistoryPage>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_AIProfilesService.Method.ListAIProfileHistory.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -474,6 +537,31 @@ extension Pax_V1_AIProfilesService.ClientProtocol {
         )
     }
 
+    /// Call the "ListAIProfileHistory" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_AIProfileHistoryQuery` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func listAIProfileHistory<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_AIProfileHistoryQuery>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfileHistoryPage>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.listAIProfileHistory(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_AIProfileHistoryQuery>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_AIProfileHistoryPage>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "MutateAIProfile" method.
     ///
     /// - Parameters:
@@ -626,6 +714,35 @@ extension Pax_V1_AIProfilesService.ClientProtocol {
             metadata: metadata
         )
         return try await self.queryAIProfiles(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ListAIProfileHistory" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func listAIProfileHistory<Result>(
+        _ message: Pax_V1_AIProfileHistoryQuery,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_AIProfileHistoryPage>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_AIProfileHistoryQuery>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.listAIProfileHistory(
             request: request,
             options: options,
             onResponse: handleResponse

@@ -37,7 +37,7 @@ NSApplication
 └─ AppDelegate
    ├─ DaemonInstaller（SMAppService 注册、授权状态、引导页）
    ├─ MenuBarController（NSStatusItem + NSMenu，见P06）
-   └─ WorkbenchWindowController（NSWindow, fullSizeContentView, 最小 1000×680）
+   └─ WorkbenchWindowController（WorkbenchWindow, fullSizeContentView）
       ├─ NSToolbar
       │   ├─ 页面标题 / 保护状态胶囊
       │   ├─ NSSearchToolbarItem（全局搜索，作用于当前页）
@@ -54,9 +54,9 @@ NSApplication
           └─ inspector: 可选详情容器，按各页合同使用；日志为双击事件打开浮层（P04）
 ```
 
-**Dashboard（连接工作台）**：`NSScrollView` + flipped document view，固定两档手写布局；净内容宽 ≥700pt 时左 44% RTT线路质量卡（下含可选线路历史列表）、右 56% 流量，跨列明细，下方事件和条件性异常；不足时堆叠，收紧连接卡。唯一开关在 toolbar，线路选择在质量卡列表，详情可从线路页进入，不再常驻线路网格。窗口默认 1280×860、最小 1000×680。页面合同唯一见 `ui/specs/P01-dashboard.md`；token 与组件状态唯一见 `ui/design-system.md`。
+**Dashboard（连接工作台）**：`NSScrollView` + flipped document view，固定两档手写布局；净内容宽 ≥700pt 时左 44% RTT线路质量卡（下含可选线路历史列表）、右 56% 流量，跨列明细，下方事件和条件性异常；不足时堆叠，收紧连接卡。唯一开关在 toolbar，线路选择在质量卡列表，详情可从线路页进入，不再常驻线路网格。页面合同唯一见 `ui/specs/P01-dashboard.md`；token 与组件状态唯一见 `ui/design-system.md`。
 
-主窗口在内容区顶部留出拖动区，双击遵循系统标题栏偏好。填满时适配当前屏幕的可用区域，再次双击可还原窗口。中英文共用这套窗口行为。
+普通主窗口按当前屏幕可用区域限制尺寸和位置。默认 1280×860，通常最小 1000×680。当屏幕容不下该最小值时，缩小最小尺寸并保留两档宽度。双击标题栏空白处（含侧栏上方）平滑填满当前屏幕可用区域，窗口边缘贴齐菜单栏和 Dock 留出的范围。再次双击平滑还原原窗口的尺寸和位置，并按当前屏幕校正。左侧导航常驻。极窄窗口的右侧内容可横向滚动。中英文共用这套行为。
 
 UI 阶段默认 App 装配 `WorkbenchWindowController → WorkbenchShellViewController → Dashboard / ComponentGallery`；`WorkbenchDemoStore` 只持有内存演示状态，不创建 ConnectionSession / DaemonInstaller。PAX_MODE=demo 强制演示；显式 PAX_MODE=live 或非空 PAX_SOCKET 进入同一新工作台的真实装配；动作按 Hello 通告的能力启用，未通告的保持禁用。旧MainWindow/MainSplit/Sidebar已删除。演示目录以产品快照驱动核心Store，OFF选路走命令替身；未交付的运行中演示交互仍隔离在fixture。
 

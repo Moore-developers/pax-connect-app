@@ -30,19 +30,18 @@ struct DashboardLiveState {
 
 extension WorkbenchDashboardViewController {
   func installOverviewActions() {
-    trendCard.onSelectFilter = { [weak self] filter in
+    routeCard.onSwitch = { [weak self] in self?.onShowRoutes?() }
+    usageCard.onSelectFilter = { [weak self] filter in
       guard let self else { return }
       self.live.selectedUsageFilter = filter
       if let store = self.store {
         self.applyDemoOverview(store)
       } else {
-        self.applyUsage(trendOnly: true)
+        self.applyUsage()
       }
     }
-    rankCard.onOpen = { [weak self] in self?.onShowAIUsage?() }
-    for card in [attentionCard, changesCard] {
-      card.onSelect = { [weak self] _ in self?.onShowLogs?() }
-    }
+    usageCard.onOpen = { [weak self] in self?.onShowAIUsage?() }
+    changesCard.onSelect = { [weak self] _ in self?.onShowLogs?() }
     actionCard.onPrimary = { [weak self] in self?.performAction(primary: true) }
     actionCard.onSecondary = { [weak self] in self?.performAction(primary: false) }
   }
@@ -99,7 +98,7 @@ extension WorkbenchDashboardViewController {
       connection.connection != .connected
       ? interfaceCopy.text("dashboard.last_route")
       : running
-        ? interfaceCopy.text("dashboard.current_route")
+        ? interfaceCopy.text(route == nil ? "dashboard.current_route" : "dashboard.connected")
         : interfaceCopy.text("dashboard.selected_route")
     // 切换线路后旧线路的趋势立即撤下：历史只在 id 与配置版本都匹配时使用。
     let history =
@@ -125,37 +124,22 @@ extension WorkbenchDashboardViewController {
     let fresh = telemetry == nil || live.activityInvalidation == telemetry?.invalidationGeneration
     let logsUnavailable = telemetry.map { !($0.available && $0.logViewsAvailable) } ?? false
     let activityReady = telemetry == nil || (fresh && live.activityInvalidation != nil)
-    if problems {
-      onPresentRegion?("problems")
-      let attention = DashboardInsightProjection.attention(
-        feedback: connection.feedback(context: interfaceCopy.context),
-        problems: fresh ? live.problems : [],
-        context: interfaceCopy.context)
-      attentionCard.apply(
-        PaxInsightModel(
-          items: attention,
-          emptyTitle: live.problemsFailed || logsUnavailable
-            ? interfaceCopy.text("dashboard.problem_unavailable")
-            : activityReady && live.problemsLoaded
-              ? interfaceCopy.text("dashboard.no_problems")
-              : interfaceCopy.text("dashboard.problems_loading"),
-          updateFailed: live.problemsFailed)
-      )
-    }
-    if operations {
-      onPresentRegion?("operations")
-      changesCard.apply(
-        PaxInsightModel(
-          items: DashboardInsightProjection.changes(
-            operations: fresh ? live.operations : [], context: interfaceCopy.context),
-          emptyTitle: live.operationsFailed || logsUnavailable
-            ? interfaceCopy.text("dashboard.operations_unavailable")
+    if problems { onPresentRegion?("problems") }
+    if operations { onPresentRegion?("operations") }
+    let issues = DashboardInsightProjection.attention(
+      feedback: connection.feedback(context: interfaceCopy.context),
+      problems: fresh ? live.problems : [], context: interfaceCopy.context)
+    let events = DashboardInsightProjection.changes(
+      operations: fresh ? live.operations : [], context: interfaceCopy.context)
+    let failed = live.problemsFailed || live.operationsFailed || logsUnavailable
+    changesCard.apply(
+      PaxInsightModel(
+        items: issues.prefix(1) + events + issues.dropFirst(),
+        emptyTitle: interfaceCopy.text(
+          failed
+            ? "dashboard.operations_unavailable"
             : activityReady && live.operationsLoaded
-              ? interfaceCopy.text("dashboard.no_operations")
-              : interfaceCopy.text("dashboard.operations_loading"),
-          updateFailed: live.operationsFailed)
-      )
-    }
+              ? "dashboard.no_operations" : "dashboard.operations_loading"), updateFailed: failed))
   }
 
   func applyLiveAction() {
@@ -219,8 +203,8 @@ extension WorkbenchDashboardViewController {
     }
   }
 
-  func applyUsage(trendOnly: Bool = false) {
-    onPresentRegion?(trendOnly ? "usageTrend" : "usage")
+  func applyUsage() {
+    onPresentRegion?("usage")
     let now = Date()
     if live.usageLoaded || live.usageFailed {
       var trend = DashboardUsageProjection.trend(
@@ -231,26 +215,24 @@ extension WorkbenchDashboardViewController {
       if live.usageFailed && live.usageLoaded {
         trend.updated += interfaceCopy.text("dashboard.update_failed")
       }
-      trendCard.apply(trend)
-      if !trendOnly {
-        var rank = DashboardUsageProjection.rank(
-          buckets: live.usageBuckets, state: live.usageState,
-          failed: live.usageFailed && !live.usageLoaded, now: now, context: interfaceCopy.context)
-        if live.usageFailed && live.usageLoaded {
-          rank.caption += interfaceCopy.text("dashboard.update_failed")
-        }
-        rankCard.apply(rank)
+
+      var rank = DashboardUsageProjection.rank(
+        buckets: live.usageBuckets, state: live.usageState,
+        failed: live.usageFailed && !live.usageLoaded, now: now, filter: live.selectedUsageFilter,
+        context: interfaceCopy.context)
+      if live.usageFailed && live.usageLoaded {
+        rank.caption += interfaceCopy.text("dashboard.update_failed")
       }
+      usageCard.apply(trend, rank)
     } else {
       var trend = PaxModelTrendModel()
       trend.empty =
         sources == nil
         ? interfaceCopy.text("dashboard.usage_not_connected")
         : interfaceCopy.text("dashboard.usage_loading")
-      trendCard.apply(trend)
       var rank = PaxModelRankModel()
       rank.empty = trend.empty
-      if !trendOnly { rankCard.apply(rank) }
+      usageCard.apply(trend, rank)
     }
   }
 

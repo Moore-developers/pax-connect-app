@@ -38,15 +38,27 @@ public struct PaxTimeSeriesStyle {
     self.formatTick = formatTick ?? formatValue
   }
 
-  /// Milliseconds on the axis: ticks are plain integers, the single "ms" caption names the unit.
+  /// A duration has at most three significant digits and one fractional digit.
+  public static func latencyText(_ milliseconds: Double?) -> String {
+    guard let milliseconds, milliseconds.isFinite, milliseconds >= 0 else { return "—" }
+    let integer = FloatingPointFormatStyle<Double>.number.grouping(.never).precision(
+      .fractionLength(0))
+    if milliseconds.rounded() < 1000 { return milliseconds.rounded().formatted(integer) + " ms" }
+    let seconds = milliseconds / 1000
+    if seconds.rounded() >= 1000 {
+      return seconds.formatted(.number.notation(.scientific).precision(.fractionLength(0...1)))
+        + " s"
+    }
+    let digits = seconds < 99.95 ? 1 : 0
+    return seconds.formatted(.number.grouping(.never).precision(.fractionLength(0...digits))) + " s"
+  }
+
   public static func latency(
-    title: String = "响应延迟", color: NSColor? = nil, formatValue: @escaping (Double) -> String
+    title: String = "响应延迟", color: NSColor? = nil
   ) -> PaxTimeSeriesStyle {
     .init(
       title: title, colors: [color ?? PaxTheme.DashboardColor.green], names: [title],
-      minimumCeiling: PaxTheme.TimeSeries.latencyMinimumCeiling, unit: "ms",
-      formatTick: { Int($0.rounded()).formatted(.number.grouping(.never)) },
-      formatValue: formatValue)
+      minimumCeiling: PaxTheme.TimeSeries.latencyMinimumCeiling, formatValue: { latencyText($0) })
   }
 
   /// Decimal MB per bucket: ticks are plain MB numbers, `unit` names the bucket width.
@@ -98,9 +110,8 @@ extension PaxTimeSeriesLayout {
         timeText: time, value: nil, isGap: true, note: style.copy.missing)
     }
     if axis == .samples {
-      let milliseconds = total.formatted(.number.grouping(.never).precision(.fractionLength(0...3)))
       return PaxTimeSeriesSelection(
-        timeText: time, value: total, isGap: false, note: time + " · " + milliseconds + " ms")
+        timeText: time, value: total, isGap: false, note: time + " · " + style.formatValue(total))
     }
     let point = points[index]
     var parts = [time]

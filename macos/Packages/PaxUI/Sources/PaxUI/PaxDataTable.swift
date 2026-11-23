@@ -108,6 +108,8 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
   public var onMove: ((String, Int) -> Void)?
   public var canMoveRow: ((String) -> Bool)?
   /// 分组说明与列表结束提示可跨列呈现；普通数据行仍由 cellProvider 构建。
+  public var hoverReadout: PaxHoverReadout?
+  public var rowReadout: ((String) -> NSView?)?
   public var rowContent: ((String) -> NSView?)?
   public var heightForRow: ((String) -> CGFloat)?
   /// Updates an existing custom content view during native cell reuse.
@@ -424,6 +426,14 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
         cornerHeight: PaxTheme.Table.radius, transform: nil)
     }
   }
+  /// Keyboard/context actions open the same optional row readout as pointer hover.
+  public func presentReadout(for id: String) {
+    guard let index = rows.firstIndex(where: { $0.id == id }),
+      let row = table.rowView(atRow: index, makeIfNecessary: false) as? PaxDataRowView
+    else { return }
+    hoverReadout?.close()
+    row.showReadout(focus: true)
+  }
   private func makeCell(tableColumn: NSTableColumn?, row: Int) -> NSView? {
     guard rows.indices.contains(row),
       let index = tableColumn.flatMap({ Int($0.identifier.rawValue) }),
@@ -509,6 +519,15 @@ public final class PaxDataTable: NSView, NSTableViewDelegate {
     view.fill = metrics.background
     view.alternateFill = metrics.alternateBackground
     view.table = table
+    if rows.indices.contains(row), let readout = hoverReadout {
+      view.readout = readout
+      view.readoutContent = { [weak self, weak view] in
+        guard let self, let view else { return nil }
+        let index = self.table.row(for: view)
+        guard let id = self.source?.itemIdentifier(forRow: index) else { return nil }
+        return self.rowReadout?(id)
+      }
+    }
     if rows.indices.contains(row), let content = rowContent?(rows[row].id) {
       content.translatesAutoresizingMaskIntoConstraints = false
       view.addSubview(content)
@@ -646,52 +665,6 @@ final class PaxNativeTable: NSTableView {
     } else {
       super.keyDown(with: event)
     }
-  }
-}
-private final class PaxDataRowView: NSTableRowView {
-  override var interiorBackgroundStyle: NSView.BackgroundStyle { .normal }
-  var current = false
-  var highlightsSelection = false
-  var rowSeparators = true
-  var selectionInset: CGFloat = 0
-  var selectionRail = false
-  var fill = PaxTheme.Table.fill
-  var alternateFill: NSColor?
-  weak var table: NSTableView?
-  override func drawBackground(in dirtyRect: NSRect) {
-    let index = table?.row(for: self) ?? -1
-    let background = index >= 0 && index % 2 == 1 ? alternateFill ?? fill : fill
-    (current ? PaxTheme.Routes.selectionFill : background).setFill()
-    bounds.fill()
-    if current {
-      PaxTheme.Table.rail.setFill()
-      NSRect(x: 0, y: 0, width: PaxTheme.Routes.railWidth, height: bounds.height).fill()
-    }
-    guard rowSeparators else { return }
-    PaxTheme.Table.line.setFill()
-    NSRect(
-      x: 0, y: bounds.height - PaxTheme.Layout.cardBorder, width: bounds.width,
-      height: PaxTheme.Layout.cardBorder
-    ).fill()
-  }
-  override func drawSelection(in dirtyRect: NSRect) {
-    guard highlightsSelection else { return }
-    PaxTheme.Table.selected.setFill()
-    NSBezierPath(
-      roundedRect: bounds.insetBy(dx: selectionInset, dy: selectionInset),
-      xRadius: selectionInset > 0 ? PaxTheme.Table.selectionRadius : 0,
-      yRadius: selectionInset > 0 ? PaxTheme.Table.selectionRadius : 0
-    ).fill()
-    if selectionRail {
-      PaxTheme.Table.rail.setFill()
-      NSRect(x: 0, y: 0, width: PaxTheme.Routes.railWidth, height: bounds.height).fill()
-    }
-    guard rowSeparators else { return }
-    PaxTheme.Table.line.setFill()
-    NSRect(
-      x: 0, y: bounds.height - PaxTheme.Layout.cardBorder, width: bounds.width,
-      height: PaxTheme.Layout.cardBorder
-    ).fill()
   }
 }
 private final class PaxReusableTableCell: NSTableCellView {

@@ -3,7 +3,7 @@
   "locale": "en",
   "catalogVersion": "1",
   "messages": {
-    "settings.mcp.title": "AI Client Access",
+    "settings.mcp.title": "MCP Access",
     "settings.mcp.read": "Read Only",
     "settings.mcp.diagnose": "Read and Diagnose",
     "settings.mcp.permissions_ax": "Permissions for New Clients",

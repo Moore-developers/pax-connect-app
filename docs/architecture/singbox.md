@@ -127,3 +127,5 @@ Geo下载、bundle离线基线和程序额外规则的唯一边界见[来源链]
 Geo基础包新增Google代理规则，先于CN直连；旧双源缓存缺Google时引用固定bundle基线，root只准入三种固定rule_set标签及哈希。下载/优先合同见geo-source-chain.md。
 
 内置广告包沿既有 RoutingPackage 字符串 kind=adblock 投影，Go/Swift 同步；私有匹配 JSON 继续只由 daemon 编译，root 不开放新资源路径。状态与更新合同见[内置广告包](../changes/pax-connect-network-control-plane/adblock.md)。
+
+连接明细查询值TrafficConnectionGroup由controller从日志窄字段聚合，对应proto同名消息及PaxClient/Swift同名模型；规则和出口复用TrafficBasis/TrafficExit，不从分页记录补算。追加TrafficConnectionSource/Address/Result及近期响应，由同一保留池汇总。口径见[目标明细](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。

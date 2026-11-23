@@ -71,7 +71,7 @@ public final class PaxTimeSeriesChart: NSView {
       density == .compact && series.axis == .time ? PaxTimeSeriesCompaction.reduce(series) : series
     return PaxTimeSeriesLayout(
       points: source.points, domain: source.domain, minimumCeiling: style.minimumCeiling,
-      axis: source.axis)
+      axis: source.axis, roundsSampleScale: density == .regular)
   }
 
   private func rebuild() {
@@ -85,7 +85,7 @@ public final class PaxTimeSeriesChart: NSView {
   }
 
   private func updateInset() {
-    guard density == .regular else {
+    guard density == .regular, model.axis != .samples else {
       plotLeft = PaxTheme.Trend.inset
       return
     }
@@ -100,6 +100,11 @@ public final class PaxTimeSeriesChart: NSView {
     switch density {
     case .compact:
       plot = bounds.insetBy(dx: PaxTheme.Trend.inset, dy: PaxTheme.Trend.inset)
+    case .regular where model.axis == .samples:
+      let inset = PaxTheme.Trend.inset
+      plot = NSRect(
+        x: inset, y: PaxTheme.Routes.chartTop, width: max(1, bounds.width - inset * 2),
+        height: max(1, bounds.height - PaxTheme.Routes.chartTop * 2))
     case .regular:
       plot = NSRect(
         x: plotLeft, y: PaxTheme.Routes.chartTop,

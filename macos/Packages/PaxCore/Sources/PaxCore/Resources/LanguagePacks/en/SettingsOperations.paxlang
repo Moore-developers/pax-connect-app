@@ -7,9 +7,17 @@
     "settings.logs.retention": "Retention",
     "settings.logs.retention_detail": "Expired logs and connection details are deleted automatically.",
     "settings.logs.history": "Log History",
-    "settings.logs.history_detail": "Delete saved logs and raw text. New events will continue to be recorded.",
+    "settings.logs.history_detail": "Delete saved logs and raw text. Logging, traffic totals, and current connections continue.",
+    "settings.logs.storage_size": "Storage {size}",
+    "settings.logs.storage_title": "Storage Usage",
+    "settings.logs.storage_network": "Network History",
+    "settings.logs.storage_logs": "Runtime logs",
+    "settings.logs.storage_traffic": "Traffic summaries",
+    "settings.logs.storage_journal": "Capture journal",
+    "settings.logs.storage_ai": "AI and Profiles",
+    "settings.logs.storage_ai_usage": "AI usage",
+    "settings.logs.storage_profile": "Profile activity",
     "settings.logs.clear": "Clear Logs…",
-    "settings.logs.note": "Clearing logs does not affect traffic totals or current connections.",
     "settings.logs.retention_accessibility": "Log Retention",
     "settings.logs.one_hour": "1 hour",
     "settings.logs.twelve_hours": "12 hours",
@@ -18,7 +26,7 @@
     "settings.logs.shorten_detail": "Logs and raw text older than {hours} hours will be permanently deleted. Traffic totals are preserved.",
     "settings.logs.shorten": "Shorten Retention",
     "settings.logs.clear_title": "Clear Local Log History?",
-    "settings.logs.clear_detail": "Events and raw text will be permanently deleted. New events will continue to be recorded.",
+    "settings.logs.clear_detail": "Clears only the runtime log database: events, raw diagnostics, recent connection details, and latency samples. Traffic summaries, the capture journal, AI usage, and Profile activity are retained. This cannot be undone.",
     "settings.logs.clear_confirm": "Clear Logs",
     "settings.measurement.title": "Test Concurrency",
     "settings.measurement.save": "Save Measurement Settings",
@@ -43,7 +51,6 @@
     "settings.measurement.loading": "Loading measurement settings…",
     "settings.measurement.note": "The exit limit applies to queued requests. Latency and download settings apply to the next batch.",
     "settings.measurement.range_error": "Enter whole numbers within the allowed ranges.",
-    "settings.measurement.saved": "Saved. The exit limit applies to queued requests; latency and download settings apply to the next batch.",
-    "settings.measurement.saved_next_batch": "Saved. Applies to the next batch."
+    "settings.measurement.saved": "Saved"
   }
 }

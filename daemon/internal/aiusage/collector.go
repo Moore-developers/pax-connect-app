@@ -77,7 +77,7 @@ func (s *Store) isForeground() bool {
 }
 
 func (s *Store) sources() ([]source, map[string]string) {
-	roots := map[string]string{"claude": filepath.Join(s.options.Home, ".claude"), "codex": filepath.Join(s.options.Home, ".codex"), "dsh": filepath.Join(s.options.Home, ".dsh")}
+	roots := map[string]string{"claude": filepath.Join(s.options.Home, ".claude"), "codex": filepath.Join(s.options.Home, ".codex"), "dsh": filepath.Join(s.options.Home, ".dsh"), antigravity: s.catalogRoot(antigravity)}
 	for k, v := range s.options.Roots {
 		roots[k] = v
 	}
@@ -85,6 +85,9 @@ func (s *Store) sources() ([]source, map[string]string) {
 	issues := map[string]string{}
 	for cli, root := range roots {
 		dirs := []string{"sessions"}
+		if cli == antigravity {
+			dirs = []string{"conversations"}
+		}
 		if cli == "claude" {
 			dirs = []string{"projects"}
 		}
@@ -106,6 +109,9 @@ func (s *Store) sources() ([]source, map[string]string) {
 					return nil
 				}
 				matches := cli == "dsh" && strings.HasSuffix(d.Name(), ".jsonl.zstd") || cli != "dsh" && (strings.HasSuffix(d.Name(), ".jsonl") || cli == "claude" && d.Name() == "sessions-index.json")
+				if cli == antigravity {
+					matches = filepath.Dir(path) == filepath.Join(root, dir) && filepath.Ext(path) == ".db" && antigravitySessionID.MatchString(strings.TrimSuffix(d.Name(), ".db"))
+				}
 				if !matches {
 					return nil
 				}
@@ -152,8 +158,10 @@ func (s *Store) Scan(ctx context.Context) (result error) {
 			s.mutate(func(st *State) { st.CatalogError = "ai_session_catalog_unavailable" })
 		}
 	}()
-	if len(sourceErrors) > 0 {
-		return ErrUnavailable
+	for cli := range sourceErrors {
+		if cli != antigravity {
+			return ErrUnavailable
+		}
 	}
 	s.forgetMissing(files)
 	s.mu.Lock()
@@ -187,6 +195,7 @@ func (s *Store) Scan(ctx context.Context) (result error) {
 	jobs := make(chan source)
 	errs := make(chan error, 4)
 	var workers sync.WaitGroup
+	var sourceErrorsMu sync.Mutex
 	count := min(runtime.NumCPU(), 4)
 	if !initial {
 		count = 1
@@ -197,6 +206,12 @@ func (s *Store) Scan(ctx context.Context) (result error) {
 			defer workers.Done()
 			for f := range jobs {
 				if e := s.ingest(work, f, attr, writes); e != nil {
+					if f.cli == antigravity {
+						sourceErrorsMu.Lock()
+						sourceErrors[antigravity] = "source_unavailable"
+						sourceErrorsMu.Unlock()
+						continue
+					}
 					select {
 					case errs <- e:
 					default:
@@ -300,6 +315,9 @@ func (s *Store) prune(ctx context.Context) error {
 	return nil
 }
 func (s *Store) ingest(ctx context.Context, f source, attr attributor, writes chan<- batch) error {
+	if f.cli == antigravity {
+		return s.ingestAntigravity(ctx, f, attr, writes)
+	}
 	stat, ok := f.info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return ErrUnavailable

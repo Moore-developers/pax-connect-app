@@ -13,9 +13,10 @@ extension AIUsageViewController {
     interfaceCopy.button(addProfile, key: "ai_usage.add_profile")
     let tools = AIUsageLayout.stack([addProfile], vertical: false)
     let count = AIUsageLayout.label("", secondary: true)
+    let profilesTitle = AIUsageLayout.heading("API Profile")
     let header = AIUsageLayout.stack(
       [
-        count,
+        profilesTitle, count,
         NSView(), tools,
       ], vertical: false)
     let update: () -> Void = { [weak self, weak count] in
@@ -30,10 +31,42 @@ extension AIUsageViewController {
     }
     contentRefreshers.append(update)
     update()
-    add(bindingStrip())
-    add(header)
-    add(recordList())
+    let clientsTitle = AIUsageLayout.heading(interfaceCopy.text("ai_usage.client_usage"))
+    interfaceCopy.bind(clientsTitle, key: "ai_usage.client_usage") { $0.stringValue = $1 }
+    let scope = PaxText.label(
+      interfaceCopy.text("ai_workbench.local_scope"), font: PaxTheme.Typography.caption(),
+      secondary: true, wrapping: true)
+    interfaceCopy.bind(scope, key: "ai_workbench.local_scope") { $0.stringValue = $1 }
+    let clientsHeading = AIUsageLayout.stack([clientsTitle, NSView()], vertical: false)
+    clientsHeading.heightAnchor.constraint(equalToConstant: PaxTheme.Table.header).isActive = true
+    let clients = AIUsageLayout.stack([clientsHeading, bindingStrip()])
+    clients.spacing = 0
+    let notices = content.arrangedSubviews
+    let alignHeading = { [weak self] in
+      guard let self else { return }
+      let lastVisible = notices.last { !$0.isHidden }
+      for notice in notices {
+        self.content.setCustomSpacing(
+          notice === lastVisible ? 0 : PaxTheme.Spacing.roomy, after: notice)
+      }
+    }
+    contentRefreshers.append(alignHeading)
+    alignHeading()
+    add(clients)
+    content.setCustomSpacing(PaxTheme.Spacing.regular, after: clients)
+    let profiles = AIUsageLayout.stack([header, recordList(), scope])
+    profiles.spacing = PaxTheme.Spacing.tight
+    add(profiles)
   }
+  var profilePeriodUsageTitle: String {
+    let context = interfaceCopy.context
+    let period = store.period
+    if period == .custom {
+      return context.text(store.isSingleDay ? "ai_workbench.day_usage" : "ai_workbench.range_usage")
+    }
+    return context.text("ai_workbench.period_usage", ["period": period.label(context: context)])
+  }
+
   func showProfileMenu(_ p: AIProfile) {
     profileMenu(p).popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
   }
@@ -46,6 +79,12 @@ extension AIUsageViewController {
     edit.target = self
     edit.representedObject = p.id
     menu.addItem(edit)
+    let logs = NSMenuItem(
+      title: interfaceCopy.text("ai_workbench.profile_logs"),
+      action: #selector(openProfileLogs(_:)), keyEquivalent: "")
+    logs.target = self
+    logs.representedObject = p.id
+    menu.addItem(logs)
     let reprice = NSMenuItem(
       title: self.interfaceCopy.text("ai_usage.reprice"), action: #selector(repriceProfileMenu(_:)),
       keyEquivalent: "")
@@ -73,6 +112,10 @@ extension AIUsageViewController {
     return menu
   }
   @objc private func editProfileMenu(_ sender: NSMenuItem) { openEditor(sender, scrollTo: nil) }
+  @objc private func openProfileLogs(_ sender: NSMenuItem) {
+    guard let id = sender.representedObject as? String else { return }
+    store.perform(.openLogs(model: nil, profile: id))
+  }
   @objc private func repriceProfileMenu(_ sender: NSMenuItem) {
     openEditor(sender, scrollTo: .reprice)
   }

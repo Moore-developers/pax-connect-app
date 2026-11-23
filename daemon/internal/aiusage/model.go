@@ -51,6 +51,7 @@ type Details struct {
 	PriceVersion          string
 	ReasoningEffort       string
 	EffortSource          string
+	NativeContextLimit    *int64 `json:",omitempty"`
 }
 
 // Request contains only usage metadata. Times are UTC Unix milliseconds.

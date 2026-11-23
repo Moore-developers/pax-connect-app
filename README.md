@@ -72,7 +72,7 @@ Unsupported routes, including VLESS over XHTTP and multi-mode gRPC, show an impo
 
 **AI tools**
 
-- Local usage for Claude Code, Codex and DeepSeek Harness, read from their local logs (`~/.claude`, `~/.codex`, `~/.dsh`).
+- Local usage for Claude Code, Codex, DeepSeek Harness, and Antigravity (App conversation SQLite format).
 - Session analysis with parent and subagent breakdown.
 - Profiles applied to Claude Code `settings.json` and Codex `config.toml`.
 

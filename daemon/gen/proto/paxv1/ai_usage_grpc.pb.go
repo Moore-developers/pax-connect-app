@@ -19,12 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AIUsageService_ListAISessions_FullMethodName       = "/pax.v1.AIUsageService/ListAISessions"
-	AIUsageService_QueryAIUsageAnalysis_FullMethodName = "/pax.v1.AIUsageService/QueryAIUsageAnalysis"
-	AIUsageService_QueryAIUsageBuckets_FullMethodName  = "/pax.v1.AIUsageService/QueryAIUsageBuckets"
-	AIUsageService_SummarizeAIUsage_FullMethodName     = "/pax.v1.AIUsageService/SummarizeAIUsage"
-	AIUsageService_ListAIUsageLogs_FullMethodName      = "/pax.v1.AIUsageService/ListAIUsageLogs"
-	AIUsageService_RepriceAIUsage_FullMethodName       = "/pax.v1.AIUsageService/RepriceAIUsage"
+	AIUsageService_ListAISessions_FullMethodName        = "/pax.v1.AIUsageService/ListAISessions"
+	AIUsageService_QueryAIUsageAnalysis_FullMethodName  = "/pax.v1.AIUsageService/QueryAIUsageAnalysis"
+	AIUsageService_QueryAIUsageBuckets_FullMethodName   = "/pax.v1.AIUsageService/QueryAIUsageBuckets"
+	AIUsageService_SummarizeAIUsage_FullMethodName      = "/pax.v1.AIUsageService/SummarizeAIUsage"
+	AIUsageService_ListAntigravityModels_FullMethodName = "/pax.v1.AIUsageService/ListAntigravityModels"
+	AIUsageService_ListAIUsageLogs_FullMethodName       = "/pax.v1.AIUsageService/ListAIUsageLogs"
+	AIUsageService_RepriceAIUsage_FullMethodName        = "/pax.v1.AIUsageService/RepriceAIUsage"
 )
 
 // AIUsageServiceClient is the client API for AIUsageService service.
@@ -37,6 +38,7 @@ type AIUsageServiceClient interface {
 	QueryAIUsageAnalysis(ctx context.Context, in *AIUsageAnalysisQuery, opts ...grpc.CallOption) (*AIUsageAnalysis, error)
 	QueryAIUsageBuckets(ctx context.Context, in *AIUsageQuery, opts ...grpc.CallOption) (*AIUsageBuckets, error)
 	SummarizeAIUsage(ctx context.Context, in *AIUsageSummaryQuery, opts ...grpc.CallOption) (*AIUsageBuckets, error)
+	ListAntigravityModels(ctx context.Context, in *AntigravityModelsQuery, opts ...grpc.CallOption) (*AntigravityModels, error)
 	ListAIUsageLogs(ctx context.Context, in *AIUsageLogQuery, opts ...grpc.CallOption) (*AIUsageLogs, error)
 	// Explicit repricing of stored history at a Profile's current multipliers.
 	RepriceAIUsage(ctx context.Context, in *RepriceAIUsageRequest, opts ...grpc.CallOption) (*RepriceAIUsageResult, error)
@@ -90,6 +92,16 @@ func (c *aIUsageServiceClient) SummarizeAIUsage(ctx context.Context, in *AIUsage
 	return out, nil
 }
 
+func (c *aIUsageServiceClient) ListAntigravityModels(ctx context.Context, in *AntigravityModelsQuery, opts ...grpc.CallOption) (*AntigravityModels, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AntigravityModels)
+	err := c.cc.Invoke(ctx, AIUsageService_ListAntigravityModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aIUsageServiceClient) ListAIUsageLogs(ctx context.Context, in *AIUsageLogQuery, opts ...grpc.CallOption) (*AIUsageLogs, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AIUsageLogs)
@@ -120,6 +132,7 @@ type AIUsageServiceServer interface {
 	QueryAIUsageAnalysis(context.Context, *AIUsageAnalysisQuery) (*AIUsageAnalysis, error)
 	QueryAIUsageBuckets(context.Context, *AIUsageQuery) (*AIUsageBuckets, error)
 	SummarizeAIUsage(context.Context, *AIUsageSummaryQuery) (*AIUsageBuckets, error)
+	ListAntigravityModels(context.Context, *AntigravityModelsQuery) (*AntigravityModels, error)
 	ListAIUsageLogs(context.Context, *AIUsageLogQuery) (*AIUsageLogs, error)
 	// Explicit repricing of stored history at a Profile's current multipliers.
 	RepriceAIUsage(context.Context, *RepriceAIUsageRequest) (*RepriceAIUsageResult, error)
@@ -144,6 +157,9 @@ func (UnimplementedAIUsageServiceServer) QueryAIUsageBuckets(context.Context, *A
 }
 func (UnimplementedAIUsageServiceServer) SummarizeAIUsage(context.Context, *AIUsageSummaryQuery) (*AIUsageBuckets, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SummarizeAIUsage not implemented")
+}
+func (UnimplementedAIUsageServiceServer) ListAntigravityModels(context.Context, *AntigravityModelsQuery) (*AntigravityModels, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAntigravityModels not implemented")
 }
 func (UnimplementedAIUsageServiceServer) ListAIUsageLogs(context.Context, *AIUsageLogQuery) (*AIUsageLogs, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAIUsageLogs not implemented")
@@ -244,6 +260,24 @@ func _AIUsageService_SummarizeAIUsage_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIUsageService_ListAntigravityModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AntigravityModelsQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIUsageServiceServer).ListAntigravityModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIUsageService_ListAntigravityModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIUsageServiceServer).ListAntigravityModels(ctx, req.(*AntigravityModelsQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AIUsageService_ListAIUsageLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AIUsageLogQuery)
 	if err := dec(in); err != nil {
@@ -302,6 +336,10 @@ var AIUsageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SummarizeAIUsage",
 			Handler:    _AIUsageService_SummarizeAIUsage_Handler,
+		},
+		{
+			MethodName: "ListAntigravityModels",
+			Handler:    _AIUsageService_ListAntigravityModels_Handler,
 		},
 		{
 			MethodName: "ListAIUsageLogs",

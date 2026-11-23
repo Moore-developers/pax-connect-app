@@ -3,6 +3,8 @@
   "locale": "en",
   "catalogVersion": "1",
   "messages": {
+    "traffic_details.application_blocked_count": "Blocked {count} times",
+    "traffic_details.application_exit_separator": ", ",
     "traffic_details.1e3d78c3da": "Collection interrupted; state unknown",
     "traffic_details.73ee1fca67": "Establishment failed",
     "traffic_details.d79b1d0e5c": "Ended",

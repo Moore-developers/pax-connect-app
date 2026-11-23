@@ -56,7 +56,7 @@ type catalogPageToken struct {
 }
 
 func validSessionKey(k SessionKey) bool {
-	return (k.CLI == "claude" || k.CLI == "codex" || k.CLI == "dsh") && k.Session != "" && len(k.Session) <= 512
+	return (k.CLI == "claude" || k.CLI == "codex" || k.CLI == "dsh" || k.CLI == antigravity) && k.Session != "" && len(k.Session) <= 512
 }
 
 // ListSessions reads metadata and retained request presence in one SQLite snapshot.

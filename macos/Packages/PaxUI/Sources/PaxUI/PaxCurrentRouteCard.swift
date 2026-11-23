@@ -36,202 +36,188 @@ public struct PaxCurrentRouteModel: Equatable {
   }
 }
 
-/// 最新参照稿：线路身份、双列测量与出口摘要、通栏趋势。
 public final class PaxCurrentRouteCard: PaxCard {
   public struct Copy {
-    public var noSelection = "未选择线路"
-    public var comparison = "较上次测量"
-    public var latencyTitle = "响应延迟"
+    public var noSelection = "未选择线路", comparison = "较上次", latencyTitle = "响应延迟"
     public var latencyCopy = PaxTimeSeriesCopy()
-    public var protocolLabel = "协议"
-    public var exitLabel = "上次测得出口"
-    public var measuredPrefix = "测量时间 "
+    public var protocolLabel = "协议", exitLabel = "上次测得出口", measuredPrefix = "测量时间 "
+    public var region = "出口地区", switchRoute = "切换线路 ›"
     public init() {}
   }
   private var copy = Copy()
   private var model = PaxCurrentRouteModel()
-  public func applyCopy(_ copy: Copy) {
-    self.copy = copy
-    comparison.stringValue = copy.comparison
-    protocolLabel.stringValue = copy.protocolLabel
-    exitLabel.stringValue = copy.exitLabel
-    apply(model)
-  }
-  private let icon = PaxIconTile("antenna.radiowaves.left.and.right")
-  private let heading = PaxText.label("")
+  private let icon = PaxIconTile("wifi")
+  private let title = PaxText.label("")
   private let badge = PaxTag("", style: .currentRoute)
-  private let number = PaxText.label("")
-  private let unit = PaxText.label("ms")
+  private let link = PaxCompactButton("", style: .text, target: nil, action: nil)
+  private let number = PaxText.label(""), unit = PaxText.label("ms", secondary: true)
   private let delta = PaxTag("", style: .currentRoute)
-  private let comparison = PaxText.label("较上次测量")
-  private let measured = PaxText.label("")
-  private let note = PaxText.label("")
-  private let protocolLabel = PaxText.label("协议")
-  private let exitLabel = PaxText.label("上次测得出口")
-  private let proto = PaxText.label("")
-  private let exitIP = PaxText.label("")
-  private let region = PaxText.label("")
-  private let axis = PaxText.label("")
-  private let empty = PaxText.label("")
-  private let dividers = PaxTheme.CurrentRoute.dividers.map { _ in NSView() }
+  private let comparison = PaxText.label("", secondary: true)
+  private let note = PaxText.label("", secondary: true)
+  private let panel = NSView(), line = NSBox()
+  private let splitLine = NSBox(), chartLine = NSBox()
+  private let axis = PaxText.label("", secondary: true)
+  private let emptySurface = NSView()
+  private let emptyIcon = PaxIcon.view("waveform.path.ecg", size: 20)
+  private let emptyMetric = PaxText.label(
+    "", font: PaxTheme.Typography.label(size: 16, weight: .medium))
+  private let chartEmpty = PaxText.label("", secondary: true)
   private let trend = PaxTimeSeriesChart(
     series: .init(
       domain: .init(start: .distantPast, end: .distantPast), points: [], axis: .samples),
-    style: .latency { "\(Int($0.rounded())) ms" }, density: .compact)
+    style: .latency(), density: .compact)
+  private let labels = (0..<3).map { _ in PaxText.label("", secondary: true) }
+  private let values = (0..<3).map { _ in PaxText.label("") }
+  public var onSwitch: (() -> Void)?
   public override var isFlipped: Bool { true }
-
   public init(tooltip: PaxChartTooltipCoordinator? = nil) {
     super.init(insets: NSEdgeInsets(), style: .currentRoute)
+    for view in [panel, icon, title, badge, link, number, unit, delta, comparison, note, line]
+      + labels + values
+    { addSubview(view) }
+    panel.wantsLayer = true
+    panel.layer?.cornerRadius = 12
+    panel.layer?.backgroundColor = PaxTheme.Routes.canvas.cgColor
     for view in [
-      icon, heading, badge, number, unit, delta, comparison, measured, note,
-      protocolLabel, proto, exitLabel, exitIP, region, trend, axis, empty,
-    ] + dividers {
-      addSubview(view)
-    }
-    for label in [
-      heading, number, unit, comparison, measured, note,
-      protocolLabel, proto, exitLabel, exitIP, region, axis, empty,
-    ] {
-      label.textColor = PaxTheme.CurrentRoute.ink
-      label.maximumNumberOfLines = 1
-      label.lineBreakMode = .byTruncatingTail
-    }
-    for label in [protocolLabel, exitLabel, measured, note, empty] {
-      label.textColor = PaxTheme.CurrentRoute.muted
-    }
-    for divider in dividers {
-      divider.wantsLayer = true
-      divider.layer?.backgroundColor = PaxTheme.CurrentRoute.line.cgColor
-    }
-    empty.alignment = .center
+      splitLine, chartLine, axis, emptySurface, emptyIcon, chartEmpty, emptyMetric, trend,
+    ] as [NSView] { addSubview(view) }
+    for divider in [line, splitLine, chartLine] { divider.boxType = .separator }
+    emptySurface.wantsLayer = true
+    emptySurface.layer?.cornerRadius = 12
+    emptySurface.layer?.backgroundColor = PaxTheme.Routes.canvas.cgColor
+    emptyIcon.contentTintColor = PaxTheme.Color.textSecondary
+    addSubview(note, positioned: .above, relativeTo: emptySurface)
+    chartEmpty.alignment = .center
     axis.alignment = .right
-    axis.textColor = PaxTheme.CurrentRoute.muted
-    trend.fadesAreaFill = true
     trend.tooltipCoordinator = tooltip
-    number.setAccessibilityIdentifier("route-quality-rtt")
-    heading.setAccessibilityIdentifier("route-quality-name")
+    trend.fadesAreaFill = true
     trend.setAccessibilityIdentifier("route-quality-trend")
+    link.target = self
+    link.action = #selector(open)
+    number.font = PaxTheme.Typography.metric(size: 42, weight: .medium)
+    title.font = PaxTheme.Typography.label(size: 16, weight: .semibold)
+    for value in values { value.alignment = .right }
+    number.setAccessibilityIdentifier("route-quality-rtt")
+    title.setAccessibilityIdentifier("route-quality-name")
     setAccessibilityIdentifier("current-route-card")
   }
-  @available(*, unavailable)
-  public required init?(coder: NSCoder) { fatalError("代码构建") }
-
+  @available(*, unavailable) public required init?(coder: NSCoder) { fatalError() }
+  @objc private func open() { onSwitch?() }
+  public func applyCopy(_ copy: Copy) {
+    self.copy = copy
+    apply(model)
+  }
   public func apply(_ model: PaxCurrentRouteModel) {
     self.model = model
-    heading.stringValue = model.name.isEmpty ? copy.noSelection : model.name
-    heading.toolTip = heading.stringValue
+    title.stringValue = model.name.isEmpty ? copy.noSelection : model.name
+    title.toolTip = title.stringValue
+    let noRoute = model.name.isEmpty
     badge.text = model.badge
-    proto.stringValue = model.tags.first ?? "—"
-    exitIP.stringValue = model.exitIP ?? "—"
-    region.stringValue = model.exitRegion ?? "—"
-    exitIP.toolTip = exitIP.stringValue
-    region.toolTip = model.exitRegion
+    badge.isHidden = noRoute
+    for view in [panel, splitLine] + labels + values { view.isHidden = noRoute }
+    link.title = copy.switchRoute
     number.stringValue = model.rtt.map { String(Int($0.rounded())) } ?? "—"
-    number.setAccessibilityLabel(number.stringValue + " ms")
-    let color =
-      model.rtt.map {
-        PaxRTTColor.band($0) == 1 ? PaxTheme.CurrentRoute.amber : PaxRTTColor.solid($0)
-      } ?? PaxTheme.CurrentRoute.muted
-    number.textColor = color
-    unit.textColor = color
+    number.textColor = model.rtt.map(PaxRTTColor.solid) ?? .secondaryLabelColor
     delta.text = model.delta ?? "—"
-    comparison.isHidden = model.firstMeasurement
-    measured.stringValue = copy.measuredPrefix + (model.measurementTime ?? "—")
+    comparison.stringValue = [
+      model.firstMeasurement ? nil : copy.comparison, model.measurementTime,
+    ].compactMap { $0 }.joined(separator: " · ")
     note.stringValue = model.note
-    note.toolTip = model.note
-    note.isHidden = model.note.isEmpty
-    let drawable = !model.series.points.isEmpty
-    trend.isHidden = !drawable
-    empty.isHidden = drawable
-    empty.stringValue = model.trendEmpty
-    var style = PaxTimeSeriesStyle.latency(title: copy.latencyTitle, color: color) {
-      "\(Int($0.rounded())) ms"
-    }
+    var style = PaxTimeSeriesStyle.latency(
+      title: copy.latencyTitle, color: number.textColor ?? PaxTheme.CurrentRoute.muted)
     style.copy = copy.latencyCopy
     trend.style = style
     trend.pinKey = model.pinKey
     trend.series = model.series
-    axis.stringValue = drawable ? model.axis.joined(separator: " · ") : ""
+    trend.isHidden = model.series.points.isEmpty
+    chartEmpty.isHidden = !trend.isHidden
+    chartEmpty.stringValue = model.trendEmpty
+    emptySurface.isHidden = !trend.isHidden
+    emptyIcon.isHidden = !trend.isHidden
+    emptyMetric.stringValue = copy.latencyTitle
+    emptyMetric.isHidden = noRoute || model.rtt != nil
+    chartLine.isHidden = noRoute
+    note.alignment = noRoute ? .center : .left
+    chartEmpty.font =
+      noRoute
+      ? PaxTheme.Typography.label(size: 16, weight: .semibold) : PaxTheme.Typography.caption()
+    chartEmpty.textColor = noRoute ? PaxTheme.Color.text : PaxTheme.Color.textSecondary
+    number.isHidden = model.rtt == nil
+    unit.isHidden = number.isHidden
+    comparison.isHidden = model.delta == nil
+    delta.isHidden = comparison.isHidden
+    note.toolTip = model.note
+    axis.stringValue = model.axis.joined(separator: " · ")
+    for (field, text) in zip(labels, [copy.protocolLabel, copy.exitLabel, copy.region]) {
+      field.stringValue = text
+    }
+    for (field, text) in zip(values, [model.tags.first, model.exitIP, model.exitRegion]) {
+      field.stringValue = text ?? "—"
+      field.toolTip = text
+    }
     needsLayout = true
   }
-
   public override func layout() {
     super.layout()
-    let t = PaxTheme.CurrentRoute.self
-    let scale = bounds.width / t.referenceWidth
-    let inset = PaxTheme.Dashboard.inset
-    let content = bounds.insetBy(dx: inset, dy: inset)
-    let horizontalScale = content.width / t.referenceContent.width
-    let verticalScale = content.height / t.referenceContent.height
-    func scaled(_ rect: NSRect) -> NSRect {
-      NSRect(
-        x: inset + (rect.minX - t.referenceContent.minX) * horizontalScale,
-        y: inset + (rect.minY - t.referenceContent.minY) * verticalScale,
-        width: rect.width * horizontalScale, height: rect.height * verticalScale)
+    let p = PaxTheme.Dashboard.inset
+    let w = bounds.width - 2 * p
+    icon.frame = NSRect(x: p, y: p, width: 28, height: 28)
+    link.sizeToFit()
+    link.frame.origin = NSPoint(
+      x: bounds.width - p - link.frame.width, y: p + (28 - link.frame.height) / 2)
+    let tx = icon.frame.maxX + 8
+    badge.frame.size = badge.intrinsicContentSize
+    let tw = min(
+      title.intrinsicContentSize.width, max(1, link.frame.minX - tx - badge.frame.width - 12))
+    let titleHeight = title.intrinsicContentSize.height
+    title.frame = NSRect(
+      x: tx, y: icon.frame.midY - titleHeight / 2, width: tw, height: titleHeight)
+    badge.frame.origin = NSPoint(x: tx + tw + 6, y: p + (28 - badge.frame.height) / 2)
+    line.frame = NSRect(x: p, y: icon.frame.maxY + 10, width: w, height: 1)
+    let center = line.frame.maxY + 65
+    let split = p + w * 0.40
+    panel.frame = NSRect(x: split, y: center - 49, width: bounds.width - p - split, height: 98)
+    splitLine.frame = NSRect(x: split - 10, y: center - 35, width: 1, height: 70)
+    let chartTop = center + 64 + (note.stringValue.isEmpty ? 0 : 14)
+    chartLine.frame = NSRect(x: p, y: chartTop, width: w, height: 1)
+    axis.frame = NSRect(x: p, y: chartTop + 4, width: w, height: 17)
+    trend.frame = NSRect(
+      x: p, y: axis.frame.maxY, width: w, height: max(1, bounds.height - p - axis.frame.maxY))
+    emptySurface.frame = trend.frame
+    emptyIcon.frame = NSRect(
+      x: emptySurface.frame.midX - 10, y: emptySurface.frame.midY - 22, width: 20, height: 20)
+    chartEmpty.frame = NSRect(x: p + 6, y: emptySurface.frame.midY + 3, width: w - 12, height: 20)
+    emptyMetric.frame = NSRect(x: p, y: center - 25, width: split - p - 12, height: 23)
+    for i in labels.indices {
+      let y = center - 36 + CGFloat(i) * 26
+      let lw = min(labels[i].intrinsicContentSize.width, panel.frame.width * 0.46)
+      labels[i].frame = NSRect(x: split + 8, y: y, width: lw, height: 21)
+      values[i].frame = NSRect(
+        x: labels[i].frame.maxX + 3, y: y,
+        width: max(1, panel.frame.maxX - labels[i].frame.maxX - 11), height: 21)
     }
-    let labels: [(NSTextField, (NSRect, CGFloat))] = [
-      (heading, t.heading), (number, t.number), (unit, t.unit),
-      (comparison, t.comparison), (measured, t.measured), (note, t.note),
-      (protocolLabel, t.protocolLabel), (proto, t.proto), (exitLabel, t.exitLabel),
-      (exitIP, t.exitIP), (region, t.region), (axis, t.axis),
-    ]
-    for (label, token) in labels {
-      let size = max(t.minimumFont, token.1 * scale)
-      label.font =
-        label === number
-        ? PaxTheme.Typography.metric(size: size, weight: .bold)
-        : PaxTheme.Typography.label(
-          size: size,
-          weight: label === heading ? .semibold : label === axis ? .regular : .medium)
-      label.frame = scaled(token.0)
-      label.frame.size.height = max(label.frame.height, label.intrinsicContentSize.height)
+    number.frame = NSRect(
+      x: p, y: center - 39, width: min(number.intrinsicContentSize.width, w * 0.40 - 30), height: 54
+    )
+    unit.frame = NSRect(x: number.frame.maxX + 2, y: center - 12, width: 26, height: 20)
+    delta.frame.size = delta.intrinsicContentSize
+    delta.frame.origin = NSPoint(x: p, y: center + 19)
+    comparison.frame = NSRect(
+      x: delta.frame.maxX + 4, y: center + 19, width: max(1, split - delta.frame.maxX - 8),
+      height: 22)
+    note.maximumNumberOfLines = model.rtt == nil ? 2 : 1
+    note.lineBreakMode = .byTruncatingTail
+    note.frame = NSRect(
+      x: p, y: model.rtt == nil ? center + 3 : center + 42, width: split - p - 12,
+      height: model.rtt == nil ? 44 : 20)
+    if model.name.isEmpty {
+      emptySurface.frame = NSRect(
+        x: p, y: line.frame.maxY + 12, width: w,
+        height: max(1, bounds.height - line.frame.maxY - 12 - p))
+      let mid = emptySurface.frame.midY
+      emptyIcon.frame = NSRect(x: emptySurface.frame.midX - 17, y: mid - 40, width: 34, height: 34)
+      chartEmpty.frame = NSRect(x: p + 12, y: mid, width: w - 24, height: 23)
+      note.frame = NSRect(x: p + 12, y: mid + 26, width: w - 24, height: 22)
     }
-    if let font = number.font {
-      let width = (number.stringValue as NSString).size(withAttributes: [.font: font]).width
-      let available = max(1, number.frame.width - PaxTheme.Spacing.tight)
-      if width > available {
-        number.font = PaxTheme.Typography.metric(
-          size: font.pointSize * available / width, weight: .bold)
-      }
-    }
-    // 两种字号沿同一基线摆放，数值位数变化只缩小数字，不遮挡单位。
-    if let numberFont = number.font, let unitFont = unit.font {
-      unit.frame.origin.y = number.frame.minY + numberFont.ascender - unitFont.ascender
-    }
-    icon.frame = NSRect(
-      x: inset, y: inset,
-      width: PaxTheme.Dashboard.icon, height: PaxTheme.Dashboard.icon)
-    heading.frame.origin.x = icon.frame.maxX + PaxTheme.Dashboard.titleGap
-    heading.frame.origin.y = icon.frame.midY - heading.intrinsicContentSize.height / 2
-    heading.frame.size.height = heading.intrinsicContentSize.height
-    for label in [number, measured, note] { label.frame.origin.x = inset }
-    for (tag, token) in [(badge, t.badge), (delta, t.delta)] {
-      tag.font = t.font(max(t.minimumFont, token.1 * scale))
-      tag.frame = scaled(token.0)
-      tag.frame.size.height = max(tag.frame.height, tag.intrinsicContentSize.height)
-      tag.frame.size.width = max(tag.frame.width, tag.intrinsicContentSize.width)
-    }
-    badge.frame.origin.x = content.maxX - badge.frame.width
-    badge.frame.origin.y = icon.frame.midY - badge.frame.height / 2
-    delta.frame.origin.x = inset
-    heading.frame.size.width = max(
-      1, badge.frame.minX - PaxTheme.Spacing.tight - heading.frame.minX)
-    comparison.frame.origin.x = max(
-      comparison.frame.minX, delta.frame.maxX + PaxTheme.Spacing.tight)
-    comparison.frame.size.width = max(
-      1, scaled(t.dividers[1]).minX - PaxTheme.Spacing.tight - comparison.frame.minX)
-    for (view, frame) in zip(dividers, t.dividers) { view.frame = scaled(frame) }
-    for index in [0, 2] {
-      dividers[index].frame.origin.x = inset
-      dividers[index].frame.size.width = content.width
-    }
-    axis.frame.origin.x = inset
-    axis.frame.size.width = content.width
-    let chart = scaled(t.chart)
-    trend.frame = chart.insetBy(dx: -PaxTheme.Trend.inset, dy: -PaxTheme.Trend.inset)
-    empty.font = t.font(max(t.minimumFont, t.measured.1 * scale))
-    empty.frame = NSRect(
-      x: chart.minX, y: chart.midY,
-      width: chart.width, height: empty.intrinsicContentSize.height)
   }
 }

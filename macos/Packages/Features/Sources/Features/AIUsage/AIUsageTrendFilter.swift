@@ -3,6 +3,7 @@ import PaxUI
 
 /// 趋势卡「Profile + 模型」筛选的共用规则：分组键、选项分组与匹配。
 enum AIUsageTrendFilter {
+  static let antigravityKey = "__antigravity__"
   static let harnessKey = "__dsh__"
   static let unassignedKey = "__unassigned__"
 
@@ -12,11 +13,13 @@ enum AIUsageTrendFilter {
   ) -> String {
     if !profileID.isEmpty { return profileID }
     if client == .harness { return harnessKey }
+    if client == .antigravity { return antigravityKey }
     if serviceSource == .unknown || serviceSource == .unrecorded { return unassignedKey }
     return "__source:" + serviceSource.rawValue + "__"
   }
 
   static func fallbackName(_ key: String, context: PresentationContext) -> String? {
+    if key == antigravityKey { return AIClient.antigravity.rawValue }
     if key == harnessKey { return context.text("ai_usage.deepseek_official") }
     if key == unassignedKey { return context.text("usage.source.unknown") }
     if key.hasPrefix("__source:"), key.hasSuffix("__"),

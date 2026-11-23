@@ -35,6 +35,7 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
   /// 收尾（移除遮罩、恢复无障碍与焦点）实际执行的次数；幂等，正常恒为 0 或 1。
   private(set) var cleanupCount = 0
   var isOverlayPresent: Bool { overlay != nil }
+  private var suspendedTooltips: [(NSView, String)] = []
   private var hiddenSiblings: [(NSView, Bool)] = []
   private var oldChildren: [Any]?
   private var oldModal = false
@@ -48,6 +49,7 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
     oldResponder = host.window?.firstResponder
     let overlay = WorkbenchOverlay()
     self.overlay = overlay
+    suspendTooltips(in: host)
     hiddenSiblings = host.subviews.map { ($0, $0.isAccessibilityHidden()) }
     for (sibling, _) in hiddenSiblings { sibling.setAccessibilityHidden(true) }
     let parent = host
@@ -110,6 +112,13 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
     overlay.window?.makeFirstResponder(overlay)
     runOpenAnimation(overlay: overlay, dialog: presented.view)
   }
+  private func suspendTooltips(in view: NSView) {
+    if let text = view.toolTip {
+      suspendedTooltips.append((view, text))
+      view.toolTip = nil
+    }
+    for child in view.subviews { suspendTooltips(in: child) }
+  }
   /// 状态先于动画：焦点、AX 已是终值，这里只动 alpha 与对话框缩放（layer 支撑，绕中心）。
   private func runOpenAnimation(overlay: WorkbenchOverlay, dialog: NSView) {
     let step = PaxMotion.plan(.presentationOpen).primary
@@ -169,7 +178,10 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
     oldChildren = nil
     for (sibling, wasHidden) in hiddenSiblings { sibling.setAccessibilityHidden(wasHidden) }
     hiddenSiblings = []
+    for (view, text) in suspendedTooltips { view.toolTip = text }
+    suspendedTooltips = []
     window?.makeFirstResponder(oldResponder)
+    (dismissed as? WorkbenchModalController)?.onDismissed?()
   }
 }
 @MainActor

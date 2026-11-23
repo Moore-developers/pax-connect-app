@@ -6,10 +6,11 @@ import (
 )
 
 type limitFact struct {
-	row               AnalysisRow
-	agent, agentTitle string
-	root              SessionKey
-	lines             *ModelLimit
+	row                AnalysisRow
+	agent, agentTitle  string
+	root               SessionKey
+	lines              *ModelLimit
+	nativeContextLimit *int64
 }
 
 func (f limitFact) money() LimitMoney {

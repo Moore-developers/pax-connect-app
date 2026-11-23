@@ -1,19 +1,19 @@
 import AppKit
 import PaxUI
 
-/// 概览 v2 的纵向版式：页头、（行动卡）、两列 53.5 / 46.5 的三行卡片、流量分析跨列、关注 | 变化；
+/// 概览纵向版式：页头、可选行动卡、双列线路与流量、通栏模型用量与流量分析、最近变化。
 /// 净内容宽不足 700pt 时全部纵向堆叠。
 final class WorkbenchGrid: NSView {
   var notice = NSView()
   var header = NSView(), action = NSView(), route = NSView(), traffic = NSView(),
-    modelTrend = NSView(), modelRank = NSView(), analysis = NSView(), attention = NSView(),
+    usage = NSView(), analysis = NSView(),
     changes = NSView()
   /// 行动卡是否占位；正常时不占位。
   var showsAction = false
   override var isFlipped: Bool { true }
   func install() {
     for v in [
-      header, notice, action, route, traffic, modelTrend, modelRank, analysis, attention, changes,
+      header, notice, action, route, traffic, usage, analysis, changes,
     ] {
       addSubview(v)
     }
@@ -40,37 +40,29 @@ final class WorkbenchGrid: NSView {
       action.frame = NSRect(x: margin, y: y, width: inner, height: d.actionCardHeight)
       y += d.actionCardHeight + gap
     }
-    let insightHeight = d.insightHeader + d.insightRow * CGFloat(d.insightRows)
     let wide = inner >= PaxTheme.Layout.wideContent
     let left = (inner - gap) * d.leftFraction
     let right = inner - left - gap
-    let rows: [(NSView, NSView, CGFloat)] = [
-      (route, traffic, d.primaryRowHeight), (modelTrend, modelRank, d.modelRowHeight),
-    ]
-    for (first, second, height) in rows {
-      if wide {
-        first.frame = NSRect(x: margin, y: y, width: left, height: height)
-        second.frame = NSRect(x: margin + left + gap, y: y, width: right, height: height)
-        y += height + gap
-      } else {
-        first.frame = NSRect(x: margin, y: y, width: inner, height: height)
-        second.frame = NSRect(x: margin, y: y + height + gap, width: inner, height: height)
-        y += (height + gap) * 2
-      }
+    let firstHeight = d.primaryRowHeight
+    if wide {
+      route.frame = NSRect(x: margin, y: y, width: left, height: firstHeight)
+      traffic.frame = NSRect(x: margin + left + gap, y: y, width: right, height: firstHeight)
+      y += firstHeight + gap
+    } else {
+      route.frame = NSRect(x: margin, y: y, width: inner, height: firstHeight)
+      y += firstHeight + gap
+      traffic.frame = NSRect(x: margin, y: y, width: inner, height: firstHeight)
+      y += firstHeight + gap
     }
+    let usageHeight: CGFloat = wide ? min(350, max(284, inner * 0.295)) : 510
+    usage.frame = NSRect(x: margin, y: y, width: inner, height: usageHeight)
+    y += usageHeight + gap
     let analysisHeight = (analysis as? PaxTrafficAnalysisCard)?.preferredHeight ?? d.headerHeight
     analysis.frame = NSRect(x: margin, y: y, width: inner, height: analysisHeight)
     y += analysisHeight + gap
-    if wide {
-      attention.frame = NSRect(x: margin, y: y, width: left, height: insightHeight)
-      changes.frame = NSRect(x: margin + left + gap, y: y, width: right, height: insightHeight)
-      y += insightHeight + gap
-    } else {
-      attention.frame = NSRect(x: margin, y: y, width: inner, height: insightHeight)
-      changes.frame = NSRect(
-        x: margin, y: y + insightHeight + gap, width: inner, height: insightHeight)
-      y += (insightHeight + gap) * 2
-    }
+    let changesHeight: CGFloat = 34 * 1.3
+    changes.frame = NSRect(x: margin, y: y, width: inner, height: changesHeight)
+    y += changesHeight + gap
     let size = NSSize(width: width, height: y + margin)
     if frame.size != size { setFrameSize(size) }
   }

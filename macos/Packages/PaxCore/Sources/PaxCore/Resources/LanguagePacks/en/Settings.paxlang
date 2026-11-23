@@ -36,7 +36,7 @@
     "settings.read_failed": "Could not load: {detail}",
     "settings.unsaved": "Unsaved Changes",
     "settings.saving": "Saving…",
-    "settings.privacy.saved": "Saved. Takes effect the next time the proxy is enabled.",
+    "settings.privacy.saved": "Saved",
     "settings.save_failed": "Could not save. Your draft is preserved: {detail}"
   }
 }

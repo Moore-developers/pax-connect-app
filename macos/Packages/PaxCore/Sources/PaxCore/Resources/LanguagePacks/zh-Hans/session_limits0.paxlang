@@ -70,6 +70,8 @@
     "session_limits.0c69edbc82": "上限 ",
     "session_limits.0c2315db3a": "未设上限",
     "session_limits.b75bde28d7": "超限 +",
+    "session_limits.antigravity_reference": "官方参考价",
+    "session_limits.native_context_limit": "原生容量 {tokens}",
     "session_limits.080bc981ec": "当前上下文",
     "session_limits.8b01b9b98b": "最近主会话请求",
     "session_limits.26fdd367e9": "暂无每日记录",

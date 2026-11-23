@@ -17,6 +17,10 @@ type historyOwner struct {
 	cancel                    context.CancelFunc
 	done                      chan struct{}
 	lastPublished             time.Time
+	storageDirectory          string
+	storageOwner              uint32
+	storageSampledAt          time.Time
+	sqliteStorage             *pb.SQLiteStorageUsage
 	publishedHistory          *pb.HistoryState
 	publishedSettingsRevision uint64
 	publishedDay              string
@@ -35,9 +39,9 @@ func (c *Controller) now() time.Time {
 }
 
 // ConfigureHistory initializes history publication without opening or mutating the old library.
-func (c *Controller) ConfigureHistory(ctx context.Context, _ string, _ uint32) error {
+func (c *Controller) ConfigureHistory(ctx context.Context, directory string, owner uint32) error {
 	lifetime, cancel := context.WithCancel(ctx)
-	h := &historyOwner{cancel: cancel, done: make(chan struct{})}
+	h := &historyOwner{cancel: cancel, done: make(chan struct{}), storageDirectory: directory, storageOwner: owner}
 	c.history = h
 	// R6: at most one publish per cadence.HistoryPublish. A change signal publishes at once when the
 	// last publish is old enough, otherwise it is merged into the publish due at the spacing; the

@@ -45,13 +45,13 @@ extension WorkbenchTrafficDetail {
   func latencyView(tooltip: PaxChartTooltipCoordinator) -> NSView {
     let series = latencySeries
     let view = PaxTimeLatencyView(
-      series: series, latest: TrafficFormatting.milliseconds(series.points.last?.value),
+      series: series,
       compact: false, tooltip: tooltip, context: responseContext,
       title: aggregate?.summary.kind == "dns"
         ? context.text("traffic_series.d824870c1d") : context.text("traffic_series.abe05d4485"),
       pinKey: "traffic-detail-" + id + "-" + (aggregate?.dnsGroupID ?? "") + "-" + periodTitle
         + "-" + String(lowerBound.timeIntervalSince1970),
-      copy: timeSeriesCopy(context), format: { TrafficFormatting.milliseconds($0) })
+      copy: timeSeriesCopy(context))
     view.heightAnchor.constraint(equalToConstant: view.intrinsicContentSize.height).isActive = true
     return view
   }

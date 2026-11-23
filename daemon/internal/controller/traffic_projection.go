@@ -31,7 +31,12 @@ func (c *Controller) projectTrafficRead(ctx context.Context, r *historyRead, q *
 		return nil
 	}
 	r.upload, r.download = 0, 0
-	groups := stats.AggregateTraffic(values, q.Dimension, q.Direction, "", from, at)
+	var groups []stats.TrafficGroup
+	if q.GroupApplications {
+		groups = stats.AggregateApplications(values, q.Direction, from, at)
+	} else {
+		groups = stats.AggregateTraffic(values, q.Dimension, q.Direction, "", from, at)
+	}
 	if q.Dimension == "application" {
 		groups = append(groups, stats.AggregateTraffic(values, "unknown", q.Direction, "", from, at)...)
 	}
@@ -60,6 +65,9 @@ func (c *Controller) projectTrafficRead(ctx context.Context, r *historyRead, q *
 		}
 		source := config.ClassifyTrafficSource(g.Flows[0].Fact)
 		row.SourceKind, row.SourceLabel, row.SourceEvidence = source.Kind, source.Label, source.Evidence
+		if q.GroupApplications && source.Kind == "app" {
+			row.Id = r.trafficRowID(aggregateIdentity{Dimension: q.Dimension, Object: g.ObjectID})
+		}
 		if q.Dimension == "" || q.Dimension == "domain" || q.Dimension == "ip" {
 			source.Kind = "mixed"
 			row.SourceKind = "mixed"
@@ -85,6 +93,12 @@ func (c *Controller) projectTrafficRead(ctx context.Context, r *historyRead, q *
 				return err
 			}
 			if summarizesTrafficDimension(q.Dimension) && row.Kind != "dns" && row.Kind != "unknown" {
+				if q.GroupApplications && f.Fact.Direction == "blocked" {
+					if f.Fact.StartedAt.After(from) {
+						row.BlockedCount++
+					}
+					row.Connections--
+				}
 				addTrafficExit(row, f.Fact.RouteID, f.Fact.RouteName, f.Fact.Direction, f.Upload, f.Download, 1)
 			}
 			key := f.Fact.Rule + "\x00" + f.Fact.RuleSource
@@ -104,10 +118,10 @@ func (c *Controller) projectTrafficRead(ctx context.Context, r *historyRead, q *
 			if r.bytes > 24<<20 {
 				return errors.New("history_query_busy")
 			}
-			r.flows[g.ID] = append(r.flows[g.ID], v)
+			r.flows[row.Id] = append(r.flows[row.Id], v)
 		}
-		sort.Slice(r.flows[g.ID], func(i, j int) bool {
-			a, b := r.flows[g.ID][i], r.flows[g.ID][j]
+		sort.Slice(r.flows[row.Id], func(i, j int) bool {
+			a, b := r.flows[row.Id][i], r.flows[row.Id][j]
 			if a.StartedAt.AsTime().Equal(b.StartedAt.AsTime()) {
 				return a.Key < b.Key
 			}

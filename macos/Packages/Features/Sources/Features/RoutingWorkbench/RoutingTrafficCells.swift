@@ -15,9 +15,6 @@ enum RoutingTrafficCellKey: Hashable {
     let dns: Bool
     let pinKey: String
 
-    var latest: String {
-      TrafficFormatting.milliseconds(samples.last.map { Double($0.milliseconds) })
-    }
     func title(presentation: PresentationContext) -> String {
       dns
         ? presentation.text("traffic_details.d824870c1d")
@@ -75,8 +72,13 @@ enum RoutingTrafficCellKey: Hashable {
   }
 
   case identity(String, Int, String, String, String)
-  case route([Exit])
-  case rule(Date?, String, String, String, String)
+  case route([Exit], UInt64)
+  case rule(TrafficRoutingMatch?, [Rule])
+
+  struct Rule: Hashable {
+    let rule: String
+    let source: String
+  }
   case latency(Latency)
   case count(Count)
   case transfer(Transfer)
@@ -99,12 +101,10 @@ func routingTrafficCellKey(
       : fact.exits.map {
         RoutingTrafficCellKey.Exit(direction: $0.direction, name: $0.routeName, id: $0.routeID)
       }
-    return .route(exits)
+    return .route(exits, fact.blockedCount)
   case 2:
-    let match = fact.latestMatch
-    return .rule(
-      match?.at, match?.rule ?? "", match?.source ?? "", match?.applicationID ?? "",
-      match?.application ?? "")
+    let rules = dimension == .application ? recordedApplicationRules(fact) : []
+    return .rule(fact.latestMatch, rules)
   case 3:
     // Compact response charts space points by sample order. Cutoff-only updates
     // do not change the curve, its readout or its interaction.
@@ -115,7 +115,8 @@ func routingTrafficCellKey(
   case 4:
     return .count(
       .init(
-        connections: fact.connections, failures: fact.failedCount,
+        connections: fact.connections,
+        failures: fact.failedCount - min(fact.failedCount, fact.blockedCount),
         blocked: fact.failedCount > 0 && fact.direction == "blocked",
         ipv6Limited: fact.failedCount > 0 && TrafficFormatting.isIPv6LimitedPath(fact)))
   case 5:
@@ -138,14 +139,12 @@ func updateRoutingTrafficCell(
       return false
     }
     if view.chart.style.title != latency.title(presentation: context) {
-      var style = PaxTimeSeriesStyle.latency(title: latency.title(presentation: context)) {
-        TrafficFormatting.milliseconds($0)
-      }
+      var style = PaxTimeSeriesStyle.latency(title: latency.title(presentation: context))
       style.copy = timeSeriesCopy(context)
       view.chart.style = style
     }
     view.updateCompact(
-      series: latency.series(in: store.livePage, presentation: context), latest: latency.latest,
+      series: latency.series(in: store.livePage, presentation: context),
       context: latency.context(presentation: context))
   case .count(let count):
     guard let view = cell as? RoutingTrafficCountCell else { return false }
@@ -166,7 +165,7 @@ func makeRoutingTrafficCell(
   _ id: String, column: Int, key: RoutingTrafficCellKey?,
   store: RoutingWorkbenchStore, icons: WorkbenchObjectIcons,
   tooltip: PaxChartTooltipCoordinator, context: PresentationContext = .chinese,
-  onActivate: @escaping () -> Void
+  rowActivationOnly: Bool = false, onActivate: @escaping () -> Void
 ) -> NSView? {
   if id == "load-more", column == 0 {
     return PaxTrafficCells.objectButton(context.text("traffic_details.af90a08fec")) {
@@ -175,6 +174,41 @@ func makeRoutingTrafficCell(
     }
   }
   if case .count(let count) = key { return RoutingTrafficCountCell(count, context: context) }
+  guard
+    let row = store.telemetry == nil
+      ? store.visibleRows.first(where: { $0.id == id }) : store.liveRow(id: id)
+  else { return nil }
+  if column == 5, rowActivationOnly {
+    let transfer: RoutingTrafficCellKey.Transfer
+    if case .transfer(let value) = key {
+      transfer = value
+    } else {
+      transfer = .init(upload: row.upload, download: row.download, known: true)
+    }
+    let label = PaxText.label("")
+    let text = NSMutableAttributedString(
+      string: "↑ " + transfer.uploadText,
+      attributes: [
+        .foregroundColor: PaxTheme.DashboardColor.uploadLabel,
+        .font: PaxTheme.Typography.metric(size: 13),
+      ])
+    text.append(
+      NSAttributedString(
+        string: "   ↓ " + transfer.downloadText,
+        attributes: [
+          .foregroundColor: PaxTheme.DashboardColor.greenLabel,
+          .font: PaxTheme.Typography.metric(size: 13),
+        ]))
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.alignment = .right
+    paragraph.lineBreakMode = .byTruncatingTail
+    text.addAttribute(
+      .paragraphStyle, value: paragraph, range: NSRange(location: 0, length: text.length))
+    label.attributedStringValue = text
+    label.alignment = .right
+    label.toolTip = transfer.note(presentation: context) ?? transfer.readout(presentation: context)
+    return label
+  }
   if case .transfer(let transfer) = key {
     return PaxTrafficCells.transfer(
       uploadText: transfer.uploadText, downloadText: transfer.downloadText,
@@ -182,12 +216,18 @@ func makeRoutingTrafficCell(
       tooltip: transfer.known ? tooltip : nil, note: transfer.note(presentation: context),
       accessibilityReadout: transfer.readout(presentation: context))
   }
-  guard
-    let row = store.telemetry == nil
-      ? store.visibleRows.first(where: { $0.id == id }) : store.liveRow(id: id)
-  else { return nil }
   let fact = store.liveFact(id: id)
-  if column == 0, store.dimension == .system {
+  let dimension = store.dimension
+  if column == 0 && rowActivationOnly {
+    let label = PaxText.label(
+      row.name, font: PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont))
+    label.toolTip = row.name
+    return icons.identityView(
+      kind: dimension == .domain ? .domain : .application, id: fact?.objectID ?? row.name,
+      name: row.name, content: label,
+      size: PaxTheme.Dashboard.nodeTitle)
+  }
+  if column == 0, dimension == .system {
     let name = PaxTrafficCells.objectButton(
       row.name, accessibilityTitle: context.text("traffic.open_connections_ax", ["name": row.name]),
       onActivate: onActivate)
@@ -196,17 +236,36 @@ func makeRoutingTrafficCell(
       content: routingSourceContent(name, title: row.name, subtitle: fact?.sourceLabel ?? ""),
       size: PaxTheme.Logs.directoryCompactIconSize)
   }
+  if dimension == .application {
+    if column == 1 {
+      if let fact { return applicationExitCell(fact, context: context, badges: rowActivationOnly) }
+      return applicationExitCell(row, context: context, badges: rowActivationOnly)
+    }
+    if column == 2, let fact {
+      return applicationRuleCell(fact, context: context, leading: rowActivationOnly)
+    }
+  }
+  if column == 1 && rowActivationOnly {
+    if let fact, !fact.exits.isEmpty {
+      return applicationExitCell(fact, context: context, badges: true)
+    }
+    let direction =
+      fact?.direction
+      ?? (row.direction == .direct ? "direct" : row.direction == .proxy ? "proxy" : "unknown")
+    let title = fact.map { TrafficFormatting.actualConnections($0, context: context) } ?? row.route
+    return overviewExitBadge(title, direction: direction)
+  }
   if column == 2 {
     let title =
       fact.map { TrafficRuleFormatting.latestTitle($0.latestMatch, context: context) }
       ?? row.basisTitle
     let label = PaxText.label(title, font: PaxTheme.Typography.caption())
     let paragraph = NSMutableParagraphStyle()
-    paragraph.alignment = .center
+    paragraph.alignment = rowActivationOnly ? .left : .center
     paragraph.lineSpacing = PaxTheme.Spacing.xs
     label.attributedStringValue = NSAttributedString(
       string: title, attributes: [.paragraphStyle: paragraph])
-    label.alignment = .center
+    label.alignment = rowActivationOnly ? .left : .center
     label.maximumNumberOfLines = 1
     label.lineBreakMode = .byTruncatingTail
     label.toolTip =
@@ -218,8 +277,7 @@ func makeRoutingTrafficCell(
     direction: row.direction.title(context: context),
     route: column == 1
       ? (fact.map { TrafficFormatting.actualConnections($0, context: context) }
-        ?? TrafficFormatting.actualConnection(
-          direction: row.direction.title(context: context), route: row.route, context: context))
+        ?? row.route)
       : "",
     count: row.count,
     upload: column == 5 ? TrafficFormatting.bytes(row.upload) : "",
@@ -234,7 +292,6 @@ func makeRoutingTrafficCell(
   // Only the latency column consumes the time-series projection. Building it for
   // every cell multiplies first-visible row work by the number of columns.
   if case .latency(let latency) = key {
-    display.latencyText = latency.latest
     display.latencyTitle = latency.title(presentation: context)
     display.latencyContext = latency.context(presentation: context)
     display.latencyPinKey = latency.pinKey
@@ -252,7 +309,6 @@ func makeRoutingTrafficCell(
     }
     display.latencySeries = .init(
       domain: .init(start: lower, end: store.now), points: points, axis: .samples)
-    display.latencyText = TrafficFormatting.milliseconds(points.last?.value)
   }
   let kind: WorkbenchObjectIcons.Kind =
     store.dimension == .application ? .application : store.dimension == .domain ? .domain : .ip

@@ -7,6 +7,7 @@ extension PaxTheme {
     public static let compactRowMinimum: CGFloat = 56
     public static let compactRowInset: CGFloat = 12
     public static let compactHorizontalInset: CGFloat = 18
+    public static let storageReadoutWidth: CGFloat = 280
     public static let pickerWidth: CGFloat = 155
     public static let numberWidth: CGFloat = 58
     public static let footerHeight: CGFloat = 74

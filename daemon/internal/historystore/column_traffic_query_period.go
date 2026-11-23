@@ -70,7 +70,8 @@ func (s *ColumnSnapshot) TrafficPeriodGroups(ctx context.Context, f ColumnTraffi
 			args = []any{at.UnixNano(), f.From.UnixNano(), f.Until.UnixNano()}
 		}
 		groupCols := "member_object,read_route_id,read_direction"
-		if f.Dimension == "dns" || f.Dimension == "unknown" {
+		byObject := f.GroupApplications || f.Dimension == "dns" || f.Dimension == "unknown"
+		if byObject {
 			groupCols = "member_object"
 		}
 		query := cte + `SELECT member_object,member_name,member_kind,read_route_id,read_direction,
@@ -83,7 +84,7 @@ coalesce(max(CASE WHEN start_ns>(SELECT from_ns FROM traffic_clock) AND read_est
 max(CASE WHEN start_ns>(SELECT from_ns FROM traffic_clock) AND read_establishment_state='ready' THEN 1 ELSE 0 END),
 max(max(CASE WHEN start_ns>(SELECT from_ns FROM traffic_clock) AND start_ns<=(SELECT until_ns FROM traffic_clock) THEN start_ns ELSE 0 END,
 CASE WHEN read_future=0 AND closed_ns IS NOT NULL AND closed_ns>(SELECT from_ns FROM traffic_clock) AND closed_ns<=(SELECT until_ns FROM traffic_clock) THEN closed_ns ELSE 0 END)),
-min(flow_key),max(pax_traffic_contains(member_name||' '||member_object||' '||application||' '||process||' '||domain||' '||ip||' '||read_route_name||' '||read_rule||' '||read_rule_source,?)),count(DISTINCT read_route_id||char(0)||read_direction)>1 FROM traffic_selected GROUP BY ` + groupCols + ` ORDER BY member_object,read_route_id,read_direction`
+min(flow_key),max(pax_traffic_contains(member_name||' '||member_object||' '||application||' '||process||' '||domain||' '||ip||' '||read_route_name||' '||read_rule||' '||read_rule_source,?)),count(DISTINCT read_route_id||char(0)||read_direction)>1 FROM traffic_selected GROUP BY ` + groupCols + ` ORDER BY ` + groupCols
 		rows, err := q.QueryContext(ctx, query, append(append([]any{}, args...), f.Search)...)
 		if err != nil {
 			return err
@@ -117,7 +118,7 @@ min(flow_key),max(pax_traffic_contains(member_name||' '||member_object||' '||app
 			v := &groups[i]
 			gcte := `WITH traffic_clock AS (SELECT ? AS detail_ns,? AS from_ns,? AS until_ns),traffic_selected AS (SELECT * FROM traffic_period WHERE member_object=?`
 			gargs := []any{at.UnixNano(), f.From.UnixNano(), f.Until.UnixNano(), v.g.Object}
-			if f.Dimension != "dns" && f.Dimension != "unknown" {
+			if !byObject {
 				gcte += " AND read_route_id=? AND read_direction=?"
 				gargs = append(gargs, v.g.Route, v.g.Direction)
 			}
@@ -141,7 +142,7 @@ min(flow_key),max(pax_traffic_contains(member_name||' '||member_object||' '||app
 			v.g.Representative = factsByKey[v.key]
 			gcte := `WITH traffic_clock AS (SELECT ? AS detail_ns,? AS from_ns,? AS until_ns),traffic_selected AS (SELECT * FROM traffic_period WHERE member_object=?`
 			gargs := []any{at.UnixNano(), f.From.UnixNano(), f.Until.UnixNano(), v.g.Object}
-			if f.Dimension != "dns" && f.Dimension != "unknown" {
+			if !byObject {
 				gcte += " AND read_route_id=? AND read_direction=?"
 				gargs = append(gargs, v.g.Route, v.g.Direction)
 			}

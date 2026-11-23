@@ -248,6 +248,14 @@ func decodeTrafficRow(r historystore.TrafficRow) (aggregateBucket, error) {
 			return v, err
 		}
 	}
+	// Older stored decisions lack the outcome fields. The persisted bucket is
+	// already scoped to one actual route and direction.
+	for key, basis := range v.Bases {
+		if basis.LatestMatch != nil && basis.LatestMatch.Direction == "" {
+			basis.LatestMatch.Direction, basis.LatestMatch.RouteName = r.Direction, r.RouteName
+			v.Bases[key] = basis
+		}
+	}
 	trackLegacyMatches(&v)
 	return v, nil
 }

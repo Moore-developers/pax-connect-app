@@ -46,6 +46,14 @@ type TrafficGroup struct {
 
 // AggregateTraffic groups the same flow set without summing across dimensions.
 func AggregateTraffic(flows []FlowWindow, dimension, direction, search string, from, until time.Time) []TrafficGroup {
+	return aggregateTraffic(flows, dimension, direction, search, from, until, false)
+}
+
+func AggregateApplications(flows []FlowWindow, direction string, from, until time.Time) []TrafficGroup {
+	return aggregateTraffic(flows, "application", direction, "", from, until, true)
+}
+
+func aggregateTraffic(flows []FlowWindow, dimension, direction, search string, from, until time.Time, byObject bool) []TrafficGroup {
 	groups := map[string]*TrafficGroup{}
 	for _, v := range flows {
 		f := v.Fact
@@ -55,8 +63,7 @@ func AggregateTraffic(flows []FlowWindow, dimension, direction, search string, f
 		object, name := trafficObject(f, dimension)
 
 		sum := sha256.Sum256([]byte(dimension + "\x00" + object + "\x00" + f.Direction + "\x00" + f.RouteID))
-		switch dimension {
-		case "dns", "unknown":
+		if byObject || dimension == "dns" || dimension == "unknown" {
 			sum = sha256.Sum256([]byte(dimension + "\x00" + object))
 		}
 		key := hex.EncodeToString(sum[:16])

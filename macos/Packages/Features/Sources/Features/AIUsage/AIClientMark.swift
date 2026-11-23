@@ -9,6 +9,7 @@ enum AIClientMark {
     case "claude": "Claude"
     case "codex": "Codex"
     case "dsh": "DeepSeek"
+    case "antigravity": AIClient.antigravity.rawValue
     default: code
     }
   }
@@ -19,6 +20,8 @@ enum AIClientMark {
     case .claude: name = "claude"
     case .codex: name = "codex"
     case .harness: name = "harness"
+    case .antigravity:
+      return NSImage(systemSymbolName: client.symbol, accessibilityDescription: client.rawValue)
     }
     guard
       let url = Bundle.module.url(

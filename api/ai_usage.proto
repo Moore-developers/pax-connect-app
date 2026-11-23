@@ -8,9 +8,31 @@ service AIUsageService {
  rpc QueryAIUsageAnalysis(AIUsageAnalysisQuery) returns (AIUsageAnalysis);
  rpc QueryAIUsageBuckets(AIUsageQuery) returns (AIUsageBuckets);
  rpc SummarizeAIUsage(AIUsageSummaryQuery) returns (AIUsageBuckets);
+ rpc ListAntigravityModels(AntigravityModelsQuery) returns (AntigravityModels);
  rpc ListAIUsageLogs(AIUsageLogQuery) returns (AIUsageLogs);
  // Explicit repricing of stored history at a Profile's current multipliers.
  rpc RepriceAIUsage(RepriceAIUsageRequest) returns (RepriceAIUsageResult);
+}
+message AntigravityModelsQuery {}
+message AntigravityModels {
+ repeated AntigravityModel models = 1;
+ repeated AntigravityRate rates = 2;
+}
+message AntigravityModel {
+ string id = 1;
+ string name = 2;
+ // Official plan IDs: free_plus, pro, ultra, enterprise.
+ repeated string plans = 3;
+ string kind = 4; // model, orchestrator, tool
+ string retired_on = 5; // YYYY-MM-DD
+}
+message AntigravityRate {
+ string model_id = 1;
+ double input = 2;
+ double cache_read = 3;
+ optional double cache_write = 4;
+ double output = 5;
+ string effective_on = 6; // YYYY-MM-DD when published
 }
 // revision 随可见查询结果变化加一；generation 在删除/重建/重新定价时加一（protocol.md §4.2）。
 message AIUsageState {
@@ -203,7 +225,11 @@ message AIUsageLimitRow {
  // Raw catalog title and provenance; title remains the legacy display fallback.
  string title_source=17; string raw_title=18;
 }
-message AIUsageLimitCurrent { int64 context=1; optional int64 limit=2; int32 band=3; }
+message AIUsageLimitCurrent {
+ int64 context=1; optional int64 limit=2; int32 band=3;
+ // Latest request's capacity as recorded by the native client, independent of the cost preset.
+ optional int64 native_context_limit=4;
+}
 message AIUsageLimitSummary {
  AIUsageLimitMoney input=1; AIUsageLimitMoney over_spend=2;
  int64 sessions=3; int64 over_sessions=4; AIUsageLimitCurrent current=5;

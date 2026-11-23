@@ -36,6 +36,7 @@
     "ai_logs.dc02b05846": "; showing previous valid filter results",
     "ai_logs.438595dea5": "\nSource inferred from local configuration and request time; terminal-specific configuration and concurrent old sessions may be unconfirmed.",
     "ai_logs.eca0f77e4a": " total duration",
+    "ai_logs.antigravity_timing": "Antigravity records time to first token and streaming duration. TPS = output tokens ÷ their combined duration.",
     "ai_logs.4336994cca": "From send to completion; — when reliable send time is missing. TPS = output tokens ÷ total duration",
     "ai_logs.126fbf59cf": "Request failed",
     "ai_logs.d56ce478f8": "Failed ",

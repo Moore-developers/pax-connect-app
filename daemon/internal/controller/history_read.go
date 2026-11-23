@@ -18,6 +18,7 @@ type historyRead struct {
 	columnSnapshot                             *historystore.ColumnSnapshot
 	aggregateMemberKeys                        map[string]string
 	aggregateDirection                         string
+	groupApplications                          bool
 	aggregateFlows                             []stats.FlowWindow
 	aggregateFlowRows                          map[string][]stats.FlowWindow
 	ruleMemberBuckets                          map[string]map[int64]bool

@@ -49,7 +49,7 @@ extension RoutingWorkbenchStore {
   func stateMessage(context: PresentationContext) -> String {
     if let telemetry {
       return liveError.isEmpty
-        ? telemetry.qualityMessage(context: context, includePastEviction: false)
+        ? telemetry.qualityMessage(context: context)
         : liveErrorText(context: context)
     }
     if !backendAvailable { return context.text("traffic_details.9fe5b39e0d") }
@@ -98,6 +98,7 @@ extension RoutingWorkbenchStore {
     filter.direction = ["all", "proxy", "direct"][direction.rawValue]
     filter.window = period.window
     filter.search = search
+    filter.groupApplications = dimension == .application
     if more {
       filter.cursor = livePage.nextCursor
       filter.readToken = livePage.readToken

@@ -5,7 +5,8 @@ import PaxUI
 /// 模型用量两卡的 App 端聚合：来自 `QueryAIUsageBuckets` 的小时桶，按本地自然日、模型、CLI 汇总。
 /// 费用 = 桶的 `costs` 合计（1× 官方原价），Token = 输入 + 输出（输入已含缓存），口径同 P07 / 采集 §3。
 enum DashboardUsageProjection {
-  /// 近 7 日（含今日）的汇总输入。
+  static let dayCount = 10
+  /// 近 10 日（含今日）的汇总输入。
   struct Day {
     var start: Date
     var totals: AIUsageTotals
@@ -40,7 +41,9 @@ enum DashboardUsageProjection {
 
   static func days(_ buckets: [AIUsageBucket], now: Date, calendar: Calendar) -> [Day] {
     let today = calendar.startOfDay(for: now)
-    let starts = (-6...0).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
+    let starts = ((1 - dayCount)...0).compactMap {
+      calendar.date(byAdding: .day, value: $0, to: today)
+    }
     var days = starts.map { Day(start: $0, totals: AIUsageTotals()) }
     for bucket in buckets {
       guard let index = days.indices.last(where: { days[$0].start <= bucket.at }),
@@ -98,8 +101,8 @@ enum DashboardUsageProjection {
     _ metric: Metric, days: [Day], facts: [PaxModelTrendModel.Fact], calendar: Calendar,
     context: PresentationContext = .chinese
   ) -> PaxModelTrendModel.Series {
-    let today = days[6]
-    let yesterday = days[5]
+    let today = days[dayCount - 1]
+    let yesterday = days[dayCount - 2]
     var result = PaxModelTrendModel.Series(facts: facts)
     result.days = days.map { day in
       let parts = calendar.dateComponents([.month, .day], from: day.start)
@@ -109,7 +112,8 @@ enum DashboardUsageProjection {
       var sample = PaxChartSample(
         day.start == today.start ? context.text("dashboard_value.today") : label,
         values: day.hasData ? split : [], at: day.start)
-      sample.amountLabel = day.hasData ? metric.whole(number) : "—"
+      sample.amountLabel =
+        day.hasData ? (day.start == today.start ? metric.label(number) : metric.whole(number)) : "—"
       sample.readout =
         day.hasData
         ? [label]
@@ -163,11 +167,12 @@ enum DashboardUsageProjection {
         : context.text("dashboard_value.model_no_requests")
       return model
     }
-    let today = days[6]
-    // 附加行：今日请求数、另一口径的今日值、占比最高的 CLI；今日无请求时写明有数据的天数。
+    let today = days[dayCount - 1]
+    // 附加行保留今日值与有效天数；主力 CLI 以整个十日窗口汇总。
     func facts(other: PaxModelTrendModel.Fact) -> [PaxModelTrendModel.Fact] {
+      let main = topClient(buckets: filtered, day: days[0], calendar: calendar, dayCount: dayCount)
       guard today.hasData else {
-        return [
+        var rows: [PaxModelTrendModel.Fact] = [
           .init(
             context.text("dashboard_value.today_requests"), context.text("dashboard_value.none")),
           .init(
@@ -176,15 +181,17 @@ enum DashboardUsageProjection {
               "dashboard_value.days_with_data", ["count": days.filter(\.hasData).count.formatted()])
           ),
         ]
+        if let main { rows.append(.init(main.name, "\(main.percent)%")) }
+        return rows
       }
       let count =
         AIUsageFormatting.count(today.totals.count) + context.text("dashboard_value.request_suffix")
       var rows = [
         PaxModelTrendModel.Fact(context.text("dashboard_value.today_requests"), count), other,
       ]
-      if let top = topClient(buckets: filtered, day: today, calendar: calendar) {
+      if let top = main {
         rows.append(
-          .init(top.name + context.text("dashboard_value.share_suffix"), "\(top.percent)%"))
+          .init(top.name, "\(top.percent)%"))
       }
       return rows
     }
@@ -201,20 +208,20 @@ enum DashboardUsageProjection {
         other: .init(
           context.text("dashboard_value.today_cost"), money(today.totals.costs.reduce(0, +)))),
       calendar: calendar, context: context)
-    model.currentIndex = 6
+    model.currentIndex = dayCount - 1
     return model
   }
 
-  /// 近 7 日有请求的 Profile 与模型分组；Profile 名取桶里的名称。
+  /// 近 10 日有请求的 Profile 与模型分组；Profile 名取桶里的名称。
   private static func filterGroups(
     _ buckets: [AIUsageBucket], now: Date, calendar: Calendar, selection: PaxUsageFilter,
     context: PresentationContext
   ) -> [PaxUsageFilterGroup] {
     let today = calendar.startOfDay(for: now)
-    guard let start = calendar.date(byAdding: .day, value: -6, to: today),
+    guard let start = calendar.date(byAdding: .day, value: 1 - dayCount, to: today),
       let end = calendar.date(byAdding: .day, value: 1, to: today)
     else { return [] }
-    let rows = buckets.filter { $0.at >= start && $0.at < end }.map {
+    let rows = buckets.filter { $0.at >= start && $0.at < end && !$0.profileID.isEmpty }.map {
       AIUsageTrendFilter.Row(
         profileID: $0.profileID, client: $0.client, profileName: $0.profileName,
         modelID: $0.modelID, count: $0.totals.count, cost: $0.totals.costs.reduce(0, +),
@@ -224,11 +231,13 @@ enum DashboardUsageProjection {
       rows: rows, selection: selection, context: context, profileName: { _ in nil })
   }
 
-  /// 今日占比最高的 CLI：按费用，费用全为 0 时按请求数。
+  /// 指定天数内占比最高的 CLI：按费用，费用全为 0 时按请求数。
   private static func topClient(
-    buckets: [AIUsageBucket], day: Day, calendar: Calendar
+    buckets: [AIUsageBucket], day: Day, calendar: Calendar, dayCount: Int = 1
   ) -> (name: String, percent: Int)? {
-    guard let end = calendar.date(byAdding: .day, value: 1, to: day.start) else { return nil }
+    guard let end = calendar.date(byAdding: .day, value: dayCount, to: day.start) else {
+      return nil
+    }
     var byCost: [AIClient: Double] = [:]
     var byCount: [AIClient: Int] = [:]
     for b in buckets where b.at >= day.start && b.at < end {
@@ -279,16 +288,22 @@ enum DashboardUsageProjection {
 
   static func rank(
     buckets: [AIUsageBucket], state: AIUsageCollectionState?, failed: Bool = false, now: Date,
-    calendar: Calendar = .current, context: PresentationContext = .chinese
+    filter: PaxUsageFilter = .all, calendar: Calendar = .current,
+    context: PresentationContext = .chinese
   ) -> PaxModelRankModel {
     var model = PaxModelRankModel()
     if let text = unavailable(state: state, failed: failed, context: context) {
       model.empty = text
       return model
     }
-    let rows = models(buckets, now: now, calendar: calendar)
+    let filtered = buckets.filter {
+      AIUsageTrendFilter.matches(
+        filter, profileID: $0.profileID, client: $0.client, modelID: $0.modelID,
+        serviceSource: $0.serviceSource)
+    }
+    let rows = models(filtered, now: now, calendar: calendar, dayCount: dayCount)
     guard !rows.isEmpty else {
-      model.empty = context.text("dashboard_value.no_today_requests")
+      model.empty = context.text("dashboard_value.no_week_requests")
       return model
     }
     let totalCost = rows.reduce(0) { $0 + $1.cost }

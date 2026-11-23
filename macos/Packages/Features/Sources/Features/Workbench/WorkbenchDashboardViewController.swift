@@ -54,11 +54,9 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
   let tooltip: PaxChartTooltipCoordinator
   let routeCard: PaxCurrentRouteCard
   let trafficCard: PaxTodayTrafficCard
-  let trendCard: PaxModelTrendCard
-  let rankCard = PaxModelRankCard()
+  let usageCard: PaxOverviewUsageCard
   let analysis: PaxTrafficAnalysisCard
-  let attentionCard = PaxInsightCard(title: "需要关注 · 今日", identifier: "dashboard-attention")
-  let changesCard = PaxInsightCard(title: "最近变化", identifier: "dashboard-changes")
+  let changesCard = PaxActivityStrip(title: "最近变化", identifier: "dashboard-changes")
   let actionCard = PaxActionCard()
   /// 刷新策略的唯一入口（ticket 107）；nil 时只在进页读取一次（演示 / 无 daemon）。
   let pageRefresh: PaxRefresh?
@@ -89,7 +87,7 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
     routeCard = PaxCurrentRouteCard(tooltip: tooltip)
     trafficCard = PaxTodayTrafficCard(
       tooltip: tooltip, axisLabel: DashboardTrafficProjection.axisByteLabel)
-    trendCard = PaxModelTrendCard(tooltip: tooltip)
+    usageCard = PaxOverviewUsageCard(tooltip: tooltip)
     analysisList = RoutingTrafficList(
       store: RoutingWorkbenchStore(session: store, initialPeriod: .day), icons: objectIcons,
       tooltip: tooltip, style: .dashboard)
@@ -113,7 +111,7 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
     routeCard = PaxCurrentRouteCard(tooltip: tooltip)
     trafficCard = PaxTodayTrafficCard(
       tooltip: tooltip, axisLabel: DashboardTrafficProjection.axisByteLabel)
-    trendCard = PaxModelTrendCard(tooltip: tooltip)
+    usageCard = PaxOverviewUsageCard(tooltip: tooltip)
     analysisList = RoutingTrafficList(
       store: telemetry.map { RoutingWorkbenchStore(telemetry: $0) }
         ?? RoutingWorkbenchStore(
@@ -121,6 +119,7 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
       icons: objectIcons, tooltip: tooltip, style: .dashboard)
     analysis = Self.makeAnalysisCard()
     super.init(nibName: nil, bundle: nil)
+    if let telemetry { analysisList.store.bind(telemetry, connection) }
     analysisList.collecting = { [weak connection] in connection?.proxyEnabled == true }
   }
   isolated deinit {
@@ -159,10 +158,8 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
     document.action = actionCard
     document.route = routeCard
     document.traffic = trafficCard
-    document.modelTrend = trendCard
-    document.modelRank = rankCard
+    document.usage = usageCard
     document.analysis = analysis
-    document.attention = attentionCard
     document.changes = changesCard
     document.install()
     mode.onSelect = { [weak self] index in

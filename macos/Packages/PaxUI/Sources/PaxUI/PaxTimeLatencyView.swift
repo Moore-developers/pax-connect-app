@@ -11,27 +11,26 @@ import AppKit
   private let compact: Bool
   private var latest: String
   private var context: String
-  private let format: (Double?) -> String
   private var hover: PaxTimeSeriesSelection?
   /// Compact only: left edge of the visible value text, in this view's coordinates.
   private(set) var metricTextLeft: CGFloat = 0
 
   public init(
-    series: PaxTimeSeries, latest: String, compact: Bool,
+    series: PaxTimeSeries, compact: Bool,
     tooltip: PaxChartTooltipCoordinator? = nil,
     context: String = "最新", title: String = "响应延迟", pinKey: String? = nil,
-    emptyCaption: String? = nil, copy: PaxTimeSeriesCopy = .init(),
-    format: @escaping (Double?) -> String
+    emptyCaption: String? = nil, copy: PaxTimeSeriesCopy = .init()
   ) {
     self.emptyCaption = emptyCaption
     self.compact = compact
+    let latest = PaxTimeSeriesStyle.latencyText(series.points.last?.value)
     self.latest = latest
     self.context = context
-    self.format = format
+    var style = PaxTimeSeriesStyle.latency(title: title)
+    style.copy = copy
     chart = PaxTimeSeriesChart(
-      series: series, style: .latency(title: title) { format($0) },
+      series: series, style: style,
       density: compact ? .compact : .regular)
-    chart.style.copy = copy
     metric = PaxText.label(
       latest,
       font: PaxTheme.Typography.metric(
@@ -48,14 +47,15 @@ import AppKit
       chart.onSelect = { [weak self] selection in
         guard let self else { return }
         self.hover = selection
-        self.metric.stringValue = selection.map { self.format($0.value) } ?? self.latest
+        self.metric.stringValue =
+          selection.map { PaxTimeSeriesStyle.latencyText($0.value) } ?? self.latest
         self.caption.stringValue = selection?.timeText ?? self.defaultCaption
         self.needsLayout = true
       }
     }
     for child in [metric, caption] { addSubview(child) }
     if !chart.isHidden { addSubview(chart) }
-    metric.toolTip = context
+    metric.toolTip = compact || tooltip != nil ? context : nil
     metric.setAccessibilityValue(latest + " · " + context)
     metric.lineBreakMode = .byTruncatingTail
     caption.stringValue = defaultCaption
@@ -64,8 +64,9 @@ import AppKit
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
 
   /// Refresh the existing compact chart for the same object and query.
-  public func updateCompact(series: PaxTimeSeries, latest: String, context: String) {
+  public func updateCompact(series: PaxTimeSeries, context: String) {
     guard compact else { return }
+    let latest = PaxTimeSeriesStyle.latencyText(series.points.last?.value)
     let latestChanged = self.latest != latest
     let contextChanged = self.context != context
     if latestChanged {

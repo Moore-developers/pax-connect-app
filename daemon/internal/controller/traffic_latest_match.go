@@ -11,13 +11,14 @@ import (
 type trafficRoutingMatch struct {
 	At                                                 time.Time
 	Rule, Source, ApplicationID, Application, Identity string
+	Direction, RouteName                               string
 }
 
 func routingMatch(f config.FlowFact) *trafficRoutingMatch {
 	if f.RoutingMatchedAt.IsZero() || f.Key == "" {
 		return nil
 	}
-	return &trafficRoutingMatch{At: f.RoutingMatchedAt, Rule: f.Rule, Source: f.RuleSource, ApplicationID: f.ApplicationID, Application: f.Application, Identity: f.Key}
+	return &trafficRoutingMatch{At: f.RoutingMatchedAt, Rule: f.Rule, Source: f.RuleSource, ApplicationID: f.ApplicationID, Application: f.Application, Identity: f.Key, Direction: f.Direction, RouteName: f.RouteName}
 }
 func newerRoutingMatch(a, b *trafficRoutingMatch) *trafficRoutingMatch {
 	if a == nil {
@@ -60,5 +61,5 @@ func latestRoutingMatch(bases map[string]aggregateBasis, from, until time.Time) 
 	if latest == nil || latest.Rule == "" || !latest.At.After(unknown) {
 		return nil
 	}
-	return &pb.TrafficRoutingMatch{At: timestamppb.New(latest.At), Rule: latest.Rule, Source: latest.Source, ApplicationId: latest.ApplicationID, Application: latest.Application, Identity: latest.Identity}
+	return &pb.TrafficRoutingMatch{At: timestamppb.New(latest.At), Rule: latest.Rule, Source: latest.Source, ApplicationId: latest.ApplicationID, Application: latest.Application, Identity: latest.Identity, Direction: latest.Direction, RouteName: latest.RouteName}
 }

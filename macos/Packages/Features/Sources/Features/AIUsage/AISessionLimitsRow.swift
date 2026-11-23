@@ -29,8 +29,8 @@ import PaxUI
   private let spendLabel = PaxText.tableLabel(
     "", secondary: true, numeric: true, alignment: .center)
   private let band = AILimitBandBar(segments: [])
-  private lazy var bandHost = AILimitReadoutHost(
-    band, readout: readout,
+  private lazy var bandHost = PaxHoverReadoutHost(
+    band, readout: readout.hover,
     content: { [weak self] in
       self.map { AILimitRowReadout.view($0.row, context: $0.context) } ?? NSView()
     })
@@ -181,7 +181,7 @@ import PaxUI
   private func multiple() -> NSView {
     let label = fixed(multipleLabel, Self.multipleWidth)
     label.toolTip = nil
-    return AILimitReadoutHost(label, readout: readout) { [weak self] in
+    return PaxHoverReadoutHost(label, readout: readout.hover) { [weak self] in
       guard let self else { return nil }
       return AILimitReadout.explanation(
         context.text("session_limits.76c84b1e3a"), self.multipleTip())
@@ -191,7 +191,7 @@ import PaxUI
   private func spend() -> NSView {
     let label = fixed(spendLabel, Self.spendWidth)
     label.toolTip = nil
-    return AILimitReadoutHost(label, readout: readout) { [weak self] in
+    return PaxHoverReadoutHost(label, readout: readout.hover) { [weak self] in
       guard let self else { return nil }
       return AILimitReadout.explanation(
         context.text("session_limits.2f7cdaa366"), self.spendTip())

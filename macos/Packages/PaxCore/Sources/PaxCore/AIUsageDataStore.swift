@@ -15,8 +15,10 @@ import PaxClient
   public private(set) var error: String?
   public private(set) var loading = false
   public private(set) var bucketsLoaded = false
+  public private(set) var lifetimeLoaded = false
   public private(set) var invalidationVersion: UInt64 = 0
   public private(set) var logsReading = false
+  public private(set) var antigravityModelsSupported = false
   public private(set) var costRangeSupported = false
   private var observedGeneration: UInt64?
   private var observedRevision: UInt64?
@@ -26,6 +28,7 @@ import PaxClient
   private let querySummary: @Sendable () async throws -> AIUsageBucketPage
   private let queryLogs: @Sendable (Date, Date, AIUsageFilter) async throws -> AIUsageLogPage
   public let sessions: AISessionStore?
+  private let queryAntigravityModels: (@Sendable () async throws -> AntigravityModels)?
   private let runReprice: Reprice?
   public typealias Reprice =
     @Sendable (String, String?, AIRepriceRange, Bool) async throws -> AIRepriceResult
@@ -56,6 +59,7 @@ import PaxClient
           try await connection.aiSessionCatalog(
             from: $0, to: $1, cli: $2, query: $3, pageToken: $4, selected: $5)
         })),
+      antigravityModels: { try await connection.antigravityModels() },
       reprice: {
         try await connection.repriceAIUsage(profileID: $0, model: $1, range: $2, dryRun: $3)
       })
@@ -64,13 +68,20 @@ import PaxClient
     buckets: @escaping @Sendable (Date, Date, String, UInt64?) async throws -> AIUsageBucketPage,
     summary: @escaping @Sendable () async throws -> AIUsageBucketPage,
     logs: @escaping @Sendable (Date, Date, AIUsageFilter) async throws -> AIUsageLogPage,
-    sessions: AISessionStore? = nil, reprice: Reprice? = nil
+    sessions: AISessionStore? = nil,
+    antigravityModels: (@Sendable () async throws -> AntigravityModels)? = nil,
+    reprice: Reprice? = nil
   ) {
     self.sessions = sessions
+    queryAntigravityModels = antigravityModels
     runReprice = reprice
     queryBuckets = buckets
     querySummary = summary
     queryLogs = logs
+  }
+  public func antigravityModels() async throws -> AntigravityModels {
+    guard let queryAntigravityModels else { throw ProductError(code: "ai_usage_unavailable") }
+    return try await queryAntigravityModels()
   }
   /// A changed range / filter is a user operation: the page on screen reads at once.
   public func select(
@@ -150,6 +161,7 @@ import PaxClient
     sessions?.consume(update)
     switch update {
     case .ready(let handshake, let snapshot):
+      antigravityModelsSupported = handshake.capabilities.contains("ai.usage.antigravity_models.v1")
       costRangeSupported = handshake.capabilities.contains("ai.usage.cost_range.v1")
       connected = true
       invalidateData()
@@ -172,6 +184,7 @@ import PaxClient
       }
     case .connecting, .retrying, .failed, .disconnected:
       connected = false
+      antigravityModelsSupported = false
       costRangeSupported = false
       cancelReads()
     }
@@ -226,6 +239,7 @@ import PaxClient
     buckets = []
     previous = []
     lifetime = []
+    lifetimeLoaded = false
     lastUsed = [:]
     logs = nil
     bucketsLoaded = false
@@ -289,6 +303,7 @@ import PaxClient
       buckets = page.buckets
       bucketsLoaded = true
       lifetime = summary.buckets
+      lifetimeLoaded = true
       lastUsed = page.lastUsed
       revision = page.state.revision
       error = nil

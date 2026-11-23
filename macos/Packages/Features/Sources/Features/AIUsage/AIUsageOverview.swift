@@ -78,12 +78,20 @@ extension AIUsageViewController {
       button.bottomAnchor.constraint(equalTo: card.bottomAnchor),
     ])
   }
-  func measureTabs(cost: Bool, onSelect: @escaping (Bool) -> Void) -> PaxTabs {
-    let tabs = PaxTabs(["Token", self.interfaceCopy.text("ai_usage.cost")])
+  func measureTabs(
+    cost: Bool, group: String? = nil, onSelect: @escaping (Bool) -> Void
+  ) -> PaxTabs {
+    func accessibilityLabels(_ costLabel: String) -> [String] {
+      guard let group else { return [] }
+      let name = interfaceCopy.text(group)
+      return [name + " · Token", name + " · " + costLabel]
+    }
+    let costLabel = interfaceCopy.text("ai_usage.cost")
+    let tabs = PaxTabs(["Token", costLabel], accessibilityLabels: accessibilityLabels(costLabel))
     tabs.selectedIndex = cost ? 1 : 0
     tabs.onSelect = { onSelect($0 == 1) }
     interfaceCopy.bind(tabs, key: "ai_usage.cost") { tabs, cost in
-      tabs.apply(labels: ["Token", cost])
+      tabs.apply(labels: ["Token", cost], accessibilityLabels: accessibilityLabels(cost))
     }
     return tabs
   }

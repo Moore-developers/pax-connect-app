@@ -6,6 +6,26 @@ import Testing
 @testable import PaxClient
 
 @Suite("系统流量与延迟覆盖映射") struct TrafficCoverageMappingTests {
+  @Test("SQLite 占用保留五项分解及未知状态")
+  func sqliteStorage() {
+    var wire = Pax_V1_HistoryState()
+    #expect(HistoryState(wire).sqliteStorage == nil)
+    var storage = Pax_V1_SQLiteStorageUsage()
+    storage.logsBytes = 1
+    storage.trafficBytes = 2
+    storage.journalBytes = 4
+    storage.aiUsageBytes = 8
+    storage.profileEventsBytes = 16
+    wire.sqliteStorage = storage
+    let usage = HistoryState(wire).sqliteStorage
+    #expect(usage?.logsBytes == 1)
+    #expect(usage?.trafficBytes == 2)
+    #expect(usage?.journalBytes == 4)
+    #expect(usage?.aiUsageBytes == 8)
+    #expect(usage?.profileEventsBytes == 16)
+    #expect(usage?.totalBytes == 31)
+  }
+
   @Test("工具小计独立映射，items仍带工具供统一分页")
   func processTotals() {
     var page = Pax_V1_TrafficPage()

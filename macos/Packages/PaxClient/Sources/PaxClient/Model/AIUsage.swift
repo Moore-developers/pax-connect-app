@@ -90,7 +90,7 @@ public struct AIUsageRequest: Identifiable, Equatable, Sendable {
   public var serviceSource: AIServiceSource = .unrecorded
   public var hasChannelEstimate: Bool { serviceSource.hasChannelEstimate }
   public var sourceLabel: String {
-    if client == .harness { return "只读" }
+    if client.isUsageOnly { return "只读" }
     return profileName.isEmpty ? serviceSource.label : profileName
   }
   public let id: String

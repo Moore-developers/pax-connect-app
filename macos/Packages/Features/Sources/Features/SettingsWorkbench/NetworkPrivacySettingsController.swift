@@ -11,8 +11,7 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
   private let mode = PaxRoutePicker(style: .toolbar)
   private lazy var webRTC = PaxToggle(
     label: "WebRTC 公网出口限制", showsLabel: false, target: self, action: #selector(changed))
-  private let status = PaxText.label(
-    "正在读取…", font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
+  private var group: PaxPreferenceGroup?
   private var saved: NetworkPrivacy?
   private var task: Task<Void, Never>?
   private lazy var save = PaxRouteButton(
@@ -40,19 +39,8 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
     retry.setAccessibilityIdentifier("privacy-retry")
     mode.target = self
     mode.action = #selector(changed)
-    let note = interfaceCopy.label(
-      "settings.privacy.note",
-      font: PaxTheme.Typography.caption(), secondary: true, wrapping: true)
-    note.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    let actions = NSStackView(views: [note, NSView(), retry, save])
+    let actions = NSStackView(views: [NSView(), retry, save])
     actions.spacing = PaxTheme.Spacing.tight
-    let footer = NSStackView(views: [actions, status])
-    footer.orientation = .vertical
-    footer.alignment = .leading
-    footer.spacing = PaxTheme.Spacing.tight
-    for item in footer.arrangedSubviews {
-      item.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
-    }
     let group = PaxPreferenceGroup(
       title: "", symbol: "lock.shield",
       rows: [
@@ -61,7 +49,8 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
         interfaceCopy.preference(
           title: "settings.privacy.webrtc", detail: "settings.privacy.webrtc_detail",
           control: webRTC),
-      ], style: .compact, footer: footer)
+      ], style: .compact, footer: actions)
+    self.group = group
     view = interfaceCopy.group(group, key: "settings.privacy.title")
     read()
   }
@@ -71,8 +60,9 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
     renderStatus()
   }
   private func renderStatus() {
-    status.stringValue = statusMessage.map { interfaceCopy.text($0.0, $0.1) } ?? ""
-    status.isHidden = status.stringValue.isEmpty
+    let note = interfaceCopy.text("settings.privacy.note")
+    let current = statusMessage.map { interfaceCopy.text($0.0, $0.1) }
+    group?.apply(summary: [current, note].compactMap { $0 }.joined(separator: " · "))
   }
 
   @objc private func read() {

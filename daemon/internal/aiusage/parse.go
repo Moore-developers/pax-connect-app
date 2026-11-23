@@ -101,14 +101,21 @@ func (s *parseState) finish(r *Request) *Request {
 	}
 	// Elapsed is send-to-end seconds from a source-specific rule; without one it stays
 	// unknown. TPS is output / elapsed (end to end, waiting included), as in sub2api.
-	if r.Elapsed != nil && *r.Elapsed > 0 {
-		v := float64(r.Output) / *r.Elapsed
-		r.TPS = &v
-	} else {
-		r.Elapsed = nil
+	if r.Elapsed != nil {
+		r.setElapsed(*r.Elapsed)
 	}
 	return r
 }
+
+func (r *Request) setElapsed(seconds float64) {
+	if seconds > 0 {
+		tps := float64(r.Output) / seconds
+		r.Elapsed, r.TPS = &seconds, &tps
+	} else {
+		r.Elapsed, r.TPS = nil, nil
+	}
+}
+
 func (s *parseState) claude(line []byte) (*Request, bool) {
 	var v struct {
 		Type, Timestamp, SessionID, RequestID string

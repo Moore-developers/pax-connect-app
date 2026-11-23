@@ -139,6 +139,10 @@ extension AIProfileEditor {
     }
     var views: [NSView] = [modelRefreshRow(p)]
     let split = usedModels(p)
+    if let top = store.topModelLine(p, context: interfaceCopy.context) {
+      let period = store.period.label(context: interfaceCopy.context)
+      views.append(AIUsageLayout.label(period + " · " + top, secondary: true))
+    }
     if !split.used.isEmpty { views.append(modelTable(p, split.used)) }
     if !split.unused.isEmpty {
       let table = modelTable(p, split.unused)

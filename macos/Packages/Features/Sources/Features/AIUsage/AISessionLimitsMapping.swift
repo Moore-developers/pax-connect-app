@@ -23,7 +23,11 @@ enum AISessionLimitsMapping {
         input: money(s.input), inputTokens: s.inputTokens, overSpend: money(s.overSpend),
         sessions: s.sessions,
         overSessions: s.overSessions,
-        current: s.current.map { .init(context: $0.context, limit: $0.limit, band: $0.band) },
+        current: s.current.map {
+          .init(
+            context: $0.context, limit: $0.limit, band: $0.band,
+            nativeContextLimit: $0.nativeContextLimit)
+        },
         requests: s.requests, turns: s.turns, turnsComplete: s.turnsComplete,
         subagents: s.subagents, bands: s.bands.map(band),
         multiple: s.multiple.map { .value($0) } ?? .dash,
@@ -121,6 +125,7 @@ enum AISessionLimitsMapping {
           kind: $0.kind == "model"
             ? .model(from: $0.from, to: $0.to) : .effort(from: $0.from, to: $0.to),
           turnMultiple: $0.turnMultiple, afterReadMultiple: $0.afterReadMultiple)
-      }, hasWriteLayer: value.hasWriteLayer)
+      }, hasWriteLayer: value.hasWriteLayer,
+      officialOnly: value.requests.first?.request.key.cli == AIClient.antigravity.code)
   }
 }

@@ -31,6 +31,18 @@ extension DaemonConnection {
       AIProfilesWorkspace(try await service.queryAIProfiles(.init(), options: options))
     }
   }
+  public func aiProfileHistory(_ client: AIClient, before: AIProfileHistoryPage.Cursor?)
+    async throws -> AIProfileHistoryPage
+  {
+    try await aiRPC { service, options in
+      AIProfileHistoryPage(
+        try await service.listAIProfileHistory(
+          .with {
+            $0.cli = client.code
+            if let before { $0.before = before.value }
+          }, options: options))
+    }
+  }
   public func refreshAIProfileModels(_ id: String) async throws -> AIProfilesWorkspace {
     try await aiRPC { service, options in
       AIProfilesWorkspace(

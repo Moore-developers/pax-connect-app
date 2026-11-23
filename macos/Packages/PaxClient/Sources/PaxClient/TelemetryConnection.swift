@@ -88,6 +88,7 @@ extension DaemonConnection {
             $0.readToken = q.readToken
             $0.cursor = q.cursor
             $0.limit = q.limit
+            $0.groupApplications = q.groupApplications
           }, options: options))
     }
   }
@@ -96,6 +97,14 @@ extension DaemonConnection {
       TrafficDetail(
         try await service.queryTrafficDetail(
           .with {
+            $0.groupConnections = q.groupConnections
+            $0.targetGroupID = q.targetGroupID
+            $0.connectionSearch = q.connectionSearch
+            $0.connectionExit = q.connectionExit
+            $0.connectionRule = q.connectionRule
+            $0.relatedID = q.relatedID
+            $0.connectionSort = q.connectionSort
+            $0.connectionAscending = q.connectionAscending
             $0.dnsGroupID = q.dnsGroupID
             $0.rowID = q.rowID
             $0.connectionKey = q.connectionKey

@@ -31,6 +31,7 @@ extension WorkbenchTrafficRecord {
         condition: f.rule, kind: context.text("traffic_details.3fcb97b8dc"),
         source: f.ruleSource),
       port: f.port > 0 && f.port <= UInt16.max ? UInt16(f.port) : nil)
+    rawIP = f.ip
     sourceNote =
       f.sourceKind == "system"
       ? context.text("traffic_details.1f4b662752")

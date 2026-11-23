@@ -51,7 +51,7 @@ func titlePriority(source string) int {
 		return 90
 	case "claude.index.custom":
 		return 80
-	case "codex.database":
+	case "codex.database", "antigravity.database":
 		return 70
 	case "claude.ai", "dsh.title":
 		return 60
@@ -161,6 +161,9 @@ func (s *catalogFileState) parseTitle(cli string, line []byte) {
 func (s *Store) catalogRoot(cli string) string {
 	if root := s.options.Roots[cli]; root != "" {
 		return root
+	}
+	if cli == antigravity {
+		return filepath.Join(s.options.Home, ".gemini", antigravity)
 	}
 	return filepath.Join(s.options.Home, "."+cli)
 }

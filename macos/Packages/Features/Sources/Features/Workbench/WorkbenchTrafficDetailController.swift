@@ -8,6 +8,11 @@ import PaxUI
 final class WorkbenchTrafficDetailController: WorkbenchModalController {
   var snapshot: WorkbenchTrafficDetail
   private let tooltip: PaxChartTooltipCoordinator
+  var ruleStore: RoutingWorkbenchStore?
+  var ruleTask: Task<Void, Never>?
+  private(set) var groupsView: WorkbenchConnectionGroupsView?
+  private var connectionKey = ""
+  private var groupsRelatedID: String?
   private var liveTelemetry: TelemetryStore?
   private let icons: WorkbenchObjectIcons?
   private var session: UInt64 = 0
@@ -17,15 +22,15 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   private let tabs = PaxTabBar(style: .detail)
   private(set) var selectedTab = "overview"
   private(set) var relatedID: String?
-  private var connectionListState = WorkbenchConnectionListState()
-  private(set) var selectedConnectionID: String?
   override var maximumPresentationWidth: CGFloat? { PaxTheme.TrafficDetail.size.width }
 
   init(
     snapshot: WorkbenchTrafficDetail, tooltip: PaxChartTooltipCoordinator,
-    icons: WorkbenchObjectIcons? = nil, onLocate: ((String) -> String?)? = nil
+    icons: WorkbenchObjectIcons? = nil, ruleStore: RoutingWorkbenchStore? = nil,
+    onLocate: ((String) -> String?)? = nil
   ) {
     self.snapshot = snapshot
+    self.ruleStore = ruleStore
     self.icons = icons
     self.tooltip = tooltip
     self.onLocate = onLocate
@@ -35,11 +40,13 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   }
   convenience init(
     detail: TrafficDetail, dimension: TrafficDimension, telemetry: TelemetryStore,
-    tooltip: PaxChartTooltipCoordinator, icons: WorkbenchObjectIcons? = nil
+    tooltip: PaxChartTooltipCoordinator, icons: WorkbenchObjectIcons? = nil,
+    ruleStore: RoutingWorkbenchStore? = nil, connectionKey: String = ""
   ) {
     self.init(
       snapshot: WorkbenchTrafficDetail(detail: detail, dimension: dimension), tooltip: tooltip,
-      icons: icons)
+      icons: icons, ruleStore: ruleStore ?? RoutingWorkbenchStore(telemetry: telemetry))
+    self.connectionKey = connectionKey
     liveTelemetry = telemetry
     session = telemetry.sessionGeneration
   }
@@ -128,6 +135,7 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     withObservationTracking {
       if session != telemetry.sessionGeneration {
         detailTask?.cancel()
+        groupsView?.invalidate()
         pagingUnavailable = self.interfaceCopy.text("interface_detail.701e08d7ec")
         updateActions()
         return
@@ -140,6 +148,7 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
     if let product = error as? ProductError,
       ["history_cursor_expired", "history_expired", "history_cleared"].contains(product.code)
     {
+      groupsView?.invalidate()
       pagingUnavailable = self.interfaceCopy.text("interface_detail.bdd9bd695f")
       updateActions()
     } else {
@@ -150,14 +159,12 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   func selectTab(_ tab: String) {
     selectedTab = tab == "connections" ? tab : "overview"
     relatedID = nil
-    selectedConnectionID = nil
     render()
   }
   func selectRelated(_ id: String) {
     guard snapshot.related.contains(where: { $0.id == id }) else { return }
     selectedTab = "connections"
     relatedID = id
-    selectedConnectionID = nil
     render()
   }
   var visibleConnections: [WorkbenchTrafficRecord] {
@@ -218,7 +225,7 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
       + self.interfaceCopy.text("interface_detail.61167ae318")
     var actions = [button(self.interfaceCopy.text("reprice.finish"), #selector(close))]
     if snapshot.aggregate?.nextCursor.isEmpty == false
-      && (snapshot.aggregate?.summary.kind != "dns" || selectedTab == "connections")
+      && snapshot.aggregate?.summary.kind == "dns" && selectedTab == "connections"
     {
       let more = button(
         snapshot.aggregate?.summary.kind == "dns"
@@ -396,19 +403,22 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
       ])
       pane.add(heading)
     }
-    pane.add(
-      WorkbenchConnectionListView(
-        rows: rows, total: snapshot.retainedConnectionCount,
-        loadedTotal: snapshot.connections.count,
-        state: connectionListState, onChange: { [weak self] in self?.connectionListState = $0 },
-        onSelect: { [weak self] in self?.selectedConnectionID = $0 },
+    if groupsView == nil || groupsRelatedID != relatedID {
+      groupsView?.stop()
+      groupsRelatedID = relatedID
+      groupsView = WorkbenchConnectionGroupsView(
+        detail: snapshot.aggregate, rows: rows, relatedID: relatedID, connectionKey: connectionKey,
+        telemetry: liveTelemetry, context: interfaceCopy.context,
+        ruleActionTitle: { [weak self] _ in
+          self?.interfaceCopy.text("connection_groups.set_rule") ?? ""
+        },
+        onRule: { [weak self] in self?.openConnectionRule($0) },
         onResize: { [weak self] in self?.pane.invalidateContentSize() },
-        context: interfaceCopy.context))
-    pane.add(
-      self.interfaceCopy.label(
-        "action.traffic.latency_note",
-        font: PaxTheme.Typography.caption(), secondary: true, wrapping: true))
+        onError: { [weak self] in self?.showReadError($0) })
+    }
+    if let groupsView { pane.add(groupsView) }
   }
+
   private func makeTable(
     titles: [String], fractions: [CGFloat], count: Int, limit: Int, identifier: String,
     selection: PaxDataTable.Selection = .none, rowHeight: CGFloat? = nil
@@ -471,10 +481,14 @@ final class WorkbenchTrafficDetailController: WorkbenchModalController {
   }
   override func close() {
     tooltip.close()
+    groupsView?.stop()
+    ruleTask?.cancel()
     super.close()
   }
   override func viewWillDisappear() {
     detailTask?.cancel()
+    ruleTask?.cancel()
+    groupsView?.stop()
     super.viewWillDisappear()
     tooltip.close()
   }

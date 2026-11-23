@@ -4,7 +4,6 @@
   "catalogVersion": "1",
   "messages": {
     "history_quality.disconnected": "Disconnected from the backend; the latest records are preserved",
-    "history_quality.previous_eviction": "History incomplete (past storage limit)",
     "history_quality.idle": "Collection is idle; viewing local history",
     "settings.mcp.dsh_desktop": "DSH Desktop",
     "settings.logs.cleared": "Logs cleared. New events will continue to be recorded.",

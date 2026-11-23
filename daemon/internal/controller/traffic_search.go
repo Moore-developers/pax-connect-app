@@ -41,19 +41,20 @@ func searchKey(i aggregateIdentity) trafficSearchKey {
 // trafficSearch only chooses complete displayed objects. Time and direction have
 // already selected contributions before observe; search never selects byte deltas.
 type trafficSearch struct {
-	term    string
-	matched map[trafficSearchKey]bool
+	groupApplications bool
+	term              string
+	matched           map[trafficSearchKey]bool
 }
 
-func newTrafficSearch(term string) *trafficSearch {
-	return &trafficSearch{term: strings.ToLower(term), matched: map[trafficSearchKey]bool{}}
+func newTrafficSearch(term string, groupApplications bool) *trafficSearch {
+	return &trafficSearch{groupApplications: groupApplications, term: strings.ToLower(term), matched: map[trafficSearchKey]bool{}}
 }
 func (s *trafficSearch) observe(i aggregateIdentity) {
 	if s.term == "" {
 		return
 	}
 	if strings.Contains(strings.ToLower(strings.Join([]string{i.Name, i.Object, i.RouteName, i.Search}, " ")), s.term) {
-		s.matched[searchKey(i)] = true
+		s.matched[s.key(i)] = true
 	}
 }
 
@@ -65,13 +66,19 @@ func (s *trafficSearch) observeBucket(v aggregateBucket) {
 	}
 	for _, basis := range v.Bases {
 		if strings.Contains(strings.ToLower(strings.Join([]string{basis.Rule, basis.Source, basis.RouteName}, " ")), s.term) {
-			s.matched[searchKey(v.Identity)] = true
+			s.matched[s.key(v.Identity)] = true
 			return
 		}
 	}
 }
+func (s *trafficSearch) key(i aggregateIdentity) trafficSearchKey {
+	if s.groupApplications && i.Dimension == "application" {
+		i.Route, i.Direction = "", ""
+	}
+	return searchKey(i)
+}
 func (s *trafficSearch) includes(i aggregateIdentity) bool {
-	return s.term == "" || s.matched[searchKey(i)]
+	return s.term == "" || s.matched[s.key(i)]
 }
 func (s *trafficSearch) includesRow(row *pb.TrafficRow, dimension string) bool {
 	if row == nil {

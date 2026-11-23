@@ -18,6 +18,19 @@ public final class PaxToneBadge: NSView {
       needsDisplay = true
     }
   }
+  public var compact = false {
+    didSet {
+      invalidateIntrinsicContentSize()
+      needsDisplay = true
+    }
+  }
+  /// Scale only an existing leading circle glyph; the label retains its own font.
+  public var leadingDotScale: CGFloat = 1 {
+    didSet {
+      invalidateIntrinsicContentSize()
+      needsDisplay = true
+    }
+  }
   public var subdued = false { didSet { needsDisplay = true } }
   public init(_ text: String, tone: Tone = .neutral) {
     self.text = text
@@ -32,11 +45,21 @@ public final class PaxToneBadge: NSView {
   private var font: NSFont {
     PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont, weight: weight)
   }
+  private var displayText: NSMutableAttributedString {
+    let value = NSMutableAttributedString(string: text, attributes: [.font: font])
+    if leadingDotScale != 1 && text.hasPrefix("●") {
+      let small = PaxTheme.Typography.label(size: font.pointSize * leadingDotScale, weight: weight)
+      value.addAttributes(
+        [.font: small, .baselineOffset: (font.capHeight - small.capHeight) / 2],
+        range: NSRange(location: 0, length: 1))
+    }
+    return value
+  }
   public override var intrinsicContentSize: NSSize {
     NSSize(
-      width: ceil((text as NSString).size(withAttributes: [.font: font]).width)
-        + PaxTheme.RTT.badgePadding * 2,
-      height: PaxTheme.Dashboard.badgeHeight)
+      width: ceil(displayText.size().width)
+        + (compact ? 9 : PaxTheme.RTT.badgePadding * 2),
+      height: compact ? 19 : PaxTheme.Dashboard.badgeHeight)
   }
   public override func draw(_ dirtyRect: NSRect) {
     let c = PaxTheme.DashboardColor.self
@@ -50,12 +73,25 @@ public final class PaxToneBadge: NSView {
     effectiveAppearance.performAsCurrentDrawingAppearance {
       (subdued ? fill.withAlphaComponent(fill.alphaComponent * Self.subduedFill) : fill)
         .setFill()
-      NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
-        .fill()
-      let size = (text as NSString).size(withAttributes: [.font: font])
-      (text as NSString).draw(
-        at: NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2),
-        withAttributes: [.font: font, .foregroundColor: ink])
+      NSBezierPath(
+        roundedRect: bounds, xRadius: compact ? 4 : bounds.height / 2,
+        yRadius: compact ? 4 : bounds.height / 2
+      )
+      .fill()
+      let paragraph = NSMutableParagraphStyle()
+      paragraph.alignment = .center
+      paragraph.lineBreakMode = .byTruncatingTail
+      let height = ceil(font.ascender - font.descender)
+      let padding: CGFloat = compact ? 3 : 5
+      let value = displayText
+      value.addAttributes(
+        [.foregroundColor: ink, .paragraphStyle: paragraph],
+        range: NSRange(location: 0, length: value.length))
+      value.draw(
+        in: NSRect(
+          x: padding, y: (bounds.height - height) / 2, width: max(0, bounds.width - 2 * padding),
+          height: height + 1))
+
     }
   }
   public override func viewDidChangeEffectiveAppearance() {

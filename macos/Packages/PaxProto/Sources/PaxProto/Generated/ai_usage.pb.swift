@@ -20,6 +20,85 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+public nonisolated struct Pax_V1_AntigravityModelsQuery: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_AntigravityModels: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var models: [Pax_V1_AntigravityModel] = []
+
+  public var rates: [Pax_V1_AntigravityRate] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_AntigravityModel: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var name: String = String()
+
+  /// Official plan IDs: free_plus, pro, ultra, enterprise.
+  public var plans: [String] = []
+
+  /// model, orchestrator, tool
+  public var kind: String = String()
+
+  /// YYYY-MM-DD
+  public var retiredOn: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_AntigravityRate: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var modelID: String = String()
+
+  public var input: Double = 0
+
+  public var cacheRead: Double = 0
+
+  public var cacheWrite: Double {
+    get {_cacheWrite ?? 0}
+    set {_cacheWrite = newValue}
+  }
+  /// Returns true if `cacheWrite` has been explicitly set.
+  public var hasCacheWrite: Bool {self._cacheWrite != nil}
+  /// Clears the value of `cacheWrite`. Subsequent reads from it will return its default value.
+  public mutating func clearCacheWrite() {self._cacheWrite = nil}
+
+  public var output: Double = 0
+
+  /// YYYY-MM-DD when published
+  public var effectiveOn: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _cacheWrite: Double? = nil
+}
+
 /// revision 随可见查询结果变化加一；generation 在删除/重建/重新定价时加一（protocol.md §4.2）。
 public nonisolated struct Pax_V1_AIUsageState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -1335,11 +1414,22 @@ public nonisolated struct Pax_V1_AIUsageLimitCurrent: Sendable {
 
   public var band: Int32 = 0
 
+  /// Latest request's capacity as recorded by the native client, independent of the cost preset.
+  public var nativeContextLimit: Int64 {
+    get {_nativeContextLimit ?? 0}
+    set {_nativeContextLimit = newValue}
+  }
+  /// Returns true if `nativeContextLimit` has been explicitly set.
+  public var hasNativeContextLimit: Bool {self._nativeContextLimit != nil}
+  /// Clears the value of `nativeContextLimit`. Subsequent reads from it will return its default value.
+  public mutating func clearNativeContextLimit() {self._nativeContextLimit = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _limit: Int64? = nil
+  fileprivate var _nativeContextLimit: Int64? = nil
 }
 
 public nonisolated struct Pax_V1_AIUsageLimitSummary: @unchecked Sendable {
@@ -1710,6 +1800,169 @@ public nonisolated struct Pax_V1_AIUsageSessionLimits: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "pax.v1"
+
+nonisolated extension Pax_V1_AntigravityModelsQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AntigravityModelsQuery"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AntigravityModelsQuery, rhs: Pax_V1_AntigravityModelsQuery) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AntigravityModels: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AntigravityModels"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}models\0\u{1}rates\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.models) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.rates) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.models.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.models, fieldNumber: 1)
+    }
+    if !self.rates.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rates, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AntigravityModels, rhs: Pax_V1_AntigravityModels) -> Bool {
+    if lhs.models != rhs.models {return false}
+    if lhs.rates != rhs.rates {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AntigravityModel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AntigravityModel"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}plans\0\u{1}kind\0\u{3}retired_on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.plans) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.retiredOn) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.plans.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.plans, fieldNumber: 3)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 4)
+    }
+    if !self.retiredOn.isEmpty {
+      try visitor.visitSingularStringField(value: self.retiredOn, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AntigravityModel, rhs: Pax_V1_AntigravityModel) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.plans != rhs.plans {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.retiredOn != rhs.retiredOn {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_AntigravityRate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AntigravityRate"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}model_id\0\u{1}input\0\u{3}cache_read\0\u{3}cache_write\0\u{1}output\0\u{3}effective_on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.modelID) }()
+      case 2: try { try decoder.decodeSingularDoubleField(value: &self.input) }()
+      case 3: try { try decoder.decodeSingularDoubleField(value: &self.cacheRead) }()
+      case 4: try { try decoder.decodeSingularDoubleField(value: &self._cacheWrite) }()
+      case 5: try { try decoder.decodeSingularDoubleField(value: &self.output) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.effectiveOn) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.modelID.isEmpty {
+      try visitor.visitSingularStringField(value: self.modelID, fieldNumber: 1)
+    }
+    if self.input.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.input, fieldNumber: 2)
+    }
+    if self.cacheRead.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.cacheRead, fieldNumber: 3)
+    }
+    try { if let v = self._cacheWrite {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 4)
+    } }()
+    if self.output.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.output, fieldNumber: 5)
+    }
+    if !self.effectiveOn.isEmpty {
+      try visitor.visitSingularStringField(value: self.effectiveOn, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_AntigravityRate, rhs: Pax_V1_AntigravityRate) -> Bool {
+    if lhs.modelID != rhs.modelID {return false}
+    if lhs.input != rhs.input {return false}
+    if lhs.cacheRead != rhs.cacheRead {return false}
+    if lhs._cacheWrite != rhs._cacheWrite {return false}
+    if lhs.output != rhs.output {return false}
+    if lhs.effectiveOn != rhs.effectiveOn {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
 
 nonisolated extension Pax_V1_AIUsageState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageState"
@@ -3996,7 +4249,7 @@ nonisolated extension Pax_V1_AIUsageLimitRow: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pax_V1_AIUsageLimitCurrent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AIUsageLimitCurrent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}context\0\u{1}limit\0\u{1}band\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}context\0\u{1}limit\0\u{1}band\0\u{3}native_context_limit\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4007,6 +4260,7 @@ nonisolated extension Pax_V1_AIUsageLimitCurrent: SwiftProtobuf.Message, SwiftPr
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.context) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self._limit) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.band) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self._nativeContextLimit) }()
       default: break
       }
     }
@@ -4026,6 +4280,9 @@ nonisolated extension Pax_V1_AIUsageLimitCurrent: SwiftProtobuf.Message, SwiftPr
     if self.band != 0 {
       try visitor.visitSingularInt32Field(value: self.band, fieldNumber: 3)
     }
+    try { if let v = self._nativeContextLimit {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4033,6 +4290,7 @@ nonisolated extension Pax_V1_AIUsageLimitCurrent: SwiftProtobuf.Message, SwiftPr
     if lhs.context != rhs.context {return false}
     if lhs._limit != rhs._limit {return false}
     if lhs.band != rhs.band {return false}
+    if lhs._nativeContextLimit != rhs._nativeContextLimit {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

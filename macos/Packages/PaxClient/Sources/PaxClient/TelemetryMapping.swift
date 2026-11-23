@@ -11,6 +11,13 @@ extension HistoryState {
     logHeadSequence = v.logHeadSequence
     logDeletionGeneration = v.logDeletionGeneration
     logRemovalBeforeMs = v.logRemovalBeforeMs
+    if v.hasSqliteStorage {
+      let usage = v.sqliteStorage
+      sqliteStorage = SQLiteStorageUsage(
+        logsBytes: usage.logsBytes, trafficBytes: usage.trafficBytes,
+        journalBytes: usage.journalBytes, aiUsageBytes: usage.aiUsageBytes,
+        profileEventsBytes: usage.profileEventsBytes)
+    }
     trafficDeletionGeneration = v.trafficDeletionGeneration
     routeHistoryRevision = v.routeHistoryRevision
     journalGeneration = v.journalGeneration
@@ -135,7 +142,8 @@ extension TrafficRoutingMatch {
   init(_ v: Pax_V1_TrafficRoutingMatch) {
     self.init(
       at: v.at.date, rule: v.rule, source: v.source, applicationID: v.applicationID,
-      application: v.application, identity: v.identity)
+      application: v.application, identity: v.identity, direction: v.direction,
+      routeName: v.routeName)
   }
 }
 extension TrafficRow {
@@ -161,6 +169,7 @@ extension TrafficRow {
     validLatencyCount = v.validLatencyCount
     missingLatencyCount = v.missingLatencyCount
     failedCount = v.failedCount
+    blockedCount = v.blockedCount
     earlierCount = v.earlierCount
     latencySampled = v.latencySampled
     id = v.id
@@ -234,6 +243,7 @@ extension TrafficBasis {
     self.init()
     target = v.target
     routeName = v.routeName
+    direction = v.direction
     rule = v.rule
     source = v.source
     connections = v.connections
@@ -242,6 +252,11 @@ extension TrafficBasis {
 extension TrafficDetail {
   init(_ v: Pax_V1_TrafficDetail) {
     self.init()
+    connectionGroups = v.connectionGroups.map(TrafficConnectionGroup.init)
+    targetGroupTotal = v.targetGroupTotal
+    filteredConnectionCount = v.filteredConnectionCount
+    connectionRules = v.connectionRules.map(TrafficBasis.init)
+    connectionExits = v.connectionExits.map(TrafficExit.init)
     retainedConnectionCount = v.retainedConnectionCount
     recentResponses = v.recentResponses.map {
       TrafficResponsePoint(
@@ -412,5 +427,58 @@ extension DNSTrafficGroup {
     lastAt = v.lastAt.date
     latencyKnown = v.latencyKnown
     latencyMS = v.latencyMs
+  }
+}
+
+extension TrafficConnectionGroup {
+  init(_ value: Pax_V1_TrafficConnectionGroup) {
+    self.init()
+    id = value.id
+    target = value.target
+    kind = value.kind
+    connections = value.connections
+    upload = value.upload
+    download = value.download
+    bytesState = value.bytesState
+    lastAt = value.lastAt.date
+    rules = value.rules.map(TrafficBasis.init)
+    exits = value.exits.map(TrafficExit.init)
+    recentResponses = value.recentResponses.map {
+      TrafficResponsePoint(
+        connectionKey: $0.connectionKey, startedAt: $0.startedAt.date, milliseconds: $0.milliseconds
+      )
+    }
+    validLatencyCount = value.validLatencyCount
+    sources = value.sources.map(TrafficConnectionSource.init)
+    addresses = value.addresses.map(TrafficConnectionAddress.init)
+    results = value.results.map(TrafficConnectionResult.init)
+  }
+}
+
+extension TrafficConnectionSource {
+  init(_ value: Pax_V1_TrafficConnectionSource) {
+    self.init()
+    applicationID = value.applicationID
+    application = value.application
+    process = value.process
+    kind = value.kind
+    connections = value.connections
+  }
+}
+extension TrafficConnectionAddress {
+  init(_ value: Pax_V1_TrafficConnectionAddress) {
+    self.init()
+    ip = value.ip
+    port = value.port
+    transport = value.transport
+    connections = value.connections
+  }
+}
+extension TrafficConnectionResult {
+  init(_ value: Pax_V1_TrafficConnectionResult) {
+    self.init()
+    state = value.state
+    failure = value.failure
+    connections = value.connections
   }
 }

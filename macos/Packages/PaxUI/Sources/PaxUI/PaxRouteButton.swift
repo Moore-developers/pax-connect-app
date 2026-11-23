@@ -17,6 +17,7 @@ public final class PaxRouteButton: NSButton {
       needsDisplay = true
     }
   }
+  public var isCapsule = false { didSet { needsDisplay = true } }
   /// Shows activity before the title while keeping cancellation buttons enabled.
   public var isLoading = false {
     didSet {
@@ -94,9 +95,9 @@ public final class PaxRouteButton: NSButton {
   }
   public override func draw(_ dirtyRect: NSRect) {
     let c = PaxTheme.Routes.self
-    let shape = NSBezierPath(
-      roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: c.controlRadius,
-      yRadius: c.controlRadius)
+    let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
+    let radius = isCapsule ? rect.height / 2 : c.controlRadius
+    let shape = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
     if style != .quiet {
       NSGraphicsContext.saveGraphicsState()
       let shadow = NSShadow()

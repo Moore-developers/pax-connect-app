@@ -7,7 +7,7 @@ import PaxUI
 @MainActor
 final class MeasurementSettingsViewController: NSViewController, InterfaceLanguageConsumer {
   let interfaceCopy = InterfaceCopyBindings()
-  private var feedback: (String, [String: String]) = ("settings.measurement.loading", [:])
+  private var feedback: (String, [String: String])?
   private let routes: RoutesStore
   private var baseline: MeasurementPreferences?
   private var task: Task<Void, Never>?
@@ -17,7 +17,7 @@ final class MeasurementSettingsViewController: NSViewController, InterfaceLangua
   private let latency = PaxRouteField("32")
   private let exit = PaxRouteField("8")
   private let download = PaxRouteField("8")
-  private let status = NSTextField(wrappingLabelWithString: "正在读取测量配置…")
+  private var group: PaxPreferenceGroup?
   private lazy var saveButton = PaxRouteButton(
     "保存测量配置", style: .primary, target: self, action: #selector(savePreferences))
   private lazy var resetButton = PaxRouteButton(
@@ -85,15 +85,12 @@ final class MeasurementSettingsViewController: NSViewController, InterfaceLangua
     resetButton.setAccessibilityIdentifier("measurement-reset")
     retryButton.setAccessibilityIdentifier("measurement-retry")
     retryButton.isHidden = true
-    status.font = PaxTheme.Typography.caption()
-    status.textColor = PaxTheme.Color.textSecondary
-    status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    let actions = NSStackView(views: [status, retryButton, NSView(), resetButton, saveButton])
+    let actions = NSStackView(views: [retryButton, NSView(), resetButton, saveButton])
     actions.spacing = PaxTheme.Spacing.tight
-    view = interfaceCopy.group(
-      PaxPreferenceGroup(
-        title: "", symbol: "speedometer", rows: rows, style: .compact, footer: actions),
-      key: "settings.measurement.title")
+    let group = PaxPreferenceGroup(
+      title: "", symbol: "speedometer", rows: rows, style: .compact, footer: actions)
+    self.group = group
+    view = interfaceCopy.group(group, key: "settings.measurement.title")
     reloadPreferences()
     observe()
   }
@@ -108,7 +105,11 @@ final class MeasurementSettingsViewController: NSViewController, InterfaceLangua
     feedback = (key, parameters)
     renderFeedback()
   }
-  private func renderFeedback() { status.stringValue = interfaceCopy.text(feedback.0, feedback.1) }
+  private func renderFeedback() {
+    let note = interfaceCopy.text("settings.measurement.note")
+    let current = feedback.map { interfaceCopy.text($0.0, $0.1) }
+    group?.apply(summary: [current, note].compactMap { $0 }.joined(separator: " · "))
+  }
   @objc private func modeChanged() { updateAvailability() }
   private func updateAvailability() {
     let available = routes.connected && baseline != nil && task == nil
@@ -126,12 +127,14 @@ final class MeasurementSettingsViewController: NSViewController, InterfaceLangua
   @objc private func reloadPreferences() {
     guard task == nil else { return }
     retryButton.isHidden = true
+    showFeedback("settings.measurement.loading")
     task = Task { [weak self, routes] in
       do {
         if case .preferences(let value) = try await routes.measurement(.preferences) {
           self?.baseline = value
           self?.render(value)
-          self?.showFeedback("settings.measurement.note")
+          self?.feedback = nil
+          self?.renderFeedback()
         }
       } catch {
         self?.showFeedback(
@@ -177,14 +180,13 @@ final class MeasurementSettingsViewController: NSViewController, InterfaceLangua
       value.exitMode = exitMode.indexOfSelectedItem == 1 ? "manual" : "auto"
     }
     value.downloadMode = ["default", "manual", "auto"][max(0, downloadMode.indexOfSelectedItem)]
+    showFeedback("settings.saving")
     task = Task { [weak self, routes] in
       do {
         if case .preferences(let saved) = try await routes.measurement(.savePreferences(value)) {
           self?.baseline = saved
           self?.render(saved)
-          self?.showFeedback(
-            routes.capabilities.contains("measurement.exit_pool.v1")
-              ? "settings.measurement.saved" : "settings.measurement.saved_next_batch")
+          self?.showFeedback("settings.measurement.saved")
         }
       } catch {
         self?.showFeedback(

@@ -45,8 +45,10 @@ type HistoryState struct {
 	// Conservative cumulative bound: prefix deletions only remove times strictly before this
 	// Unix millisecond. Zero/absent means unknown. Summary/journal changes always revoke all.
 	LogRemovalBeforeMs int64 `protobuf:"varint,18,opt,name=log_removal_before_ms,json=logRemovalBeforeMs,proto3" json:"log_removal_before_ms,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Disk space allocated to the active SQLite files and their companions.
+	SqliteStorage *SQLiteStorageUsage `protobuf:"bytes,20,opt,name=sqlite_storage,json=sqliteStorage,proto3" json:"sqlite_storage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HistoryState) Reset() {
@@ -198,6 +200,89 @@ func (x *HistoryState) GetLogRemovalBeforeMs() int64 {
 	return 0
 }
 
+func (x *HistoryState) GetSqliteStorage() *SQLiteStorageUsage {
+	if x != nil {
+		return x.SqliteStorage
+	}
+	return nil
+}
+
+type SQLiteStorageUsage struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	LogsBytes          uint64                 `protobuf:"varint,1,opt,name=logs_bytes,json=logsBytes,proto3" json:"logs_bytes,omitempty"`
+	TrafficBytes       uint64                 `protobuf:"varint,2,opt,name=traffic_bytes,json=trafficBytes,proto3" json:"traffic_bytes,omitempty"`
+	JournalBytes       uint64                 `protobuf:"varint,3,opt,name=journal_bytes,json=journalBytes,proto3" json:"journal_bytes,omitempty"`
+	AiUsageBytes       uint64                 `protobuf:"varint,4,opt,name=ai_usage_bytes,json=aiUsageBytes,proto3" json:"ai_usage_bytes,omitempty"`
+	ProfileEventsBytes uint64                 `protobuf:"varint,5,opt,name=profile_events_bytes,json=profileEventsBytes,proto3" json:"profile_events_bytes,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SQLiteStorageUsage) Reset() {
+	*x = SQLiteStorageUsage{}
+	mi := &file_traffic_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SQLiteStorageUsage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SQLiteStorageUsage) ProtoMessage() {}
+
+func (x *SQLiteStorageUsage) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SQLiteStorageUsage.ProtoReflect.Descriptor instead.
+func (*SQLiteStorageUsage) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *SQLiteStorageUsage) GetLogsBytes() uint64 {
+	if x != nil {
+		return x.LogsBytes
+	}
+	return 0
+}
+
+func (x *SQLiteStorageUsage) GetTrafficBytes() uint64 {
+	if x != nil {
+		return x.TrafficBytes
+	}
+	return 0
+}
+
+func (x *SQLiteStorageUsage) GetJournalBytes() uint64 {
+	if x != nil {
+		return x.JournalBytes
+	}
+	return 0
+}
+
+func (x *SQLiteStorageUsage) GetAiUsageBytes() uint64 {
+	if x != nil {
+		return x.AiUsageBytes
+	}
+	return 0
+}
+
+func (x *SQLiteStorageUsage) GetProfileEventsBytes() uint64 {
+	if x != nil {
+		return x.ProfileEventsBytes
+	}
+	return 0
+}
+
 type FlowRecord struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Key                string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
@@ -240,7 +325,7 @@ type FlowRecord struct {
 
 func (x *FlowRecord) Reset() {
 	*x = FlowRecord{}
-	mi := &file_traffic_proto_msgTypes[1]
+	mi := &file_traffic_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -252,7 +337,7 @@ func (x *FlowRecord) String() string {
 func (*FlowRecord) ProtoMessage() {}
 
 func (x *FlowRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[1]
+	mi := &file_traffic_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -265,7 +350,7 @@ func (x *FlowRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowRecord.ProtoReflect.Descriptor instead.
 func (*FlowRecord) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{1}
+	return file_traffic_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FlowRecord) GetKey() string {
@@ -517,7 +602,7 @@ type DNSRecord struct {
 
 func (x *DNSRecord) Reset() {
 	*x = DNSRecord{}
-	mi := &file_traffic_proto_msgTypes[2]
+	mi := &file_traffic_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -529,7 +614,7 @@ func (x *DNSRecord) String() string {
 func (*DNSRecord) ProtoMessage() {}
 
 func (x *DNSRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[2]
+	mi := &file_traffic_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -542,7 +627,7 @@ func (x *DNSRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DNSRecord.ProtoReflect.Descriptor instead.
 func (*DNSRecord) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{2}
+	return file_traffic_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *DNSRecord) GetQueryType() string {
@@ -567,22 +652,24 @@ func (x *DNSRecord) GetAnswers() []string {
 }
 
 type TrafficQuery struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Dimension     string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
-	Direction     string                 `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
-	Window        string                 `protobuf:"bytes,3,opt,name=window,proto3" json:"window,omitempty"`
-	Search        string                 `protobuf:"bytes,4,opt,name=search,proto3" json:"search,omitempty"`
-	ReadToken     string                 `protobuf:"bytes,5,opt,name=read_token,json=readToken,proto3" json:"read_token,omitempty"`
-	Cursor        string                 `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Limit         uint32                 `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
-	Until         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=until,proto3" json:"until,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Dimension string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
+	Direction string                 `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
+	Window    string                 `protobuf:"bytes,3,opt,name=window,proto3" json:"window,omitempty"`
+	Search    string                 `protobuf:"bytes,4,opt,name=search,proto3" json:"search,omitempty"`
+	ReadToken string                 `protobuf:"bytes,5,opt,name=read_token,json=readToken,proto3" json:"read_token,omitempty"`
+	Cursor    string                 `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit     uint32                 `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
+	Until     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=until,proto3" json:"until,omitempty"`
+	// Application workbench projection. Aggregate across actual exits before ranking and paging.
+	GroupApplications bool `protobuf:"varint,9,opt,name=group_applications,json=groupApplications,proto3" json:"group_applications,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *TrafficQuery) Reset() {
 	*x = TrafficQuery{}
-	mi := &file_traffic_proto_msgTypes[3]
+	mi := &file_traffic_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -594,7 +681,7 @@ func (x *TrafficQuery) String() string {
 func (*TrafficQuery) ProtoMessage() {}
 
 func (x *TrafficQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[3]
+	mi := &file_traffic_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -607,7 +694,7 @@ func (x *TrafficQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficQuery.ProtoReflect.Descriptor instead.
 func (*TrafficQuery) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{3}
+	return file_traffic_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TrafficQuery) GetDimension() string {
@@ -666,6 +753,13 @@ func (x *TrafficQuery) GetUntil() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TrafficQuery) GetGroupApplications() bool {
+	if x != nil {
+		return x.GroupApplications
+	}
+	return false
+}
+
 // One retained connection's real first-response latency. Zero milliseconds is valid.
 type TrafficResponsePoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -678,7 +772,7 @@ type TrafficResponsePoint struct {
 
 func (x *TrafficResponsePoint) Reset() {
 	*x = TrafficResponsePoint{}
-	mi := &file_traffic_proto_msgTypes[4]
+	mi := &file_traffic_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +784,7 @@ func (x *TrafficResponsePoint) String() string {
 func (*TrafficResponsePoint) ProtoMessage() {}
 
 func (x *TrafficResponsePoint) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[4]
+	mi := &file_traffic_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +797,7 @@ func (x *TrafficResponsePoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficResponsePoint.ProtoReflect.Descriptor instead.
 func (*TrafficResponsePoint) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{4}
+	return file_traffic_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *TrafficResponsePoint) GetConnectionKey() string {
@@ -742,7 +836,7 @@ type TrafficExit struct {
 
 func (x *TrafficExit) Reset() {
 	*x = TrafficExit{}
-	mi := &file_traffic_proto_msgTypes[5]
+	mi := &file_traffic_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +848,7 @@ func (x *TrafficExit) String() string {
 func (*TrafficExit) ProtoMessage() {}
 
 func (x *TrafficExit) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[5]
+	mi := &file_traffic_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +861,7 @@ func (x *TrafficExit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficExit.ProtoReflect.Descriptor instead.
 func (*TrafficExit) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{5}
+	return file_traffic_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TrafficExit) GetRouteId() string {
@@ -822,13 +916,15 @@ type TrafficRoutingMatch struct {
 	Application   string                 `protobuf:"bytes,5,opt,name=application,proto3" json:"application,omitempty"`
 	// Connection key includes the runtime session; lexical order breaks equal-time ties.
 	Identity      string `protobuf:"bytes,6,opt,name=identity,proto3" json:"identity,omitempty"`
+	Direction     string `protobuf:"bytes,7,opt,name=direction,proto3" json:"direction,omitempty"`
+	RouteName     string `protobuf:"bytes,8,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TrafficRoutingMatch) Reset() {
 	*x = TrafficRoutingMatch{}
-	mi := &file_traffic_proto_msgTypes[6]
+	mi := &file_traffic_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -840,7 +936,7 @@ func (x *TrafficRoutingMatch) String() string {
 func (*TrafficRoutingMatch) ProtoMessage() {}
 
 func (x *TrafficRoutingMatch) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[6]
+	mi := &file_traffic_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,7 +949,7 @@ func (x *TrafficRoutingMatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRoutingMatch.ProtoReflect.Descriptor instead.
 func (*TrafficRoutingMatch) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{6}
+	return file_traffic_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TrafficRoutingMatch) GetAt() *timestamppb.Timestamp {
@@ -898,10 +994,26 @@ func (x *TrafficRoutingMatch) GetIdentity() string {
 	return ""
 }
 
+func (x *TrafficRoutingMatch) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *TrafficRoutingMatch) GetRouteName() string {
+	if x != nil {
+		return x.RouteName
+	}
+	return ""
+}
+
 type TrafficRow struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	LatestMatch *TrafficRoutingMatch   `protobuf:"bytes,37,opt,name=latest_match,json=latestMatch,proto3" json:"latest_match,omitempty"`
-	// Source/target rows: one recorded exit per object/exit/direction group.
+	// Rejected attempts within a merged application row, included in failed_count.
+	BlockedCount uint64 `protobuf:"varint,38,opt,name=blocked_count,json=blockedCount,proto3" json:"blocked_count,omitempty"`
+	// Recorded exits covered by the row, including blocked attempts.
 	Exits []*TrafficExit `protobuf:"bytes,36,rep,name=exits,proto3" json:"exits,omitempty"`
 	// Retained facts only, oldest to newest. State: ready / partial / failed; empty means unavailable.
 	RecentResponses      []*TrafficResponsePoint `protobuf:"bytes,33,rep,name=recent_responses,json=recentResponses,proto3" json:"recent_responses,omitempty"`
@@ -947,7 +1059,7 @@ type TrafficRow struct {
 
 func (x *TrafficRow) Reset() {
 	*x = TrafficRow{}
-	mi := &file_traffic_proto_msgTypes[7]
+	mi := &file_traffic_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -959,7 +1071,7 @@ func (x *TrafficRow) String() string {
 func (*TrafficRow) ProtoMessage() {}
 
 func (x *TrafficRow) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[7]
+	mi := &file_traffic_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -972,7 +1084,7 @@ func (x *TrafficRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRow.ProtoReflect.Descriptor instead.
 func (*TrafficRow) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{7}
+	return file_traffic_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TrafficRow) GetLatestMatch() *TrafficRoutingMatch {
@@ -980,6 +1092,13 @@ func (x *TrafficRow) GetLatestMatch() *TrafficRoutingMatch {
 		return x.LatestMatch
 	}
 	return nil
+}
+
+func (x *TrafficRow) GetBlockedCount() uint64 {
+	if x != nil {
+		return x.BlockedCount
+	}
+	return 0
 }
 
 func (x *TrafficRow) GetExits() []*TrafficExit {
@@ -1248,7 +1367,7 @@ type TrafficPoint struct {
 
 func (x *TrafficPoint) Reset() {
 	*x = TrafficPoint{}
-	mi := &file_traffic_proto_msgTypes[8]
+	mi := &file_traffic_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1260,7 +1379,7 @@ func (x *TrafficPoint) String() string {
 func (*TrafficPoint) ProtoMessage() {}
 
 func (x *TrafficPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[8]
+	mi := &file_traffic_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1273,7 +1392,7 @@ func (x *TrafficPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPoint.ProtoReflect.Descriptor instead.
 func (*TrafficPoint) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{8}
+	return file_traffic_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TrafficPoint) GetAt() *timestamppb.Timestamp {
@@ -1347,7 +1466,7 @@ type TrafficPage struct {
 
 func (x *TrafficPage) Reset() {
 	*x = TrafficPage{}
-	mi := &file_traffic_proto_msgTypes[9]
+	mi := &file_traffic_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1359,7 +1478,7 @@ func (x *TrafficPage) String() string {
 func (*TrafficPage) ProtoMessage() {}
 
 func (x *TrafficPage) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[9]
+	mi := &file_traffic_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1372,7 +1491,7 @@ func (x *TrafficPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPage.ProtoReflect.Descriptor instead.
 func (*TrafficPage) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{9}
+	return file_traffic_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *TrafficPage) GetItems() []*TrafficRow {
@@ -1517,13 +1636,23 @@ type TrafficDetailRequest struct {
 	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	Limit         uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	DnsGroupId    string                 `protobuf:"bytes,6,opt,name=dns_group_id,json=dnsGroupId,proto3" json:"dns_group_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Full retained pool: filter before grouping/paging; target_group_id expands one group.
+	GroupConnections bool   `protobuf:"varint,7,opt,name=group_connections,json=groupConnections,proto3" json:"group_connections,omitempty"`
+	TargetGroupId    string `protobuf:"bytes,8,opt,name=target_group_id,json=targetGroupId,proto3" json:"target_group_id,omitempty"`
+	ConnectionSearch string `protobuf:"bytes,9,opt,name=connection_search,json=connectionSearch,proto3" json:"connection_search,omitempty"`
+	ConnectionExit   string `protobuf:"bytes,10,opt,name=connection_exit,json=connectionExit,proto3" json:"connection_exit,omitempty"`
+	ConnectionRule   string `protobuf:"bytes,11,opt,name=connection_rule,json=connectionRule,proto3" json:"connection_rule,omitempty"`
+	RelatedId        string `protobuf:"bytes,12,opt,name=related_id,json=relatedId,proto3" json:"related_id,omitempty"`
+	// target / connections / bytes / exit; empty defaults to connections descending.
+	ConnectionSort      string `protobuf:"bytes,13,opt,name=connection_sort,json=connectionSort,proto3" json:"connection_sort,omitempty"`
+	ConnectionAscending bool   `protobuf:"varint,14,opt,name=connection_ascending,json=connectionAscending,proto3" json:"connection_ascending,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *TrafficDetailRequest) Reset() {
 	*x = TrafficDetailRequest{}
-	mi := &file_traffic_proto_msgTypes[10]
+	mi := &file_traffic_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1535,7 +1664,7 @@ func (x *TrafficDetailRequest) String() string {
 func (*TrafficDetailRequest) ProtoMessage() {}
 
 func (x *TrafficDetailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[10]
+	mi := &file_traffic_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1548,7 +1677,7 @@ func (x *TrafficDetailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficDetailRequest.ProtoReflect.Descriptor instead.
 func (*TrafficDetailRequest) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{10}
+	return file_traffic_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TrafficDetailRequest) GetRowId() string {
@@ -1593,6 +1722,62 @@ func (x *TrafficDetailRequest) GetDnsGroupId() string {
 	return ""
 }
 
+func (x *TrafficDetailRequest) GetGroupConnections() bool {
+	if x != nil {
+		return x.GroupConnections
+	}
+	return false
+}
+
+func (x *TrafficDetailRequest) GetTargetGroupId() string {
+	if x != nil {
+		return x.TargetGroupId
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetConnectionSearch() string {
+	if x != nil {
+		return x.ConnectionSearch
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetConnectionExit() string {
+	if x != nil {
+		return x.ConnectionExit
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetConnectionRule() string {
+	if x != nil {
+		return x.ConnectionRule
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetRelatedId() string {
+	if x != nil {
+		return x.RelatedId
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetConnectionSort() string {
+	if x != nil {
+		return x.ConnectionSort
+	}
+	return ""
+}
+
+func (x *TrafficDetailRequest) GetConnectionAscending() bool {
+	if x != nil {
+		return x.ConnectionAscending
+	}
+	return false
+}
+
 type TrafficBasis struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rule          string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
@@ -1600,13 +1785,14 @@ type TrafficBasis struct {
 	Connections   uint64                 `protobuf:"varint,3,opt,name=connections,proto3" json:"connections,omitempty"`
 	Target        string                 `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
 	RouteName     string                 `protobuf:"bytes,5,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
+	Direction     string                 `protobuf:"bytes,6,opt,name=direction,proto3" json:"direction,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TrafficBasis) Reset() {
 	*x = TrafficBasis{}
-	mi := &file_traffic_proto_msgTypes[11]
+	mi := &file_traffic_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1618,7 +1804,7 @@ func (x *TrafficBasis) String() string {
 func (*TrafficBasis) ProtoMessage() {}
 
 func (x *TrafficBasis) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[11]
+	mi := &file_traffic_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1631,7 +1817,7 @@ func (x *TrafficBasis) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficBasis.ProtoReflect.Descriptor instead.
 func (*TrafficBasis) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{11}
+	return file_traffic_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TrafficBasis) GetRule() string {
@@ -1669,6 +1855,13 @@ func (x *TrafficBasis) GetRouteName() string {
 	return ""
 }
 
+func (x *TrafficBasis) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
 type TrafficLatencySample struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	At            *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
@@ -1683,7 +1876,7 @@ type TrafficLatencySample struct {
 
 func (x *TrafficLatencySample) Reset() {
 	*x = TrafficLatencySample{}
-	mi := &file_traffic_proto_msgTypes[12]
+	mi := &file_traffic_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1695,7 +1888,7 @@ func (x *TrafficLatencySample) String() string {
 func (*TrafficLatencySample) ProtoMessage() {}
 
 func (x *TrafficLatencySample) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[12]
+	mi := &file_traffic_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1708,7 +1901,7 @@ func (x *TrafficLatencySample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficLatencySample.ProtoReflect.Descriptor instead.
 func (*TrafficLatencySample) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{12}
+	return file_traffic_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TrafficLatencySample) GetAt() *timestamppb.Timestamp {
@@ -1753,10 +1946,378 @@ func (x *TrafficLatencySample) GetSeconds() uint32 {
 	return 0
 }
 
+type TrafficConnectionGroup struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Target      string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	Kind        string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Connections uint64                 `protobuf:"varint,4,opt,name=connections,proto3" json:"connections,omitempty"`
+	Upload      uint64                 `protobuf:"varint,5,opt,name=upload,proto3" json:"upload,omitempty"`
+	Download    uint64                 `protobuf:"varint,6,opt,name=download,proto3" json:"download,omitempty"`
+	BytesState  string                 `protobuf:"bytes,7,opt,name=bytes_state,json=bytesState,proto3" json:"bytes_state,omitempty"`
+	LastAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_at,json=lastAt,proto3" json:"last_at,omitempty"`
+	Rules       []*TrafficBasis        `protobuf:"bytes,9,rep,name=rules,proto3" json:"rules,omitempty"`
+	Exits       []*TrafficExit         `protobuf:"bytes,10,rep,name=exits,proto3" json:"exits,omitempty"`
+	// Complete-pool evidence; response samples are the latest 60 valid retained observations.
+	RecentResponses   []*TrafficResponsePoint     `protobuf:"bytes,11,rep,name=recent_responses,json=recentResponses,proto3" json:"recent_responses,omitempty"`
+	ValidLatencyCount uint64                      `protobuf:"varint,12,opt,name=valid_latency_count,json=validLatencyCount,proto3" json:"valid_latency_count,omitempty"`
+	Sources           []*TrafficConnectionSource  `protobuf:"bytes,13,rep,name=sources,proto3" json:"sources,omitempty"`
+	Addresses         []*TrafficConnectionAddress `protobuf:"bytes,14,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	Results           []*TrafficConnectionResult  `protobuf:"bytes,15,rep,name=results,proto3" json:"results,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *TrafficConnectionGroup) Reset() {
+	*x = TrafficConnectionGroup{}
+	mi := &file_traffic_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficConnectionGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficConnectionGroup) ProtoMessage() {}
+
+func (x *TrafficConnectionGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficConnectionGroup.ProtoReflect.Descriptor instead.
+func (*TrafficConnectionGroup) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TrafficConnectionGroup) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TrafficConnectionGroup) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *TrafficConnectionGroup) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *TrafficConnectionGroup) GetConnections() uint64 {
+	if x != nil {
+		return x.Connections
+	}
+	return 0
+}
+
+func (x *TrafficConnectionGroup) GetUpload() uint64 {
+	if x != nil {
+		return x.Upload
+	}
+	return 0
+}
+
+func (x *TrafficConnectionGroup) GetDownload() uint64 {
+	if x != nil {
+		return x.Download
+	}
+	return 0
+}
+
+func (x *TrafficConnectionGroup) GetBytesState() string {
+	if x != nil {
+		return x.BytesState
+	}
+	return ""
+}
+
+func (x *TrafficConnectionGroup) GetLastAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastAt
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetRules() []*TrafficBasis {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetExits() []*TrafficExit {
+	if x != nil {
+		return x.Exits
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetRecentResponses() []*TrafficResponsePoint {
+	if x != nil {
+		return x.RecentResponses
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetValidLatencyCount() uint64 {
+	if x != nil {
+		return x.ValidLatencyCount
+	}
+	return 0
+}
+
+func (x *TrafficConnectionGroup) GetSources() []*TrafficConnectionSource {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetAddresses() []*TrafficConnectionAddress {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
+func (x *TrafficConnectionGroup) GetResults() []*TrafficConnectionResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+type TrafficConnectionSource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	Application   string                 `protobuf:"bytes,2,opt,name=application,proto3" json:"application,omitempty"`
+	Process       string                 `protobuf:"bytes,3,opt,name=process,proto3" json:"process,omitempty"`
+	Kind          string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	Connections   uint64                 `protobuf:"varint,5,opt,name=connections,proto3" json:"connections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficConnectionSource) Reset() {
+	*x = TrafficConnectionSource{}
+	mi := &file_traffic_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficConnectionSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficConnectionSource) ProtoMessage() {}
+
+func (x *TrafficConnectionSource) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficConnectionSource.ProtoReflect.Descriptor instead.
+func (*TrafficConnectionSource) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *TrafficConnectionSource) GetApplicationId() string {
+	if x != nil {
+		return x.ApplicationId
+	}
+	return ""
+}
+
+func (x *TrafficConnectionSource) GetApplication() string {
+	if x != nil {
+		return x.Application
+	}
+	return ""
+}
+
+func (x *TrafficConnectionSource) GetProcess() string {
+	if x != nil {
+		return x.Process
+	}
+	return ""
+}
+
+func (x *TrafficConnectionSource) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *TrafficConnectionSource) GetConnections() uint64 {
+	if x != nil {
+		return x.Connections
+	}
+	return 0
+}
+
+type TrafficConnectionAddress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ip            string                 `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
+	Port          uint32                 `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	Transport     string                 `protobuf:"bytes,3,opt,name=transport,proto3" json:"transport,omitempty"`
+	Connections   uint64                 `protobuf:"varint,4,opt,name=connections,proto3" json:"connections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficConnectionAddress) Reset() {
+	*x = TrafficConnectionAddress{}
+	mi := &file_traffic_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficConnectionAddress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficConnectionAddress) ProtoMessage() {}
+
+func (x *TrafficConnectionAddress) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficConnectionAddress.ProtoReflect.Descriptor instead.
+func (*TrafficConnectionAddress) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *TrafficConnectionAddress) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *TrafficConnectionAddress) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *TrafficConnectionAddress) GetTransport() string {
+	if x != nil {
+		return x.Transport
+	}
+	return ""
+}
+
+func (x *TrafficConnectionAddress) GetConnections() uint64 {
+	if x != nil {
+		return x.Connections
+	}
+	return 0
+}
+
+type TrafficConnectionResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// active / closed / failed / unknown, based only on evidence at the frozen cutoff.
+	State         string `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	Failure       string `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
+	Connections   uint64 `protobuf:"varint,3,opt,name=connections,proto3" json:"connections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficConnectionResult) Reset() {
+	*x = TrafficConnectionResult{}
+	mi := &file_traffic_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficConnectionResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficConnectionResult) ProtoMessage() {}
+
+func (x *TrafficConnectionResult) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficConnectionResult.ProtoReflect.Descriptor instead.
+func (*TrafficConnectionResult) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *TrafficConnectionResult) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *TrafficConnectionResult) GetFailure() string {
+	if x != nil {
+		return x.Failure
+	}
+	return ""
+}
+
+func (x *TrafficConnectionResult) GetConnections() uint64 {
+	if x != nil {
+		return x.Connections
+	}
+	return 0
+}
+
 type TrafficDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Exact number of retained matching connections in the recent 24-hour detail pool.
-	RetainedConnectionCount uint64 `protobuf:"varint,25,opt,name=retained_connection_count,json=retainedConnectionCount,proto3" json:"retained_connection_count,omitempty"`
+	RetainedConnectionCount uint64                    `protobuf:"varint,25,opt,name=retained_connection_count,json=retainedConnectionCount,proto3" json:"retained_connection_count,omitempty"`
+	ConnectionGroups        []*TrafficConnectionGroup `protobuf:"bytes,26,rep,name=connection_groups,json=connectionGroups,proto3" json:"connection_groups,omitempty"`
+	TargetGroupTotal        uint64                    `protobuf:"varint,27,opt,name=target_group_total,json=targetGroupTotal,proto3" json:"target_group_total,omitempty"`
+	FilteredConnectionCount uint64                    `protobuf:"varint,28,opt,name=filtered_connection_count,json=filteredConnectionCount,proto3" json:"filtered_connection_count,omitempty"`
+	// Complete pool choices, independent of the active intersection filters.
+	ConnectionRules []*TrafficBasis `protobuf:"bytes,29,rep,name=connection_rules,json=connectionRules,proto3" json:"connection_rules,omitempty"`
+	ConnectionExits []*TrafficExit  `protobuf:"bytes,30,rep,name=connection_exits,json=connectionExits,proto3" json:"connection_exits,omitempty"`
 	// Same frozen selection as the list, up to 60 points (list carries its last 20).
 	RecentResponses      []*TrafficResponsePoint `protobuf:"bytes,22,rep,name=recent_responses,json=recentResponses,proto3" json:"recent_responses,omitempty"`
 	RecentResponsesState string                  `protobuf:"bytes,23,opt,name=recent_responses_state,json=recentResponsesState,proto3" json:"recent_responses_state,omitempty"`
@@ -1788,7 +2349,7 @@ type TrafficDetail struct {
 
 func (x *TrafficDetail) Reset() {
 	*x = TrafficDetail{}
-	mi := &file_traffic_proto_msgTypes[13]
+	mi := &file_traffic_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1800,7 +2361,7 @@ func (x *TrafficDetail) String() string {
 func (*TrafficDetail) ProtoMessage() {}
 
 func (x *TrafficDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[13]
+	mi := &file_traffic_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1813,7 +2374,7 @@ func (x *TrafficDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficDetail.ProtoReflect.Descriptor instead.
 func (*TrafficDetail) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{13}
+	return file_traffic_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TrafficDetail) GetRetainedConnectionCount() uint64 {
@@ -1821,6 +2382,41 @@ func (x *TrafficDetail) GetRetainedConnectionCount() uint64 {
 		return x.RetainedConnectionCount
 	}
 	return 0
+}
+
+func (x *TrafficDetail) GetConnectionGroups() []*TrafficConnectionGroup {
+	if x != nil {
+		return x.ConnectionGroups
+	}
+	return nil
+}
+
+func (x *TrafficDetail) GetTargetGroupTotal() uint64 {
+	if x != nil {
+		return x.TargetGroupTotal
+	}
+	return 0
+}
+
+func (x *TrafficDetail) GetFilteredConnectionCount() uint64 {
+	if x != nil {
+		return x.FilteredConnectionCount
+	}
+	return 0
+}
+
+func (x *TrafficDetail) GetConnectionRules() []*TrafficBasis {
+	if x != nil {
+		return x.ConnectionRules
+	}
+	return nil
+}
+
+func (x *TrafficDetail) GetConnectionExits() []*TrafficExit {
+	if x != nil {
+		return x.ConnectionExits
+	}
+	return nil
 }
 
 func (x *TrafficDetail) GetRecentResponses() []*TrafficResponsePoint {
@@ -2004,7 +2600,7 @@ type TrafficRelated struct {
 
 func (x *TrafficRelated) Reset() {
 	*x = TrafficRelated{}
-	mi := &file_traffic_proto_msgTypes[14]
+	mi := &file_traffic_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2016,7 +2612,7 @@ func (x *TrafficRelated) String() string {
 func (*TrafficRelated) ProtoMessage() {}
 
 func (x *TrafficRelated) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[14]
+	mi := &file_traffic_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2029,7 +2625,7 @@ func (x *TrafficRelated) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRelated.ProtoReflect.Descriptor instead.
 func (*TrafficRelated) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{14}
+	return file_traffic_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TrafficRelated) GetId() string {
@@ -2085,7 +2681,7 @@ type DNSTrafficGroup struct {
 
 func (x *DNSTrafficGroup) Reset() {
 	*x = DNSTrafficGroup{}
-	mi := &file_traffic_proto_msgTypes[15]
+	mi := &file_traffic_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2097,7 +2693,7 @@ func (x *DNSTrafficGroup) String() string {
 func (*DNSTrafficGroup) ProtoMessage() {}
 
 func (x *DNSTrafficGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[15]
+	mi := &file_traffic_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2110,7 +2706,7 @@ func (x *DNSTrafficGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DNSTrafficGroup.ProtoReflect.Descriptor instead.
 func (*DNSTrafficGroup) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{15}
+	return file_traffic_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DNSTrafficGroup) GetId() string {
@@ -2180,7 +2776,7 @@ var File_traffic_proto protoreflect.FileDescriptor
 
 const file_traffic_proto_rawDesc = "" +
 	"\n" +
-	"\rtraffic.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd0\x06\n" +
+	"\rtraffic.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xac\a\n" +
 	"\fHistoryState\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x12)\n" +
 	"\x10clear_generation\x18\x02 \x01(\x04R\x0fclearGeneration\x12A\n" +
@@ -2200,7 +2796,15 @@ const file_traffic_proto_rawDesc = "" +
 	"\x12summary_generation\x18\x0f \x01(\tR\x11summaryGeneration\x12T\n" +
 	"\x18aggregate_coverage_start\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\x16aggregateCoverageStart\x124\n" +
 	"\x16route_history_revision\x18\x11 \x01(\x04R\x14routeHistoryRevision\x121\n" +
-	"\x15log_removal_before_ms\x18\x12 \x01(\x03R\x12logRemovalBeforeMsJ\x04\b\r\x10\x0eR\x10quality_revision\"\xff\b\n" +
+	"\x15log_removal_before_ms\x18\x12 \x01(\x03R\x12logRemovalBeforeMs\x12A\n" +
+	"\x0esqlite_storage\x18\x14 \x01(\v2\x1a.pax.v1.SQLiteStorageUsageR\rsqliteStorageJ\x04\b\x13\x10\x14J\x04\b\r\x10\x0eR\x11log_storage_bytesR\x10quality_revision\"\xd5\x01\n" +
+	"\x12SQLiteStorageUsage\x12\x1d\n" +
+	"\n" +
+	"logs_bytes\x18\x01 \x01(\x04R\tlogsBytes\x12#\n" +
+	"\rtraffic_bytes\x18\x02 \x01(\x04R\ftrafficBytes\x12#\n" +
+	"\rjournal_bytes\x18\x03 \x01(\x04R\fjournalBytes\x12$\n" +
+	"\x0eai_usage_bytes\x18\x04 \x01(\x04R\faiUsageBytes\x120\n" +
+	"\x14profile_events_bytes\x18\x05 \x01(\x04R\x12profileEventsBytes\"\xff\b\n" +
 	"\n" +
 	"FlowRecord\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
@@ -2247,7 +2851,7 @@ const file_traffic_proto_rawDesc = "" +
 	"\n" +
 	"query_type\x18\x01 \x01(\tR\tqueryType\x12\x16\n" +
 	"\x06result\x18\x02 \x01(\tR\x06result\x12\x18\n" +
-	"\aanswers\x18\x03 \x03(\tR\aanswers\"\xf9\x01\n" +
+	"\aanswers\x18\x03 \x03(\tR\aanswers\"\xa8\x02\n" +
 	"\fTrafficQuery\x12\x1c\n" +
 	"\tdimension\x18\x01 \x01(\tR\tdimension\x12\x1c\n" +
 	"\tdirection\x18\x02 \x01(\tR\tdirection\x12\x16\n" +
@@ -2257,7 +2861,8 @@ const file_traffic_proto_rawDesc = "" +
 	"read_token\x18\x05 \x01(\tR\treadToken\x12\x16\n" +
 	"\x06cursor\x18\x06 \x01(\tR\x06cursor\x12\x14\n" +
 	"\x05limit\x18\a \x01(\rR\x05limit\x120\n" +
-	"\x05until\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x05until\"\x9c\x01\n" +
+	"\x05until\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x05until\x12-\n" +
+	"\x12group_applications\x18\t \x01(\bR\x11groupApplications\"\x9c\x01\n" +
 	"\x14TrafficResponsePoint\x12%\n" +
 	"\x0econnection_key\x18\x01 \x01(\tR\rconnectionKey\x129\n" +
 	"\n" +
@@ -2270,17 +2875,21 @@ const file_traffic_proto_rawDesc = "" +
 	"\tdirection\x18\x03 \x01(\tR\tdirection\x12\x16\n" +
 	"\x06upload\x18\x04 \x01(\x04R\x06upload\x12\x1a\n" +
 	"\bdownload\x18\x05 \x01(\x04R\bdownload\x12 \n" +
-	"\vconnections\x18\x06 \x01(\x04R\vconnections\"\xd2\x01\n" +
+	"\vconnections\x18\x06 \x01(\x04R\vconnections\"\x8f\x02\n" +
 	"\x13TrafficRoutingMatch\x12*\n" +
 	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x12\n" +
 	"\x04rule\x18\x02 \x01(\tR\x04rule\x12\x16\n" +
 	"\x06source\x18\x03 \x01(\tR\x06source\x12%\n" +
 	"\x0eapplication_id\x18\x04 \x01(\tR\rapplicationId\x12 \n" +
 	"\vapplication\x18\x05 \x01(\tR\vapplication\x12\x1a\n" +
-	"\bidentity\x18\x06 \x01(\tR\bidentity\"\xb5\v\n" +
+	"\bidentity\x18\x06 \x01(\tR\bidentity\x12\x1c\n" +
+	"\tdirection\x18\a \x01(\tR\tdirection\x12\x1d\n" +
+	"\n" +
+	"route_name\x18\b \x01(\tR\trouteName\"\xda\v\n" +
 	"\n" +
 	"TrafficRow\x12>\n" +
-	"\flatest_match\x18% \x01(\v2\x1b.pax.v1.TrafficRoutingMatchR\vlatestMatch\x12)\n" +
+	"\flatest_match\x18% \x01(\v2\x1b.pax.v1.TrafficRoutingMatchR\vlatestMatch\x12#\n" +
+	"\rblocked_count\x18& \x01(\x04R\fblockedCount\x12)\n" +
 	"\x05exits\x18$ \x03(\v2\x13.pax.v1.TrafficExitR\x05exits\x12G\n" +
 	"\x10recent_responses\x18! \x03(\v2\x1c.pax.v1.TrafficResponsePointR\x0frecentResponses\x124\n" +
 	"\x16recent_responses_state\x18\" \x01(\tR\x14recentResponsesState\x124\n" +
@@ -2353,7 +2962,7 @@ const file_traffic_proto_rawDesc = "" +
 	"\x0fsystem_download\x18\x10 \x01(\x04R\x0esystemDownload\x120\n" +
 	"\x14other_process_upload\x18\x11 \x01(\x04R\x12otherProcessUpload\x124\n" +
 	"\x16other_process_download\x18\x12 \x01(\x04R\x14otherProcessDownload\x12:\n" +
-	"\x19other_process_connections\x18\x13 \x01(\x04R\x17otherProcessConnections\"\xc3\x01\n" +
+	"\x19other_process_connections\x18\x13 \x01(\x04R\x17otherProcessConnections\"\x92\x04\n" +
 	"\x14TrafficDetailRequest\x12\x15\n" +
 	"\x06row_id\x18\x01 \x01(\tR\x05rowId\x12%\n" +
 	"\x0econnection_key\x18\x02 \x01(\tR\rconnectionKey\x12\x1d\n" +
@@ -2362,23 +2971,73 @@ const file_traffic_proto_rawDesc = "" +
 	"\x06cursor\x18\x04 \x01(\tR\x06cursor\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\rR\x05limit\x12 \n" +
 	"\fdns_group_id\x18\x06 \x01(\tR\n" +
-	"dnsGroupId\"\x93\x01\n" +
+	"dnsGroupId\x12+\n" +
+	"\x11group_connections\x18\a \x01(\bR\x10groupConnections\x12&\n" +
+	"\x0ftarget_group_id\x18\b \x01(\tR\rtargetGroupId\x12+\n" +
+	"\x11connection_search\x18\t \x01(\tR\x10connectionSearch\x12'\n" +
+	"\x0fconnection_exit\x18\n" +
+	" \x01(\tR\x0econnectionExit\x12'\n" +
+	"\x0fconnection_rule\x18\v \x01(\tR\x0econnectionRule\x12\x1d\n" +
+	"\n" +
+	"related_id\x18\f \x01(\tR\trelatedId\x12'\n" +
+	"\x0fconnection_sort\x18\r \x01(\tR\x0econnectionSort\x121\n" +
+	"\x14connection_ascending\x18\x0e \x01(\bR\x13connectionAscending\"\xb1\x01\n" +
 	"\fTrafficBasis\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12 \n" +
 	"\vconnections\x18\x03 \x01(\x04R\vconnections\x12\x16\n" +
 	"\x06target\x18\x04 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
-	"route_name\x18\x05 \x01(\tR\trouteName\"\xc3\x01\n" +
+	"route_name\x18\x05 \x01(\tR\trouteName\x12\x1c\n" +
+	"\tdirection\x18\x06 \x01(\tR\tdirection\"\xc3\x01\n" +
 	"\x14TrafficLatencySample\x12*\n" +
 	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\"\n" +
 	"\fmilliseconds\x18\x02 \x01(\x04R\fmilliseconds\x12\x14\n" +
 	"\x05known\x18\x03 \x01(\bR\x05known\x12\x14\n" +
 	"\x05count\x18\x04 \x01(\x04R\x05count\x12\x15\n" +
 	"\x06p95_ms\x18\x05 \x01(\x04R\x05p95Ms\x12\x18\n" +
-	"\aseconds\x18\x06 \x01(\rR\aseconds\"\xc5\b\n" +
+	"\aseconds\x18\x06 \x01(\rR\aseconds\"\x86\x05\n" +
+	"\x16TrafficConnectionGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x12\x12\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12 \n" +
+	"\vconnections\x18\x04 \x01(\x04R\vconnections\x12\x16\n" +
+	"\x06upload\x18\x05 \x01(\x04R\x06upload\x12\x1a\n" +
+	"\bdownload\x18\x06 \x01(\x04R\bdownload\x12\x1f\n" +
+	"\vbytes_state\x18\a \x01(\tR\n" +
+	"bytesState\x123\n" +
+	"\alast_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x06lastAt\x12*\n" +
+	"\x05rules\x18\t \x03(\v2\x14.pax.v1.TrafficBasisR\x05rules\x12)\n" +
+	"\x05exits\x18\n" +
+	" \x03(\v2\x13.pax.v1.TrafficExitR\x05exits\x12G\n" +
+	"\x10recent_responses\x18\v \x03(\v2\x1c.pax.v1.TrafficResponsePointR\x0frecentResponses\x12.\n" +
+	"\x13valid_latency_count\x18\f \x01(\x04R\x11validLatencyCount\x129\n" +
+	"\asources\x18\r \x03(\v2\x1f.pax.v1.TrafficConnectionSourceR\asources\x12>\n" +
+	"\taddresses\x18\x0e \x03(\v2 .pax.v1.TrafficConnectionAddressR\taddresses\x129\n" +
+	"\aresults\x18\x0f \x03(\v2\x1f.pax.v1.TrafficConnectionResultR\aresults\"\xb2\x01\n" +
+	"\x17TrafficConnectionSource\x12%\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12 \n" +
+	"\vapplication\x18\x02 \x01(\tR\vapplication\x12\x18\n" +
+	"\aprocess\x18\x03 \x01(\tR\aprocess\x12\x12\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12 \n" +
+	"\vconnections\x18\x05 \x01(\x04R\vconnections\"~\n" +
+	"\x18TrafficConnectionAddress\x12\x0e\n" +
+	"\x02ip\x18\x01 \x01(\tR\x02ip\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12\x1c\n" +
+	"\ttransport\x18\x03 \x01(\tR\ttransport\x12 \n" +
+	"\vconnections\x18\x04 \x01(\x04R\vconnections\"k\n" +
+	"\x17TrafficConnectionResult\x12\x14\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state\x12\x18\n" +
+	"\afailure\x18\x02 \x01(\tR\afailure\x12 \n" +
+	"\vconnections\x18\x03 \x01(\x04R\vconnections\"\xfd\n" +
+	"\n" +
 	"\rTrafficDetail\x12:\n" +
-	"\x19retained_connection_count\x18\x19 \x01(\x04R\x17retainedConnectionCount\x12G\n" +
+	"\x19retained_connection_count\x18\x19 \x01(\x04R\x17retainedConnectionCount\x12K\n" +
+	"\x11connection_groups\x18\x1a \x03(\v2\x1e.pax.v1.TrafficConnectionGroupR\x10connectionGroups\x12,\n" +
+	"\x12target_group_total\x18\x1b \x01(\x04R\x10targetGroupTotal\x12:\n" +
+	"\x19filtered_connection_count\x18\x1c \x01(\x04R\x17filteredConnectionCount\x12?\n" +
+	"\x10connection_rules\x18\x1d \x03(\v2\x14.pax.v1.TrafficBasisR\x0fconnectionRules\x12>\n" +
+	"\x10connection_exits\x18\x1e \x03(\v2\x13.pax.v1.TrafficExitR\x0fconnectionExits\x12G\n" +
 	"\x10recent_responses\x18\x16 \x03(\v2\x1c.pax.v1.TrafficResponsePointR\x0frecentResponses\x124\n" +
 	"\x16recent_responses_state\x18\x17 \x01(\tR\x14recentResponsesState\x124\n" +
 	"\x16recent_responses_error\x18\x18 \x01(\tR\x14recentResponsesError\x12,\n" +
@@ -2441,68 +3100,84 @@ func file_traffic_proto_rawDescGZIP() []byte {
 	return file_traffic_proto_rawDescData
 }
 
-var file_traffic_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_traffic_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_traffic_proto_goTypes = []any{
-	(*HistoryState)(nil),          // 0: pax.v1.HistoryState
-	(*FlowRecord)(nil),            // 1: pax.v1.FlowRecord
-	(*DNSRecord)(nil),             // 2: pax.v1.DNSRecord
-	(*TrafficQuery)(nil),          // 3: pax.v1.TrafficQuery
-	(*TrafficResponsePoint)(nil),  // 4: pax.v1.TrafficResponsePoint
-	(*TrafficExit)(nil),           // 5: pax.v1.TrafficExit
-	(*TrafficRoutingMatch)(nil),   // 6: pax.v1.TrafficRoutingMatch
-	(*TrafficRow)(nil),            // 7: pax.v1.TrafficRow
-	(*TrafficPoint)(nil),          // 8: pax.v1.TrafficPoint
-	(*TrafficPage)(nil),           // 9: pax.v1.TrafficPage
-	(*TrafficDetailRequest)(nil),  // 10: pax.v1.TrafficDetailRequest
-	(*TrafficBasis)(nil),          // 11: pax.v1.TrafficBasis
-	(*TrafficLatencySample)(nil),  // 12: pax.v1.TrafficLatencySample
-	(*TrafficDetail)(nil),         // 13: pax.v1.TrafficDetail
-	(*TrafficRelated)(nil),        // 14: pax.v1.TrafficRelated
-	(*DNSTrafficGroup)(nil),       // 15: pax.v1.DNSTrafficGroup
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
+	(*HistoryState)(nil),             // 0: pax.v1.HistoryState
+	(*SQLiteStorageUsage)(nil),       // 1: pax.v1.SQLiteStorageUsage
+	(*FlowRecord)(nil),               // 2: pax.v1.FlowRecord
+	(*DNSRecord)(nil),                // 3: pax.v1.DNSRecord
+	(*TrafficQuery)(nil),             // 4: pax.v1.TrafficQuery
+	(*TrafficResponsePoint)(nil),     // 5: pax.v1.TrafficResponsePoint
+	(*TrafficExit)(nil),              // 6: pax.v1.TrafficExit
+	(*TrafficRoutingMatch)(nil),      // 7: pax.v1.TrafficRoutingMatch
+	(*TrafficRow)(nil),               // 8: pax.v1.TrafficRow
+	(*TrafficPoint)(nil),             // 9: pax.v1.TrafficPoint
+	(*TrafficPage)(nil),              // 10: pax.v1.TrafficPage
+	(*TrafficDetailRequest)(nil),     // 11: pax.v1.TrafficDetailRequest
+	(*TrafficBasis)(nil),             // 12: pax.v1.TrafficBasis
+	(*TrafficLatencySample)(nil),     // 13: pax.v1.TrafficLatencySample
+	(*TrafficConnectionGroup)(nil),   // 14: pax.v1.TrafficConnectionGroup
+	(*TrafficConnectionSource)(nil),  // 15: pax.v1.TrafficConnectionSource
+	(*TrafficConnectionAddress)(nil), // 16: pax.v1.TrafficConnectionAddress
+	(*TrafficConnectionResult)(nil),  // 17: pax.v1.TrafficConnectionResult
+	(*TrafficDetail)(nil),            // 18: pax.v1.TrafficDetail
+	(*TrafficRelated)(nil),           // 19: pax.v1.TrafficRelated
+	(*DNSTrafficGroup)(nil),          // 20: pax.v1.DNSTrafficGroup
+	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
 }
 var file_traffic_proto_depIdxs = []int32{
-	16, // 0: pax.v1.HistoryState.coverage_start:type_name -> google.protobuf.Timestamp
-	16, // 1: pax.v1.HistoryState.aggregate_coverage_start:type_name -> google.protobuf.Timestamp
-	16, // 2: pax.v1.FlowRecord.started_at:type_name -> google.protobuf.Timestamp
-	16, // 3: pax.v1.FlowRecord.closed_at:type_name -> google.protobuf.Timestamp
-	16, // 4: pax.v1.FlowRecord.observed_until:type_name -> google.protobuf.Timestamp
-	2,  // 5: pax.v1.FlowRecord.dns:type_name -> pax.v1.DNSRecord
-	16, // 6: pax.v1.TrafficQuery.until:type_name -> google.protobuf.Timestamp
-	16, // 7: pax.v1.TrafficResponsePoint.started_at:type_name -> google.protobuf.Timestamp
-	16, // 8: pax.v1.TrafficRoutingMatch.at:type_name -> google.protobuf.Timestamp
-	6,  // 9: pax.v1.TrafficRow.latest_match:type_name -> pax.v1.TrafficRoutingMatch
-	5,  // 10: pax.v1.TrafficRow.exits:type_name -> pax.v1.TrafficExit
-	4,  // 11: pax.v1.TrafficRow.recent_responses:type_name -> pax.v1.TrafficResponsePoint
-	12, // 12: pax.v1.TrafficRow.latency_samples:type_name -> pax.v1.TrafficLatencySample
-	11, // 13: pax.v1.TrafficRow.bases:type_name -> pax.v1.TrafficBasis
-	16, // 14: pax.v1.TrafficRow.latest_latency_at:type_name -> google.protobuf.Timestamp
-	16, // 15: pax.v1.TrafficPoint.at:type_name -> google.protobuf.Timestamp
-	7,  // 16: pax.v1.TrafficPage.items:type_name -> pax.v1.TrafficRow
-	16, // 17: pax.v1.TrafficPage.as_of:type_name -> google.protobuf.Timestamp
-	16, // 18: pax.v1.TrafficPage.from:type_name -> google.protobuf.Timestamp
-	8,  // 19: pax.v1.TrafficPage.trend:type_name -> pax.v1.TrafficPoint
-	0,  // 20: pax.v1.TrafficPage.history:type_name -> pax.v1.HistoryState
-	7,  // 21: pax.v1.TrafficPage.unknown_source:type_name -> pax.v1.TrafficRow
-	7,  // 22: pax.v1.TrafficPage.dns_summary:type_name -> pax.v1.TrafficRow
-	16, // 23: pax.v1.TrafficLatencySample.at:type_name -> google.protobuf.Timestamp
-	4,  // 24: pax.v1.TrafficDetail.recent_responses:type_name -> pax.v1.TrafficResponsePoint
-	7,  // 25: pax.v1.TrafficDetail.summary:type_name -> pax.v1.TrafficRow
-	1,  // 26: pax.v1.TrafficDetail.items:type_name -> pax.v1.FlowRecord
-	11, // 27: pax.v1.TrafficDetail.basis:type_name -> pax.v1.TrafficBasis
-	16, // 28: pax.v1.TrafficDetail.as_of:type_name -> google.protobuf.Timestamp
-	16, // 29: pax.v1.TrafficDetail.from:type_name -> google.protobuf.Timestamp
-	0,  // 30: pax.v1.TrafficDetail.history:type_name -> pax.v1.HistoryState
-	14, // 31: pax.v1.TrafficDetail.related:type_name -> pax.v1.TrafficRelated
-	1,  // 32: pax.v1.TrafficDetail.timings:type_name -> pax.v1.FlowRecord
-	8,  // 33: pax.v1.TrafficDetail.trend:type_name -> pax.v1.TrafficPoint
-	15, // 34: pax.v1.TrafficDetail.dns_groups:type_name -> pax.v1.DNSTrafficGroup
-	16, // 35: pax.v1.DNSTrafficGroup.last_at:type_name -> google.protobuf.Timestamp
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	21, // 0: pax.v1.HistoryState.coverage_start:type_name -> google.protobuf.Timestamp
+	21, // 1: pax.v1.HistoryState.aggregate_coverage_start:type_name -> google.protobuf.Timestamp
+	1,  // 2: pax.v1.HistoryState.sqlite_storage:type_name -> pax.v1.SQLiteStorageUsage
+	21, // 3: pax.v1.FlowRecord.started_at:type_name -> google.protobuf.Timestamp
+	21, // 4: pax.v1.FlowRecord.closed_at:type_name -> google.protobuf.Timestamp
+	21, // 5: pax.v1.FlowRecord.observed_until:type_name -> google.protobuf.Timestamp
+	3,  // 6: pax.v1.FlowRecord.dns:type_name -> pax.v1.DNSRecord
+	21, // 7: pax.v1.TrafficQuery.until:type_name -> google.protobuf.Timestamp
+	21, // 8: pax.v1.TrafficResponsePoint.started_at:type_name -> google.protobuf.Timestamp
+	21, // 9: pax.v1.TrafficRoutingMatch.at:type_name -> google.protobuf.Timestamp
+	7,  // 10: pax.v1.TrafficRow.latest_match:type_name -> pax.v1.TrafficRoutingMatch
+	6,  // 11: pax.v1.TrafficRow.exits:type_name -> pax.v1.TrafficExit
+	5,  // 12: pax.v1.TrafficRow.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	13, // 13: pax.v1.TrafficRow.latency_samples:type_name -> pax.v1.TrafficLatencySample
+	12, // 14: pax.v1.TrafficRow.bases:type_name -> pax.v1.TrafficBasis
+	21, // 15: pax.v1.TrafficRow.latest_latency_at:type_name -> google.protobuf.Timestamp
+	21, // 16: pax.v1.TrafficPoint.at:type_name -> google.protobuf.Timestamp
+	8,  // 17: pax.v1.TrafficPage.items:type_name -> pax.v1.TrafficRow
+	21, // 18: pax.v1.TrafficPage.as_of:type_name -> google.protobuf.Timestamp
+	21, // 19: pax.v1.TrafficPage.from:type_name -> google.protobuf.Timestamp
+	9,  // 20: pax.v1.TrafficPage.trend:type_name -> pax.v1.TrafficPoint
+	0,  // 21: pax.v1.TrafficPage.history:type_name -> pax.v1.HistoryState
+	8,  // 22: pax.v1.TrafficPage.unknown_source:type_name -> pax.v1.TrafficRow
+	8,  // 23: pax.v1.TrafficPage.dns_summary:type_name -> pax.v1.TrafficRow
+	21, // 24: pax.v1.TrafficLatencySample.at:type_name -> google.protobuf.Timestamp
+	21, // 25: pax.v1.TrafficConnectionGroup.last_at:type_name -> google.protobuf.Timestamp
+	12, // 26: pax.v1.TrafficConnectionGroup.rules:type_name -> pax.v1.TrafficBasis
+	6,  // 27: pax.v1.TrafficConnectionGroup.exits:type_name -> pax.v1.TrafficExit
+	5,  // 28: pax.v1.TrafficConnectionGroup.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	15, // 29: pax.v1.TrafficConnectionGroup.sources:type_name -> pax.v1.TrafficConnectionSource
+	16, // 30: pax.v1.TrafficConnectionGroup.addresses:type_name -> pax.v1.TrafficConnectionAddress
+	17, // 31: pax.v1.TrafficConnectionGroup.results:type_name -> pax.v1.TrafficConnectionResult
+	14, // 32: pax.v1.TrafficDetail.connection_groups:type_name -> pax.v1.TrafficConnectionGroup
+	12, // 33: pax.v1.TrafficDetail.connection_rules:type_name -> pax.v1.TrafficBasis
+	6,  // 34: pax.v1.TrafficDetail.connection_exits:type_name -> pax.v1.TrafficExit
+	5,  // 35: pax.v1.TrafficDetail.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	8,  // 36: pax.v1.TrafficDetail.summary:type_name -> pax.v1.TrafficRow
+	2,  // 37: pax.v1.TrafficDetail.items:type_name -> pax.v1.FlowRecord
+	12, // 38: pax.v1.TrafficDetail.basis:type_name -> pax.v1.TrafficBasis
+	21, // 39: pax.v1.TrafficDetail.as_of:type_name -> google.protobuf.Timestamp
+	21, // 40: pax.v1.TrafficDetail.from:type_name -> google.protobuf.Timestamp
+	0,  // 41: pax.v1.TrafficDetail.history:type_name -> pax.v1.HistoryState
+	19, // 42: pax.v1.TrafficDetail.related:type_name -> pax.v1.TrafficRelated
+	2,  // 43: pax.v1.TrafficDetail.timings:type_name -> pax.v1.FlowRecord
+	9,  // 44: pax.v1.TrafficDetail.trend:type_name -> pax.v1.TrafficPoint
+	20, // 45: pax.v1.TrafficDetail.dns_groups:type_name -> pax.v1.DNSTrafficGroup
+	21, // 46: pax.v1.DNSTrafficGroup.last_at:type_name -> google.protobuf.Timestamp
+	47, // [47:47] is the sub-list for method output_type
+	47, // [47:47] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_traffic_proto_init() }
@@ -2516,7 +3191,7 @@ func file_traffic_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_traffic_proto_rawDesc), len(file_traffic_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

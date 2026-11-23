@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strconv"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "pax-connect/daemon/gen/proto/paxv1"
@@ -15,6 +17,9 @@ import (
 
 func (c *Controller) trafficRead(ctx context.Context, q *pb.TrafficQuery) (*historyRead, string, error) {
 	if (!validDimension(q.Dimension) && q.Dimension != "system" && q.Dimension != "network") || len(q.Search) > 200 || q.Direction != "" && q.Direction != "all" && q.Direction != "direct" && q.Direction != "proxy" {
+		return nil, "", errors.New("invalid_filter")
+	}
+	if q.GroupApplications && q.Dimension != "application" {
 		return nil, "", errors.New("invalid_filter")
 	}
 	if q.Cursor != "" && q.ReadToken == "" {
@@ -30,7 +35,7 @@ func (c *Controller) trafficRead(ctx context.Context, q *pb.TrafficQuery) (*hist
 	if q.Window != "" && q.Window != "minute" || (!validDimension(q.Dimension) && q.Dimension != "system") || len(q.Search) > 200 || q.Direction != "" && q.Direction != "all" && q.Direction != "proxy" && q.Direction != "direct" {
 		return nil, "", errors.New("invalid_filter")
 	}
-	sig := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search})
+	sig := querySignature([]string{q.Dimension, q.Direction, q.Window, q.Search, strconv.FormatBool(q.GroupApplications)})
 	if q.ReadToken != "" {
 		r, e := c.readTokens.read(q.ReadToken, "traffic", sig)
 		return r, q.ReadToken, e
@@ -44,7 +49,7 @@ func (c *Controller) trafficRead(ctx context.Context, q *pb.TrafficQuery) (*hist
 	}
 	at := time.Now().UTC().Truncate(5 * time.Second)
 	from := at.Add(-time.Minute)
-	r := &historyRead{at: at, from: from, kind: "traffic", signature: sig, dimension: q.Dimension, window: q.Window, meta: c.publishedTrafficMeta(), flows: map[string][]*pb.FlowRecord{}}
+	r := &historyRead{at: at, from: from, kind: "traffic", signature: sig, dimension: q.Dimension, groupApplications: q.GroupApplications, window: q.Window, meta: c.publishedTrafficMeta(), flows: map[string][]*pb.FlowRecord{}}
 	var values []stats.FlowWindow
 	points := map[int64]*pb.TrafficPoint{}
 	windows := map[string][liveWindowPoints]livePoint{}
@@ -185,12 +190,19 @@ func (c *Controller) ensureTrafficListToken(ctx context.Context, token string) e
 
 // QueryTrafficDetail keeps summary values fixed while connection pages are loaded.
 func (c *Controller) QueryTrafficDetail(ctx context.Context, q *pb.TrafficDetailRequest) (*pb.TrafficDetail, error) {
-	if len(q.DnsGroupId) > 128 {
+	if len(q.DnsGroupId) > 128 || len(q.TargetGroupId) > 512 || len(q.ConnectionSearch) > 512 || len(q.ConnectionExit) > 2048 || len(q.ConnectionRule) > 4096 || len(q.RelatedId) > 512 {
+
 		return nil, historyError(errors.New("invalid_filter"))
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	out := &pb.TrafficDetail{}
+	original := q
+	var frozen *historyRead
+	if q.GroupConnections {
+		q = proto.Clone(q).(*pb.TrafficDetailRequest)
+		q.Cursor = ""
+	}
 	err := func() error {
 		token := q.ReadToken
 		var r *historyRead
@@ -216,6 +228,7 @@ func (c *Controller) QueryTrafficDetail(ctx context.Context, q *pb.TrafficDetail
 				return err
 			}
 		}
+		frozen = r
 		if r.columnSnapshot != nil && !r.aggregate && q.ConnectionKey != "" {
 			local := *r
 			local.flows = map[string][]*pb.FlowRecord{}
@@ -397,6 +410,11 @@ func (c *Controller) QueryTrafficDetail(ctx context.Context, q *pb.TrafficDetail
 	}()
 	if err != nil {
 		return nil, historyError(err)
+	}
+	if original.GroupConnections && out.Summary.Kind != "dns" {
+		if err := frozen.targetConnectionDetail(ctx, original, out); err != nil {
+			return nil, historyError(err)
+		}
 	}
 	if err := c.readTokens.ensureLive(ctx, out.ReadToken); err != nil {
 		return nil, historyError(err)

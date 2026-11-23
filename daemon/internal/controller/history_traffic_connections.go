@@ -57,7 +57,7 @@ func applyTrafficLogMeta(r *historyRead, meta historystore.LogsMeta) {
 	r.deletionGeneration, r.summaryGeneration = meta.LogDeletionGeneration, meta.SummaryGeneration
 	r.logJournalGeneration = meta.JournalGeneration
 	r.recentResponsesState = "ready"
-	if meta.Partial || meta.CapacityEvicted {
+	if meta.Partial {
 		r.recentResponsesState = "partial"
 	}
 	r.meta.LogsRevision, r.meta.LogDeletionGeneration = meta.LogsRevision, meta.LogDeletionGeneration

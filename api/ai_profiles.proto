@@ -8,6 +8,7 @@ option go_package = "pax-connect/daemon/gen/proto/paxv1";
 // Same-UID user-daemon only. No credential is returned in snapshots or plans.
 service AIProfilesService {
  rpc QueryAIProfiles(AIProfilesQuery) returns (AIProfilesWorkspace);
+ rpc ListAIProfileHistory(AIProfileHistoryQuery) returns (AIProfileHistoryPage);
  rpc MutateAIProfile(AIProfileMutation) returns (AIProfilesWorkspace);
  rpc PlanAIProfileApply(AIProfilePlanRequest) returns (AIProfilePlan);
  rpc RefreshAIProfileModels(AIProfileModelsRequest) returns (AIProfilesWorkspace);
@@ -15,6 +16,22 @@ service AIProfilesService {
  rpc ApplyAIProfile(AIProfileApplyRequest) returns (AIProfilesWorkspace);
 }
 message AIProfilesQuery {}
+message AIProfileHistoryQuery {
+ string cli=1;
+ AIProfileHistoryCursor before=2;
+}
+message AIProfileHistoryCursor { int64 at_ns=1; int64 row_id=2; }
+message AIProfileHistoryEvent {
+ int64 at_ms=1;
+ string kind=2;
+ string profile_id=3;
+ string profile_name=4;
+ string service_source=5;
+}
+message AIProfileHistoryPage {
+ repeated AIProfileHistoryEvent events=1;
+ AIProfileHistoryCursor next=2;
+}
 message AIProfileModelsRequest { string profile_id=1; OperationContext context=2; }
 message AIProfileSave {
  AIProfileSummary profile=1; uint64 expected_revision=2;

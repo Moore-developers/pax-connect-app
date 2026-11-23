@@ -19,9 +19,22 @@ message HistoryState {
  // Conservative cumulative bound: prefix deletions only remove times strictly before this
  // Unix millisecond. Zero/absent means unknown. Summary/journal changes always revoke all.
  int64 log_removal_before_ms=18;
+ // Disk space allocated to the active SQLite files and their companions.
+ SQLiteStorageUsage sqlite_storage=20;
+ // The local single-library preview used this field.
+ reserved 19;
+ reserved "log_storage_bytes";
  // 13 曾是 quality_revision：状态类字段随值送达（R8），不另设版本号，字段与名称均不复用。
  reserved 13;
  reserved "quality_revision";
+}
+
+message SQLiteStorageUsage {
+ uint64 logs_bytes = 1;
+ uint64 traffic_bytes = 2;
+ uint64 journal_bytes = 3;
+ uint64 ai_usage_bytes = 4;
+ uint64 profile_events_bytes = 5;
 }
 
 message FlowRecord {
@@ -43,6 +56,8 @@ message DNSRecord {string query_type=1;string result=2;repeated string answers=3
 message TrafficQuery {
  string dimension = 1; string direction = 2; string window = 3; string search = 4;
  string read_token = 5; string cursor = 6; uint32 limit = 7; google.protobuf.Timestamp until=8;
+ // Application workbench projection. Aggregate across actual exits before ranking and paging.
+ bool group_applications=9;
 }
 
 // One retained connection's real first-response latency. Zero milliseconds is valid.
@@ -62,11 +77,14 @@ message TrafficRoutingMatch {
  string rule=2; string source=3; string application_id=4; string application=5;
  // Connection key includes the runtime session; lexical order breaks equal-time ties.
  string identity=6;
+ string direction=7; string route_name=8;
 }
 
 message TrafficRow {
  TrafficRoutingMatch latest_match=37;
- // Source/target rows: one recorded exit per object/exit/direction group.
+ // Rejected attempts within a merged application row, included in failed_count.
+ uint64 blocked_count=38;
+ // Recorded exits covered by the row, including blocked attempts.
  repeated TrafficExit exits=36;
  // Retained facts only, oldest to newest. State: ready / partial / failed; empty means unavailable.
  repeated TrafficResponsePoint recent_responses=33;
@@ -111,15 +129,46 @@ message TrafficPage {
 message TrafficDetailRequest {
  string row_id = 1; string connection_key = 2; string read_token = 3;
  string cursor = 4; uint32 limit = 5; string dns_group_id=6;
+ // Full retained pool: filter before grouping/paging; target_group_id expands one group.
+ bool group_connections=7; string target_group_id=8; string connection_search=9;
+ string connection_exit=10; string connection_rule=11; string related_id=12;
+ // target / connections / bytes / exit; empty defaults to connections descending.
+ string connection_sort=13; bool connection_ascending=14;
 }
 
-message TrafficBasis { string rule = 1; string source = 2; uint64 connections = 3;string target=4;string route_name=5; }
+message TrafficBasis { string rule = 1; string source = 2; uint64 connections = 3;string target=4;string route_name=5; string direction=6; }
 
 message TrafficLatencySample {google.protobuf.Timestamp at=1;uint64 milliseconds=2;bool known=3;uint64 count=4;uint64 p95_ms=5;uint32 seconds=6;}
+
+message TrafficConnectionGroup {
+ string id=1; string target=2; string kind=3; uint64 connections=4;
+ uint64 upload=5; uint64 download=6; string bytes_state=7;
+ google.protobuf.Timestamp last_at=8;
+ repeated TrafficBasis rules=9; repeated TrafficExit exits=10;
+ // Complete-pool evidence; response samples are the latest 60 valid retained observations.
+ repeated TrafficResponsePoint recent_responses=11; uint64 valid_latency_count=12;
+ repeated TrafficConnectionSource sources=13; repeated TrafficConnectionAddress addresses=14;
+ repeated TrafficConnectionResult results=15;
+}
+
+message TrafficConnectionSource {
+ string application_id=1; string application=2; string process=3; string kind=4; uint64 connections=5;
+}
+message TrafficConnectionAddress {
+ string ip=1; uint32 port=2; string transport=3; uint64 connections=4;
+}
+message TrafficConnectionResult {
+ // active / closed / failed / unknown, based only on evidence at the frozen cutoff.
+ string state=1; string failure=2; uint64 connections=3;
+}
 
 message TrafficDetail {
  // Exact number of retained matching connections in the recent 24-hour detail pool.
  uint64 retained_connection_count=25;
+ repeated TrafficConnectionGroup connection_groups=26;
+ uint64 target_group_total=27; uint64 filtered_connection_count=28;
+ // Complete pool choices, independent of the active intersection filters.
+ repeated TrafficBasis connection_rules=29; repeated TrafficExit connection_exits=30;
  // Same frozen selection as the list, up to 60 points (list carries its last 20).
  repeated TrafficResponsePoint recent_responses=22;
  string recent_responses_state=23; string recent_responses_error=24;

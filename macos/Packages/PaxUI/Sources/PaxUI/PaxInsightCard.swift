@@ -252,3 +252,142 @@ private final class InsightRow: NSButton {
     }
   }
 }
+
+/// Compact dashboard activity feed. The full event remains available on hover and in Logs.
+public final class PaxActivityStrip: PaxCard {
+  private let heading = PaxText.label(
+    "", font: PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont))
+  private let message = PaxText.label(
+    "", font: PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont), secondary: true)
+  private let dot = NSView()
+  private let slots = (0..<3).map { _ in ActivitySlot() }
+  private var name: String
+  private var failure = ""
+  private var failed = false
+  public var onSelect: ((String) -> Void)?
+  public override var isFlipped: Bool { true }
+
+  public init(title: String, identifier: String) {
+    name = title
+    super.init(insets: NSEdgeInsets())
+    dot.wantsLayer = true
+    dot.layer?.cornerRadius = 3
+    dot.layer?.backgroundColor = PaxTheme.DashboardColor.green.cgColor
+    for view in [dot, heading, message] + slots { addSubview(view) }
+    for slot in slots {
+      slot.isHidden = true
+      slot.onSelect = { [weak self] id in self?.onSelect?(id) }
+    }
+    setAccessibilityIdentifier(identifier)
+  }
+  @available(*, unavailable) public required init?(coder: NSCoder) { fatalError() }
+  public func applyTitle(_ title: String, failedSuffix: String) {
+    name = title
+    failure = failedSuffix
+    updateHeading()
+  }
+  private func updateHeading() {
+    let text = name + (failed ? failure : "")
+    if heading.stringValue != text {
+      heading.stringValue = text
+      needsLayout = true
+    }
+  }
+  public func apply(_ model: PaxInsightModel) {
+    failed = model.updateFailed
+    updateHeading()
+    let text = model.items.isEmpty ? model.emptyTitle : ""
+    if message.stringValue != text { message.stringValue = text }
+    for (index, slot) in slots.enumerated() {
+      let next = model.items.indices.contains(index) ? model.items[index] : nil
+      guard slot.item != next else { continue }
+      let previousWidth = slot.item == nil ? 0 : slot.intrinsicContentSize.width
+      slot.apply(next)
+      let width = next == nil ? 0 : slot.intrinsicContentSize.width
+      if previousWidth != width { needsLayout = true }
+    }
+  }
+  public override func layout() {
+    super.layout()
+    layer?.cornerRadius = bounds.height / 2
+    let pad = PaxTheme.Dashboard.inset
+    dot.frame = NSRect(x: pad, y: (bounds.height - 6) / 2, width: 6, height: 6)
+    heading.sizeToFit()
+    heading.frame.origin = NSPoint(
+      x: dot.frame.maxX + 7, y: (bounds.height - heading.frame.height) / 2)
+    var x = heading.frame.maxX + 12
+    let messageHeight = message.intrinsicContentSize.height
+    message.frame = NSRect(
+      x: x, y: (bounds.height - messageHeight) / 2, width: max(1, bounds.width - pad - x),
+      height: messageHeight)
+    let visible = slots.filter { !$0.isHidden }
+    for (index, slot) in visible.enumerated() {
+      let width = min(
+        slot.intrinsicContentSize.width,
+        max(0, (bounds.width - pad - x) / CGFloat(visible.count - index)))
+      slot.frame = NSRect(x: x, y: 0, width: width, height: bounds.height)
+      x += width + 16
+    }
+  }
+}
+
+/// A stable event position. Its text and status change independently of its neighbors.
+private final class ActivitySlot: NSButton {
+  private(set) var item: PaxInsightItem?
+  var onSelect: ((String) -> Void)?
+  private let time = PaxText.label(
+    "", font: PaxTheme.Typography.metric(size: PaxTheme.Dashboard.bodyFont), secondary: true)
+  private let event = PaxText.label(
+    "", font: PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyFont))
+  private let status = PaxToneBadge("")
+  override init(frame: NSRect) {
+    super.init(frame: frame)
+    isBordered = false
+    title = ""
+    target = self
+    action = #selector(open)
+    status.compact = true
+    event.lineBreakMode = .byTruncatingTail
+    for view in [time, event, status] as [NSView] { addSubview(view) }
+  }
+  @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+  @objc private func open() { if let item { onSelect?(item.id) } }
+  override func hitTest(_ point: NSPoint) -> NSView? { super.hitTest(point) == nil ? nil : self }
+  func apply(_ next: PaxInsightItem?) {
+    item = next
+    isHidden = next == nil
+    guard let next else { return }
+    if time.stringValue != next.time { time.stringValue = next.time }
+    if event.stringValue != next.title { event.stringValue = next.title }
+    let label = next.badge ?? next.detail
+    let tone = next.badge == nil ? next.detailTone : next.badgeTone
+    if status.text != label { status.text = label }
+    if status.tone != tone { status.tone = tone }
+    status.isHidden = label.isEmpty
+    toolTip = [next.time, next.title, next.detail, next.badge ?? ""].filter { !$0.isEmpty }.joined(
+      separator: " · ")
+    setAccessibilityLabel(toolTip)
+    invalidateIntrinsicContentSize()
+    needsLayout = true
+  }
+  private var timeWidth: CGFloat {
+    time.stringValue.isEmpty ? 0 : time.intrinsicContentSize.width + 5
+  }
+  private var statusWidth: CGFloat { status.isHidden ? 0 : status.intrinsicContentSize.width + 5 }
+  override var intrinsicContentSize: NSSize {
+    .init(
+      width: timeWidth
+        + ceil((event.stringValue as NSString).size(withAttributes: [.font: event.font!]).width)
+        + statusWidth + 6, height: 20)
+  }
+  override func layout() {
+    super.layout()
+    func centered(_ view: NSView, x: CGFloat, width: CGFloat) -> NSRect {
+      let height = view.intrinsicContentSize.height
+      return NSRect(x: x, y: (bounds.height - height) / 2, width: max(0, width), height: height)
+    }
+    time.frame = centered(time, x: 0, width: timeWidth)
+    event.frame = centered(event, x: timeWidth, width: bounds.width - timeWidth - statusWidth)
+    status.frame = centered(status, x: event.frame.maxX + 5, width: statusWidth - 5)
+  }
+}

@@ -33,9 +33,9 @@
     "dashboard_value.output": "Output",
     "dashboard_value.cache": "Cache",
     "dashboard_value.today": "Today",
-    "dashboard_value.no_week_requests": "No AI Requests in the Last 7 Days",
-    "dashboard_value.profile_no_requests": "No Requests for This Profile in the Last 7 Days",
-    "dashboard_value.model_no_requests": "No Requests for This Model in the Last 7 Days",
+    "dashboard_value.no_week_requests": "No AI Requests in the Last 10 Days",
+    "dashboard_value.profile_no_requests": "No Requests for This Profile in the Last 10 Days",
+    "dashboard_value.model_no_requests": "No Requests for This Model in the Last 10 Days",
     "dashboard_value.today_requests": "Requests",
     "dashboard_value.none": "None Yet",
     "dashboard_value.has_data": "Days with Data",
@@ -60,7 +60,7 @@
     "dashboard_value.attention": "Needs Attention",
     "dashboard_value.success": "Succeeded",
     "dashboard_value.recent_samples": "Last {count} Valid Measurements",
-    "dashboard_value.days_with_data": "{count} / 7 days",
+    "dashboard_value.days_with_data": "{count} / 10 days",
     "dashboard_value.models_caption": "{tokens} tokens · {count} models"
   }
 }

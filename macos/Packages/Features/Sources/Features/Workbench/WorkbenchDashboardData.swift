@@ -20,8 +20,8 @@ extension WorkbenchDemoStore {
   }
 
   var dashboardRouteModel: PaxCurrentRouteModel {
-    let badge = scenario == .disconnected ? "最后线路" : isRunning ? "当前线路" : "选定线路"
-    guard let route else {
+    let badge = scenario == .disconnected ? "最后线路" : isRunning ? "已连接" : "选定线路"
+    guard scenario != .empty, let route else {
       return DashboardRouteProjection.card(
         route: nil, badge: badge, exitIP: nil, running: false, history: [])
     }
@@ -73,7 +73,7 @@ extension WorkbenchDemoStore {
     return DashboardTrafficProjection.card(snapshot: snapshot, page: page, now: now)
   }
 
-  /// 近 7 日 + 今日各模型的确定桶：今日官方 $18.60，6 个模型，全部只在内存。
+  /// 前 9 日 + 今日各模型的确定桶：今日官方 $18.60，6 个模型，全部只在内存。
   var dashboardUsageBuckets: [AIUsageBucket] {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: trafficCapturedAt)
@@ -89,9 +89,11 @@ extension WorkbenchDemoStore {
       value.billedCosts = value.costs
       return value
     }
-    let earlier: [Double] = [12.4, 15.1, 9.8, 13.6, 14.9, 15.4]
+    let earlier: [Double] = [10.6, 11.8, 16.2, 12.4, 15.1, 9.8, 13.6, 14.9, 15.4]
     var buckets = earlier.enumerated().compactMap { index, cost -> AIUsageBucket? in
-      calendar.date(byAdding: .day, value: index - 6, to: today).map {
+      calendar.date(
+        byAdding: .day, value: index - (DashboardUsageProjection.dayCount - 1), to: today
+      ).map {
         AIUsageBucket(
           at: $0.addingTimeInterval(36_000), client: .claude, modelID: "claude-opus-5-5",
           totals: totals(cost, 900_000, 800))
@@ -153,25 +155,22 @@ extension WorkbenchDashboardViewController {
     if store.scenario == .empty {
       var trend = PaxModelTrendModel()
       trend.empty = self.interfaceCopy.text("dashboard_value.no_week_requests")
-      trendCard.apply(trend)
       var rank = PaxModelRankModel()
       rank.empty = self.interfaceCopy.text("dashboard_value.no_today_requests")
-      rankCard.apply(rank)
+      usageCard.apply(trend, rank)
     } else {
       let buckets = store.dashboardUsageBuckets
-      trendCard.apply(
+      usageCard.apply(
         DashboardUsageProjection.trend(
           buckets: buckets, state: nil, updatedAt: now.addingTimeInterval(-1800), now: now,
-          filter: live.selectedUsageFilter))
-      rankCard.apply(DashboardUsageProjection.rank(buckets: buckets, state: nil, now: now))
+          filter: live.selectedUsageFilter),
+        DashboardUsageProjection.rank(
+          buckets: buckets, state: nil, now: now, filter: live.selectedUsageFilter))
     }
-    attentionCard.apply(
-      PaxInsightModel(
-        items: store.dashboardAttention,
-        emptyTitle: self.interfaceCopy.text("dashboard.no_problems")))
     changesCard.apply(
       PaxInsightModel(
-        items: store.dashboardChanges,
+        items: store.dashboardAttention.prefix(1) + store.dashboardChanges
+          + store.dashboardAttention.dropFirst(),
         emptyTitle: self.interfaceCopy.text("dashboard.no_operations")))
     applyAction(store.dashboardAction)
   }

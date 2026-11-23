@@ -33,9 +33,9 @@
     "dashboard_value.output": "输出",
     "dashboard_value.cache": "缓存",
     "dashboard_value.today": "今日",
-    "dashboard_value.no_week_requests": "近 7 日暂无模型请求",
-    "dashboard_value.profile_no_requests": "该 Profile 近 7 日无请求",
-    "dashboard_value.model_no_requests": "该模型近 7 日无请求",
+    "dashboard_value.no_week_requests": "近 10 日暂无模型请求",
+    "dashboard_value.profile_no_requests": "该 Profile 近 10 日无请求",
+    "dashboard_value.model_no_requests": "该模型近 10 日无请求",
     "dashboard_value.today_requests": "今日请求",
     "dashboard_value.none": "暂无",
     "dashboard_value.has_data": "有数据",
@@ -60,7 +60,7 @@
     "dashboard_value.attention": "需注意",
     "dashboard_value.success": "成功",
     "dashboard_value.recent_samples": "最近 {count} 次有效测量",
-    "dashboard_value.days_with_data": "{count} / 7 天",
+    "dashboard_value.days_with_data": "{count} / 10 天",
     "dashboard_value.models_caption": "{tokens} Token · {count} 个模型"
   }
 }

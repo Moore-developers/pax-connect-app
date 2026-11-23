@@ -118,3 +118,7 @@ MCP网络操作：controller/operation_network.go复用现有testOwner/pathDiagn
 适用范围、用例与验收入口见[验证合同](validation.md)。
 
 CF的异步验证/冻结保存沿controller/cf_validation_operations.go，MCP四工具沿mcpserver/cf.go与cf_schema.go；不增包或存储。共享CF结果消息归operation.proto，Swift DaemonCFValidation与现有CFWorkspace在PaxClient映射。真实stdio/socket与落盘证据见tests/pax-mcp/1130-results.md。
+
+目标明细查询/展示补充：controller/traffic_connection_groups.go与traffic_connection_evidence.go、PaxClient/Model/TrafficConnectionGroup.swift、Features/Workbench/WorkbenchConnectionGroups{View,Presentation}.swift、WorkbenchConnectionGroupEvidence.swift、WorkbenchConnectionTransferText.swift、WorkbenchConnectionReadoutLayout.swift与WorkbenchConnectionRule.swift。PaxUI/PaxDataRowView.swift从共享表格分出行背景和可选悬停，不增加状态owner；见[合同](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。
+
+目标明细移除WorkbenchConnectionListView.swift与WorkbenchConnectionListState.swift，原逐条排查信息并入目标hover；无新页面状态。

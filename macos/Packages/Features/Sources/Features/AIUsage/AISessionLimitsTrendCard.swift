@@ -11,7 +11,8 @@ import PaxUI
 
   let view: NSView
   private let options: AISessionOptions
-  private let basis = PaxTabs([])
+  private let basis: PaxTabs
+  private let referenceBasis: NSTextField
   private let chart = PaxContextTrendChart(frame: .zero)
   private let layerLegend = PaxSeriesLegend()
   private let bandLegend = PaxSeriesLegend()
@@ -19,13 +20,16 @@ import PaxUI
 
   init(options: AISessionOptions, interfaceCopy: InterfaceCopyBindings = InterfaceCopyBindings()) {
     self.interfaceCopy = interfaceCopy
+    referenceBasis = interfaceCopy.usageLabel(
+      "session_limits.antigravity_reference", secondary: true)
+    referenceBasis.isHidden = true
     let context = interfaceCopy.context
+    basis = PaxTabs([
+      context.text("session_limits.c0b69a3163"), context.text("session_limits.4d14ea51f5"),
+    ])
     chart.tokenTitle = context.text("session_chart.context_title")
     chart.costTitle = context.text("session_chart.cost_title")
     chart.emptyMessage = context.text("session_chart.empty")
-    basis.apply(labels: [
-      context.text("session_limits.c0b69a3163"), context.text("session_limits.4d14ea51f5"),
-    ])
 
     self.options = options
     let note = interfaceCopy.bind(
@@ -37,6 +41,7 @@ import PaxUI
     let header = AIUsageLayout.stack(
       [
         interfaceCopy.usageHeading("session_limits.95b0287904"), note, NSView(), basis,
+        referenceBasis,
       ], vertical: false)
     header.spacing = PaxTheme.Spacing.tight
     basis.setAccessibilityIdentifier("ai-session-trend-basis")
@@ -74,7 +79,9 @@ import PaxUI
   }
   func apply(_ trend: AILimitTrend) {
     self.trend = trend
-    let useChannel = options.cacheChannel
+    let useChannel = !trend.officialOnly && options.cacheChannel
+    basis.isHidden = trend.officialOnly
+    referenceBasis.isHidden = !trend.officialOnly
     let rows = trend.requests
     let write = trend.hasWriteLayer
     let switches = Dictionary(trend.switches.map { ($0.index, $0) }, uniquingKeysWith: { $1 })

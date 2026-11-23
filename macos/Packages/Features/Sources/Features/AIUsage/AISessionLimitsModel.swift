@@ -191,6 +191,7 @@ struct AILimitCurrent: Equatable {
   var context: Int
   var limit: Int?
   var band: Int
+  var nativeContextLimit: Int? = nil
 }
 
 /// One local calendar day of active root sessions and their input costs, including descendants.
@@ -257,6 +258,7 @@ struct AILimitTrend: Equatable {
   var flatStart: Int?
   var switches: [AILimitSwitch]
   var hasWriteLayer: Bool
+  var officialOnly: Bool = false
 }
 
 /// Everything shown for one selection: every session or a single one.

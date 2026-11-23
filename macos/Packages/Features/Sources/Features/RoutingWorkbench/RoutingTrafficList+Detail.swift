@@ -12,6 +12,7 @@ extension RoutingTrafficList {
     let generation = store.liveGeneration
     var query = TrafficDetailQuery()
     query.limit = 20
+    query.groupConnections = true
     query.rowID = id
     query.readToken = store.livePage.readToken
     let dimension: TrafficDimension =
@@ -25,7 +26,7 @@ extension RoutingTrafficList {
         present(
           WorkbenchTrafficDetailController(
             detail: detail, dimension: dimension, telemetry: telemetry, tooltip: self.tooltip,
-            icons: self.icons))
+            icons: self.icons, ruleStore: self.store))
       } catch {
         if !Task.isCancelled, self?.store.liveGeneration == generation {
           fail(ProductErrorPresentation.display(error))

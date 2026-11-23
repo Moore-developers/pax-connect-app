@@ -8,7 +8,7 @@ import (
 )
 
 // ProtocolVersion is shared by the daemon and its local Go adapters.
-const ProtocolVersion uint32 = 49
+const ProtocolVersion uint32 = 52
 
 // DialUser verifies the server UID before transmitting any product request.
 func DialUser(ctx context.Context, path string) (net.Conn, error) {

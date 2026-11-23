@@ -74,34 +74,33 @@ final class AIUsageLogView: NSView, NSTextFieldDelegate {
     self.store = store
     table = PaxDataTable(
       columns: [
-        // Minimum widths fit the 814pt content area. Names receive most of the extra width;
-        // compact status and multiplier columns stay fixed, as in the route table.
-        .init("CLI", width: 110, growth: 0, symbol: "terminal", sortable: false),
+        // Minimum widths fit the 814pt content area. Columns share the extra width evenly.
+        .init("CLI", width: 134, symbol: "terminal", sortable: false),
         .init(
-          context.text("ai_logs.f996981f0d"), width: 166, growth: 3, symbol: "clock",
+          context.text("ai_logs.f996981f0d"), width: 138, symbol: "clock",
           sortable: false),
         .init(
-          context.text("ai_logs.be547232eb"), width: 90, growth: 2, alignment: .center,
+          context.text("ai_logs.be547232eb"), width: 104, alignment: .center,
           symbol: "person.crop.circle",
           inset: cellInset, sortable: false),
         .init(
-          context.text("ai_logs.205f148340"), width: 56, growth: 0, alignment: .center,
+          context.text("ai_logs.205f148340"), width: 60, alignment: .center,
           symbol: "creditcard", inset: cellInset,
           sortable: false),
         .init(
-          context.text("ai_logs.3282fd6773"), width: 104, growth: 1, alignment: .center,
+          context.text("ai_logs.3282fd6773"), width: 110, alignment: .center,
           symbol: "speedometer",
           inset: cellInset, sortable: false),
         .init(
-          context.text("ai_logs.df444cc4db"), width: 160, numeric: true, growth: 2,
+          context.text("ai_logs.df444cc4db"), width: 140, numeric: true,
           symbol: "number",
           inset: cellInset,
           sortable: false),
         .init(
-          context.text("ai_logs.column.cache"), width: 72, growth: 0.5, alignment: .center,
+          context.text("ai_logs.column.cache"), width: 64, alignment: .center,
           inset: cellInset, sortable: false),
         .init(
-          context.text("ai_logs.6320b4a872"), width: 56, growth: 0, alignment: .center,
+          context.text("ai_logs.6320b4a872"), width: 64, alignment: .center,
           inset: cellInset, sortable: false),
       ], metrics: .init(),
       selection: .browse)

@@ -19,7 +19,8 @@ type ColumnTrafficFilter struct {
 	From, Until, DetailAt                                time.Time
 	Buckets                                              []int64  // five-minute bucket starts, Unix milliseconds
 	Overlap                                              bool     // period summaries apply TrafficMatches; retained details do not
-	AnyExit                                              bool     // select every exit while discovering period summary rows
+	AnyExit                                              bool     // include all exits allowed by the direction filter
+	GroupApplications                                    bool     // one period summary per application identity
 	keys                                                 []string // already selected immutable page keys
 	stale                                                bool     // snapshot older than writer: snap_* are UNION views
 }

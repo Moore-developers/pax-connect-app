@@ -22,7 +22,7 @@ func aiDescription(name string) string {
 }
 
 func aiSessionSchema() schema {
-	return object(schema{"cli": enum("claude", "codex", "dsh"), "session_id": idSchema()}, "cli", "session_id")
+	return object(schema{"cli": enum("claude", "codex", "dsh", "antigravity"), "session_id": idSchema()}, "cli", "session_id")
 }
 
 func aiInputSchema(name string) schema {
@@ -35,11 +35,11 @@ func aiInputSchema(name string) schema {
 	case "pax_ai_buckets":
 		merge(props, schema{"granularity": enum("hour", "day"), "known_revision": revisionSchema()})
 	case "pax_ai_sessions":
-		merge(props, schema{"cli": enum("claude", "codex", "dsh"), "search": str(200), "selected": aiSessionSchema()})
+		merge(props, schema{"cli": enum("claude", "codex", "dsh", "antigravity"), "search": str(200), "selected": aiSessionSchema()})
 	case "pax_ai_analysis":
 		merge(props, schema{"sessions": array(aiSessionSchema(), 5), "projection": enum("context", "trajectories", "limits"), "comparison_range": rangeSchema(), "known_revision": revisionSchema()})
 	case "pax_ai_logs":
-		merge(props, schema{"cli": enum("claude", "codex", "dsh"), "profile_id": idSchema(), "model_id": nameSchema(), "service_source": enum("official_account", "official_api", "relay_api", "unknown"), "succeeded": boolean(), "search": str(200), "min_official_cost_micro": countSchema(), "max_official_cost_micro": countSchema()})
+		merge(props, schema{"cli": enum("claude", "codex", "dsh", "antigravity"), "profile_id": idSchema(), "model_id": nameSchema(), "service_source": enum("official_account", "official_api", "relay_api", "unknown"), "succeeded": boolean(), "search": str(200), "min_official_cost_micro": countSchema(), "max_official_cost_micro": countSchema()})
 	}
 	out := object(props)
 	out["$schema"] = "https://json-schema.org/draft/2020-12/schema"

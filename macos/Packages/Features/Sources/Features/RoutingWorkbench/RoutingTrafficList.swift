@@ -32,6 +32,7 @@ final class RoutingTrafficList: NSObject {
       context.text("traffic_details.3669d1a3f0"), context.text("traffic_details.ebab9eed49"),
     ]
   }
+  private static let overviewGrowth: [CGFloat] = [0.24, 0.20, 0.24, 0.14, 0, 0.18]
   private static let symbols = [
     "app", "point.3.connected.trianglepath.dotted", "line.3.horizontal.decrease.circle",
     "timer", "number", "arrow.up.arrow.down",
@@ -94,8 +95,9 @@ final class RoutingTrafficList: NSObject {
     self.icons = icons
     self.tooltip = tooltip
     self.style = style
-    let application = Self.titles().indices.filter { !style.hiddenColumns.contains($0) }
-    let system = Self.systemColumns.filter { !style.hiddenColumns.contains($0) }
+    let order = style.scrollMode == .page ? [0, 2, 1, 5, 3] : Array(Self.titles().indices)
+    let application = order.filter { !style.hiddenColumns.contains($0) }
+    let system = order.filter { !style.hiddenColumns.contains($0) }
     applicationLogical = application
     systemLogical = system
     table = Self.makeApplicationTable(style, logical: application, context: .chinese)
@@ -115,12 +117,19 @@ final class RoutingTrafficList: NSObject {
         let title = titles(context: context)[index]
         return .init(
           title, width: columnWidth(index, style: style, context: context, system: false),
-          growth: PaxTheme.Routing.columns[index],
-          alignment: (2...4).contains(index) ? .center : .left, symbol: symbols[index],
+          growth: style.scrollMode == .page
+            ? overviewGrowth[index] : PaxTheme.Routing.columns[index],
+          alignment: style.scrollMode == .page
+            ? (index == 3 || index == 5 ? .right : .left)
+            : (2...4).contains(index) ? .center : .left,
+          symbol: style.scrollMode == .page ? nil : symbols[index],
           inset: style.scrollMode == .page
             ? PaxTheme.Dashboard.cellInset
             : index == 0 || index == 5 ? PaxTheme.Dashboard.inset : PaxTheme.Dashboard.cellInset,
-          sortable: false, contentLayout: index == 2 || index == 4 ? .centered : .fill)
+          sortable: false,
+          contentLayout: (index == 2 || index == 4 || (style.scrollMode == .page && index == 5))
+            ? .centered : .fill
+        )
       },
       metrics: .workbench(),
       selection: style.selection, scrollMode: style.scrollMode)
@@ -136,12 +145,16 @@ final class RoutingTrafficList: NSObject {
         let title = systemTitles(context: context)[index]
         return .init(
           title, width: columnWidth(index, style: style, context: context, system: true),
-          growth: widths[index],
-          alignment: (2...4).contains(index) ? .center : .left,
-          symbol: systemSymbols[index],
+          growth: style.scrollMode == .page ? overviewGrowth[index] : widths[index],
+          alignment: style.scrollMode == .page
+            ? (index == 3 || index == 5 ? .right : .left)
+            : (2...4).contains(index) ? .center : .left,
+          symbol: style.scrollMode == .page ? nil : systemSymbols[index],
           inset: style.scrollMode == .page ? PaxTheme.Dashboard.cellInset : PaxTheme.Table.inset,
           sortable: false,
-          contentLayout: index == 2 || index == 4 ? .centered : .fill)
+          contentLayout: (index == 2 || index == 4 || (style.scrollMode == .page && index == 5))
+            ? .centered : .fill
+        )
       },
       metrics: .workbench(rounded: true),
       selection: style.selection, scrollMode: style.scrollMode)
@@ -156,6 +169,8 @@ final class RoutingTrafficList: NSObject {
     if isDashboard || system { labels.append(systemTitles(context: context)[index]) }
     if isDashboard || !system {
       labels.append(titles(context: context)[index])
+      if index == 1 { labels.append(context.text("connection_groups.exit")) }
+      if index == 2 { labels.append(context.text("connection_groups.rules")) }
       if index == 0 {
         labels.append(RoutingWorkbenchStore.Dimension.domain.title(context: context))
       }
@@ -194,10 +209,33 @@ final class RoutingTrafficList: NSObject {
     systemTable.refreshVisibleCopy()
   }
   func syncHeaders() {
+    if style.scrollMode == .page {
+      let first =
+        store.dimension == .application
+        ? context.text("dashboard.object") : store.dimension.title(context: context)
+      activeTable.setColumnTitle(first, at: 0)
+      if let exit = activeColumns.firstIndex(of: 1) {
+        activeTable.setColumnTitle(context.text("connection_groups.exit"), at: exit)
+      }
+      for (index, logical) in activeColumns.enumerated() where logical == 2 || logical == 3 {
+        activeTable.setColumnTitle(
+          context.text(logical == 2 ? "traffic_details.d17db68e8a" : "traffic_details.abe05d4485"),
+          at: index)
+      }
+      return
+    }
     table.setColumnTitle(
-      store.dimension.title(context: context), at: 0,
+      style.scrollMode == .page
+        ? context.text("dashboard.object") : store.dimension.title(context: context), at: 0,
       symbol: store.dimension == .application
         ? "app" : store.dimension == .domain ? "globe" : "gearshape")
+    let titles = Self.titles(context: context)
+    for (column, key) in [(1, "connection_groups.exit"), (2, "connection_groups.rules")] {
+      if let index = applicationIndex(column) {
+        table.setColumnTitle(
+          store.dimension == .application ? context.text(key) : titles[column], at: index)
+      }
+    }
     if let count = applicationIndex(4) {
       table.setColumnTitle(context.text("traffic_details.3669d1a3f0"), at: count, symbol: "number")
     }
@@ -279,10 +317,10 @@ final class RoutingTrafficList: NSObject {
       return Dictionary(uniqueKeysWithValues: rows.map { ($0.id, allColumns) })
     }
     let previousRows = Dictionary(uniqueKeysWithValues: renderedRows.map { ($0.id, $0) })
-    let dimension = store.dimension
     var changes: [String: IndexSet] = [:]
     for row in rows {
       guard let previous = previousRows[row.id], row != previous else { continue }
+      let dimension = store.dimension
       let pinKey = trafficPinKey(id: row.id, scope: scope)
       let changed = IndexSet(
         columns.indices.filter { index in
@@ -302,14 +340,16 @@ final class RoutingTrafficList: NSObject {
   private func cellKey(_ id: String, column: Int) -> RoutingTrafficCellKey? {
     guard let fact = store.liveFact(id: id) else { return nil }
     return routingTrafficCellKey(
-      fact, column: column, dimension: store.dimension, pinKey: trafficPinKey(id: id, scope: scope))
+      fact, column: column,
+      dimension: store.dimension,
+      pinKey: trafficPinKey(id: id, scope: scope))
   }
 
   func cell(_ id: String, column: Int, key: RoutingTrafficCellKey? = nil) -> NSView? {
     if id.hasPrefix("placeholder-") { return NSView() }
     return makeRoutingTrafficCell(
       id, column: column, key: key ?? cellKey(id, column: column), store: store,
-      icons: icons, tooltip: tooltip, context: context
+      icons: icons, tooltip: tooltip, context: context, rowActivationOnly: style.scrollMode == .page
     ) {
       [weak self] in self?.onOpen?(id)
     }

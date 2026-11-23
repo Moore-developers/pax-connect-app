@@ -84,9 +84,11 @@ extension PaxTimeSeriesChart {
       line.stroke()
       let text = style.formatTick(value) as NSString
       let size = text.size(withAttributes: attrs)
-      text.draw(
-        at: NSPoint(x: plot.minX - PaxTheme.Spacing.tight - size.width, y: y - size.height / 2),
-        withAttributes: attrs)
+      let labelOrigin =
+        model.axis == .samples
+        ? NSPoint(x: plot.minX, y: value == model.floor ? y : y - size.height)
+        : NSPoint(x: plot.minX - PaxTheme.Spacing.tight - size.width, y: y - size.height / 2)
+      text.draw(at: labelOrigin, withAttributes: attrs)
     }
     guard !style.unit.isEmpty else { return }
     let unitAttrs: [NSAttributedString.Key: Any] = [

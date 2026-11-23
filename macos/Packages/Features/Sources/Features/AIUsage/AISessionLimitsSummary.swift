@@ -272,29 +272,35 @@ import PaxUI
     if let current = summary.current {
       let limit = current.limit
       let tone = limit == nil ? nil : AILimitStyle.bandLabels[current.band]
+      let capacity = current.nativeContextLimit.map {
+        context.text("session_limits.native_context_limit", ["tokens": AILimitStyle.k($0)])
+      }
       let gauge = AIUsageLayout.stack([
         PaxText.label(
           limit.map { context.text("session_limits.0c69edbc82") + AILimitStyle.k($0) }
-            ?? context.text("session_limits.0c2315db3a"),
+            ?? capacity ?? context.text("session_limits.0c2315db3a"),
           font: PaxTheme.Typography.caption(), secondary: true),
         bar(
-          limit.map { Double(current.context) / Double($0) } ?? 0,
+          (limit ?? current.nativeContextLimit).map { Double(current.context) / Double($0) } ?? 0,
           color: tone ?? AILimitStyle.neutral),
       ])
       let status: String
       if let limit, current.context > limit {
         status = context.text("session_limits.b75bde28d7") + AILimitStyle.k(current.context - limit)
+      } else if limit != nil {
+        status = AILimitStyle.bandNames(context: context)[current.band]
+      } else if let nativeLimit = current.nativeContextLimit {
+        status = AIUsageFormatting.percent(Double(current.context) / Double(nativeLimit))
       } else {
-        status =
-          limit == nil
-          ? context.text("session_limits.0c2315db3a")
-          : AILimitStyle.bandNames(context: context)[current.band]
+        status = context.text("session_limits.0c2315db3a")
       }
       cards[2].apply(
         title: context.text("session_limits.080bc981ec"), value: AILimitStyle.k(current.context),
         sub: status,
         color: tone, subColor: tone, evidence: gauge,
-        footer: footer(context.text("session_limits.8b01b9b98b"), value: ""))
+        footer: footer(
+          context.text("session_limits.8b01b9b98b"),
+          value: limit == nil ? "" : capacity ?? ""))
       showActivity(cards[2])
     } else {
       showActivity(

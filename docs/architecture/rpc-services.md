@@ -22,8 +22,10 @@
 | 网络保护 / 设置 | GetNetworkPrivacy、SaveNetworkPrivacy、UpdateSettings（仅日志保留 field mask） | `network.privacy.v1`、`history.retention.v1` | [network-privacy](../changes/pax-connect-network-control-plane/network-privacy.md) |
 | AI 配置 | `api/ai_profiles.proto` 的 AIProfilesService | `ai.profiles.v1` / `ai.cli_apply.v1` / `ai.profiles.operations.v1` | [P07](../changes/pax-connect-network-control-plane/ui/specs/P07-ai-usage.md)、[M6](../changes/pax-mcp/tools-ai-settings.md#m6profile与客户端配置) |
 | AI 本地用量 | `api/ai_usage.proto` 的 AIUsageService：QueryAIUsageBuckets、SummarizeAIUsage、ListAIUsageLogs、RepriceAIUsage | `ai.usage.v1` / `ai.usage.cost_range.v1` | [AI采集](../changes/pax-connect-network-control-plane/ai-usage-collection.md) §3–7 |
+| 客户端配置历史 | `AIProfilesService.ListAIProfileHistory` | `ai.profiles.history.v1` | [配置历史](../changes/pax-connect-network-control-plane/ai-usage-attribution.md#2-客户端配置历史) |
+| Antigravity 模型 | `AIUsageService.ListAntigravityModels` | `ai.usage.antigravity_models.v1` | [模型与价格](../changes/pax-connect-network-control-plane/antigravity-usage.md#2-模型目录与价格) |
 
-TrafficRow.latest_match为可选最近匹配证据；语义见[最近命中](../changes/pax-connect-network-control-plane/latest-routing-match.md)。近期响应见[统一延迟](../changes/pax-connect-network-control-plane/traffic-system-latency.md)。
+应用排行可用 `TrafficQuery.group_applications` 按应用身份跨去向合并，作用域绑定读令牌。合并行的 `blocked_count` 是 `failed_count` 的子集。最近匹配及详情依据附实际方向，语义见[最近命中](../changes/pax-connect-network-control-plane/latest-routing-match.md)。近期响应见[统一延迟](../changes/pax-connect-network-control-plane/traffic-system-latency.md)。
 
 网络诊断提供者证据见`api/network_diagnostics.proto`：NetworkDiagnosticProvider保留确切查询IP/地址族、已返回能力、逐源状态/错误/HTTP/耗时/时间与备用能力/原因；source/fact以provider_id归因获取渠道。旧报告缺providers不冒充直接请求；provider_error只表示整体无可用资料，不能遮住部分成功。补充原因independent_coverage_missing兼容原备用历史；实际来源及预算以[诊断合同](../changes/pax-connect-network-control-plane/network-diagnostics.md#独立资料来源票1572026-11-09用户批准)为准。
 

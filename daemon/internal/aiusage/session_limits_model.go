@@ -56,9 +56,9 @@ type LimitRow struct {
 
 // LimitCurrent is the latest retained main request, independent of the date window.
 type LimitCurrent struct {
-	Context int64
-	Limit   *int64
-	Band    int32
+	Context                   int64
+	Limit, NativeContextLimit *int64
+	Band                      int32
 }
 
 // LimitSummary is the date-window summary; curve follows chronological request order.

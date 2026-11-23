@@ -64,10 +64,9 @@ import AppKit
       }
       if let series = value.latencySeries {
         return PaxTimeLatencyView(
-          series: series, latest: value.latencyText, compact: true, tooltip: tooltip,
+          series: series, compact: true, tooltip: tooltip,
           context: value.latencyContext, title: value.latencyTitle,
-          pinKey: value.latencyPinKey ?? "traffic-list-" + value.id, copy: timeSeriesCopy,
-          format: format)
+          pinKey: value.latencyPinKey ?? "traffic-list-" + value.id, copy: timeSeriesCopy)
       }
       return PaxLatencyView(
         samples: value.requests, latest: value.latencyText, compact: true,

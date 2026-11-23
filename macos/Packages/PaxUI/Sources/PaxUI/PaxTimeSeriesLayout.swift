@@ -26,10 +26,11 @@ struct PaxTimeSeriesLayout {
   let floor: Double
   let ceiling: Double
   let segments: [Segment]
+  private let sampleTickStep: Double?
 
   init(
     points: [PaxTimeSeriesPoint], domain: PaxTimeDomain, minimumCeiling: Double,
-    axis: PaxTimeSeries.Axis = .time
+    axis: PaxTimeSeries.Axis = .time, roundsSampleScale: Bool = false
   ) {
     self.axis = axis
     self.domain = domain
@@ -39,9 +40,22 @@ struct PaxTimeSeriesLayout {
     self.points = cleaned
     let maximum = cleaned.compactMap(\.total).max() ?? 0
     let range = PaxChartPlot.range(cleaned.compactMap(\.total))
-    floor = axis == .samples ? range.lowerBound : 0
-    ceiling =
-      axis == .samples ? range.upperBound : Self.niceCeiling(maximum, minimum: minimumCeiling)
+    if axis == .samples && roundsSampleScale {
+      // Give the regular axis legible whole intervals without flattening close observations.
+      let resolution: Double = maximum >= 100_000 ? 1000 : maximum >= 1000 ? 100 : 1
+      let target = max(resolution, (range.upperBound - range.lowerBound) / 2)
+      let magnitude = pow(10, Foundation.floor(log10(target)))
+      let factor = target / magnitude
+      let step = (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * magnitude
+      sampleTickStep = step
+      floor = (range.lowerBound / step).rounded(.down) * step
+      ceiling = (range.upperBound / step).rounded(.up) * step
+    } else {
+      sampleTickStep = nil
+      floor = axis == .samples ? range.lowerBound : 0
+      ceiling =
+        axis == .samples ? range.upperBound : Self.niceCeiling(maximum, minimum: minimumCeiling)
+    }
     segments = Self.segments(cleaned, bucket: axis == .samples ? nil : domain.bucket)
   }
 
@@ -62,6 +76,9 @@ struct PaxTimeSeriesLayout {
   func yFraction(_ value: Double) -> Double { min(1, max(0, (value - floor) / (ceiling - floor))) }
 
   var gridValues: [Double] {
+    if let step = sampleTickStep {
+      return (0...Int(((ceiling - floor) / step).rounded())).map { floor + Double($0) * step }
+    }
     let count = max(2, PaxTheme.TimeSeries.gridLineCount)
     return (0..<count).map { floor + (ceiling - floor) * Double($0) / Double(count - 1) }
   }

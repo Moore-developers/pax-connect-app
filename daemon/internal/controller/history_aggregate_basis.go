@@ -13,6 +13,7 @@ import (
 // Rule evidence belongs to the observed connection, never the current policy.
 type aggregateBasis struct {
 	Rule, Source, RouteName string
+	Direction               string `json:"-"`
 	Connections             uint64
 	Observations            uint64
 	Contribution            *ruleContribution    `json:",omitempty"`
@@ -53,6 +54,17 @@ func mergeAggregateBases(to *aggregateBucket, from map[string]aggregateBasis) {
 		to.Bases = mergeRoutingBases(to.Bases, from)
 	}
 }
+
+// Split the existing read-time rule evidence by the actual exit for a merged app.
+func applicationRoutingBases(v aggregateBucket) map[string]aggregateBasis {
+	bases := make(map[string]aggregateBasis, len(v.Bases))
+	for key, b := range v.Bases {
+		b.Direction, b.RouteName = v.Identity.Direction, v.Identity.RouteName
+		bases[key+"\x00"+v.Identity.Direction+"\x00"+v.Identity.Route] = b
+	}
+	return bases
+}
+
 func applyAggregateBases(row *pb.TrafficRow, bases map[string]aggregateBasis) {
 	if len(bases) == 0 {
 		bases = flowAggregateBases(config.FlowFact{RouteName: row.RouteName}, row.Connections)
@@ -65,7 +77,7 @@ func applyAggregateBases(row *pb.TrafficRow, bases map[string]aggregateBasis) {
 	sort.Strings(keys)
 	for _, key := range keys {
 		b := bases[key]
-		row.Bases = append(row.Bases, &pb.TrafficBasis{Rule: b.Rule, Source: b.Source, RouteName: b.RouteName, Connections: b.Connections})
+		row.Bases = append(row.Bases, &pb.TrafficBasis{Rule: b.Rule, Source: b.Source, RouteName: b.RouteName, Connections: b.Connections, Direction: b.Direction})
 		lines[config.TrafficBasisLine(b.Rule, b.Source)] = true
 	}
 	names := make([]string, 0, len(lines))

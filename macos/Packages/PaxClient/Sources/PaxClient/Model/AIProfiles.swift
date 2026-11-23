@@ -5,12 +5,15 @@ public enum AIClient: String, CaseIterable, Identifiable, Sendable {
   case claude = "Claude Code"
   case codex = "Codex"
   case harness = "Deepseek Harness"
+  case antigravity = "Antigravity"
+  public var isUsageOnly: Bool { self == .harness || self == .antigravity }
   public var id: String { rawValue }
   public var code: String {
     switch self {
     case .claude: "claude"
     case .codex: "codex"
     case .harness: "dsh"
+    case .antigravity: "antigravity"
     }
   }
   public init?(code: String) {
@@ -18,6 +21,7 @@ public enum AIClient: String, CaseIterable, Identifiable, Sendable {
     case "claude": self = .claude
     case "codex": self = .codex
     case "dsh": self = .harness
+    case "antigravity": self = .antigravity
     default: return nil
     }
   }
@@ -26,6 +30,7 @@ public enum AIClient: String, CaseIterable, Identifiable, Sendable {
     case .claude: "asterisk"
     case .codex: "terminal"
     case .harness: "fish"
+    case .antigravity: "sparkles"
     }
   }
 }

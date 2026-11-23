@@ -26,6 +26,7 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     case failed
   }
 
+  var onConnectionRuleSaved: (() -> Void)?
   let store: RoutingWorkbenchStore
   var draft: RoutingWorkbenchStore.RuleDraft
   private let tabs = PaxTabs(Kind.allCases.map(\.title))
@@ -60,16 +61,21 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
 
   init(
     store: RoutingWorkbenchStore, packageID: String, ruleID: String? = nil,
-    objectIcons: WorkbenchObjectIcons = WorkbenchObjectIcons()
+    objectIcons: WorkbenchObjectIcons = WorkbenchObjectIcons(),
+    prefilled: (method: RoutingWorkbenchStore.Method, target: String)? = nil
   ) {
     self.store = store
     candidates = RoutingRuleCandidateGrid(icons: objectIcons)
     if store.routeSelectionStore == nil && store.telemetry == nil {
       store.routeSelectionStore = RouteWorkbenchStore(session: WorkbenchDemoStore())
     }
-    let draft =
+    var draft =
       ruleID.flatMap { store.ruleDraft(packageID: packageID, ruleID: $0) }
       ?? store.newRuleDraft(packageID: packageID)
+    if let prefilled, ruleID == nil {
+      draft.method = prefilled.method
+      draft.target = prefilled.target
+    }
     self.draft = draft
     kind = Kind(draft.method)
     savedApplication = draft.method == .application ? draft.target : nil
@@ -441,9 +447,16 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
     if kind == .application || kind == .process {
       updateCandidateFooter()
     } else {
-      previewLabel.stringValue =
-        destination != nil && destination?.selection == nil
-        ? self.interfaceCopy.text("interface_detail.13fa119f20") : store.draftSummary(draft)
+      if destination != nil && destination?.selection == nil {
+        previewLabel.stringValue = self.interfaceCopy.text("interface_detail.13fa119f20")
+      } else if onConnectionRuleSaved != nil {
+        previewLabel.stringValue =
+          draft.target + " → "
+          + store.destinationName(draft.destination, context: self.interfaceCopy.context)
+          + "\n" + self.interfaceCopy.text("connection_groups.rule_scope")
+      } else {
+        previewLabel.stringValue = store.draftSummary(draft)
+      }
     }
     saveButton?.isEnabled = canSave
     pane.invalidateContentSize()
@@ -457,6 +470,7 @@ final class RoutingRuleEditor: RoutingModalController, NSTextFieldDelegate {
       guard let self else { return }
       do {
         try await store.saveLibrary(intent)
+        onConnectionRuleSaved?()
         close()
       } catch { showError(error) }
     }

@@ -289,7 +289,11 @@ final class AIUsageDetailController: WorkbenchModalController {
         profileRows(list, expanded: true)
       }
       if isRequest {
-        addPricing(list)
+        if let request = list.first, request.client == .antigravity, request.inputPrice == nil {
+          pane.add(self.interfaceCopy.usageLabel("ai_usage.antigravity.no_rate", secondary: true))
+        } else {
+          addPricing(list)
+        }
       } else {
         pane.add(self.interfaceCopy.usageLabel("action.usage.pricing_note", secondary: true))
       }

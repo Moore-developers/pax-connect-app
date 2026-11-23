@@ -426,6 +426,7 @@ final class RoutingWorkbenchViewController: NSViewController, InterfaceLanguageC
     let hits = row.hits
     let controller = WorkbenchTrafficDetailController(
       snapshot: store.trafficDetail(for: row), tooltip: tooltip, icons: objectIcons,
+      ruleStore: store,
       onLocate: { [weak store] key in
         guard let store, let index = Int(key), hits.indices.contains(index) else {
           return self.interfaceCopy.text("interface_detail.6a861b4be6")

@@ -59,7 +59,7 @@ func sessionLimits(v *aiusage.SessionLimits) *pb.AIUsageSessionLimits {
 		out.Summary.Comparison = &pb.AIUsageLimitComparison{Input: limitMoney(c.Input), Sessions: c.Sessions, FromMs: c.From, ToMs: c.To, InputTokens: &c.InputTokens}
 	}
 	if c := s.Current; c != nil {
-		out.Summary.Current = &pb.AIUsageLimitCurrent{Context: c.Context, Limit: c.Limit, Band: c.Band}
+		out.Summary.Current = &pb.AIUsageLimitCurrent{Context: c.Context, Limit: c.Limit, Band: c.Band, NativeContextLimit: c.NativeContextLimit}
 	}
 	if t := v.Trend; t != nil {
 		out.Trend = &pb.AIUsageLimitTrend{Lines: modelLimit(t.Lines), OverStart: t.OverStart, FlatStart: t.FlatStart, HasWriteLayer: t.HasWriteLayer}

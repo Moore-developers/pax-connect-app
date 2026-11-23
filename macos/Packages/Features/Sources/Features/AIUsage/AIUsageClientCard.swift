@@ -5,7 +5,8 @@ import PaxUI
 extension AIUsageViewController {
   /// Header, optional configuration notice, then usage, bar and billing metadata per CLI.
   func clientContent() -> NSStackView {
-    let tabs = measureTabs(cost: store.profileMeasureCost) { [weak self] cost in
+    let tabs = measureTabs(cost: store.profileMeasureCost, group: "ai_usage.client_usage") {
+      [weak self] cost in
       guard let self, self.store.profileMeasureCost != cost else { return }
       self.refreshMeasuresOnly = true
       self.store.perform(.profileMeasureCost(cost))
@@ -42,7 +43,37 @@ extension AIUsageViewController {
     noticeHost.isHidden = true
     updateNotice()
     items.append(noticeHost)
-    items += rows.map { clientRow($0, total: total) }
+    let rowHost = AIUsageLayout.stack([])
+    items.append(rowHost)
+    let views = Dictionary(
+      uniqueKeysWithValues: rows.map { ($0.client, clientRow($0, total: total)) })
+    var visible: [AIClient] = []
+    let updateOrder: () -> Void = { [weak self, weak rowHost] in
+      guard let self, let rowHost else { return }
+      let next = self.store.clientRows(
+        cost: self.store.profileMeasureCost, context: self.interfaceCopy.context
+      ).enumerated().sorted { lhs, rhs in
+        if lhs.element.amount != rhs.element.amount {
+          return lhs.element.amount > rhs.element.amount
+        }
+        if lhs.element.hasUsage != rhs.element.hasUsage { return lhs.element.hasUsage }
+        return lhs.offset < rhs.offset
+      }.prefix(3).map { $0.element.client }
+      guard visible != next else { return }
+      visible = next
+      for child in rowHost.arrangedSubviews {
+        rowHost.removeArrangedSubview(child)
+        child.removeFromSuperview()
+      }
+      for client in next {
+        guard let row = views[client] else { continue }
+        rowHost.addArrangedSubview(row)
+        row.widthAnchor.constraint(equalTo: rowHost.widthAnchor).isActive = true
+      }
+    }
+    rowHost.spacing = PaxTheme.Spacing.regular
+    contentRefreshers.append(updateOrder)
+    updateOrder()
     let content = AIUsageLayout.stack(items)
     content.spacing = PaxTheme.Spacing.regular
     return content
@@ -76,6 +107,9 @@ extension AIUsageViewController {
   }
 
   private func billingText(_ row: AIClientUsageRow) -> String {
+    if row.client == .antigravity {
+      return self.interfaceCopy.text("ai_usage.antigravity.estimate")
+    }
     if row.serviceSource == .officialAccount {
       return self.interfaceCopy.text("ai_usage.account_estimate")
     }
@@ -108,16 +142,15 @@ extension AIUsageViewController {
     let body = AIUsageLayout.stack([top, barHost, meta])
     body.spacing = PaxTheme.Spacing.tight
     let button = actions.overlay(
-      label: row.client == .harness
-        ? self.interfaceCopy.text("ai_usage.view_dsh")
+      label: row.client.isUsageOnly
+        ? self.interfaceCopy.text("ai_usage.view_client", ["name": row.client.rawValue])
         : self.interfaceCopy.text("ai_usage.manage_prefix") + row.client.rawValue
           + self.interfaceCopy.text("ai_usage.profile_suffix"),
       id: "ai-client-" + row.client.code
     ) { [weak self] in
       guard let self else { return }
-      if row.client == .harness {
-        self.store.perform(.page(.logs))
-        self.store.perform(.logClient(.harness))
+      if row.client.isUsageOnly {
+        self.store.perform(.openClientLogs(row.client))
       } else {
         self.store.perform(.page(.profiles))
       }

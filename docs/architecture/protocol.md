@@ -2,6 +2,8 @@
 
 ## 4. IPC 与协议
 
+目标明细见[合同](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。
+
 MCP公共查询：`HelloResponse.daemon_instance`（字段8）为本次daemon进程随机身份，`timezone`（字段9）为其日历查询使用的时区。`operations.query.v1`提供`GetOperation`，按operation_id或client_id/request_id回读受控状态；实例变化、过期、未找到均是unknown，不能推断失败或重发。`OperationContext`绑定预期实例、稳定客户端和带时间戳UUID请求身份；SetProxyEnabled、SelectRoute、TestRoute、RecheckCurrentPath、CancelOperation、异步诊断/环境启动及M2导入确认、线路保存/删除/TLS/分组/组合、订阅刷新/删除/恢复已接入。旧App不传context仍走既有路径，Watch不重放旧结果。保留/权限合同见[MCP工具](../changes/pax-mcp/tool-contracts.md)§3。
 
 context操作在受理前预留256项有界结果名额，活跃和10分钟内终态不淘汰，满则拒绝；相同请求同内容返回原operation_id，异内容request_conflict，旧时间戳不重新执行。结果variant包含RouteSaveResult、ProxyOperationResult、RouteMeasurementsResult、CurrentPathCheck及线路/网络/环境诊断报告；在原owner提交处冻结，保留选定/运行线路区别及批次逐项失败。OperationProgress的completed/total有presence，未知不造0。单结果≤1MiB、总预算32MiB在入队前预留，超预算拒绝新任务。为避免循环import，ProtectionStatus、RouteTestSummary、DownloadTestSummary、CurrentPathCheck移入operation.proto，EnvironmentDiagnosticRequest移入pax.proto；类型全名及原字段编号不变，不传任意业务JSON。
@@ -71,13 +73,14 @@ AI日志可选`min_official_cost_micro`/`max_official_cost_micro`及能力`ai.us
 
 **演进规则**（所有族通用）：
 
-- 产品协议版本以 Go `ipc.ProtocolVersion` 与 Swift `DaemonConnection.protocolVersion` 为准（须一致），内部 core 版本以 `api/pax_core.proto` 的握手校验为准；文档不再记版本号。字段编号、RPC 签名唯一见 `api/*.proto`，只加字段 / RPC，不改编号；删除字段或 payload 须 reserved 其编号与名称。
+- 产品协议版本以 Go `ipc.ProtocolVersion` 与 Swift `DaemonConnection.protocolVersion` 为准（须一致），内部 core 版本以 `api/pax_core.proto` 的握手校验为准；文档不再记版本号。签名见 `api/*.proto`。只增字段/RPC，删字段须 reserved 编号及名称。
+- 客户端配置历史按游标分页。
 - 能力门控：`Hello.capabilities` 只通告已装配的能力，缺失即 App 禁用对应动作；旧后台不伪称支持新能力。
 - 命令只返回 `OperationAck`，终态走 `Watch` 的 `OperationResult`；会改目录 / 偏好 / 来源的请求带 `expected_*revision` 做 CAS，`client_id` + `request_id` 保证重试幂等（有界保留终态），冲突返回 `catalog_stale` 等稳定产品码并附当前 revision。
 - 长读取走 `Query*` 分页并绑定读令牌，不进 `Watch` 全量推送；产品错误一律 `ProductError{code, message_params}`，不透传内核原文、凭据或完整 URL。
 - 跨端模型（proto / Go `config` 标准值 / Swift `PaxClient`）同一提交更新；上游 sing-box 类型不越过 `internal/singbox`。
 
-RPC族、能力及字段见[服务索引](rpc-services.md)。
+RPC族、流量查询与能力见[服务索引](rpc-services.md)。
 
 ### 4.2 推送与版本号规则
 
@@ -104,6 +107,8 @@ RPC族、能力及字段见[服务索引](rpc-services.md)。
 | AI 用量 | `AIUsageState.revision` | `AIUsageState.generation`（93 天清理删行、重建时与 revision 同事务加一，R5） | aiusage 入库 / 重算事务落库；回填、扫描错误、skipped 只走状态字段（R8） | `ai_usage`（版本号、代数或状态字段变化，每秒最多一次）；首帧 `Snapshot.ai_usage` | `ai_overview`、`ai_logs`、`ai_profiles` |
 
 `HistoryState.revision`仅作概览已有统计标记（`>0`），不作版本号。`SetViewVisibility` 仅影响采集与探测节奏，不改变推送；Watch 订阅全部结束即清空；`ai_overview` / `ai_logs` / `dashboard` 任一可见时 AI 用量采集走前台节奏。
+
+`HistoryState.sqlite_storage` 每 5 秒读一次磁盘占用，随快照和历史推送更新。缺省为未知。大小变化不推进日志版本。口径见 [设置](../changes/pax-connect-network-control-plane/ui/specs/P05-settings.md#日志)。
 
 内部 `pax_core.proto` 另含 UpdateRouting（只改路由匹配表，不重启实例、不关旧连接）、ReadObservations / ReadUsage（只读、不传连接明细）、IdentifyTUNOwner（只识别）。
 

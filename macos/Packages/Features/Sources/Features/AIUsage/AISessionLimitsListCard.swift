@@ -30,7 +30,7 @@ import PaxUI
   private var compactTitle: NSLayoutConstraint?
   private var hintConstraints: [NSLayoutConstraint] = []
   private var loading = false
-  private lazy var titleHost = AILimitReadoutHost(title, readout: readout) { [weak self] in
+  private lazy var titleHost = PaxHoverReadoutHost(title, readout: readout.hover) { [weak self] in
     guard let self, selected else { return nil }
     return AILimitReadout.explanation(
       context.text("session_limits.e0c412d97f"), fullTitle + "\n" + titleIdentity)
@@ -156,8 +156,14 @@ import PaxUI
   }
   func setNavigation(session: String?, identity: String?) {
     if identity != nil, !selected { search.abortEditing() }
-    if titleIdentity != (identity ?? "") { readout.close(from: titleHost) }
-    selected = identity != nil
+    if titleIdentity != (identity ?? "") { readout.hover.close(from: titleHost) }
+    let isDetail = identity != nil
+    if selected != isDetail {
+      selected = isDetail
+      // A detail name must yield before AppKit considers changing the window's size.
+      title.setContentCompressionResistancePriority(
+        isDetail ? .defaultLow : .defaultHigh, for: .horizontal)
+    }
     fullTitle = session ?? context.text("session_limits.8eb6779f0a")
     titleIdentity = identity ?? ""
     back.isHidden = !selected
@@ -257,7 +263,7 @@ import PaxUI
       content.emptyMessage = context.text("session_limits.43a937d227")
     }
     guard rendered != content || renderedExpanded != expanded else { return false }
-    readout.close()
+    readout.hover.close()
     rendered = content
     renderedExpanded = expanded
     return renderRows(content, expanded: expanded)

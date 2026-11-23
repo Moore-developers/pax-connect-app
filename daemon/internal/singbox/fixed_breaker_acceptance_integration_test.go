@@ -37,11 +37,12 @@ import (
 // These peers keep existing streams and UDP associations alive when fail is set.
 // Only new handshakes fail, so a lost old stream proves active retirement.
 type breakerPeer struct {
-	address string
-	fail    atomic.Bool
-	tcp     atomic.Int64
-	udp     atomic.Int64
-	port    uint16
+	loopbackDomain string
+	address        string
+	fail           atomic.Bool
+	tcp            atomic.Int64
+	udp            atomic.Int64
+	port           uint16
 }
 
 func breakerSOCKSPeer(t *testing.T, businessPort uint16) *breakerPeer {
@@ -100,7 +101,11 @@ func breakerSOCKSPeer(t *testing.T, businessPort uint16) *breakerPeer {
 				if target.Port == p.port {
 					p.tcp.Add(1)
 				}
-				peer, err := net.DialTimeout("tcp4", breakerPhysicalTarget(target), time.Second)
+				physicalTarget := breakerPhysicalTarget(target)
+				if p.loopbackDomain != "" && target.Fqdn == p.loopbackDomain {
+					physicalTarget = net.JoinHostPort("127.0.0.1", strconv.Itoa(int(target.Port)))
+				}
+				peer, err := net.DialTimeout("tcp4", physicalTarget, time.Second)
 				if err != nil {
 					return
 				}

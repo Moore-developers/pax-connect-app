@@ -73,6 +73,7 @@ public typealias DownloadQueueState = PaxClient.DownloadQueueState
 public typealias CFIPLocation = PaxClient.CFIPLocation
 
 public typealias HistoryState = PaxClient.HistoryState
+public typealias SQLiteStorageUsage = PaxClient.SQLiteStorageUsage
 public typealias LogFilter = PaxClient.LogFilter
 public typealias HistoryLogPage = PaxClient.HistoryLogPage
 public typealias HistoryObject = PaxClient.HistoryObject
@@ -88,6 +89,10 @@ public typealias TrafficRoutingMatch = PaxClient.TrafficRoutingMatch
 public typealias TrafficPoint = PaxClient.TrafficPoint
 public typealias TrafficPage = PaxClient.TrafficPage
 public typealias TrafficBasis = PaxClient.TrafficBasis
+public typealias TrafficConnectionSource = PaxClient.TrafficConnectionSource
+public typealias TrafficConnectionAddress = PaxClient.TrafficConnectionAddress
+public typealias TrafficConnectionResult = PaxClient.TrafficConnectionResult
+public typealias TrafficConnectionGroup = PaxClient.TrafficConnectionGroup
 public typealias TrafficDetail = PaxClient.TrafficDetail
 public typealias TrafficDetailQuery = PaxClient.TrafficDetailQuery
 
