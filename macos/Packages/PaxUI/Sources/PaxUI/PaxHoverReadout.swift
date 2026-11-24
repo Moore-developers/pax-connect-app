@@ -1,5 +1,10 @@
 import AppKit
 
+/// Interactive readouts can change their fitting size when a detail is disclosed.
+@MainActor public protocol PaxResizableReadout: AnyObject {
+  var onReadoutResize: (() -> Void)? { get set }
+}
+
 /// A native popover with the shared card surface and hover dismissal.
 @MainActor public final class PaxHoverReadout {
   private let panel = NSPopover()
@@ -7,11 +12,13 @@ import AppKit
   private var monitor: Any?
   private weak var scrollingWindow: NSWindow?
 
+  private let cardStyle: PaxCard.Style
   private let interactive: Bool
   private var keyboardPinned = false
   private var dismissal: Task<Void, Never>?
 
-  public init(interactive: Bool = false) {
+  public init(interactive: Bool = false, cardStyle: PaxCard.Style = .standard) {
+    self.cardStyle = cardStyle
     self.interactive = interactive
     panel.behavior = .applicationDefined
     panel.animates = false
@@ -47,7 +54,8 @@ import AppKit
     owner = host
     let controller = NSViewController()
     let inset = PaxTheme.Spacing.card
-    let card = PaxCard(insets: .init(top: inset, left: inset, bottom: inset, right: inset))
+    let card = PaxCard(
+      insets: .init(top: inset, left: inset, bottom: inset, right: inset), style: cardStyle)
     card.contentView = content
     card.heightAnchor.constraint(equalTo: content.heightAnchor, constant: inset * 2).isActive = true
     controller.view = card
@@ -57,6 +65,15 @@ import AppKit
     panel.appearance = host.effectiveAppearance
     panel.contentViewController = controller
     panel.contentSize = size
+    if let resizable = content as? PaxResizableReadout {
+      resizable.onReadoutResize = { [weak self, weak controller, weak content] in
+        guard let self, let controller, let content, panel.contentViewController === controller
+        else { return }
+        let fit = content.fittingSize
+        let next = NSSize(width: fit.width + 2 * inset, height: fit.height + 2 * inset)
+        if panel.contentSize != next { panel.contentSize = next }
+      }
+    }
     panel.show(relativeTo: anchor, of: host, preferredEdge: edge)
   }
 

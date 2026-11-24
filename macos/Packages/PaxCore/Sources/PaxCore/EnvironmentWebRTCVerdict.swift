@@ -5,6 +5,7 @@ import PaxClient
 extension EnvironmentDiagnosticPresentation {
   public struct WebRTCVerdict: Sendable, Equatable {
     public let conclusion: String
+    public let summary: String
     public let tone: Tone
     /// One sentence about the STUN route evidence, kept apart from the conclusion.
     public let route: String
@@ -52,9 +53,10 @@ extension EnvironmentDiagnosticPresentation {
           + (check.at.map { context.text("environment_evidence.e026a44250") + timeText($0) } ?? "")
         : context.text("environment_evidence.99dc5aaa4a")
     }
-    func verdict(_ text: String, _ tone: Tone) -> WebRTCVerdict {
+    func verdict(_ text: String, _ tone: Tone, summary: String? = nil) -> WebRTCVerdict {
       WebRTCVerdict(
-        conclusion: text, tone: tone, route: route, routeDetails: routeDetails,
+        conclusion: text, summary: summary ?? text, tone: tone, route: route,
+        routeDetails: routeDetails,
         physicalDetail: physicalDetail)
     }
     guard let sample else {
@@ -64,7 +66,9 @@ extension EnvironmentDiagnosticPresentation {
           : context.text("environment_evidence.c0c079662d"), .pending)
     }
     if sample.rtcState == "unsupported" {
-      return verdict(context.text("environment_evidence.7898adb2b8"), .pending)
+      return verdict(
+        context.text("environment_evidence.7898adb2b8"), .pending,
+        summary: context.text("environment.webrtc.unsupported"))
     }
     let publics = sample.rtcAddresses.filter(isPublicAddress)
     if !publics.isEmpty {
@@ -80,24 +84,33 @@ extension EnvironmentDiagnosticPresentation {
     }
     if pending { return verdict(context.text("environment_evidence.284be5ff65"), .pending) }
     let rtcChecks = checks.filter { $0.kind.hasPrefix("rtc_") }
+    let timedOut = rtcChecks.contains { $0.state == "timeout" }
     let broken =
-      rtcChecks.contains { $0.state == "timeout" || $0.state == "failed" || !$0.errorCode.isEmpty }
+      timedOut || rtcChecks.contains { $0.state == "failed" || !$0.errorCode.isEmpty }
       || sample.rtcState == "failed"
+    let failureSummary = context.text(
+      timedOut ? "environment.webrtc.timeout" : "environment.webrtc.failed")
     if stun.contains(where: { $0.state == "blocked" })
       && !stun.contains(where: { $0.state == "proxy" })
     {
-      return verdict(context.text("environment_evidence.661a67f342"), .pending)
+      return verdict(
+        context.text("environment_evidence.661a67f342"), .pending,
+        summary: context.text("environment.webrtc.blocked"))
     }
     if broken && stun.contains(where: { $0.state == "proxy" }) {
-      return verdict(context.text("environment_evidence.c244987ba2"), .pending)
+      return verdict(
+        context.text("environment_evidence.c244987ba2"), .pending, summary: failureSummary)
     }
-    if broken { return verdict(context.text("environment_evidence.be6d3493fd"), .failure) }
+    if broken {
+      return verdict(
+        context.text("environment_evidence.be6d3493fd"), .failure, summary: failureSummary)
+    }
     if !sample.rtcState.isEmpty {
       return verdict(
         sample.rtcAddresses.isEmpty
           ? context.text("environment_evidence.292055cffb")
           : context.text("environment_evidence.5b2707f29b"),
-        .pending)
+        .pending, summary: context.text("environment.webrtc.no_public"))
     }
     return verdict(context.text("environment_evidence.c0c079662d"), .pending)
   }

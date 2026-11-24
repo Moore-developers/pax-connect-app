@@ -7,6 +7,7 @@ import PaxUI
 final class SettingsWorkbenchViewController: NSViewController, InterfaceLanguageConsumer {
   let interfaceCopy = InterfaceCopyBindings()
   private let privacyController: NetworkPrivacySettingsController?
+  private let trafficAlertsController: TrafficAlertsSettingsController?
   private let logHistoryController: LogHistorySettingsController?
   private let measurementController: MeasurementSettingsViewController?
   private let mcpController: MCPAccessSettingsController?
@@ -21,9 +22,11 @@ final class SettingsWorkbenchViewController: NSViewController, InterfaceLanguage
   init(
     measurement: MeasurementSettingsViewController? = nil, telemetry: TelemetryStore? = nil,
     privacyRoutes: RoutesStore? = nil, mcpAccess: MCPAccessActions? = nil,
-    connection: ConnectionStore? = nil, language: InterfaceLanguageStore? = nil
+    connection: ConnectionStore? = nil, language: InterfaceLanguageStore? = nil,
+    trafficAlerts: TrafficAlertsStore? = nil
   ) {
     self.language = language
+    trafficAlertsController = trafficAlerts.map(TrafficAlertsSettingsController.init)
     languageController = language.map(InterfaceLanguageSettingsController.init)
     mcpController = mcpAccess.flatMap { actions in
       connection.map { MCPAccessSettingsController(actions: actions, connection: $0) }
@@ -64,6 +67,7 @@ final class SettingsWorkbenchViewController: NSViewController, InterfaceLanguage
         self.interfaceCopy.text(self.expanded ? "settings.expanded" : "settings.collapsed"))
     }
     if let privacyController { add(privacyController) }
+    if let trafficAlertsController { add(trafficAlertsController) }
     if let logHistoryController { add(logHistoryController) }
     if let mcpController { add(mcpController) }
     if let measurementController {

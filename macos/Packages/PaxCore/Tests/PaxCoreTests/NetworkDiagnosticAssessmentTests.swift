@@ -70,7 +70,8 @@ import Testing
     #expect(rows[3].detail.contains("1.1.1.1"))
     #expect(rows[3].detail.contains("9.9.9.9"))
     #expect(rows[3].detail.contains("149.112.112.112"))
-    #expect(rows[4].value.contains("不能据此确认防泄露"))
+    #expect(rows[4].value == "无公网候选 · 泄露待确认")
+    #expect(rows[4].detail.contains("不能据此确认防泄露"))
   }
   @Test("相同DNS出口仍待确认；IP和偏好只报告差异，不宣称安全", arguments: [true, false])
   func evidenceBoundaries(matching: Bool) {
@@ -132,6 +133,58 @@ import Testing
       })
     let value = EnvironmentDiagnosticPresentation.exitAssessment(report.browser.checks ?? [])
     #expect(value.text.contains("地址族不同"))
+    #expect(value.tone == .information)
     #expect(!value.text.contains("存在按目标分流"))
+  }
+
+  @Test("同地址族的出口 IP 不同时，保留各家地区并报告异常")
+  @MainActor
+  func differentBrowserExits() throws {
+    let ipip = "14.19.29.200 · 中国 广东 广州"
+    let ipinfo = "204.152.192.235 · US, California, Los Angeles"
+    let sample = EnvironmentDiagnosticReport.Sample(
+      .with {
+        $0.checks = [("echo_ipip", ipip), ("echo_ipinfo", ipinfo)].map { kind, value in
+          .with {
+            $0.kind = kind
+            $0.state = "observed"
+            $0.value = value
+          }
+        }
+      })
+    let checks = try #require(sample.checks)
+    let assessment = EnvironmentDiagnosticPresentation.exitAssessment(checks)
+    #expect(assessment.tone == .difference)
+    #expect(assessment.text.contains("出口异常"))
+    #expect(EnvironmentDiagnosticPresentation.exitReading(checks[0]) == ipip)
+    #expect(
+      EnvironmentDiagnosticPresentation.exitReading(checks[1])
+        == "204.152.192.235 · 美国 · California · Los Angeles")
+    #expect(
+      EnvironmentDiagnosticStore.sampleIssues(sample, ipv6Off: false, context: .chinese)
+        == [assessment.text])
+  }
+
+  @Test("相同 IP 的旧回显和新地区记录仍判同一出口")
+  func sameBrowserExitWithLegacyRecord() throws {
+    let sample = EnvironmentDiagnosticReport.Sample(
+      .with {
+        $0.checks = [
+          .with {
+            $0.kind = "echo_ipip"
+            $0.state = "observed"
+            $0.value = "8.8.8.8"
+          },
+          .with {
+            $0.kind = "echo_ipinfo"
+            $0.state = "observed"
+            $0.value = "8.8.8.8 · US, California"
+          },
+        ]
+      })
+    let checks = try #require(sample.checks)
+    #expect(EnvironmentDiagnosticPresentation.exitAssessment(checks).text.contains("同出口"))
+    #expect(EnvironmentDiagnosticPresentation.exitReading(checks[0]) == "8.8.8.8 · 地区未取得")
+    #expect(EnvironmentDiagnosticPresentation.exitAssessment([checks[0]]).tone == .pending)
   }
 }

@@ -2,7 +2,7 @@ import AppKit
 
 /// 实底内容卡片；内边距只由本视图应用一次，替换内容时释放旧约束。
 public class PaxCard: NSView {
-  public enum Style { case standard, routesSection, routesList, inset, currentRoute }
+  public enum Style { case standard, routeUsage, routesSection, routesList, inset, currentRoute }
   public var clipsContent = false {
     didSet {
       let clipped = clipsContent || style == .routesList
@@ -63,17 +63,20 @@ public class PaxCard: NSView {
 
   private func refreshSurface() {
     effectiveAppearance.performAsCurrentDrawingAppearance {
-      layer?.backgroundColor =
-        (style == .currentRoute
-        ? PaxTheme.CurrentRoute.surface
-        : style == .inset
-          ? PaxTheme.Routes.canvas
-          : style == .standard ? PaxTheme.Color.card : PaxTheme.Routes.card)
-        .cgColor
-      layer?.borderColor =
-        (style == .currentRoute
-        ? PaxTheme.CurrentRoute.line
-        : style == .standard ? PaxTheme.Color.cardBorder : PaxTheme.Routes.edge).cgColor
+      let surface: NSColor
+      let border: NSColor
+      switch style {
+      case .standard: (surface, border) = (PaxTheme.Color.card, PaxTheme.Color.cardBorder)
+      case .routeUsage:
+        (surface, border) = (PaxTheme.UsageReadout.surface, PaxTheme.UsageReadout.border)
+      case .currentRoute:
+        (surface, border) = (PaxTheme.CurrentRoute.surface, PaxTheme.CurrentRoute.line)
+      case .inset: (surface, border) = (PaxTheme.Routes.canvas, PaxTheme.Routes.edge)
+      case .routesSection, .routesList:
+        (surface, border) = (PaxTheme.Routes.card, PaxTheme.Routes.edge)
+      }
+      layer?.backgroundColor = surface.cgColor
+      layer?.borderColor = border.cgColor
       layer?.borderWidth =
         style == .inset
         ? 0
@@ -84,7 +87,7 @@ public class PaxCard: NSView {
         ? PaxTheme.CurrentRoute.radius
         : style == .inset
           ? PaxTheme.Radius.control
-          : style == .standard
+          : style == .standard || style == .routeUsage
             ? PaxTheme.Radius.card
             : style == .routesList ? PaxTheme.Routes.tableRadius : PaxTheme.Routes.sectionRadius
       layer?.shadowColor = PaxTheme.Color.shadow.cgColor
@@ -105,7 +108,7 @@ public class PaxCard: NSView {
         roundedRect: bounds, cornerWidth: layer?.cornerRadius ?? PaxTheme.Radius.card,
         cornerHeight: layer?.cornerRadius ?? PaxTheme.Radius.card, transform: nil)
     }
-    highlight.isHidden = style == .routesList || style == .inset
+    highlight.isHidden = style == .routesList || style == .inset || style == .routeUsage
     let path = CGPath(
       roundedRect: bounds, cornerWidth: layer?.cornerRadius ?? PaxTheme.Radius.card,
       cornerHeight: layer?.cornerRadius ?? PaxTheme.Radius.card, transform: nil)

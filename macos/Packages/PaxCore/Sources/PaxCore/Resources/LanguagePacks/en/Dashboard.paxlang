@@ -19,7 +19,7 @@
     "dashboard.object": "App / Object",
     "dashboard.hint": "Double-click for details",
     "dashboard.all_exits": "All destinations",
-    "dashboard.switch": "Switch Route ›",
+    "dashboard.switch": "Switch Route",
     "dashboard.region": "Exit Region",
     "dashboard.connected": "Connected",
     "dashboard.trend": "AI Model Usage",

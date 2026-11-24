@@ -14,6 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     expectedFingerprint: debugSocket == nil ? DaemonInstaller.fingerprint : nil)
   lazy var aiProfilesStore = AIProfilesStore(connection: commandConnection)
   lazy var aiUsageStore = AIUsageDataStore(connection: commandConnection)
+  lazy var trafficAlertsStore = makeTrafficAlertsStore()
+  lazy var trafficNotifications = TrafficAlertNotification(
+    context: { [weak self] in self?.languageContext ?? .chinese },
+    openRoutes: { [weak self] in self?.windowController?.openMenuDestination(.routes) })
   private lazy var routesStore: RoutesStore = makeRoutesStore()
   private let diagnosticBrowser = DiagnosticBrowserOpener()
   private func makeRoutesStore() -> RoutesStore {
@@ -101,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             history: history,
             request: { try await connection.inspectEnvironment(action: $0, sessionID: $1) },
             openBrowser: { await diagnosticBrowser.open($0) },
+            scanClaudeKeychain: { ClaudeKeychainScanner.scan() },
             browserPresentation: { [weak self] in
               guard
                 self?.routesStore.capabilities.contains("network.browser_presentation.v1") == true
@@ -155,6 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     return socket.isEmpty ? nil : socket
   }
   private var menuBar: MenuBarController?
+  var languageContext: PresentationContext { language?.context ?? .chinese }
   private var language: InterfaceLanguageStore?
   var windowController: WorkbenchWindowController?
   private var workbenchWindow: WorkbenchWindowController?
@@ -235,7 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       routes: routesStore, connection: store, telemetry: telemetry,
       aiProfiles: aiProfilesStore,
       aiUsage: aiUsageStore, dashboardSources: DashboardSources(connection: commandConnection),
-      refresh: refresh, mcpAccess: mcpAccess, language: language)
+      refresh: refresh, mcpAccess: mcpAccess, language: language, trafficAlerts: trafficAlertsStore)
     window.showWindow(nil)
     windowController = window
     menuBar?.attach(
@@ -294,6 +300,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   func applicationDidBecomeActive(_ notification: Notification) {
     language?.updateSystemLanguage()
+    Task { [weak self] in
+      guard let self else { return }
+      if let allowed = await self.trafficNotifications.permission() {
+        self.trafficAlertsStore.setNotificationPermission(allowed)
+      }
+    }
     if windowController != nil && !usesWorkbench { telemetry.setAppActive(true) }
   }
   func applicationDidResignActive(_ notification: Notification) {

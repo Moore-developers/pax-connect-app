@@ -178,6 +178,6 @@ import Testing
     #expect(
       NetworkDiagnosticPresentation.providerState(try #require(missing.providers?.first)).contains(
         "不代表"))
-    #expect(NetworkDiagnosticPresentation.acquisitionSummary(missing).contains("未请求 ipx.al"))
+    #expect(NetworkDiagnosticPresentation.acquisitionSummary(missing).contains("直查来源"))
   }
 }

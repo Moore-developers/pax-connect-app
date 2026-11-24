@@ -20,6 +20,9 @@ import Observation
   }
   public var isShowingHistoryMessage: Bool { messageValue.key == "diagnostic_state.427740ea8a" }
   public private(set) var revision: UInt64 = 0
+  public private(set) var claudeKeychain: ClaudeKeychainReading?
+  public private(set) var checkingClaudeKeychain = false
+  private var keychainTask: Task<Void, Never>?
   private var task: Task<Void, Never>?
   private var generation: UInt64 = 0
   private var previous: (EnvironmentDiagnosticReport, NetworkDiagnosticEnvironment?, Bool)?
@@ -31,6 +34,7 @@ import Observation
   private let browserPresentation: @MainActor () -> BrowserPresentation?
   private let openBrowser: @MainActor (URL) async -> Bool
   private let scanLocation: @Sendable () -> LocationExposure
+  private let scanClaudeKeychain: (@Sendable () -> ClaudeKeychainReading)?
 
   public init(
     history: NetworkDiagnosticHistory? = nil,
@@ -39,6 +43,7 @@ import Observation
     scanLocation: @escaping @Sendable () -> LocationExposure = {
       LocationExposureScanner.current()
     },
+    scanClaudeKeychain: (@Sendable () -> ClaudeKeychainReading)? = nil,
     browserPresentation: @escaping @MainActor () -> BrowserPresentation? = { nil },
     requestWithPresentation: (
       @Sendable (String, String, BrowserPresentation?) async throws -> EnvironmentDiagnosticReport
@@ -46,6 +51,7 @@ import Observation
   ) {
     self.history = history
     self.scanLocation = scanLocation
+    self.scanClaudeKeychain = scanClaudeKeychain
     self.request =
       requestWithPresentation ?? { action, session, _ in try await request(action, session) }
     self.browserPresentation = browserPresentation
@@ -62,6 +68,7 @@ import Observation
     guard !busy else { return }
     generation &+= 1
     let token = generation
+    startClaudeKeychainCheck(token)
     previous = report.map { ($0, local, stale) }
     busy = true
     runState = .running
@@ -172,11 +179,29 @@ import Observation
       revision &+= 1
     }
   }
+  private func startClaudeKeychainCheck(_ token: UInt64) {
+    guard let scanClaudeKeychain else { return }
+    keychainTask?.cancel()
+    claudeKeychain = nil
+    checkingClaudeKeychain = true
+    keychainTask = Task { [weak self] in
+      let reading = await Task.detached(priority: .utility) { scanClaudeKeychain() }.value
+      guard let self, generation == token, !Task.isCancelled else { return }
+      claudeKeychain = reading
+      checkingClaudeKeychain = false
+      keychainTask = nil
+      revision &+= 1
+    }
+  }
+
   public func cancel() {
     if busy { runState = .stopped }
     generation &+= 1
     task?.cancel()
     task = nil
+    keychainTask?.cancel()
+    keychainTask = nil
+    checkingClaudeKeychain = false
     busy = false
     revision &+= 1
     if let id = activeSessionID, !id.isEmpty {
@@ -220,6 +245,7 @@ import Observation
     report = nil
     previousReport = nil
     local = nil
+    claudeKeychain = nil
     stale = false
     runState = .idle
     progressReport = nil

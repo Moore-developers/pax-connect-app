@@ -22,4 +22,15 @@ extension RoutesStore {
     filter.isEmpty
       || matchesSearchText(route).localizedCaseInsensitiveContains(filter)
   }
+  func refreshDoneMessage(_ sourceID: String) -> String {
+    guard let summary = subscriptions.first(where: { $0.id == sourceID }) else { return "订阅已刷新" }
+    let report = summary.lastRefresh
+    if report.partial {
+      return "部分刷新失败：保留 \(report.kept) 条未确认线路"
+    }
+    if report.removed > 0 {
+      return "刷新完成：新增 \(report.added)，来源移除 \(report.removed)"
+    }
+    return "订阅已刷新"
+  }
 }

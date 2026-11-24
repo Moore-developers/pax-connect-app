@@ -113,17 +113,6 @@ public enum NetworkDiagnosticPresentation {
     let locale = Locale(identifier: "zh_CN")
     return (locale.localizedString(forIdentifier: value) ?? value) + "（" + value + "）"
   }
-  public static func differences(
-    _ report: NetworkDiagnosticReport, source: NetworkDiagnosticReport.Source
-  ) -> Bool {
-    report.sources.contains { other in
-      [
-        (source.country, other.country), (source.city, other.city),
-        (normalizedASN(source.asn), normalizedASN(other.asn)),
-      ].contains { a, b in !a.isEmpty && !b.isEmpty && a != b }
-    }
-  }
-
   public static func downloadEnd(_ code: String, context: PresentationContext = .chinese) -> String
   {
     switch code {

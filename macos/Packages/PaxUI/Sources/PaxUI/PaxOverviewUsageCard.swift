@@ -2,7 +2,8 @@ import AppKit
 
 /// One filter and metric drive the daily composition and the ranking.
 public final class PaxOverviewUsageCard: PaxCard {
-  private let heading = PaxCardHeading("AI 模型用量", symbol: "asterisk")
+  private let heading = PaxCardHeading("AI 模型用量", symbol: "chart.bar")
+  private let summarySurface = NSView()
   private let summary = PaxText.label("", secondary: true)
   private let picker = PaxRoutePicker(style: .filter)
   private let tabs = PaxTabs(["费用", "Token"])
@@ -33,8 +34,9 @@ public final class PaxOverviewUsageCard: PaxCard {
   public init(tooltip: PaxChartTooltipCoordinator?) {
     super.init(insets: NSEdgeInsets())
     for view in [
-      heading, summary, picker, tabs, link, chartTitle, rankTitle, order, footerLine, legend, chart,
-      chartEmpty, divider, middle,
+      heading, summarySurface, summary, picker, tabs, link, chartTitle, rankTitle, order,
+      footerLine,
+      legend, chart, chartEmpty, divider, middle,
     ] as [NSView] { addSubview(view) }
     footerLine.boxType = .separator
     for field in footer { addSubview(field) }
@@ -43,9 +45,9 @@ public final class PaxOverviewUsageCard: PaxCard {
     for label in [chartTitle, rankTitle] {
       label.font = PaxTheme.Typography.label(size: 14, weight: .semibold)
     }
-    summary.wantsLayer = true
-    summary.layer?.backgroundColor = PaxTheme.Routes.canvas.cgColor
-    summary.layer?.cornerRadius = 6
+    summarySurface.wantsLayer = true
+    summarySurface.layer?.backgroundColor = PaxTheme.Routes.canvas.cgColor
+    summarySurface.layer?.cornerRadius = 6
     for line in rankLines {
       line.boxType = .separator
       addSubview(line)
@@ -134,7 +136,6 @@ public final class PaxOverviewUsageCard: PaxCard {
     }
     summary.attributedStringValue = header
     summary.toolTip = trend.updated
-    summary.sizeToFit()
     let main = series.facts.count == 3 ? series.facts[2] : nil
     let facts = [
       (copy.yesterday[metric], series.yesterday), (copy.average, series.average),
@@ -170,15 +171,16 @@ public final class PaxOverviewUsageCard: PaxCard {
     ranking = []
     let values = metric == 0 ? rank.rows : rank.tokenRows
     for (index, row) in values.enumerated() {
-      let name = PaxText.label(row.name)
+      let name = PaxText.label(row.name, font: PaxTheme.Dashboard.readoutFont())
       name.toolTip = row.name
       let bar = PaxShareBar(
         segments: [.init(row.name, value: row.fraction)],
         colors: [PaxTheme.Dashboard.rankColors[index]], striped: [0], total: 1)
       let amount = PaxText.label(
         metric == 0 ? row.cost : row.tokens,
-        font: PaxTheme.Typography.metric(size: 13, weight: .medium))
-      let share = PaxText.label(row.percent, font: PaxTheme.Typography.caption(), secondary: true)
+        font: PaxTheme.Dashboard.readoutFont(bold: true))
+      let share = PaxText.label(
+        row.percent, font: PaxTheme.Dashboard.readoutFont(size: 12), secondary: true)
       amount.alignment = .right
       share.alignment = .right
       for view in [name, bar, amount, share] as [NSView] { addSubview(view) }
@@ -195,18 +197,27 @@ public final class PaxOverviewUsageCard: PaxCard {
     }
     let wide = bounds.width >= 700
     let headY: CGFloat = 12
-    heading.frame = rect(pad, headY, 134, 28)
+    let headHeight = PaxTheme.Dashboard.icon
+    let headCenter = headY + headHeight / 2
+    let controlHeight: CGFloat = 28
+    let controlY = headCenter - controlHeight / 2
+    heading.frame = rect(pad, headY, 134, headHeight)
     let linkW = link.intrinsicContentSize.width
-    link.frame = rect(bounds.width - pad - linkW, headY, linkW, 28)
+    link.frame = rect(bounds.width - pad - linkW, controlY, linkW, controlHeight)
     let tabW = tabs.intrinsicContentSize.width
-    tabs.frame = rect(link.frame.minX - tabW - 8, headY, tabW, 28)
+    tabs.frame = rect(link.frame.minX - tabW - 8, controlY, tabW, controlHeight)
     let pickW = min(
       PaxUsageFilterMenu.pickerWidth(for: picker) + 30,
       max(70, tabs.frame.minX - heading.frame.maxX - 16))
-    picker.frame = rect(tabs.frame.minX - pickW - 8, headY, pickW, 28)
+    picker.frame = rect(tabs.frame.minX - pickW - 8, controlY, pickW, controlHeight)
+    let summarySize = summary.intrinsicContentSize
+    let summaryWidth = min(summarySize.width + 6, picker.frame.minX - heading.frame.maxX - 6)
+    let summaryHeight: CGFloat = 20
+    summarySurface.frame = rect(
+      heading.frame.maxX, headCenter - summaryHeight / 2, summaryWidth, summaryHeight)
     summary.frame = rect(
-      heading.frame.maxX, headY + 4,
-      min(summary.intrinsicContentSize.width + 6, picker.frame.minX - heading.frame.maxX - 6), 20)
+      summarySurface.frame.minX, headCenter - summarySize.height / 2, summaryWidth,
+      summarySize.height)
     divider.frame = rect(pad, 49, width, 1)
     let half = wide ? (width - 28) / 2 : width
     let bottom = wide ? bounds.height - pad : bounds.height / 2

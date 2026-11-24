@@ -24,6 +24,13 @@ message UpdateSettingsRequest {
 // Saved intent; changes apply on next explicit proxy activation.
 message NetworkPrivacy { uint64 revision=1; string dns_mode=2; bool webrtc=3; OperationContext context=4; }
 
+// Bytes use decimal units. Only one of hour/two_hours is selected by medium_seconds.
+message TrafficAlertRule { bool enabled=1; uint64 upload=2; uint64 download=3; }
+message TrafficAlertSettings {
+ uint64 revision=1; bool enabled=2; uint32 medium_seconds=3;
+ TrafficAlertRule short=4; TrafficAlertRule hour=5; TrafficAlertRule two_hours=6; TrafficAlertRule day=7;
+}
+
 // Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
 // interface 如 utun6；target 为被承接的路由目标（如 128.0/1）；at 为观测时间。
 message ExternalTUN {

@@ -44,14 +44,22 @@ public struct NetworkDiagnosticReport: Sendable, Equatable, Codable {
   public let scoreCeiling: Int
   public let ipType, timezone, country: String
   public let intelAnswered, intelTotal: Int
-  public let sources: [Source]
-  public let facts: [Fact]
-  public let providers: [Provider]?
+  public private(set) var sources: [Source]
+  public private(set) var facts: [Fact]
+  public private(set) var providers: [Provider]?
   public private(set) var probes: [Probe]
 
   public func preservingProbes(_ probes: [Probe]) -> Self {
     var copy = self
     copy.probes = probes
+    return copy
+  }
+
+  public func excludingProviderEvidence(_ id: String) -> Self {
+    var copy = self
+    copy.sources.removeAll { $0.providerID == id }
+    copy.facts.removeAll { $0.providerID == id }
+    copy.providers?.removeAll { $0.id == id }
     return copy
   }
 

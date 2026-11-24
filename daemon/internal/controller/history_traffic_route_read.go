@@ -12,6 +12,11 @@ import (
 )
 
 func (c *Controller) trafficRouteUsage(ctx context.Context, q *pb.RouteHistoryRequest) (*pb.RouteUsageResponse, error) {
+	var proof *coverageSpan
+	if q.Window == "today" && q.RouteId != "" && c.ingest != nil {
+		// A successful poll publishes its live rows before publishing the proof.
+		proof = c.ingest.coverage.Load()
+	}
 	snap, err := c.trafficSnapshot(ctx)
 	if err != nil {
 		return nil, historyError(err)
@@ -32,6 +37,9 @@ func (c *Controller) trafficRouteUsage(ctx context.Context, q *pb.RouteHistoryRe
 	}
 	if err != nil || !from.Before(at) {
 		return nil, historyError(errors.New("invalid_filter"))
+	}
+	if q.Window == "hour" && q.RouteId != "" {
+		from = routeUsageHourStart(at)
 	}
 	values, err := snap.buckets(ctx, from, at, []string{"route"})
 	if err != nil {
@@ -124,6 +132,31 @@ func (c *Controller) trafficRouteUsage(ctx context.Context, q *pb.RouteHistoryRe
 				out.TodayUpload += v.Upload
 				out.TodayDownload += v.Download
 			}
+		}
+	}
+	if q.Window == "today" {
+		overview, err := routeUsageOverview(ctx, snap, at, values)
+		if err != nil {
+			return nil, err
+		}
+		out.HourFrom = overview.HourFrom
+		out.Partial = out.Partial || overview.Partial
+		for _, summary := range overview.Routes {
+			if q.RouteId == "" || summary.RouteId == q.RouteId {
+				out.Routes = append(out.Routes, summary)
+			}
+		}
+		if q.RouteId != "" {
+			out.AlertProgress = c.routeAlertProgress(ctx, snap, proof, q.RouteId)
+			if err := routeUsageRanks(ctx, snap, q.RouteId, from, at, out); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if q.Window == "hour" && q.RouteId != "" {
+		out.HourFrom = timestamppb.New(from)
+		if err := routeUsageRanks(ctx, snap, q.RouteId, from, at, out); err != nil {
+			return nil, err
 		}
 	}
 	return out, nil

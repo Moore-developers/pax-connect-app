@@ -49,6 +49,40 @@ import Testing
     store.clear()
   }
 
+  @Test("完成后显示具体异常，停用 IPv6 和匿名 API 401 不计为失败")
+  func completedIssues() {
+    let sample = EnvironmentDiagnosticReport.Sample(
+      .with {
+        $0.checks = ["ipv6", "rtc_cf", "rtc_google"].map { kind in
+          .with {
+            $0.kind = kind
+            $0.state = "timeout"
+          }
+        }
+      })
+    #expect(
+      EnvironmentDiagnosticStore.sampleIssues(sample, ipv6Off: true, context: .chinese)
+        == ["WebRTC · STUN 超时"])
+    let report = NetworkDiagnosticReport(
+      .with {
+        $0.probes = [
+          .with {
+            $0.target = "https://api.anthropic.com/v1/models"
+            $0.httpStatus = 401
+            $0.errorCode = "target_http_401"
+          },
+          .with {
+            $0.target = "https://www.google.com/generate_204"
+            $0.httpStatus = 503
+            $0.errorCode = "target_http_503"
+          },
+        ]
+      })
+    #expect(
+      NetworkDiagnosticStore.routeIssues(report, context: .chinese)
+        == ["www.google.com · HTTP 503"])
+  }
+
   @Test("环境采样返回但资料未结束时显示阶段，不借用旧结果作为完成")
   func environmentPhases() async {
     let sample = EnvironmentDiagnosticReport(

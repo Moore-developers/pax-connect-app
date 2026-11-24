@@ -23,6 +23,8 @@
 
 ### 5.1 状态 owner 与持久化
 
+流量提醒由独立有界cadence任务读取原流量快照，设置经配置队列写入traffic-alert-settings.json，当前轮次写入traffic-alert-state.json；单线路今日查询从同次评估取线路字节分量。Go标准模型、配置与状态所有权见[流量提醒](../changes/pax-connect-network-control-plane/traffic-alerts.md)。
+
 语言偏好及自定义包由App独立持有，不入daemon配置。事件可选文本语义随journal及col_texts落盘；子表在同事务写入、快照和清理，旧事实不回填。环境检测网页词条只存于短会话并在结束时释放，报告不携带词条；接口见[协议§4](protocol.md)。
 
 

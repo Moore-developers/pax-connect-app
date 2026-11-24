@@ -1,13 +1,13 @@
 import AppKit
 
-/// 原稿浮层骨架：横向身份标题、分隔页签、独立正文底色、固定底部动作。
+/// 浮层骨架，概览的标题、正文和操作由呈现容器一起滚动。
 public final class PaxDialogView: NSView {
-  public enum Style { case detail, auxiliary, event, compact }
+  public enum Style { case detail, auxiliary, event, compact, overview }
   public let style: Style
   public var onContentResize: (() -> Void)?
   public var naturalHeight: CGFloat {
     header.fittingSize.height + PaxTheme.Routes.pageInset + headerBodyGap
-      + content.fittingSize.height + PaxTheme.Routes.bodyTop * 2
+      + content.fittingSize.height + bodyTopInset + bodyBottomInset + footerBottomInset
       + (footer.isHidden ? 0 : footerHeight?.constant ?? 0)
   }
   private let titleField = PaxText.label(
@@ -29,6 +29,16 @@ public final class PaxDialogView: NSView {
   private let document = DialogDocument()
   private var footerHeight: NSLayoutConstraint?
   private var headerBodyGap: CGFloat { style == .auxiliary ? PaxTheme.Routes.bodyTop : 0 }
+  private var bodyTopInset: CGFloat {
+    style == .overview ? PaxTheme.Spacing.medium / 2 : PaxTheme.Routes.bodyTop
+  }
+  private var bodyBottomInset: CGFloat {
+    style == .overview ? PaxTheme.Spacing.xs / 2 : PaxTheme.Routes.bodyTop
+  }
+  private var footerBottomInset: CGFloat { style == .overview ? PaxTheme.Routes.footerInset : 0 }
+  private var footerRowHeight: CGFloat {
+    PaxTheme.Routes.controlHeight + (style == .overview ? 0 : PaxTheme.Routes.footerInset * 2)
+  }
   public init(
     title: String, subtitle: String = "", style: Style = .detail,
     symbol: String = "point.3.connected.trianglepath.dotted", tone: PaxFeatureTag.Tone = .blue
@@ -36,7 +46,8 @@ public final class PaxDialogView: NSView {
     self.style = style
     super.init(frame: .zero)
     wantsLayer = true
-    layer?.backgroundColor = PaxTheme.Routes.card.cgColor
+    layer?.backgroundColor =
+      (style == .overview ? PaxTheme.Color.workspace : PaxTheme.Routes.card).cgColor
     layer?.cornerRadius = PaxTheme.Routes.dialogRadius
     layer?.borderColor = PaxTheme.Routes.edge.cgColor
     layer?.borderWidth = PaxTheme.Layout.cardBorder
@@ -46,6 +57,10 @@ public final class PaxDialogView: NSView {
         ? PaxTheme.Logs.detailTitle
         : style == .detail ? PaxTheme.Routes.detailTitleFont : PaxTheme.Routes.auxiliaryTitleFont,
       weight: style == .detail ? .semibold : .medium)
+    if style == .overview {
+      titleField.font = PaxTheme.Typography.label(
+        size: PaxTheme.Dashboard.pageTitle, weight: .medium)
+    }
     titleField.lineBreakMode = .byTruncatingTail
     titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     titleField.stringValue = title
@@ -61,7 +76,7 @@ public final class PaxDialogView: NSView {
       symbol, tone: tone,
       size: style == .detail ? PaxTheme.Routes.headerIcon : PaxTheme.Routes.pickerIcon)
     let titleRow = NSStackView(
-      views: style == .event || style == .compact
+      views: style == .event || style == .compact || style == .overview
         ? [identity, NSView(), identityActions] : [icon, identity, NSView(), identityActions])
     if style == .event {
       titleRow.alignment = .top
@@ -74,7 +89,7 @@ public final class PaxDialogView: NSView {
     self.titleRow = titleRow
     header.orientation = .vertical
     header.alignment = .leading
-    header.spacing = PaxTheme.Spacing.medium
+    header.spacing = style == .overview ? PaxTheme.Spacing.xs / 2 : PaxTheme.Spacing.medium
     header.addArrangedSubview(titleRow)
     content.orientation = .vertical
     content.alignment = .leading
@@ -82,13 +97,20 @@ public final class PaxDialogView: NSView {
     document.translatesAutoresizingMaskIntoConstraints = false
     content.translatesAutoresizingMaskIntoConstraints = false
     document.addSubview(content)
-    bodyScroll.contentView = body
-    body.color = style == .detail ? PaxTheme.Routes.canvas : PaxTheme.Routes.card
-    bodyScroll.drawsBackground = false
-    bodyScroll.automaticallyAdjustsContentInsets = false
-    bodyScroll.hasVerticalScroller = true
-    bodyScroll.autohidesScrollers = true
-    bodyScroll.documentView = document
+    let bodyView: NSView
+    if style == .overview {
+      bodyView = document
+    } else {
+      bodyScroll.contentView = body
+      body.color = style == .detail ? PaxTheme.Routes.canvas : PaxTheme.Routes.card
+      bodyScroll.drawsBackground = false
+      bodyScroll.automaticallyAdjustsContentInsets = false
+      bodyScroll.hasVerticalScroller = true
+      bodyScroll.autohidesScrollers = true
+      bodyScroll.documentView = document
+      document.widthAnchor.constraint(equalTo: body.widthAnchor).isActive = true
+      bodyView = bodyScroll
+    }
     actions.orientation = .horizontal
     actions.spacing = PaxTheme.Spacing.tight
     footer.orientation = .horizontal
@@ -96,32 +118,36 @@ public final class PaxDialogView: NSView {
     footer.addArrangedSubview(status)
     footer.addArrangedSubview(NSView())
     footer.addArrangedSubview(actions)
-    for v in [header, bodyScroll, footer] {
+    for v in [header, bodyView, footer] {
       v.translatesAutoresizingMaskIntoConstraints = false
       addSubview(v)
     }
     let c = PaxTheme.Routes.self
     let headerInset =
-      style == .compact
+      style == .compact || style == .overview
       ? PaxTheme.Spacing.page
       : style == .event ? PaxTheme.Logs.detailInset : style == .detail ? c.bodyInset : c.dialogInset
+    let bodyEnd = bodyView.bottomAnchor.constraint(equalTo: footer.topAnchor)
+    if style == .overview {
+      // The presenter measures the body at its natural height before sizing the panel.
+      bodyEnd.priority = .fittingSizeCompression
+    }
     NSLayoutConstraint.activate([
       header.leadingAnchor.constraint(equalTo: leadingAnchor, constant: headerInset),
       header.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -headerInset),
       header.topAnchor.constraint(equalTo: topAnchor, constant: c.pageInset),
       titleRow.widthAnchor.constraint(equalTo: header.widthAnchor),
-      bodyScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
-      bodyScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
-      bodyScroll.topAnchor.constraint(equalTo: header.bottomAnchor, constant: headerBodyGap),
-      bodyScroll.bottomAnchor.constraint(equalTo: footer.topAnchor),
+      bodyView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      bodyView.trailingAnchor.constraint(equalTo: trailingAnchor),
+      bodyView.topAnchor.constraint(equalTo: header.bottomAnchor, constant: headerBodyGap),
+      bodyEnd,
       footer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: headerInset),
       footer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -headerInset),
-      footer.bottomAnchor.constraint(equalTo: bottomAnchor),
-      document.widthAnchor.constraint(equalTo: bodyScroll.contentView.widthAnchor),
+      footer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -footerBottomInset),
       content.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: c.bodyInset),
       content.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -c.bodyInset),
-      content.topAnchor.constraint(equalTo: document.topAnchor, constant: c.bodyTop),
-      content.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -c.bodyTop),
+      content.topAnchor.constraint(equalTo: document.topAnchor, constant: bodyTopInset),
+      content.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -bodyBottomInset),
     ])
     if style == .event {
       content.spacing = PaxTheme.Logs.detailSection
@@ -135,11 +161,25 @@ public final class PaxDialogView: NSView {
         separator.bottomAnchor.constraint(equalTo: footer.topAnchor),
       ])
     }
-    footerHeight = footer.heightAnchor.constraint(
-      equalToConstant: c.controlHeight + c.footerInset * 2)
+    footerHeight = footer.heightAnchor.constraint(equalToConstant: footerRowHeight)
     footerHeight?.isActive = true
   }
   @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("代码构建") }
+  public override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+    updateOverviewCanvas()
+  }
+  public override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    updateOverviewCanvas()
+  }
+  private func updateOverviewCanvas() {
+    if style == .overview {
+      effectiveAppearance.performAsCurrentDrawingAppearance {
+        layer?.backgroundColor = PaxTheme.Color.workspace.cgColor
+      }
+    }
+  }
   public override var isFlipped: Bool { true }
   /// 用调用方提供的对象图标替换默认符号块；视图按标题图标尺寸固定。
   public func replaceIcon(_ view: NSView) {
@@ -194,9 +234,8 @@ public final class PaxDialogView: NSView {
     let hidden = buttons.isEmpty && status.stringValue.isEmpty
     status.isHidden = status.stringValue.isEmpty
     footer.isHidden = hidden
-    footerHeight?.constant =
-      hidden ? 0 : PaxTheme.Routes.controlHeight + PaxTheme.Routes.footerInset * 2
-    bodyScroll.contentView.scroll(to: .zero)
+    footerHeight?.constant = hidden ? 0 : footerRowHeight
+    if style != .overview { bodyScroll.contentView.scroll(to: .zero) }
     invalidateContentSize()
   }
 }

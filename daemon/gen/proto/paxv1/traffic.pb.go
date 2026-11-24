@@ -22,6 +22,234 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Latest still-active notice per source/direction; never an alert history.
+type TrafficAlertNotice struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Source        string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	SourceKind    string                 `protobuf:"bytes,4,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	Direction     string                 `protobuf:"bytes,5,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowSeconds uint32                 `protobuf:"varint,6,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"`
+	Bytes         uint64                 `protobuf:"varint,7,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	Threshold     uint64                 `protobuf:"varint,8,opt,name=threshold,proto3" json:"threshold,omitempty"`
+	Until         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=until,proto3" json:"until,omitempty"`
+	RouteId       string                 `protobuf:"bytes,10,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
+	RouteName     string                 `protobuf:"bytes,11,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
+	RouteCount    uint32                 `protobuf:"varint,12,opt,name=route_count,json=routeCount,proto3" json:"route_count,omitempty"`
+	Partial       bool                   `protobuf:"varint,13,opt,name=partial,proto3" json:"partial,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficAlertNotice) Reset() {
+	*x = TrafficAlertNotice{}
+	mi := &file_traffic_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficAlertNotice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficAlertNotice) ProtoMessage() {}
+
+func (x *TrafficAlertNotice) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficAlertNotice.ProtoReflect.Descriptor instead.
+func (*TrafficAlertNotice) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *TrafficAlertNotice) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetWindowSeconds() uint32 {
+	if x != nil {
+		return x.WindowSeconds
+	}
+	return 0
+}
+
+func (x *TrafficAlertNotice) GetBytes() uint64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+func (x *TrafficAlertNotice) GetThreshold() uint64 {
+	if x != nil {
+		return x.Threshold
+	}
+	return 0
+}
+
+func (x *TrafficAlertNotice) GetUntil() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Until
+	}
+	return nil
+}
+
+func (x *TrafficAlertNotice) GetRouteId() string {
+	if x != nil {
+		return x.RouteId
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetRouteName() string {
+	if x != nil {
+		return x.RouteName
+	}
+	return ""
+}
+
+func (x *TrafficAlertNotice) GetRouteCount() uint32 {
+	if x != nil {
+		return x.RouteCount
+	}
+	return 0
+}
+
+func (x *TrafficAlertNotice) GetPartial() bool {
+	if x != nil {
+		return x.Partial
+	}
+	return false
+}
+
+type TrafficAlertState struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Settings *TrafficAlertSettings  `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	// disabled / checking / collecting / partial / proxy_off / collection_interrupted / failed
+	MonitorState string                `protobuf:"bytes,2,opt,name=monitor_state,json=monitorState,proto3" json:"monitor_state,omitempty"`
+	ErrorCode    string                `protobuf:"bytes,3,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	Notices      []*TrafficAlertNotice `protobuf:"bytes,4,rep,name=notices,proto3" json:"notices,omitempty"`
+	// Current episode IDs include temporarily suppressed notices, for delivery-ledger pruning.
+	ActiveNoticeIds []string `protobuf:"bytes,5,rep,name=active_notice_ids,json=activeNoticeIds,proto3" json:"active_notice_ids,omitempty"`
+	// Changes only with visible state, for in-flight read vs Watch ordering.
+	Revision      uint64 `protobuf:"varint,6,opt,name=revision,proto3" json:"revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficAlertState) Reset() {
+	*x = TrafficAlertState{}
+	mi := &file_traffic_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficAlertState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficAlertState) ProtoMessage() {}
+
+func (x *TrafficAlertState) ProtoReflect() protoreflect.Message {
+	mi := &file_traffic_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficAlertState.ProtoReflect.Descriptor instead.
+func (*TrafficAlertState) Descriptor() ([]byte, []int) {
+	return file_traffic_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *TrafficAlertState) GetSettings() *TrafficAlertSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+func (x *TrafficAlertState) GetMonitorState() string {
+	if x != nil {
+		return x.MonitorState
+	}
+	return ""
+}
+
+func (x *TrafficAlertState) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *TrafficAlertState) GetNotices() []*TrafficAlertNotice {
+	if x != nil {
+		return x.Notices
+	}
+	return nil
+}
+
+func (x *TrafficAlertState) GetActiveNoticeIds() []string {
+	if x != nil {
+		return x.ActiveNoticeIds
+	}
+	return nil
+}
+
+func (x *TrafficAlertState) GetRevision() uint64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
 // User-private connection facts and their frozen traffic projections.
 type HistoryState struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
@@ -53,7 +281,7 @@ type HistoryState struct {
 
 func (x *HistoryState) Reset() {
 	*x = HistoryState{}
-	mi := &file_traffic_proto_msgTypes[0]
+	mi := &file_traffic_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -65,7 +293,7 @@ func (x *HistoryState) String() string {
 func (*HistoryState) ProtoMessage() {}
 
 func (x *HistoryState) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[0]
+	mi := &file_traffic_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -78,7 +306,7 @@ func (x *HistoryState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HistoryState.ProtoReflect.Descriptor instead.
 func (*HistoryState) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{0}
+	return file_traffic_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *HistoryState) GetRevision() uint64 {
@@ -220,7 +448,7 @@ type SQLiteStorageUsage struct {
 
 func (x *SQLiteStorageUsage) Reset() {
 	*x = SQLiteStorageUsage{}
-	mi := &file_traffic_proto_msgTypes[1]
+	mi := &file_traffic_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -232,7 +460,7 @@ func (x *SQLiteStorageUsage) String() string {
 func (*SQLiteStorageUsage) ProtoMessage() {}
 
 func (x *SQLiteStorageUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[1]
+	mi := &file_traffic_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +473,7 @@ func (x *SQLiteStorageUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SQLiteStorageUsage.ProtoReflect.Descriptor instead.
 func (*SQLiteStorageUsage) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{1}
+	return file_traffic_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SQLiteStorageUsage) GetLogsBytes() uint64 {
@@ -325,7 +553,7 @@ type FlowRecord struct {
 
 func (x *FlowRecord) Reset() {
 	*x = FlowRecord{}
-	mi := &file_traffic_proto_msgTypes[2]
+	mi := &file_traffic_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +565,7 @@ func (x *FlowRecord) String() string {
 func (*FlowRecord) ProtoMessage() {}
 
 func (x *FlowRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[2]
+	mi := &file_traffic_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +578,7 @@ func (x *FlowRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowRecord.ProtoReflect.Descriptor instead.
 func (*FlowRecord) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{2}
+	return file_traffic_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FlowRecord) GetKey() string {
@@ -602,7 +830,7 @@ type DNSRecord struct {
 
 func (x *DNSRecord) Reset() {
 	*x = DNSRecord{}
-	mi := &file_traffic_proto_msgTypes[3]
+	mi := &file_traffic_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +842,7 @@ func (x *DNSRecord) String() string {
 func (*DNSRecord) ProtoMessage() {}
 
 func (x *DNSRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[3]
+	mi := &file_traffic_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +855,7 @@ func (x *DNSRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DNSRecord.ProtoReflect.Descriptor instead.
 func (*DNSRecord) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{3}
+	return file_traffic_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DNSRecord) GetQueryType() string {
@@ -669,7 +897,7 @@ type TrafficQuery struct {
 
 func (x *TrafficQuery) Reset() {
 	*x = TrafficQuery{}
-	mi := &file_traffic_proto_msgTypes[4]
+	mi := &file_traffic_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -681,7 +909,7 @@ func (x *TrafficQuery) String() string {
 func (*TrafficQuery) ProtoMessage() {}
 
 func (x *TrafficQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[4]
+	mi := &file_traffic_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +922,7 @@ func (x *TrafficQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficQuery.ProtoReflect.Descriptor instead.
 func (*TrafficQuery) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{4}
+	return file_traffic_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TrafficQuery) GetDimension() string {
@@ -772,7 +1000,7 @@ type TrafficResponsePoint struct {
 
 func (x *TrafficResponsePoint) Reset() {
 	*x = TrafficResponsePoint{}
-	mi := &file_traffic_proto_msgTypes[5]
+	mi := &file_traffic_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -784,7 +1012,7 @@ func (x *TrafficResponsePoint) String() string {
 func (*TrafficResponsePoint) ProtoMessage() {}
 
 func (x *TrafficResponsePoint) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[5]
+	mi := &file_traffic_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -797,7 +1025,7 @@ func (x *TrafficResponsePoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficResponsePoint.ProtoReflect.Descriptor instead.
 func (*TrafficResponsePoint) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{5}
+	return file_traffic_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TrafficResponsePoint) GetConnectionKey() string {
@@ -836,7 +1064,7 @@ type TrafficExit struct {
 
 func (x *TrafficExit) Reset() {
 	*x = TrafficExit{}
-	mi := &file_traffic_proto_msgTypes[6]
+	mi := &file_traffic_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -848,7 +1076,7 @@ func (x *TrafficExit) String() string {
 func (*TrafficExit) ProtoMessage() {}
 
 func (x *TrafficExit) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[6]
+	mi := &file_traffic_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -861,7 +1089,7 @@ func (x *TrafficExit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficExit.ProtoReflect.Descriptor instead.
 func (*TrafficExit) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{6}
+	return file_traffic_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TrafficExit) GetRouteId() string {
@@ -924,7 +1152,7 @@ type TrafficRoutingMatch struct {
 
 func (x *TrafficRoutingMatch) Reset() {
 	*x = TrafficRoutingMatch{}
-	mi := &file_traffic_proto_msgTypes[7]
+	mi := &file_traffic_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1164,7 @@ func (x *TrafficRoutingMatch) String() string {
 func (*TrafficRoutingMatch) ProtoMessage() {}
 
 func (x *TrafficRoutingMatch) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[7]
+	mi := &file_traffic_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1177,7 @@ func (x *TrafficRoutingMatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRoutingMatch.ProtoReflect.Descriptor instead.
 func (*TrafficRoutingMatch) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{7}
+	return file_traffic_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TrafficRoutingMatch) GetAt() *timestamppb.Timestamp {
@@ -1059,7 +1287,7 @@ type TrafficRow struct {
 
 func (x *TrafficRow) Reset() {
 	*x = TrafficRow{}
-	mi := &file_traffic_proto_msgTypes[8]
+	mi := &file_traffic_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1071,7 +1299,7 @@ func (x *TrafficRow) String() string {
 func (*TrafficRow) ProtoMessage() {}
 
 func (x *TrafficRow) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[8]
+	mi := &file_traffic_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1084,7 +1312,7 @@ func (x *TrafficRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRow.ProtoReflect.Descriptor instead.
 func (*TrafficRow) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{8}
+	return file_traffic_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *TrafficRow) GetLatestMatch() *TrafficRoutingMatch {
@@ -1367,7 +1595,7 @@ type TrafficPoint struct {
 
 func (x *TrafficPoint) Reset() {
 	*x = TrafficPoint{}
-	mi := &file_traffic_proto_msgTypes[9]
+	mi := &file_traffic_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1379,7 +1607,7 @@ func (x *TrafficPoint) String() string {
 func (*TrafficPoint) ProtoMessage() {}
 
 func (x *TrafficPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[9]
+	mi := &file_traffic_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1392,7 +1620,7 @@ func (x *TrafficPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPoint.ProtoReflect.Descriptor instead.
 func (*TrafficPoint) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{9}
+	return file_traffic_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TrafficPoint) GetAt() *timestamppb.Timestamp {
@@ -1466,7 +1694,7 @@ type TrafficPage struct {
 
 func (x *TrafficPage) Reset() {
 	*x = TrafficPage{}
-	mi := &file_traffic_proto_msgTypes[10]
+	mi := &file_traffic_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1478,7 +1706,7 @@ func (x *TrafficPage) String() string {
 func (*TrafficPage) ProtoMessage() {}
 
 func (x *TrafficPage) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[10]
+	mi := &file_traffic_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1491,7 +1719,7 @@ func (x *TrafficPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPage.ProtoReflect.Descriptor instead.
 func (*TrafficPage) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{10}
+	return file_traffic_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TrafficPage) GetItems() []*TrafficRow {
@@ -1652,7 +1880,7 @@ type TrafficDetailRequest struct {
 
 func (x *TrafficDetailRequest) Reset() {
 	*x = TrafficDetailRequest{}
-	mi := &file_traffic_proto_msgTypes[11]
+	mi := &file_traffic_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1664,7 +1892,7 @@ func (x *TrafficDetailRequest) String() string {
 func (*TrafficDetailRequest) ProtoMessage() {}
 
 func (x *TrafficDetailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[11]
+	mi := &file_traffic_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1677,7 +1905,7 @@ func (x *TrafficDetailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficDetailRequest.ProtoReflect.Descriptor instead.
 func (*TrafficDetailRequest) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{11}
+	return file_traffic_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TrafficDetailRequest) GetRowId() string {
@@ -1792,7 +2020,7 @@ type TrafficBasis struct {
 
 func (x *TrafficBasis) Reset() {
 	*x = TrafficBasis{}
-	mi := &file_traffic_proto_msgTypes[12]
+	mi := &file_traffic_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1804,7 +2032,7 @@ func (x *TrafficBasis) String() string {
 func (*TrafficBasis) ProtoMessage() {}
 
 func (x *TrafficBasis) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[12]
+	mi := &file_traffic_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1817,7 +2045,7 @@ func (x *TrafficBasis) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficBasis.ProtoReflect.Descriptor instead.
 func (*TrafficBasis) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{12}
+	return file_traffic_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TrafficBasis) GetRule() string {
@@ -1876,7 +2104,7 @@ type TrafficLatencySample struct {
 
 func (x *TrafficLatencySample) Reset() {
 	*x = TrafficLatencySample{}
-	mi := &file_traffic_proto_msgTypes[13]
+	mi := &file_traffic_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1888,7 +2116,7 @@ func (x *TrafficLatencySample) String() string {
 func (*TrafficLatencySample) ProtoMessage() {}
 
 func (x *TrafficLatencySample) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[13]
+	mi := &file_traffic_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1901,7 +2129,7 @@ func (x *TrafficLatencySample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficLatencySample.ProtoReflect.Descriptor instead.
 func (*TrafficLatencySample) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{13}
+	return file_traffic_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TrafficLatencySample) GetAt() *timestamppb.Timestamp {
@@ -1970,7 +2198,7 @@ type TrafficConnectionGroup struct {
 
 func (x *TrafficConnectionGroup) Reset() {
 	*x = TrafficConnectionGroup{}
-	mi := &file_traffic_proto_msgTypes[14]
+	mi := &file_traffic_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1982,7 +2210,7 @@ func (x *TrafficConnectionGroup) String() string {
 func (*TrafficConnectionGroup) ProtoMessage() {}
 
 func (x *TrafficConnectionGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[14]
+	mi := &file_traffic_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1995,7 +2223,7 @@ func (x *TrafficConnectionGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficConnectionGroup.ProtoReflect.Descriptor instead.
 func (*TrafficConnectionGroup) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{14}
+	return file_traffic_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TrafficConnectionGroup) GetId() string {
@@ -2116,7 +2344,7 @@ type TrafficConnectionSource struct {
 
 func (x *TrafficConnectionSource) Reset() {
 	*x = TrafficConnectionSource{}
-	mi := &file_traffic_proto_msgTypes[15]
+	mi := &file_traffic_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2128,7 +2356,7 @@ func (x *TrafficConnectionSource) String() string {
 func (*TrafficConnectionSource) ProtoMessage() {}
 
 func (x *TrafficConnectionSource) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[15]
+	mi := &file_traffic_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2141,7 +2369,7 @@ func (x *TrafficConnectionSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficConnectionSource.ProtoReflect.Descriptor instead.
 func (*TrafficConnectionSource) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{15}
+	return file_traffic_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *TrafficConnectionSource) GetApplicationId() string {
@@ -2191,7 +2419,7 @@ type TrafficConnectionAddress struct {
 
 func (x *TrafficConnectionAddress) Reset() {
 	*x = TrafficConnectionAddress{}
-	mi := &file_traffic_proto_msgTypes[16]
+	mi := &file_traffic_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2203,7 +2431,7 @@ func (x *TrafficConnectionAddress) String() string {
 func (*TrafficConnectionAddress) ProtoMessage() {}
 
 func (x *TrafficConnectionAddress) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[16]
+	mi := &file_traffic_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2216,7 +2444,7 @@ func (x *TrafficConnectionAddress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficConnectionAddress.ProtoReflect.Descriptor instead.
 func (*TrafficConnectionAddress) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{16}
+	return file_traffic_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TrafficConnectionAddress) GetIp() string {
@@ -2259,7 +2487,7 @@ type TrafficConnectionResult struct {
 
 func (x *TrafficConnectionResult) Reset() {
 	*x = TrafficConnectionResult{}
-	mi := &file_traffic_proto_msgTypes[17]
+	mi := &file_traffic_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2271,7 +2499,7 @@ func (x *TrafficConnectionResult) String() string {
 func (*TrafficConnectionResult) ProtoMessage() {}
 
 func (x *TrafficConnectionResult) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[17]
+	mi := &file_traffic_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2284,7 +2512,7 @@ func (x *TrafficConnectionResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficConnectionResult.ProtoReflect.Descriptor instead.
 func (*TrafficConnectionResult) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{17}
+	return file_traffic_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TrafficConnectionResult) GetState() string {
@@ -2349,7 +2577,7 @@ type TrafficDetail struct {
 
 func (x *TrafficDetail) Reset() {
 	*x = TrafficDetail{}
-	mi := &file_traffic_proto_msgTypes[18]
+	mi := &file_traffic_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2361,7 +2589,7 @@ func (x *TrafficDetail) String() string {
 func (*TrafficDetail) ProtoMessage() {}
 
 func (x *TrafficDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[18]
+	mi := &file_traffic_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2374,7 +2602,7 @@ func (x *TrafficDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficDetail.ProtoReflect.Descriptor instead.
 func (*TrafficDetail) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{18}
+	return file_traffic_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *TrafficDetail) GetRetainedConnectionCount() uint64 {
@@ -2600,7 +2828,7 @@ type TrafficRelated struct {
 
 func (x *TrafficRelated) Reset() {
 	*x = TrafficRelated{}
-	mi := &file_traffic_proto_msgTypes[19]
+	mi := &file_traffic_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2612,7 +2840,7 @@ func (x *TrafficRelated) String() string {
 func (*TrafficRelated) ProtoMessage() {}
 
 func (x *TrafficRelated) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[19]
+	mi := &file_traffic_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2625,7 +2853,7 @@ func (x *TrafficRelated) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficRelated.ProtoReflect.Descriptor instead.
 func (*TrafficRelated) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{19}
+	return file_traffic_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *TrafficRelated) GetId() string {
@@ -2681,7 +2909,7 @@ type DNSTrafficGroup struct {
 
 func (x *DNSTrafficGroup) Reset() {
 	*x = DNSTrafficGroup{}
-	mi := &file_traffic_proto_msgTypes[20]
+	mi := &file_traffic_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2693,7 +2921,7 @@ func (x *DNSTrafficGroup) String() string {
 func (*DNSTrafficGroup) ProtoMessage() {}
 
 func (x *DNSTrafficGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_traffic_proto_msgTypes[20]
+	mi := &file_traffic_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2706,7 +2934,7 @@ func (x *DNSTrafficGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DNSTrafficGroup.ProtoReflect.Descriptor instead.
 func (*DNSTrafficGroup) Descriptor() ([]byte, []int) {
-	return file_traffic_proto_rawDescGZIP(), []int{20}
+	return file_traffic_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DNSTrafficGroup) GetId() string {
@@ -2776,7 +3004,33 @@ var File_traffic_proto protoreflect.FileDescriptor
 
 const file_traffic_proto_rawDesc = "" +
 	"\n" +
-	"\rtraffic.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xac\a\n" +
+	"\rtraffic.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\rprivacy.proto\"\x8f\x03\n" +
+	"\x12TrafficAlertNotice\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x16\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\x12\x1f\n" +
+	"\vsource_kind\x18\x04 \x01(\tR\n" +
+	"sourceKind\x12\x1c\n" +
+	"\tdirection\x18\x05 \x01(\tR\tdirection\x12%\n" +
+	"\x0ewindow_seconds\x18\x06 \x01(\rR\rwindowSeconds\x12\x14\n" +
+	"\x05bytes\x18\a \x01(\x04R\x05bytes\x12\x1c\n" +
+	"\tthreshold\x18\b \x01(\x04R\tthreshold\x120\n" +
+	"\x05until\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x05until\x12\x19\n" +
+	"\broute_id\x18\n" +
+	" \x01(\tR\arouteId\x12\x1d\n" +
+	"\n" +
+	"route_name\x18\v \x01(\tR\trouteName\x12\x1f\n" +
+	"\vroute_count\x18\f \x01(\rR\n" +
+	"routeCount\x12\x18\n" +
+	"\apartial\x18\r \x01(\bR\apartial\"\x8f\x02\n" +
+	"\x11TrafficAlertState\x128\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1c.pax.v1.TrafficAlertSettingsR\bsettings\x12#\n" +
+	"\rmonitor_state\x18\x02 \x01(\tR\fmonitorState\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x03 \x01(\tR\terrorCode\x124\n" +
+	"\anotices\x18\x04 \x03(\v2\x1a.pax.v1.TrafficAlertNoticeR\anotices\x12*\n" +
+	"\x11active_notice_ids\x18\x05 \x03(\tR\x0factiveNoticeIds\x12\x1a\n" +
+	"\brevision\x18\x06 \x01(\x04R\brevision\"\xac\a\n" +
 	"\fHistoryState\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x12)\n" +
 	"\x10clear_generation\x18\x02 \x01(\x04R\x0fclearGeneration\x12A\n" +
@@ -3100,84 +3354,90 @@ func file_traffic_proto_rawDescGZIP() []byte {
 	return file_traffic_proto_rawDescData
 }
 
-var file_traffic_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_traffic_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_traffic_proto_goTypes = []any{
-	(*HistoryState)(nil),             // 0: pax.v1.HistoryState
-	(*SQLiteStorageUsage)(nil),       // 1: pax.v1.SQLiteStorageUsage
-	(*FlowRecord)(nil),               // 2: pax.v1.FlowRecord
-	(*DNSRecord)(nil),                // 3: pax.v1.DNSRecord
-	(*TrafficQuery)(nil),             // 4: pax.v1.TrafficQuery
-	(*TrafficResponsePoint)(nil),     // 5: pax.v1.TrafficResponsePoint
-	(*TrafficExit)(nil),              // 6: pax.v1.TrafficExit
-	(*TrafficRoutingMatch)(nil),      // 7: pax.v1.TrafficRoutingMatch
-	(*TrafficRow)(nil),               // 8: pax.v1.TrafficRow
-	(*TrafficPoint)(nil),             // 9: pax.v1.TrafficPoint
-	(*TrafficPage)(nil),              // 10: pax.v1.TrafficPage
-	(*TrafficDetailRequest)(nil),     // 11: pax.v1.TrafficDetailRequest
-	(*TrafficBasis)(nil),             // 12: pax.v1.TrafficBasis
-	(*TrafficLatencySample)(nil),     // 13: pax.v1.TrafficLatencySample
-	(*TrafficConnectionGroup)(nil),   // 14: pax.v1.TrafficConnectionGroup
-	(*TrafficConnectionSource)(nil),  // 15: pax.v1.TrafficConnectionSource
-	(*TrafficConnectionAddress)(nil), // 16: pax.v1.TrafficConnectionAddress
-	(*TrafficConnectionResult)(nil),  // 17: pax.v1.TrafficConnectionResult
-	(*TrafficDetail)(nil),            // 18: pax.v1.TrafficDetail
-	(*TrafficRelated)(nil),           // 19: pax.v1.TrafficRelated
-	(*DNSTrafficGroup)(nil),          // 20: pax.v1.DNSTrafficGroup
-	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
+	(*TrafficAlertNotice)(nil),       // 0: pax.v1.TrafficAlertNotice
+	(*TrafficAlertState)(nil),        // 1: pax.v1.TrafficAlertState
+	(*HistoryState)(nil),             // 2: pax.v1.HistoryState
+	(*SQLiteStorageUsage)(nil),       // 3: pax.v1.SQLiteStorageUsage
+	(*FlowRecord)(nil),               // 4: pax.v1.FlowRecord
+	(*DNSRecord)(nil),                // 5: pax.v1.DNSRecord
+	(*TrafficQuery)(nil),             // 6: pax.v1.TrafficQuery
+	(*TrafficResponsePoint)(nil),     // 7: pax.v1.TrafficResponsePoint
+	(*TrafficExit)(nil),              // 8: pax.v1.TrafficExit
+	(*TrafficRoutingMatch)(nil),      // 9: pax.v1.TrafficRoutingMatch
+	(*TrafficRow)(nil),               // 10: pax.v1.TrafficRow
+	(*TrafficPoint)(nil),             // 11: pax.v1.TrafficPoint
+	(*TrafficPage)(nil),              // 12: pax.v1.TrafficPage
+	(*TrafficDetailRequest)(nil),     // 13: pax.v1.TrafficDetailRequest
+	(*TrafficBasis)(nil),             // 14: pax.v1.TrafficBasis
+	(*TrafficLatencySample)(nil),     // 15: pax.v1.TrafficLatencySample
+	(*TrafficConnectionGroup)(nil),   // 16: pax.v1.TrafficConnectionGroup
+	(*TrafficConnectionSource)(nil),  // 17: pax.v1.TrafficConnectionSource
+	(*TrafficConnectionAddress)(nil), // 18: pax.v1.TrafficConnectionAddress
+	(*TrafficConnectionResult)(nil),  // 19: pax.v1.TrafficConnectionResult
+	(*TrafficDetail)(nil),            // 20: pax.v1.TrafficDetail
+	(*TrafficRelated)(nil),           // 21: pax.v1.TrafficRelated
+	(*DNSTrafficGroup)(nil),          // 22: pax.v1.DNSTrafficGroup
+	(*timestamppb.Timestamp)(nil),    // 23: google.protobuf.Timestamp
+	(*TrafficAlertSettings)(nil),     // 24: pax.v1.TrafficAlertSettings
 }
 var file_traffic_proto_depIdxs = []int32{
-	21, // 0: pax.v1.HistoryState.coverage_start:type_name -> google.protobuf.Timestamp
-	21, // 1: pax.v1.HistoryState.aggregate_coverage_start:type_name -> google.protobuf.Timestamp
-	1,  // 2: pax.v1.HistoryState.sqlite_storage:type_name -> pax.v1.SQLiteStorageUsage
-	21, // 3: pax.v1.FlowRecord.started_at:type_name -> google.protobuf.Timestamp
-	21, // 4: pax.v1.FlowRecord.closed_at:type_name -> google.protobuf.Timestamp
-	21, // 5: pax.v1.FlowRecord.observed_until:type_name -> google.protobuf.Timestamp
-	3,  // 6: pax.v1.FlowRecord.dns:type_name -> pax.v1.DNSRecord
-	21, // 7: pax.v1.TrafficQuery.until:type_name -> google.protobuf.Timestamp
-	21, // 8: pax.v1.TrafficResponsePoint.started_at:type_name -> google.protobuf.Timestamp
-	21, // 9: pax.v1.TrafficRoutingMatch.at:type_name -> google.protobuf.Timestamp
-	7,  // 10: pax.v1.TrafficRow.latest_match:type_name -> pax.v1.TrafficRoutingMatch
-	6,  // 11: pax.v1.TrafficRow.exits:type_name -> pax.v1.TrafficExit
-	5,  // 12: pax.v1.TrafficRow.recent_responses:type_name -> pax.v1.TrafficResponsePoint
-	13, // 13: pax.v1.TrafficRow.latency_samples:type_name -> pax.v1.TrafficLatencySample
-	12, // 14: pax.v1.TrafficRow.bases:type_name -> pax.v1.TrafficBasis
-	21, // 15: pax.v1.TrafficRow.latest_latency_at:type_name -> google.protobuf.Timestamp
-	21, // 16: pax.v1.TrafficPoint.at:type_name -> google.protobuf.Timestamp
-	8,  // 17: pax.v1.TrafficPage.items:type_name -> pax.v1.TrafficRow
-	21, // 18: pax.v1.TrafficPage.as_of:type_name -> google.protobuf.Timestamp
-	21, // 19: pax.v1.TrafficPage.from:type_name -> google.protobuf.Timestamp
-	9,  // 20: pax.v1.TrafficPage.trend:type_name -> pax.v1.TrafficPoint
-	0,  // 21: pax.v1.TrafficPage.history:type_name -> pax.v1.HistoryState
-	8,  // 22: pax.v1.TrafficPage.unknown_source:type_name -> pax.v1.TrafficRow
-	8,  // 23: pax.v1.TrafficPage.dns_summary:type_name -> pax.v1.TrafficRow
-	21, // 24: pax.v1.TrafficLatencySample.at:type_name -> google.protobuf.Timestamp
-	21, // 25: pax.v1.TrafficConnectionGroup.last_at:type_name -> google.protobuf.Timestamp
-	12, // 26: pax.v1.TrafficConnectionGroup.rules:type_name -> pax.v1.TrafficBasis
-	6,  // 27: pax.v1.TrafficConnectionGroup.exits:type_name -> pax.v1.TrafficExit
-	5,  // 28: pax.v1.TrafficConnectionGroup.recent_responses:type_name -> pax.v1.TrafficResponsePoint
-	15, // 29: pax.v1.TrafficConnectionGroup.sources:type_name -> pax.v1.TrafficConnectionSource
-	16, // 30: pax.v1.TrafficConnectionGroup.addresses:type_name -> pax.v1.TrafficConnectionAddress
-	17, // 31: pax.v1.TrafficConnectionGroup.results:type_name -> pax.v1.TrafficConnectionResult
-	14, // 32: pax.v1.TrafficDetail.connection_groups:type_name -> pax.v1.TrafficConnectionGroup
-	12, // 33: pax.v1.TrafficDetail.connection_rules:type_name -> pax.v1.TrafficBasis
-	6,  // 34: pax.v1.TrafficDetail.connection_exits:type_name -> pax.v1.TrafficExit
-	5,  // 35: pax.v1.TrafficDetail.recent_responses:type_name -> pax.v1.TrafficResponsePoint
-	8,  // 36: pax.v1.TrafficDetail.summary:type_name -> pax.v1.TrafficRow
-	2,  // 37: pax.v1.TrafficDetail.items:type_name -> pax.v1.FlowRecord
-	12, // 38: pax.v1.TrafficDetail.basis:type_name -> pax.v1.TrafficBasis
-	21, // 39: pax.v1.TrafficDetail.as_of:type_name -> google.protobuf.Timestamp
-	21, // 40: pax.v1.TrafficDetail.from:type_name -> google.protobuf.Timestamp
-	0,  // 41: pax.v1.TrafficDetail.history:type_name -> pax.v1.HistoryState
-	19, // 42: pax.v1.TrafficDetail.related:type_name -> pax.v1.TrafficRelated
-	2,  // 43: pax.v1.TrafficDetail.timings:type_name -> pax.v1.FlowRecord
-	9,  // 44: pax.v1.TrafficDetail.trend:type_name -> pax.v1.TrafficPoint
-	20, // 45: pax.v1.TrafficDetail.dns_groups:type_name -> pax.v1.DNSTrafficGroup
-	21, // 46: pax.v1.DNSTrafficGroup.last_at:type_name -> google.protobuf.Timestamp
-	47, // [47:47] is the sub-list for method output_type
-	47, // [47:47] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	23, // 0: pax.v1.TrafficAlertNotice.until:type_name -> google.protobuf.Timestamp
+	24, // 1: pax.v1.TrafficAlertState.settings:type_name -> pax.v1.TrafficAlertSettings
+	0,  // 2: pax.v1.TrafficAlertState.notices:type_name -> pax.v1.TrafficAlertNotice
+	23, // 3: pax.v1.HistoryState.coverage_start:type_name -> google.protobuf.Timestamp
+	23, // 4: pax.v1.HistoryState.aggregate_coverage_start:type_name -> google.protobuf.Timestamp
+	3,  // 5: pax.v1.HistoryState.sqlite_storage:type_name -> pax.v1.SQLiteStorageUsage
+	23, // 6: pax.v1.FlowRecord.started_at:type_name -> google.protobuf.Timestamp
+	23, // 7: pax.v1.FlowRecord.closed_at:type_name -> google.protobuf.Timestamp
+	23, // 8: pax.v1.FlowRecord.observed_until:type_name -> google.protobuf.Timestamp
+	5,  // 9: pax.v1.FlowRecord.dns:type_name -> pax.v1.DNSRecord
+	23, // 10: pax.v1.TrafficQuery.until:type_name -> google.protobuf.Timestamp
+	23, // 11: pax.v1.TrafficResponsePoint.started_at:type_name -> google.protobuf.Timestamp
+	23, // 12: pax.v1.TrafficRoutingMatch.at:type_name -> google.protobuf.Timestamp
+	9,  // 13: pax.v1.TrafficRow.latest_match:type_name -> pax.v1.TrafficRoutingMatch
+	8,  // 14: pax.v1.TrafficRow.exits:type_name -> pax.v1.TrafficExit
+	7,  // 15: pax.v1.TrafficRow.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	15, // 16: pax.v1.TrafficRow.latency_samples:type_name -> pax.v1.TrafficLatencySample
+	14, // 17: pax.v1.TrafficRow.bases:type_name -> pax.v1.TrafficBasis
+	23, // 18: pax.v1.TrafficRow.latest_latency_at:type_name -> google.protobuf.Timestamp
+	23, // 19: pax.v1.TrafficPoint.at:type_name -> google.protobuf.Timestamp
+	10, // 20: pax.v1.TrafficPage.items:type_name -> pax.v1.TrafficRow
+	23, // 21: pax.v1.TrafficPage.as_of:type_name -> google.protobuf.Timestamp
+	23, // 22: pax.v1.TrafficPage.from:type_name -> google.protobuf.Timestamp
+	11, // 23: pax.v1.TrafficPage.trend:type_name -> pax.v1.TrafficPoint
+	2,  // 24: pax.v1.TrafficPage.history:type_name -> pax.v1.HistoryState
+	10, // 25: pax.v1.TrafficPage.unknown_source:type_name -> pax.v1.TrafficRow
+	10, // 26: pax.v1.TrafficPage.dns_summary:type_name -> pax.v1.TrafficRow
+	23, // 27: pax.v1.TrafficLatencySample.at:type_name -> google.protobuf.Timestamp
+	23, // 28: pax.v1.TrafficConnectionGroup.last_at:type_name -> google.protobuf.Timestamp
+	14, // 29: pax.v1.TrafficConnectionGroup.rules:type_name -> pax.v1.TrafficBasis
+	8,  // 30: pax.v1.TrafficConnectionGroup.exits:type_name -> pax.v1.TrafficExit
+	7,  // 31: pax.v1.TrafficConnectionGroup.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	17, // 32: pax.v1.TrafficConnectionGroup.sources:type_name -> pax.v1.TrafficConnectionSource
+	18, // 33: pax.v1.TrafficConnectionGroup.addresses:type_name -> pax.v1.TrafficConnectionAddress
+	19, // 34: pax.v1.TrafficConnectionGroup.results:type_name -> pax.v1.TrafficConnectionResult
+	16, // 35: pax.v1.TrafficDetail.connection_groups:type_name -> pax.v1.TrafficConnectionGroup
+	14, // 36: pax.v1.TrafficDetail.connection_rules:type_name -> pax.v1.TrafficBasis
+	8,  // 37: pax.v1.TrafficDetail.connection_exits:type_name -> pax.v1.TrafficExit
+	7,  // 38: pax.v1.TrafficDetail.recent_responses:type_name -> pax.v1.TrafficResponsePoint
+	10, // 39: pax.v1.TrafficDetail.summary:type_name -> pax.v1.TrafficRow
+	4,  // 40: pax.v1.TrafficDetail.items:type_name -> pax.v1.FlowRecord
+	14, // 41: pax.v1.TrafficDetail.basis:type_name -> pax.v1.TrafficBasis
+	23, // 42: pax.v1.TrafficDetail.as_of:type_name -> google.protobuf.Timestamp
+	23, // 43: pax.v1.TrafficDetail.from:type_name -> google.protobuf.Timestamp
+	2,  // 44: pax.v1.TrafficDetail.history:type_name -> pax.v1.HistoryState
+	21, // 45: pax.v1.TrafficDetail.related:type_name -> pax.v1.TrafficRelated
+	4,  // 46: pax.v1.TrafficDetail.timings:type_name -> pax.v1.FlowRecord
+	11, // 47: pax.v1.TrafficDetail.trend:type_name -> pax.v1.TrafficPoint
+	22, // 48: pax.v1.TrafficDetail.dns_groups:type_name -> pax.v1.DNSTrafficGroup
+	23, // 49: pax.v1.DNSTrafficGroup.last_at:type_name -> google.protobuf.Timestamp
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_traffic_proto_init() }
@@ -3185,13 +3445,14 @@ func file_traffic_proto_init() {
 	if File_traffic_proto != nil {
 		return
 	}
+	file_privacy_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_traffic_proto_rawDesc), len(file_traffic_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

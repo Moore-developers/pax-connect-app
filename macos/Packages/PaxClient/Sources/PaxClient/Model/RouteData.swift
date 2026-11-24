@@ -79,7 +79,57 @@ public struct RouteUsageBucket: Sendable, Equatable {
     self.gap = gap
   }
 }
+public struct RouteUsageSummary: Sendable, Equatable {
+  public var routeID: String
+  public var todayUpload: UInt64
+  public var todayDownload: UInt64
+  public var hourUpload: UInt64
+  public var hourDownload: UInt64
+  public init(
+    routeID: String, todayUpload: UInt64 = 0, todayDownload: UInt64 = 0,
+    hourUpload: UInt64 = 0, hourDownload: UInt64 = 0
+  ) {
+    self.routeID = routeID
+    self.todayUpload = todayUpload
+    self.todayDownload = todayDownload
+    self.hourUpload = hourUpload
+    self.hourDownload = hourDownload
+  }
+}
+public struct RouteUsageRank: Sendable, Equatable {
+  public var id: String
+  public var name: String
+  public var upload: UInt64
+  public var download: UInt64
+  public init(id: String, name: String, upload: UInt64, download: UInt64) {
+    self.id = id
+    self.name = name
+    self.upload = upload
+    self.download = download
+  }
+}
+public struct RouteAlertWindow: Sendable {
+  public let seconds: UInt32
+  public let upload: UInt64
+  public let download: UInt64
+  public let partial: Bool
+  public let until: Date
+}
+
+public struct RouteAlertProgress: Sendable {
+  public let monitorState: String
+  public let settings: TrafficAlertSettings
+  public let windows: [RouteAlertWindow]
+}
+
 public struct RouteUsagePage: Sendable {
+  public var alertProgress: RouteAlertProgress? = nil
+  public var routes: [RouteUsageSummary] = []
+  public var hourFrom: Date? = nil
+  public var applications: [RouteUsageRank] = []
+  public var domains: [RouteUsageRank] = []
+  public var ips: [RouteUsageRank] = []
+
   public var coverageStart: Date? = nil
   public var upload: UInt64 = 0
   public var download: UInt64 = 0

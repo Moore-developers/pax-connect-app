@@ -2,6 +2,10 @@
   "formatVersion": 1,
   "locale": "zh-Hans",
   "messages": {
-    "diagnostic.source.cloudflare_edge": "Cloudflare 边缘"
+    "diagnostic.source.cloudflare_edge": "Cloudflare 边缘",
+    "diagnostic.source.bgp_origin": "BGP 公告 ASN：",
+    "diagnostic.source.bgp_prefix": "BGP 公告前缀：",
+    "diagnostic.source.flagged": "来源已标记",
+    "diagnostic.source.ip2location_attribution": "Pax Connect 使用 IP2Location.io 地理位置服务"
   }
 }

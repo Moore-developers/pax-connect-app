@@ -21,13 +21,14 @@ final class WorkbenchWindowController: NSWindowController, NSWindowDelegate, NSM
     routes: RoutesStore, connection: ConnectionStore, telemetry: TelemetryStore? = nil,
     aiProfiles: AIProfilesStore? = nil, aiUsage: AIUsageDataStore? = nil,
     dashboardSources: DashboardSources? = nil, refresh: PaxRefresh? = nil,
-    mcpAccess: MCPAccessActions? = nil, language: InterfaceLanguageStore? = nil
+    mcpAccess: MCPAccessActions? = nil, language: InterfaceLanguageStore? = nil,
+    trafficAlerts: TrafficAlertsStore? = nil
   ) {
     self.init(
       shell: WorkbenchShellViewController(
         routes: routes, connection: connection, telemetry: telemetry, aiProfiles: aiProfiles,
         aiUsage: aiUsage, dashboardSources: dashboardSources, refresh: refresh,
-        mcpAccess: mcpAccess, language: language),
+        mcpAccess: mcpAccess, language: language, trafficAlerts: trafficAlerts),
       store: nil)
     liveTelemetry = telemetry
     liveRefresh = refresh

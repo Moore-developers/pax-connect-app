@@ -64,7 +64,9 @@ import Foundation
     environment: NetworkDiagnosticEnvironment?, previous: NetworkDiagnosticReport? = nil
   ) {
     archive.route = RouteSnapshot(
-      report: report, services: services, previous: previous, environment: environment)
+      report: report?.excludingProviderEvidence("ip2location.io"),
+      services: services, previous: previous?.excludingProviderEvidence("ip2location.io"),
+      environment: environment)
     save()
   }
 

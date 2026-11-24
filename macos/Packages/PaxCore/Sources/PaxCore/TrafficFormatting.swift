@@ -109,6 +109,11 @@ public enum TrafficFormatting {
     let bytes = min(value * 1_000_000, Double(UInt64.max).nextDown)
     return self.bytes(UInt64(bytes.rounded(.down)))
   }
+  /// Compact catalog units; the underlying decimal byte accounting is unchanged.
+  public static func compactBytes(_ value: UInt64) -> String {
+    bytes(value).replacingOccurrences(of: " GB", with: " G")
+      .replacingOccurrences(of: " MB", with: " M").replacingOccurrences(of: " KB", with: " K")
+  }
   public static func bytes(_ value: UInt64) -> String {
     let gb = Double(value) / 1_000_000_000
     if gb >= 1 { return gb.formatted(.number.precision(.fractionLength(2))) + " GB" }

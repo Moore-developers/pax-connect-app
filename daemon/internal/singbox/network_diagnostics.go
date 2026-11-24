@@ -34,7 +34,7 @@ func (r *Runtime) DiagnoseNetwork(ctx context.Context, p config.RouteConfig, mod
 			exit.ExitIP = exit.ExitLocation.IP
 			if mode != "services" {
 				measurement.ObserveDiagnostic(ctx, measurement.DiagnosticProgress{SourcesState: "running"})
-				report = r.exits.DiagnoseIP(ctx, client, exit.ExitIP, config.RuntimeTag(p)+"/"+p.MeasurementNetwork)
+				report = r.exits.DiagnoseRouteIP(ctx, client, exit.ExitIP, config.RuntimeTag(p)+"/"+p.MeasurementNetwork)
 				state := "complete"
 				if report.ProviderError != "" {
 					state = "failed"

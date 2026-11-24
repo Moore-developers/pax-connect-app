@@ -1,5 +1,12 @@
 import AppKit
 
+extension PaxTheme.Dashboard {
+  static func readoutFont(size: CGFloat = 13, bold: Bool = false) -> NSFont {
+    NSFont(name: bold ? "Menlo-Bold" : "Menlo-Regular", size: size)
+      ?? .monospacedSystemFont(ofSize: size, weight: bold ? .bold : .regular)
+  }
+}
+
 /// 卡片标题的统一白色图标座。Dashboard 与组件目录共享尺寸和颜色。
 public final class PaxIconTile: NSView {
   private let image: NSImageView
@@ -68,15 +75,16 @@ public final class PaxCardHeading: NSView {
     super.layout()
     let d = PaxTheme.Dashboard.self
     icon.frame = NSRect(x: 0, y: 0, width: d.icon, height: d.icon)
-    let reserve = detail.stringValue.isEmpty ? 0 : detail.intrinsicContentSize.width + d.titleGap
+    let detailSize = detail.intrinsicContentSize
+    let detailWidth = detail.stringValue.isEmpty ? 0 : ceil(detailSize.width) + PaxTheme.Spacing.xs
+    let reserve = detailWidth > 0 ? detailWidth + d.titleGap : 0
     title.frame = NSRect(
       x: d.icon + d.titleGap, y: (d.icon - title.intrinsicContentSize.height) / 2,
       width: max(1, bounds.width - d.icon - d.titleGap - reserve),
       height: title.intrinsicContentSize.height)
     detail.frame = NSRect(
-      x: bounds.width - detail.intrinsicContentSize.width,
-      y: (d.icon - detail.intrinsicContentSize.height) / 2,
-      width: detail.intrinsicContentSize.width, height: detail.intrinsicContentSize.height)
+      x: bounds.width - detailWidth, y: (d.icon - detailSize.height) / 2,
+      width: detailWidth, height: detailSize.height)
   }
 }
 

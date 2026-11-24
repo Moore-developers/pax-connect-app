@@ -58,12 +58,8 @@ type diagnosticTarget struct {
 
 func diagnosticTargets(mode string) []diagnosticTarget {
 	services := []diagnosticTarget{
-		{"https://chatgpt.com/", 1}, {"https://api.openai.com/v1/models", 1},
-		{"https://claude.ai/", 1}, {"https://api.anthropic.com/v1/models", 1},
-		{"https://grok.com/", 1}, {"https://www.perplexity.ai/", 1},
-		{"https://gemini.google.com/", 1}, {"https://www.tiktok.com/", 1},
-		{"https://www.facebook.com/", 1}, {"https://x.com/", 1},
-		{"https://store.steampowered.com/", 1}, {"https://github.com/", 1},
+		{"https://api.openai.com/v1/models", 1},
+		{"https://api.anthropic.com/v1/models", 1},
 	}
 	if mode == "services" {
 		return services
@@ -72,7 +68,7 @@ func diagnosticTargets(mode string) []diagnosticTarget {
 	if mode == "full" {
 		return append(targets, services...)
 	}
-	return append(targets, services[2:4]...)
+	return append(targets, services[1])
 }
 
 // DiagnoseNetwork probes only fixed public endpoints through the injected route client.

@@ -125,7 +125,7 @@ func parseResolvers(data []byte) ([]Resolver, error) {
 	}
 	return result, nil
 }
-func macSample(ctx context.Context, client measurement.Client, provider EvidenceProvider) Sample {
+func macSample(ctx context.Context, client measurement.Client, provider EvidenceProvider, onIPv6Route func(Check)) Sample {
 	var sample Sample
 	var v4, v6, route Check
 	var dnsChecks []Check
@@ -133,7 +133,11 @@ func macSample(ctx context.Context, client measurement.Client, provider Evidence
 	workers.Add(4)
 	go func() { defer workers.Done(); sample.IPv4, v4 = ipCheck(ctx, client, false) }()
 	go func() { defer workers.Done(); sample.IPv6, v6 = ipCheck(ctx, client, true) }()
-	go func() { defer workers.Done(); route = ipv6RouteCheck(ctx) }()
+	go func() {
+		defer workers.Done()
+		route = ipv6RouteCheck(ctx)
+		onIPv6Route(route)
+	}()
 	go func() {
 		defer workers.Done()
 		session := Check{Kind: "dns_session", Target: "bash.ws", At: time.Now(), State: "failed"}

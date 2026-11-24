@@ -112,6 +112,57 @@ func TestEnvironmentCheckRetainsHTTPFailureAndRejectsForgedTargets(t *testing.T)
 	}
 }
 
+func TestBrowserExitEvidenceAcceptsBoundedLocationsAndLegacyIP(t *testing.T) {
+	now := time.Now()
+	ipip := Check{Kind: "echo_ipip", Target: "myip.ipip.net", State: "observed", Value: "14.19.29.200 · 中国 广东 广州", At: now}
+	ipinfo := Check{Kind: "echo_ipinfo", Target: "ipinfo.io", State: "observed", Value: "204.152.192.235 · US, California, Los Angeles", At: now}
+	if err := validateChecks([]Check{ipip, ipinfo}); err != nil {
+		t.Fatal(err)
+	}
+	ipip.Value = "14.19.29.200"
+	if err := validateChecks([]Check{ipip}); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{
+		"14.19.29.200 · https://example.com", "14.19.29.200 · " + strings.Repeat("广", 61),
+		"14.19.29.200 · 中国 · 广东", "2606:4700:4700::1111 · 中国",
+	} {
+		ipip.Value = invalid
+		if validateChecks([]Check{ipip}) == nil {
+			t.Fatal("accepted invalid IPIP evidence", invalid)
+		}
+	}
+}
+
+func TestClaudeBrowserEvidenceAcceptsOnlyFixedEndpointsAndValues(t *testing.T) {
+	now := time.Now()
+	exit := Check{Kind: "echo_claude", Target: "claude.ai", State: "observed", Value: "8.8.8.8 · US", At: now}
+	status := Check{Kind: "claude_status", Target: "status.claude.com", State: "observed", Value: "partial_outage", At: now}
+	valid := []Check{
+		exit, status,
+		{Kind: "echo_claude_api", Target: "api.anthropic.com", State: "observed", Value: "1.1.1.1 · US", At: now},
+		{Kind: "claude_api_status", Target: "status.claude.com", State: "observed", Value: "operational", At: now},
+		{Kind: "claude_edge", Target: "claude.ai", State: "observed", Value: "IAD", At: now},
+		{Kind: "claude_protocol", Target: "claude.ai", State: "observed", Value: "HTTP/2 · TLS 1.3", At: now},
+	}
+	if err := validateChecks(valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []Check{
+		{Kind: exit.Kind, Target: exit.Target, State: "observed", Value: "8.8.8.8 · SFO", At: now},
+		{Kind: exit.Kind, Target: "example.org", State: "observed", Value: exit.Value, At: now},
+		{Kind: status.Kind, Target: status.Target, State: "observed", Value: "invalid", At: now},
+		{Kind: status.Kind, Target: status.Target, State: "failed", Value: "operational", At: now},
+		{Kind: "claude_home", Target: "claude.ai", State: "observed", Value: "opaque", At: now},
+		{Kind: "claude_edge", Target: "claude.ai", State: "observed", Value: "invalid", At: now},
+		{Kind: "claude_protocol", Target: "claude.ai", State: "observed", Value: "HTTP/2 · TLS 4.0", At: now},
+	} {
+		if validateChecks([]Check{invalid}) == nil {
+			t.Fatal("accepted invalid browser evidence", invalid)
+		}
+	}
+}
+
 func TestEnvironmentRetrySameIPKeepsSuccessOnFailure(t *testing.T) {
 	score := 55
 	client := fixtureClient(func(*http.Request) (*http.Response, error) {
@@ -130,6 +181,36 @@ func TestEnvironmentRetrySameIPKeepsSuccessOnFailure(t *testing.T) {
 	}
 }
 
+func TestBrowserReceivesDNSResultBeforeIPEnrichment(t *testing.T) {
+	s := &Session{
+		lookup: measurement.NewExitLookup(),
+		state:  Snapshot{ID: "nonce", Mac: Sample{Complete: true}},
+		origin: "http://127.0.0.1:1234", path: "/secret/",
+		browserDNS: "abcd1234", macIPv6Route: "absent", cancel: func() {},
+	}
+	w := httptest.NewRecorder()
+	s.client = fixtureClient(func(r *http.Request) (*http.Response, error) {
+		body := `[{"ip":"8.8.4.4","country":"US","type":"dns"}]`
+		if r.URL.Host != "bash.ws" {
+			if !w.Flushed || w.Header().Get("X-Pax-DNS-Result") != "observed" {
+				t.Error("page is still waiting for DNS while the daemon is looking up IP data")
+			}
+			body = `{"ip":"8.8.8.8","country_code":"US","asn":15169}`
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body))}, nil
+	})
+	r := httptest.NewRequest("POST", s.origin+s.path+"result", strings.NewReader(`{"ipv4":"8.8.8.8","rtcState":"empty"}`))
+	r.Header.Set("Origin", s.origin)
+	r.Header.Set("Content-Type", "application/json")
+	s.serve(context.Background(), w, r)
+	if w.Code != 204 || len(s.Read().Browser.Resolvers) != 1 || !s.Read().Browser.Complete {
+		t.Fatal("missing final browser result", w.Code)
+	}
+	if w.Header().Get("X-Pax-IPv6-Route") != "absent" {
+		t.Fatal("known IPv6 route state must not wait for Mac sampling")
+	}
+}
+
 func TestEnvironmentBrowserCannotSetCompletionOrRawIPError(t *testing.T) {
 	s := &Session{lookup: measurement.NewExitLookup(), state: Snapshot{ID: "nonce", Mac: Sample{Complete: true}}, origin: "http://127.0.0.1:1234", path: "/secret/", cancel: func() {}}
 	s.client = fixtureClient(func(*http.Request) (*http.Response, error) {
@@ -142,7 +223,7 @@ func TestEnvironmentBrowserCannotSetCompletionOrRawIPError(t *testing.T) {
 	r := httptest.NewRequest("POST", "http://127.0.0.1:1234/secret/result", strings.NewReader(`{"ipv4":"8.8.8.8","complete":true,"ipError":"untrusted text","rtcState":"empty"}`))
 	r.Header.Set("Origin", s.origin)
 	r.Header.Set("Content-Type", "application/json")
-	s.state.Mac.Checks = []Check{{Kind: "ipv6_route", State: "absent"}}
+	s.macIPv6Route = "absent"
 	w := httptest.NewRecorder()
 	s.serve(context.Background(), w, r)
 	if w.Code != 204 || !s.Read().Browser.Complete {

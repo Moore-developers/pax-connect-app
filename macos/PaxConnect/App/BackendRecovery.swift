@@ -73,6 +73,7 @@ extension AppDelegate {
 
   func publishBackend(_ update: ConnectionUpdate) {
     store.consume(update)
+    trafficAlertsStore.consume(update)
     telemetry.consume(update)
     aiUsageStore.consume(update)
     aiProfilesStore.consume(update)

@@ -1,12 +1,32 @@
 package controller
 
 import (
+	"context"
 	"time"
 )
 
 type aggregateCoverage struct {
 	At   time.Time
 	Bits [5]uint64
+}
+
+// Overlay the current continuous poll run on disk coverage. Older gaps remain
+// explicit, even if the affected buckets contain some recorded traffic.
+func (s *trafficSnapshot) coverageWithPoll(ctx context.Context, from, until time.Time, proof *coverageSpan) (map[int64]aggregateCoverage, error) {
+	coverage, err := s.coverageRows(ctx, from, until)
+	if err != nil {
+		return nil, err
+	}
+	end := minTime(until, proof.last).UTC().Truncate(time.Second)
+	for t := maxTime(from, proof.runFrom).UTC().Truncate(time.Second); t.Before(end); t = t.Add(time.Second) {
+		base := t.Truncate(trafficBucket5m)
+		v := coverage[base.Unix()]
+		v.At = base
+		second := int(t.Sub(base) / time.Second)
+		v.Bits[second/64] |= uint64(1) << uint(second%64)
+		coverage[base.Unix()] = v
+	}
+	return coverage, nil
 }
 
 // Collection continuity comes from consecutive daemon polls, not the presence

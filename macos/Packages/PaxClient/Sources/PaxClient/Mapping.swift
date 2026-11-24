@@ -221,6 +221,7 @@ extension DaemonSnapshot {
     history = HistoryState(proto.history)
     currentPathCheck = CurrentPathCheck(proto.currentPathCheck)
     aiUsage = proto.hasAiUsage ? AIUsageCollectionState(proto.aiUsage) : nil
+    trafficAlerts = proto.hasTrafficAlerts ? TrafficAlertState(proto.trafficAlerts) : nil
     externalTUN = proto.hasExternalTun ? ExternalTUN(proto: proto.externalTun) : nil
   }
 }
@@ -229,6 +230,7 @@ extension DaemonEvent {
   /// 把一条 `WatchEvent` 映射成领域事件；payload 为空的事件由调用方丢弃（返回 nil）。
   init?(proto: Pax_V1_WatchEvent) {
     switch proto.payload {
+    case .trafficAlerts(let state): self = .trafficAlerts(TrafficAlertState(state))
     case .historyDelta(let v): self = .historyDelta(HistoryDelta(v))
     case .currentPathCheck(let v): self = .currentPathCheck(CurrentPathCheck(v))
     case .snapshot(let snapshot):

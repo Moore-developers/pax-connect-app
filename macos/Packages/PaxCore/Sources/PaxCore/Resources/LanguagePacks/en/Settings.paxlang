@@ -29,7 +29,6 @@
     "settings.privacy.balanced": "Encrypted Routing",
     "settings.privacy.strict": "Strict Privacy",
     "settings.privacy.note": "Protection applies while the proxy is on. Changes take effect the next time it is enabled.",
-    "settings.privacy.save": "Save Network Protection",
     "settings.loading": "Loading…",
     "settings.retry": "Retry",
     "settings.backend_unavailable": "The backend is not ready. Retry after connecting.",
@@ -37,6 +36,9 @@
     "settings.unsaved": "Unsaved Changes",
     "settings.saving": "Saving…",
     "settings.privacy.saved": "Saved",
-    "settings.save_failed": "Could not save. Your draft is preserved: {detail}"
+    "settings.save_failed": "Could not save. Your draft is preserved: {detail}",
+    "settings.reload": "Reload settings",
+    "settings.privacy.auto_save_failed": "Could not save automatically: {detail}",
+    "settings.privacy.refreshed": "Settings changed elsewhere. The latest values are loaded; try your change again."
   }
 }

@@ -203,6 +203,32 @@ public enum Pax_V1_PaxService: Sendable {
                 type: .unary
             )
         }
+        /// Namespace for "GetTrafficAlerts" metadata.
+        public enum GetTrafficAlerts: Sendable {
+            /// Request type for "GetTrafficAlerts".
+            public typealias Input = SwiftProtobuf.Google_Protobuf_Empty
+            /// Response type for "GetTrafficAlerts".
+            public typealias Output = Pax_V1_TrafficAlertState
+            /// Descriptor for "GetTrafficAlerts".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "GetTrafficAlerts",
+                type: .unary
+            )
+        }
+        /// Namespace for "SaveTrafficAlertSettings" metadata.
+        public enum SaveTrafficAlertSettings: Sendable {
+            /// Request type for "SaveTrafficAlertSettings".
+            public typealias Input = Pax_V1_TrafficAlertSettings
+            /// Response type for "SaveTrafficAlertSettings".
+            public typealias Output = Pax_V1_TrafficAlertState
+            /// Descriptor for "SaveTrafficAlertSettings".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "pax.v1.PaxService"),
+                method: "SaveTrafficAlertSettings",
+                type: .unary
+            )
+        }
         /// Namespace for "ClearLogs" metadata.
         public enum ClearLogs: Sendable {
             /// Request type for "ClearLogs".
@@ -882,6 +908,8 @@ public enum Pax_V1_PaxService: Sendable {
             GetLogDetail.descriptor,
             QueryTraffic.descriptor,
             QueryTrafficDetail.descriptor,
+            GetTrafficAlerts.descriptor,
+            SaveTrafficAlertSettings.descriptor,
             ClearLogs.descriptor,
             ShutdownAppSession.descriptor,
             Hello.descriptor,
@@ -1225,6 +1253,44 @@ extension Pax_V1_PaxService {
             deserializer: some GRPCCore.MessageDeserializer<Pax_V1_TrafficDetail>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficDetail>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "GetTrafficAlerts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+        ///   - serializer: A serializer for `SwiftProtobuf.Google_Protobuf_Empty` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_TrafficAlertState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func getTrafficAlerts<Result>(
+            request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+            serializer: some GRPCCore.MessageSerializer<SwiftProtobuf.Google_Protobuf_Empty>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_TrafficAlertState>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "SaveTrafficAlertSettings" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_TrafficAlertSettings` message.
+        ///   - serializer: A serializer for `Pax_V1_TrafficAlertSettings` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_TrafficAlertState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        func saveTrafficAlertSettings<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_TrafficAlertSettings>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_TrafficAlertSettings>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_TrafficAlertState>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ClearLogs" method.
@@ -2656,6 +2722,66 @@ extension Pax_V1_PaxService {
             try await self.client.unary(
                 request: request,
                 descriptor: Pax_V1_PaxService.Method.QueryTrafficDetail.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "GetTrafficAlerts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+        ///   - serializer: A serializer for `SwiftProtobuf.Google_Protobuf_Empty` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_TrafficAlertState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func getTrafficAlerts<Result>(
+            request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+            serializer: some GRPCCore.MessageSerializer<SwiftProtobuf.Google_Protobuf_Empty>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_TrafficAlertState>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.GetTrafficAlerts.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "SaveTrafficAlertSettings" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Pax_V1_TrafficAlertSettings` message.
+        ///   - serializer: A serializer for `Pax_V1_TrafficAlertSettings` messages.
+        ///   - deserializer: A deserializer for `Pax_V1_TrafficAlertState` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response and returns its result to
+        ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+        ///       already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func saveTrafficAlertSettings<Result>(
+            request: GRPCCore.ClientRequest<Pax_V1_TrafficAlertSettings>,
+            serializer: some GRPCCore.MessageSerializer<Pax_V1_TrafficAlertSettings>,
+            deserializer: some GRPCCore.MessageDeserializer<Pax_V1_TrafficAlertState>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Pax_V1_PaxService.Method.SaveTrafficAlertSettings.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -4567,6 +4693,56 @@ extension Pax_V1_PaxService.ClientProtocol {
         )
     }
 
+    /// Call the "GetTrafficAlerts" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `SwiftProtobuf.Google_Protobuf_Empty` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getTrafficAlerts<Result>(
+        request: GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.getTrafficAlerts(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<SwiftProtobuf.Google_Protobuf_Empty>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_TrafficAlertState>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveTrafficAlertSettings" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Pax_V1_TrafficAlertSettings` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveTrafficAlertSettings<Result>(
+        request: GRPCCore.ClientRequest<Pax_V1_TrafficAlertSettings>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.saveTrafficAlertSettings(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Pax_V1_TrafficAlertSettings>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Pax_V1_TrafficAlertState>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "ClearLogs" method.
     ///
     /// - Parameters:
@@ -6265,6 +6441,64 @@ extension Pax_V1_PaxService.ClientProtocol {
             metadata: metadata
         )
         return try await self.queryTrafficDetail(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "GetTrafficAlerts" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func getTrafficAlerts<Result>(
+        _ message: SwiftProtobuf.Google_Protobuf_Empty,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<SwiftProtobuf.Google_Protobuf_Empty>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.getTrafficAlerts(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "SaveTrafficAlertSettings" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response and returns its result to
+    ///       the caller. Returning from the closure will cancel the RPC if it hasn't
+    ///       already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func saveTrafficAlertSettings<Result>(
+        _ message: Pax_V1_TrafficAlertSettings,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Pax_V1_TrafficAlertState>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Pax_V1_TrafficAlertSettings>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.saveTrafficAlertSettings(
             request: request,
             options: options,
             onResponse: handleResponse

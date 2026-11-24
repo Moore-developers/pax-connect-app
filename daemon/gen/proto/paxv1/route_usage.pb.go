@@ -115,11 +115,294 @@ func (x *RouteUsageBucket) GetConnections() uint64 {
 	return 0
 }
 
+// Batch overview: actual outbound bytes, decimal units. Hour starts at the first
+// full five-minute bucket inside the rolling hour; includes the current tail.
+type RouteUsageSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RouteId       string                 `protobuf:"bytes,1,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
+	TodayUpload   uint64                 `protobuf:"varint,2,opt,name=today_upload,json=todayUpload,proto3" json:"today_upload,omitempty"`
+	TodayDownload uint64                 `protobuf:"varint,3,opt,name=today_download,json=todayDownload,proto3" json:"today_download,omitempty"`
+	HourUpload    uint64                 `protobuf:"varint,4,opt,name=hour_upload,json=hourUpload,proto3" json:"hour_upload,omitempty"`
+	HourDownload  uint64                 `protobuf:"varint,5,opt,name=hour_download,json=hourDownload,proto3" json:"hour_download,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RouteUsageSummary) Reset() {
+	*x = RouteUsageSummary{}
+	mi := &file_route_usage_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteUsageSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteUsageSummary) ProtoMessage() {}
+
+func (x *RouteUsageSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_route_usage_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteUsageSummary.ProtoReflect.Descriptor instead.
+func (*RouteUsageSummary) Descriptor() ([]byte, []int) {
+	return file_route_usage_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RouteUsageSummary) GetRouteId() string {
+	if x != nil {
+		return x.RouteId
+	}
+	return ""
+}
+
+func (x *RouteUsageSummary) GetTodayUpload() uint64 {
+	if x != nil {
+		return x.TodayUpload
+	}
+	return 0
+}
+
+func (x *RouteUsageSummary) GetTodayDownload() uint64 {
+	if x != nil {
+		return x.TodayDownload
+	}
+	return 0
+}
+
+func (x *RouteUsageSummary) GetHourUpload() uint64 {
+	if x != nil {
+		return x.HourUpload
+	}
+	return 0
+}
+
+func (x *RouteUsageSummary) GetHourDownload() uint64 {
+	if x != nil {
+		return x.HourDownload
+	}
+	return 0
+}
+
+type RouteUsageRank struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Upload        uint64                 `protobuf:"varint,3,opt,name=upload,proto3" json:"upload,omitempty"`
+	Download      uint64                 `protobuf:"varint,4,opt,name=download,proto3" json:"download,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RouteUsageRank) Reset() {
+	*x = RouteUsageRank{}
+	mi := &file_route_usage_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteUsageRank) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteUsageRank) ProtoMessage() {}
+
+func (x *RouteUsageRank) ProtoReflect() protoreflect.Message {
+	mi := &file_route_usage_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteUsageRank.ProtoReflect.Descriptor instead.
+func (*RouteUsageRank) Descriptor() ([]byte, []int) {
+	return file_route_usage_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RouteUsageRank) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RouteUsageRank) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RouteUsageRank) GetUpload() uint64 {
+	if x != nil {
+		return x.Upload
+	}
+	return 0
+}
+
+func (x *RouteUsageRank) GetDownload() uint64 {
+	if x != nil {
+		return x.Download
+	}
+	return 0
+}
+
+// Frozen sample from the latest evaluation. Totals include only the requested actual route.
+type RouteAlertProgress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MonitorState  string                 `protobuf:"bytes,1,opt,name=monitor_state,json=monitorState,proto3" json:"monitor_state,omitempty"`
+	Settings      *TrafficAlertSettings  `protobuf:"bytes,2,opt,name=settings,proto3" json:"settings,omitempty"`
+	Windows       []*RouteAlertWindow    `protobuf:"bytes,3,rep,name=windows,proto3" json:"windows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RouteAlertProgress) Reset() {
+	*x = RouteAlertProgress{}
+	mi := &file_route_usage_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteAlertProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteAlertProgress) ProtoMessage() {}
+
+func (x *RouteAlertProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_route_usage_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteAlertProgress.ProtoReflect.Descriptor instead.
+func (*RouteAlertProgress) Descriptor() ([]byte, []int) {
+	return file_route_usage_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RouteAlertProgress) GetMonitorState() string {
+	if x != nil {
+		return x.MonitorState
+	}
+	return ""
+}
+
+func (x *RouteAlertProgress) GetSettings() *TrafficAlertSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+func (x *RouteAlertProgress) GetWindows() []*RouteAlertWindow {
+	if x != nil {
+		return x.Windows
+	}
+	return nil
+}
+
+type RouteAlertWindow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Seconds       uint32                 `protobuf:"varint,1,opt,name=seconds,proto3" json:"seconds,omitempty"`
+	Upload        uint64                 `protobuf:"varint,2,opt,name=upload,proto3" json:"upload,omitempty"`
+	Download      uint64                 `protobuf:"varint,3,opt,name=download,proto3" json:"download,omitempty"`
+	Partial       bool                   `protobuf:"varint,4,opt,name=partial,proto3" json:"partial,omitempty"`
+	Until         *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=until,proto3" json:"until,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RouteAlertWindow) Reset() {
+	*x = RouteAlertWindow{}
+	mi := &file_route_usage_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteAlertWindow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteAlertWindow) ProtoMessage() {}
+
+func (x *RouteAlertWindow) ProtoReflect() protoreflect.Message {
+	mi := &file_route_usage_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteAlertWindow.ProtoReflect.Descriptor instead.
+func (*RouteAlertWindow) Descriptor() ([]byte, []int) {
+	return file_route_usage_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RouteAlertWindow) GetSeconds() uint32 {
+	if x != nil {
+		return x.Seconds
+	}
+	return 0
+}
+
+func (x *RouteAlertWindow) GetUpload() uint64 {
+	if x != nil {
+		return x.Upload
+	}
+	return 0
+}
+
+func (x *RouteAlertWindow) GetDownload() uint64 {
+	if x != nil {
+		return x.Download
+	}
+	return 0
+}
+
+func (x *RouteAlertWindow) GetPartial() bool {
+	if x != nil {
+		return x.Partial
+	}
+	return false
+}
+
+func (x *RouteAlertWindow) GetUntil() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Until
+	}
+	return nil
+}
+
 var File_route_usage_proto protoreflect.FileDescriptor
 
 const file_route_usage_proto_rawDesc = "" +
 	"\n" +
-	"\x11route_usage.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x01\n" +
+	"\x11route_usage.proto\x12\x06pax.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\rprivacy.proto\"\xda\x01\n" +
 	"\x10RouteUsageBucket\x12*\n" +
 	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x16\n" +
 	"\x06upload\x18\x02 \x01(\x04R\x06upload\x12\x1a\n" +
@@ -127,7 +410,29 @@ const file_route_usage_proto_rawDesc = "" +
 	"\x03gap\x18\x04 \x01(\bR\x03gap\x12\x18\n" +
 	"\aseconds\x18\x05 \x01(\rR\aseconds\x12\x18\n" +
 	"\apartial\x18\x06 \x01(\bR\apartial\x12 \n" +
-	"\vconnections\x18\a \x01(\x04R\vconnectionsB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
+	"\vconnections\x18\a \x01(\x04R\vconnections\"\xbe\x01\n" +
+	"\x11RouteUsageSummary\x12\x19\n" +
+	"\broute_id\x18\x01 \x01(\tR\arouteId\x12!\n" +
+	"\ftoday_upload\x18\x02 \x01(\x04R\vtodayUpload\x12%\n" +
+	"\x0etoday_download\x18\x03 \x01(\x04R\rtodayDownload\x12\x1f\n" +
+	"\vhour_upload\x18\x04 \x01(\x04R\n" +
+	"hourUpload\x12#\n" +
+	"\rhour_download\x18\x05 \x01(\x04R\fhourDownload\"h\n" +
+	"\x0eRouteUsageRank\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06upload\x18\x03 \x01(\x04R\x06upload\x12\x1a\n" +
+	"\bdownload\x18\x04 \x01(\x04R\bdownload\"\xa7\x01\n" +
+	"\x12RouteAlertProgress\x12#\n" +
+	"\rmonitor_state\x18\x01 \x01(\tR\fmonitorState\x128\n" +
+	"\bsettings\x18\x02 \x01(\v2\x1c.pax.v1.TrafficAlertSettingsR\bsettings\x122\n" +
+	"\awindows\x18\x03 \x03(\v2\x18.pax.v1.RouteAlertWindowR\awindows\"\xac\x01\n" +
+	"\x10RouteAlertWindow\x12\x18\n" +
+	"\aseconds\x18\x01 \x01(\rR\aseconds\x12\x16\n" +
+	"\x06upload\x18\x02 \x01(\x04R\x06upload\x12\x1a\n" +
+	"\bdownload\x18\x03 \x01(\x04R\bdownload\x12\x18\n" +
+	"\apartial\x18\x04 \x01(\bR\apartial\x120\n" +
+	"\x05until\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x05untilB$Z\"pax-connect/daemon/gen/proto/paxv1b\x06proto3"
 
 var (
 	file_route_usage_proto_rawDescOnce sync.Once
@@ -141,18 +446,26 @@ func file_route_usage_proto_rawDescGZIP() []byte {
 	return file_route_usage_proto_rawDescData
 }
 
-var file_route_usage_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_route_usage_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_route_usage_proto_goTypes = []any{
 	(*RouteUsageBucket)(nil),      // 0: pax.v1.RouteUsageBucket
-	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
+	(*RouteUsageSummary)(nil),     // 1: pax.v1.RouteUsageSummary
+	(*RouteUsageRank)(nil),        // 2: pax.v1.RouteUsageRank
+	(*RouteAlertProgress)(nil),    // 3: pax.v1.RouteAlertProgress
+	(*RouteAlertWindow)(nil),      // 4: pax.v1.RouteAlertWindow
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*TrafficAlertSettings)(nil),  // 6: pax.v1.TrafficAlertSettings
 }
 var file_route_usage_proto_depIdxs = []int32{
-	1, // 0: pax.v1.RouteUsageBucket.at:type_name -> google.protobuf.Timestamp
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 0: pax.v1.RouteUsageBucket.at:type_name -> google.protobuf.Timestamp
+	6, // 1: pax.v1.RouteAlertProgress.settings:type_name -> pax.v1.TrafficAlertSettings
+	4, // 2: pax.v1.RouteAlertProgress.windows:type_name -> pax.v1.RouteAlertWindow
+	5, // 3: pax.v1.RouteAlertWindow.until:type_name -> google.protobuf.Timestamp
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_route_usage_proto_init() }
@@ -160,13 +473,14 @@ func file_route_usage_proto_init() {
 	if File_route_usage_proto != nil {
 		return
 	}
+	file_privacy_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_route_usage_proto_rawDesc), len(file_route_usage_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

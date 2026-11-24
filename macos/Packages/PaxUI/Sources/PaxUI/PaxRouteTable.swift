@@ -16,6 +16,11 @@ public struct PaxRouteTableRow: Equatable {
   public let addressCaption: String
   public let latency: String
   public let latencyCaption: String
+  public var uploadText = "—"
+  public var downloadText = "—"
+  public var upload: Double = 0
+  public var download: Double = 0
+  public var usageWarning: String? = nil
   public let speed: String
   public let latencyColor: NSColor
   public init(
@@ -51,6 +56,21 @@ public final class PaxRouteTable: NSView {
   public var onSort: ((Int, Bool) -> Void)?
   public var onActivate: ((String) -> Void)?
   public var onScrollPosition: ((Bool) -> Void)?
+  public var usageContent: ((String) -> NSView?)?
+  private let usageReadout = PaxHoverReadout(interactive: true, cardStyle: .routeUsage)
+  public func closeUsageReadout() { usageReadout.close() }
+  public func canShowUsage(_ id: String) -> Bool {
+    rows.first { $0.id == id }.map { $0.upload > 0 || $0.download > 0 } ?? false
+  }
+  private func usageView(_ id: String) -> NSView? {
+    guard canShowUsage(id) else { return nil }
+    return usageContent?(id)
+  }
+  public func showUsageReadout(_ id: String) {
+    guard let content = usageView(id) else { return }
+    usageReadout.show(content, from: self)
+    usageReadout.focus()
+  }
   private var rows: [PaxRouteTableRow] = []
   private let data: PaxDataTable
   private var initialAppearance = true
@@ -58,20 +78,23 @@ public final class PaxRouteTable: NSView {
   private var speedHelp = "；正文平均下载速度，使用十进制字节率。"
   public init() {
     let c = PaxTheme.Routes.self
-    let titles = ["", "线路", "线路特性", "出口地址", "延迟", "下载速度"]
+    let titles = ["", "线路", "线路特性", "出口地址", "延迟", "下载速度", "今日流量"]
     let symbols: [String?] = [
       nil, "point.3.connected.trianglepath.dotted", "tag", "globe", "timer", "arrow.down",
+      "arrow.up.arrow.down",
     ]
     let widths = [
       c.ordinalWidth, c.nameMinimum, c.featureWidth, c.valueWidth, c.valueWidth, c.valueWidth,
+      PaxTheme.UsageReadout.trafficColumn,
     ]
     data = PaxDataTable(
       columns: titles.enumerated().map { index, title in
         .init(
-          title, width: widths[index], growth: c.columnShares[index],
+          title, width: widths[index],
+          growth: index < c.columnShares.count ? c.columnShares[index] : 0.20,
           alignment: index == 1 || index == 2 ? .left : .center,
           symbol: symbols[index], inset: index == 0 ? 0 : PaxTheme.Table.inset,
-          sortable: index > 0)
+          sortable: index > 0 && index < 6)
       }, metrics: .init(rounded: false), selection: .browse, scrollMode: .fixedHeader)
     super.init(frame: .zero)
     data.setTableIdentifier("routes-table")
@@ -79,6 +102,15 @@ public final class PaxRouteTable: NSView {
     data.onScrollPosition = { [weak self] in self?.onScrollPosition?($0) }
     data.onActivate = { [weak self] id in self?.onActivate?(id) }
     data.cellProvider = { [weak self] id, column in self?.cell(id: id, index: column) }
+    data.cellUpdater = { [weak self] existing, id, column in
+      guard let self, column == 6, let host = existing as? PaxHoverReadoutHost,
+        host.accessibilityIdentifier() == "route-usage-" + id,
+        let item = self.rows.first(where: { $0.id == id }), self.canShowUsage(id),
+        let transfer = host.subviews.first
+      else { return false }
+      host.setAccessibilityLabel(self.usageLabel(item))
+      return PaxDataTable.updateContent(transfer, content: self.usageCell(item))
+    }
     data.rowAppearance = { [weak self] id in
       self?.rows.first(where: { $0.id == id })?.emphasized == true ? .current : .normal
     }
@@ -115,14 +147,30 @@ public final class PaxRouteTable: NSView {
     guard self.rows != rows || resetScroll else { return }
     let previous = Dictionary(
       uniqueKeysWithValues: self.rows.enumerated().map { ($0.element.id, $0.offset) })
-    let changed = Set(
-      rows.enumerated().compactMap { index, row -> String? in
-        guard let oldIndex = previous[row.id] else { return row.id }
-        return oldIndex != index || self.rows[oldIndex] != row ? row.id : nil
-      })
+    var changed: Set<String> = []
+    var usageChanges: [String: IndexSet] = [:]
+    for (index, row) in rows.enumerated() {
+      guard let oldIndex = previous[row.id], oldIndex == index else {
+        changed.insert(row.id)
+        continue
+      }
+      var old = self.rows[oldIndex]
+      guard old != row else { continue }
+      old.upload = row.upload
+      old.download = row.download
+      old.uploadText = row.uploadText
+      old.downloadText = row.downloadText
+      old.usageWarning = row.usageWarning
+      if old == row {
+        usageChanges[row.id] = IndexSet(integer: 6)
+      } else {
+        changed.insert(row.id)
+      }
+    }
     self.rows = rows
     data.apply(
       rows: rows.map { .init(id: $0.id, values: []) }, emptyMessage: "", reloading: changed)
+    data.updateCells(usageChanges)
     if resetScroll {
       layoutSubtreeIfNeeded()
       data.scrollToTop()
@@ -139,7 +187,19 @@ public final class PaxRouteTable: NSView {
     guard let ordinal = rows.firstIndex(where: { $0.id == id }) else { return nil }
     let item = rows[ordinal]
     let content: NSView
-    if index == 1 {
+    if index == 6 {
+      let transfer = usageCell(item)
+      guard canShowUsage(id) else { return transfer }
+      let reusable = PaxDataTable.reusableContent(transfer)
+      let host = PaxHoverReadoutHost(reusable, readout: usageReadout) { [weak self] in
+        self?.usageView(id)
+      }
+      host.setAccessibilityIdentifier("route-usage-" + id)
+      host.setAccessibilityElement(true)
+      host.setAccessibilityRole(.button)
+      host.setAccessibilityLabel(usageLabel(item))
+      return host
+    } else if index == 1 {
       let title = PaxText.label(
         item.name,
         font: PaxTheme.Typography.label(
@@ -248,5 +308,27 @@ public final class PaxRouteTable: NSView {
         !$0.isEmpty
       }.joined(separator: " · "))
     return content
+  }
+
+  private func usageLabel(_ item: PaxRouteTableRow) -> String {
+    item.name + " · " + item.uploadText + " / " + item.downloadText
+  }
+
+  private func usageCell(_ item: PaxRouteTableRow) -> NSView {
+    let transfer = PaxTrafficCells.transfer(
+      uploadText: item.uploadText,
+      downloadText: item.downloadText, upload: item.upload, download: item.download,
+      note: item.usageWarning, stacksWhenNarrow: true)
+    let stack = NSStackView(views: [transfer])
+    stack.orientation = .vertical
+    stack.spacing = PaxTheme.Spacing.xs
+    transfer.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+    transfer.heightAnchor.constraint(equalToConstant: PaxTheme.Table.row / 2).isActive = true
+    if let warning = item.usageWarning {
+      let label = PaxText.label(warning, font: PaxTheme.Typography.caption())
+      label.textColor = PaxTheme.Color.warning
+      stack.addArrangedSubview(label)
+    }
+    return stack
   }
 }

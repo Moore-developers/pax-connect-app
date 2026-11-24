@@ -84,13 +84,14 @@ final class AboutViewController: NSViewController, InterfaceLanguageConsumer {
       interfaceCopy.group(
         PaxPreferenceGroup(
           title: "", symbol: "doc.text",
-          rows: AboutStore.licenses.map { entry in
-            licenseRow(
-              entry.name, detail: entry.detail,
-              value: entry.license.hasPrefix("about.")
-                ? interfaceCopy.label(entry.license, font: PaxTheme.Typography.time)
-                : label(entry.license))
-          }, style: .compact), key: "about.licenses"))
+          rows: [geolocationCredit()]
+            + AboutStore.licenses.map { entry in
+              licenseRow(
+                entry.name, detail: entry.detail,
+                value: entry.license.hasPrefix("about.")
+                  ? interfaceCopy.label(entry.license, font: PaxTheme.Typography.time)
+                  : label(entry.license))
+            }, style: .compact), key: "about.licenses"))
     observe()
   }
   private func add(_ item: NSView) {
@@ -105,11 +106,23 @@ final class AboutViewController: NSViewController, InterfaceLanguageConsumer {
   private func row(_ title: String, detail: String, value: NSTextField) -> NSView {
     interfaceCopy.preference(title: title, detail: detail, control: value)
   }
-  private func licenseRow(_ title: String, detail: String, value: NSTextField) -> NSView {
+  private func licenseRow(_ title: String, detail: String, value: NSView) -> NSView {
     let row = PaxPreferenceRow(title: title, detail: "", control: value, style: .compact)
     return interfaceCopy.bind(row, key: detail) { row, detail in
       row.apply(title: title, detail: detail)
     }
+  }
+  private func geolocationCredit() -> NSView {
+    let link = PaxRouteButton(
+      "IP2Location.io", symbol: "arrow.up.right", style: .quiet, target: self,
+      action: #selector(openGeolocationProvider))
+    link.imagePosition = .imageOnly
+    link.setAccessibilityIdentifier("about-ip2location-link")
+    return licenseRow(
+      "IP2Location.io", detail: "diagnostic.source.ip2location_attribution", value: link)
+  }
+  @objc private func openGeolocationProvider() {
+    if let url = URL(string: "https://www.ip2location.io") { NSWorkspace.shared.open(url) }
   }
   private func renderIdentity() {
     version.stringValue = interfaceCopy.text(

@@ -3,7 +3,7 @@ import Observation
 import PaxCore
 import PaxUI
 
-/// One scrolling view for network diagnostic results.
+/// The diagnostic overview scrolls as one page in the presentation container.
 @MainActor final class TrafficPathController: RouteModalController {
   override var localizedSubtitleKey: String? { "modal.network.environment_note" }
   override var localizedTitleKey: String? { "routes.diagnostics" }
@@ -22,7 +22,7 @@ import PaxUI
     self.connection = connection
     super.init(
       title: "线路诊断", subtitle: "检测当前 Mac 与浏览器的网络环境",
-      size: PaxTheme.Routes.diagnosticWorkspace, style: .compact, symbol: "network")
+      size: PaxTheme.Routes.diagnosticWorkspace, style: .overview, symbol: "network")
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
 
@@ -37,9 +37,9 @@ import PaxUI
     progressView.widthAnchor.constraint(equalTo: pane.header.widthAnchor).isActive = true
     progressView.onResize = { [weak self] in self?.pane.invalidateContentSize() }
     if let network = store.network {
-      network.onlyDifferences = false
+      network.topic = 0
       let content = NetworkDiagnosticView(
-        store: network, connection: connection, context: interfaceCopy.context)
+        store: network, context: interfaceCopy.context)
       content.onResize = { [weak self] in self?.pane.invalidateContentSize() }
       workbench = content
       pane.add(content)

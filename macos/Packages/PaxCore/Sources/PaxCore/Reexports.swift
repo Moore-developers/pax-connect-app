@@ -1,5 +1,10 @@
 import PaxClient
 
+public typealias TrafficAlertRule = PaxClient.TrafficAlertRule
+public typealias TrafficAlertSettings = PaxClient.TrafficAlertSettings
+public typealias TrafficAlertNotice = PaxClient.TrafficAlertNotice
+public typealias TrafficAlertState = PaxClient.TrafficAlertState
+
 // 领域模型的对外出口。
 //
 // 模型类型定义在 PaxClient（理由见其模块说明：映射只发生在 PaxClient，而依赖方向是 PaxCore → PaxClient）。
@@ -59,7 +64,11 @@ public typealias ChainEdit = PaxClient.ChainEdit
 public typealias ChainRoute = PaxClient.ChainRoute
 public typealias RouteHistorySample = PaxClient.RouteHistorySample
 public typealias RouteHistoryPage = PaxClient.RouteHistoryPage
+public typealias RouteAlertProgress = PaxClient.RouteAlertProgress
+public typealias RouteAlertWindow = PaxClient.RouteAlertWindow
 public typealias RouteUsagePage = PaxClient.RouteUsagePage
+public typealias RouteUsageSummary = PaxClient.RouteUsageSummary
+public typealias RouteUsageRank = PaxClient.RouteUsageRank
 public typealias RouteUsageBucket = PaxClient.RouteUsageBucket
 
 public typealias ExitLocation = PaxClient.ExitLocation

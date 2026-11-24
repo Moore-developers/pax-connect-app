@@ -53,53 +53,20 @@ extension NetworkDiagnosticPresentation {
     return Assessment(text: result + " · \(probe.httpStatus)", tone: tone)
   }
 
-  public static func serviceOverview(
-    _ probes: [NetworkDiagnosticReport.Probe], context: PresentationContext = .chinese
-  ) -> Assessment {
-    guard !probes.isEmpty else {
-      return Assessment(text: context.text("diagnostic_evidence.6e0b52b3a2"), tone: .pending)
-    }
-    let total = max(12, probes.count)
-    let responded = probes.filter { $0.httpStatus > 0 }.count
-    let refused = probes.filter { $0.httpStatus == 403 }.count
-    let auth = probes.filter { $0.httpStatus == 401 }.count
-    let limited = probes.filter { $0.httpStatus == 429 }.count
-    let server = probes.filter { $0.httpStatus >= 500 }.count
-    let missing = total - responded
-    var parts = [
-      context.text(
-        "diagnostic_evidence.cc73afb721",
-        ["arg0": String(describing: responded), "arg1": String(describing: total)])
-    ]
-    for (count, label) in [
-      (auth, context.text("diagnostic_evidence.c50b5de976")),
-      (refused, context.text("diagnostic_evidence.a71ec66393")),
-      (limited, context.text("diagnostic_evidence.d4e54d7e01")),
-      (server, context.text("diagnostic_evidence.4a27c8df17")),
-      (missing, context.text("diagnostic_evidence.51fa398c2d")),
-    ] where count > 0 {
-      parts.append(
-        context.text("diagnostic_evidence.5096cf6930", ["arg0": String(describing: count)]) + label)
-    }
-    return Assessment(
-      text: parts.joined(separator: "；"),
-      tone: missing > 0 || server > 0
-        ? .failure : refused > 0 || limited > 0 ? .difference : .information)
-  }
-
   public static func sourceAssessment(
     _ source: NetworkDiagnosticReport.Source, all: [NetworkDiagnosticReport.Source],
     context: PresentationContext = .chinese
   ) -> Assessment {
-    let missing = [
-      (context.text("diagnostic_evidence.0cc659a9f5"), source.country),
-      (context.text("diagnostic_evidence.ed84a1665f"), source.city), ("ASN", source.asn),
-    ].filter {
-      $0.1.isEmpty
-    }.map(\.0)
+    if source.providerID == "ripestat" {
+      return Assessment(
+        text: context.text("diagnostic.source.bgp_origin") + source.asn, tone: .information)
+    }
+    let missing = missingSourceFields(source, context: context)
+    let geographic = all.filter { $0.providerID != "ripestat" }
     let conflicts = [
-      (source.country, all.map(\.country)), (source.city, all.map(\.city)),
-      (normalizedASN(source.asn), all.map { normalizedASN($0.asn) }),
+      (comparableCountry(source.country), geographic.map { comparableCountry($0.country) }),
+      (source.city, geographic.map(\.city)),
+      (normalizedASN(source.asn), geographic.map { normalizedASN($0.asn) }),
     ]
     .contains { value, others in !value.isEmpty && others.contains { !$0.isEmpty && $0 != value } }
     let location = [
@@ -124,14 +91,17 @@ extension NetworkDiagnosticPresentation {
     guard !sources.isEmpty else {
       return Assessment(text: context.text("diagnostic_evidence.084a9f8fa4"), tone: .pending)
     }
+    let geographic = sources.filter { $0.providerID != "ripestat" }
     let groups = [
-      (context.text("diagnostic_evidence.0cc659a9f5"), sources.map(\.country)),
-      (context.text("diagnostic_evidence.ed84a1665f"), sources.map(\.city)),
-      ("ASN", sources.map { normalizedASN($0.asn) }),
+      (
+        context.text("diagnostic_evidence.0cc659a9f5"),
+        geographic.map { comparableCountry($0.country) }
+      ),
+      (context.text("diagnostic_evidence.ed84a1665f"), geographic.map(\.city)),
+      ("ASN", geographic.map { normalizedASN($0.asn) }),
     ]
     let conflicts = groups.filter { Set($0.1.filter { !$0.isEmpty }).count > 1 }.map(\.0)
-    let incomplete = sources.filter { $0.country.isEmpty || $0.city.isEmpty || $0.asn.isEmpty }
-      .count
+    let incomplete = sources.filter { !missingSourceFields($0, context: context).isEmpty }.count
     let compared = groups.filter { $0.1.filter { !$0.isEmpty }.count >= 2 }.count
     let direct = Set(sources.compactMap(\.providerID).filter { $0 != "ipx.al" }).count
     let fallback = sources.contains { $0.providerID == "ipx.al" }
@@ -195,12 +165,9 @@ extension NetworkDiagnosticPresentation {
             ? "diagnostic.risk.unconfigured" : "diagnostic.risk.unknown"), tone: .pending)
     }
   }
-  public static func riskOverview(_ facts: [NetworkDiagnosticFact]) -> Assessment {
-    riskOverview(facts, context: .chinese)
-  }
-  public static func riskOverview(_ facts: [NetworkDiagnosticFact], context: PresentationContext)
-    -> Assessment
-  {
+  public static func riskOverview(
+    _ facts: [NetworkDiagnosticFact], context: PresentationContext = .chinese
+  ) -> Assessment {
     guard !facts.isEmpty else {
       return Assessment(text: context.text("diagnostic.risk.missing"), tone: .pending)
     }
@@ -216,10 +183,9 @@ extension NetworkDiagnosticPresentation {
           ["labels": hits.joined(separator: context.language == .chinese ? "、" : ", ")])
     ]
     if unknown > 0 { parts.append(context.text("diagnostic.risk.pending", count: unknown)) }
-    parts.append(context.text("diagnostic.risk.not_scan"))
     return Assessment(
-      text: parts.joined(separator: context.language == .chinese ? "；" : "; "),
-      tone: hits.isEmpty ? .information : .difference)
+      text: parts.joined(separator: " · "),
+      tone: hits.isEmpty ? (unknown > 0 ? .pending : .information) : .difference)
   }
 
   static func normalizedASN(_ value: String) -> String {

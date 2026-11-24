@@ -131,7 +131,7 @@
     "diagnostic_evidence.03134622e3": "仅补缺：",
     "diagnostic_evidence.9325ec09e6": "旧记录未采集逐源请求；请按需重新检测",
     "diagnostic_evidence.6c686d7b7c": "独立来源 {arg0}/{arg1} 返回；ipx.al 补充：",
-    "diagnostic_evidence.dedda3b38d": "独立来源 {arg0}/{arg1} 返回；未请求 ipx.al",
+    "diagnostic_evidence.dedda3b38d": "直查来源 {arg0}/{arg1} 返回",
     "diagnostic_evidence.d8750d60af": "原生 IP",
     "diagnostic_evidence.c098e854e6": "未确认",
     "diagnostic_evidence.adae7def03": "本阶段未取得独立来源资料，未作判断",

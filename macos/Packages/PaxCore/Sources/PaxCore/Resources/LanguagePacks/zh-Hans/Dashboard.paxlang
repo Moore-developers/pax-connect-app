@@ -19,7 +19,7 @@
     "dashboard.object": "应用 / 对象",
     "dashboard.hint": "双击可看详情",
     "dashboard.all_exits": "全部去向",
-    "dashboard.switch": "切换线路 ›",
+    "dashboard.switch": "切换线路",
     "dashboard.region": "出口地区",
     "dashboard.connected": "已连接",
     "dashboard.trend": "AI 模型用量",

@@ -95,6 +95,7 @@ import Testing
     let proxied = verdict(report(state: "complete", checks: [timeout, route("proxy")]))
     #expect(proxied.conclusion == "泄露风险待确认 · 探测经代理但未返回地址（代理可能不支持 UDP）")
     #expect(proxied.tone == .pending)
+    #expect(proxied.summary == "STUN 超时 · 泄露待确认")
     let failed = verdict(report(state: "failed", checks: [timeout, route("direct", "")]))
     #expect(failed.tone == .failure)
     let rest = verdict(report(addresses: ["192.168.1.2"], state: "complete"))
@@ -122,7 +123,7 @@ import Testing
     let plain = P.rows(value.browser, browser: true, waiting: false).last
     #expect(assessed?.value == plain?.value)
     #expect(assessed?.tone == plain?.tone)
-    #expect(assessed?.value == verdict(value).text)
+    #expect(assessed?.value == verdict(value).summary)
     #expect(assessed?.detail.contains("9.9.9.9") == true)
   }
   @Test("旧记录可解码并显示未采集线路证据；rtc 过滤不含新 kind")
@@ -131,7 +132,7 @@ import Testing
     let decoded = try JSONDecoder().decode(
       EnvironmentDiagnosticReport.self, from: JSONEncoder().encode(value))
     let row = P.assessedRows(decoded, local: nil, waiting: false).first { $0.title == "WebRTC" }
-    #expect(row?.value.contains("旧记录未采集线路证据") == true)
+    #expect(row?.detail.contains("旧记录未采集线路证据") == true)
     let new = report(checks: [route("proxy"), physical("v4=9.9.9.9;v6=")])
     #expect(new.browser.checks?.filter { $0.kind.hasPrefix("rtc_") }.isEmpty == true)
   }

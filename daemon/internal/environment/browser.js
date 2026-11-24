@@ -101,6 +101,11 @@
       startCountdown();
     }
   });
+  const rows = Object.fromEntries(Array.from(document.querySelectorAll('[data-check]'), row => [row.dataset.check, row]));
+  function progress(row, label, state = '', params = {}) {
+    rows[row].dataset.state = state;
+    rows[row].querySelector('.check-state').textContent = text('browser.' + label, params);
+  }
   const result = {
     languages: Array.from(navigator.languages || []).slice(0, 16),
     region: Intl.DateTimeFormat().resolvedOptions().locale,
@@ -108,6 +113,7 @@
     browser: /Edg\//.test(navigator.userAgent) ? 'Microsoft Edge' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : 'Browser',
     ipv4: '', ipv6: '', rtcAddresses: [], rtcState: 'empty', checks: []
   };
+  progress('locale', 'check_read', 'observed');
   const check = (kind, target) => ({ kind, target, state: 'failed', value: '', errorCode: '', durationMS: 0, httpStatus: 0, at: new Date().toISOString() });
   const timed = (url, options = {}, ms = 6000) => fetch(url, { credentials: 'omit', cache: 'no-store', ...options, signal: AbortSignal.timeout(ms) });
   function failure(c, e) {
@@ -138,35 +144,64 @@
     } catch (e) { failure(c, e); }
     finally { c.durationMS = Math.min(45000, Math.round(performance.now() - start)); result.checks.push(c); }
   }
+  function checkIssue(c) {
+    if (c.state === 'timeout') return 'check_timeout';
+    if (c.state === 'unsupported') return 'check_unsupported';
+    return 'check_failed';
+  }
+  function showCheck(row, c) {
+    progress(row, c.state === 'observed' ? 'check_observed' : checkIssue(c),
+      c.state === 'observed' ? 'observed' : 'failed');
+  }
   const v4 = text => text.trim().match(/^(?:\d{1,3}\.){3}\d{1,3}$/)?.[0] || '';
   const v6 = text => /^[0-9a-f:]+$/i.test(text.trim()) && text.includes(':') ? text.trim() : '';
   async function ip(isV6) {
     const c = check(isV6 ? 'ipv6' : 'ipv4', (isV6 ? 'ipv6' : 'ipv4') + '.icanhazip.com');
     await request(c, 'https://' + c.target, isV6 ? v6 : v4);
-    if (c.state === 'observed') result[isV6 ? 'ipv6' : 'ipv4'] = c.value;
+    if (c.state === 'observed') {
+      result[isV6 ? 'ipv6' : 'ipv4'] = c.value;
+      progress('ip', 'check_observed', 'observed');
+    }
   }
   async function dns() {
     const c = check('dns_session', 'bash.ws'), start = performance.now();
+    progress('dns', 'check_dns_starting');
+    let names;
     try {
-      const response = await timed(base + 'dns/start', { method: 'POST' });
+      const response = await timed(base + 'dns/start', { method: 'POST' }, 8000);
       c.httpStatus = response.status;
-      if (!response.ok) { try { c.errorCode = (await response.json()).errorCode || 'probe_http_' + response.status; } catch { c.errorCode = 'probe_http_' + response.status; } return; }
-      const { id, names } = await response.json();
+      if (!response.ok) {
+        try { c.errorCode = (await response.json()).errorCode || 'probe_http_' + response.status; }
+        catch { c.errorCode = 'probe_http_' + response.status; }
+        if (['probe_timeout', 'target_connection_timeout'].includes(c.errorCode)) c.state = 'timeout';
+        return;
+      }
+      const session = await response.json();
+      const id = session.id;
+      names = session.names;
       if (!/^[a-zA-Z0-9]{8,64}$/.test(id) || !Array.isArray(names) || names.length !== 12 || !names.every(name => typeof name === 'string' && /^[a-zA-Z0-9]{8,64}\.[a-zA-Z0-9]{8,64}\.bash\.ws$/.test(name) && name.endsWith('.' + id + '.bash.ws'))) { c.errorCode = 'dns_session_invalid'; return; }
       c.state = 'observed';
-      const q = check('dns_query', 'bash.ws'), begin = performance.now();
-      let resolved = 0;
-      await Promise.all(names.map(async name => {
-        try {
-          await timed('https://' + name + '/css/z.css', { mode: 'no-cors' }, 3000);
-          resolved++;
-        } catch { /* Opaque triggers are counted separately from authority results. */ }
-      }));
-      q.state = 'attempted'; q.value = '12 triggers; ' + resolved + ' fetches completed';
-      q.durationMS = Math.round(performance.now() - begin); result.checks.push(q);
-      await new Promise(resolve => setTimeout(resolve, 1200));
-    } catch (e) { failure(c, e); }
-    finally { c.durationMS = Math.min(45000, Math.round(performance.now() - start)); result.checks.push(c); }
+    } catch (e) { failure(c, e); return; }
+    finally {
+      c.durationMS = Math.min(45000, Math.round(performance.now() - start)); result.checks.push(c);
+      if (c.state !== 'observed') showCheck('dns', c);
+    }
+
+    progress('dns', 'check_dns_sending');
+    const q = check('dns_query', 'bash.ws'), begin = performance.now();
+    const triggers = await Promise.allSettled(names.map(name =>
+      timed('https://' + name + '/css/z.css', { mode: 'no-cors' }, 3000)));
+    const completed = triggers.filter(trigger => trigger.status === 'fulfilled').length;
+    q.state = 'attempted'; q.value = '12 triggers; ' + completed + ' fetches completed';
+    q.durationMS = Math.round(performance.now() - begin); result.checks.push(q);
+    progress('dns', 'check_dns_sent');
+    await new Promise(resolve => setTimeout(resolve, 1200));
+  }
+  function isPublic(a) {
+    if (!a || a.endsWith('.local')) return false;
+    if (a.includes(':')) return !/^(::1?$|f[cd]|fe[89ab])/i.test(a);
+    const p = a.split('.').map(Number);
+    return p.length === 4 && !(p[0] === 10 || p[0] === 127 || p[0] === 0 || (p[0] === 169 && p[1] === 254) || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) || (p[0] === 100 && p[1] >= 64 && p[1] <= 127));
   }
   async function rtc(kind, target) {
     const c = check(kind, target), start = performance.now();
@@ -174,12 +209,6 @@
       c.state = 'unsupported'; c.errorCode = 'rtc_api_unavailable'; result.checks.push(c); return [];
     }
     let pc, addresses = new Set(), candidates = [], seenCandidates = new Set(), errors = [], serverCodes = [], srflx = false, grace;
-    const isPublic = a => {
-      if (!a || a.endsWith('.local')) return false;
-      if (a.includes(':')) return !/^(::1?$|f[cd]|fe[89ab])/i.test(a);
-      const p = a.split('.').map(Number);
-      return p.length === 4 && !(p[0] === 10 || p[0] === 127 || p[0] === 0 || (p[0] === 169 && p[1] === 254) || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) || (p[0] === 100 && p[1] >= 64 && p[1] <= 127));
-    };
     try {
       pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:' + target }] });
       pc.createDataChannel('pax-environment');
@@ -222,35 +251,120 @@
     }
     return [...addresses];
   }
+  async function echo(c, url, parse) {
+    await request(c, url, parse);
+    const checks = result.checks.filter(item => ['echo_cf', 'echo_ipinfo', 'echo_ipip'].includes(item.kind));
+    const received = checks.filter(item => item.state === 'observed').length;
+    progress('echoes', 'check_echo_count', checks.length === 3 ? (received === 3 ? 'observed' : 'failed') : '', { count: received });
+  }
   async function echoes() {
     await Promise.all([
-      request(check('echo_cf', 'www.cloudflare.com'), 'https://www.cloudflare.com/cdn-cgi/trace', text => {
+      echo(check('echo_cf', 'www.cloudflare.com'), 'https://www.cloudflare.com/cdn-cgi/trace', text => {
         const ip = text.match(/^ip=(.+)$/m)?.[1]?.trim(), colo = text.match(/^colo=([A-Z]{3})$/m)?.[1];
         return ip && (v4(ip) || v6(ip)) ? ip + (colo ? ' · ' + colo : '') : '';
       }),
-      request(check('echo_ipinfo', 'ipinfo.io'), 'https://ipinfo.io/json', text => {
-        const ip = JSON.parse(text).ip || ''; return v4(ip) || v6(ip);
+      echo(check('echo_ipinfo', 'ipinfo.io'), 'https://ipinfo.io/json', text => {
+        const { ip, country, region, city } = JSON.parse(text);
+        if (typeof ip !== 'string') return '';
+        const address = v4(ip) || v6(ip);
+        const countryCode = typeof country === 'string' && /^[A-Z]{2}$/.test(country) ? country : '';
+        const local = [region, city].map(locationField).filter(Boolean);
+        return exitWithLocation(address, local.length ? [countryCode, ...local].join(', ') : countryCode);
       }),
-      request(check('echo_ipip', 'myip.ipip.net'), 'https://myip.ipip.net/', text => v4(text.match(/(?:\d{1,3}\.){3}\d{1,3}/)?.[0] || ''))
+      echo(check('echo_ipip', 'myip.ipip.net'), 'https://myip.ipip.net/', text => {
+        const match = text.trim().match(/^当前 IP[：:]\s*((?:\d{1,3}\.){3}\d{1,3})(?:\s+来自于[：:][ \t]*(.*))?$/u);
+        if (!match) return '';
+        // IPIP separates the location and ISP with at least two spaces.
+        const location = match[2]?.split(/[ \t]{2,}/, 1)[0];
+        return exitWithLocation(v4(match[1]), locationField(location));
+      })
     ]);
   }
+  function locationField(value) {
+    if (typeof value !== 'string') return '';
+    const field = value.trim().replace(/[ \t]+/g, ' ');
+    return /^[\p{L}\p{M}\p{N} .’'()\p{Pd}]+$/u.test(field) && /\p{L}/u.test(field) ? field : '';
+  }
+  function exitWithLocation(address, location) {
+    if (!address || !location || new TextEncoder().encode(location).length > 180) return address;
+    return address + ' · ' + location;
+  }
+  async function publicAddresses() {
+    await Promise.all([ip(false), ip(true)]);
+    if (!result.ipv4 && !result.ipv6) {
+      const checks = result.checks.filter(c => c.kind === 'ipv4' || c.kind === 'ipv6');
+      progress('ip', checks.every(c => c.state === 'timeout') ? 'check_timeout' : 'check_failed', 'failed');
+    }
+  }
+  async function webrtc() {
+    progress('rtc', 'check_rtc_waiting');
+    const addresses = await Promise.all([rtc('rtc_cf', 'stun.cloudflare.com:3478'), rtc('rtc_google', 'stun.l.google.com:19302')]);
+    result.rtcAddresses = [...new Set(addresses.flat())].slice(0, 32);
+    const checks = result.checks.filter(c => c.kind.startsWith('rtc_'));
+    result.rtcState = result.rtcAddresses.length ? 'complete' : checks.every(c => c.state === 'unsupported') ? 'unsupported' : checks.every(c => c.state === 'failed') ? 'failed' : 'empty';
+    const publicCount = result.rtcAddresses.filter(isPublic).length;
+    const timedOut = checks.some(c => c.state === 'timeout');
+    if (publicCount) progress('rtc', 'check_rtc_candidates', 'observed', { count: publicCount });
+    else if (result.rtcAddresses.length) progress('rtc', timedOut ? 'check_rtc_local_timeout' : 'check_rtc_local_only', timedOut ? 'failed' : '');
+    else if (checks.some(c => ['failed', 'unsupported'].includes(c.state))) {
+      progress('rtc', checks.every(c => c.state === 'unsupported') ? 'check_unsupported' : 'check_failed', 'failed');
+    } else progress('rtc', timedOut ? 'check_rtc_timeout' : 'check_rtc_no_public', timedOut ? 'failed' : '');
+  }
+  function completedIssues(noIPv6) {
+    const issues = [];
+    for (const [id, row] of Object.entries(rows)) {
+      if (row.dataset.state !== 'failed' || id === 'echoes') continue;
+      issues.push(text('browser.check_' + id) + ' · ' + row.querySelector('.check-state').textContent);
+    }
+    for (const c of result.checks) {
+      if (!['failed', 'timeout', 'unsupported'].includes(c.state)) continue;
+      const ipFamily = c.kind === 'ipv6' && !noIPv6 && result.ipv4 ? 'IPv6' :
+        c.kind === 'ipv4' && result.ipv6 ? 'IPv4' : '';
+      if (ipFamily || ['echo_cf', 'echo_ipinfo', 'echo_ipip'].includes(c.kind)) {
+        issues.push((ipFamily || c.target) + ' · ' + text('browser.' + checkIssue(c)));
+      }
+    }
+    const address = kind => result.checks.find(c => c.kind === kind && c.state === 'observed')?.value.split(' · ')[0];
+    const ipip = address('echo_ipip'), ipinfo = address('echo_ipinfo');
+    if (ipip && ipinfo && !ipinfo.includes(':') && ipip !== ipinfo) {
+      issues.push(text('browser.check_exit_mismatch'));
+    }
+    if (rows.rtc.dataset.state === 'observed') {
+      for (const c of result.checks.filter(item => item.kind.startsWith('rtc_') &&
+           ['failed', 'timeout', 'unsupported'].includes(item.state))) {
+        issues.push(c.target + ' · ' + text('browser.' + checkIssue(c)));
+      }
+    }
+    return issues;
+  }
   try {
-    const [,, , cf, google] = await Promise.all([ip(false), ip(true), dns(), rtc('rtc_cf', 'stun.cloudflare.com:3478'), rtc('rtc_google', 'stun.l.google.com:19302'), echoes()]);
-    result.rtcAddresses = [...new Set([...cf, ...google])].slice(0, 32);
-    const rtcChecks = result.checks.filter(c => c.kind.startsWith('rtc_'));
-    result.rtcState = result.rtcAddresses.length ? 'complete' : rtcChecks.every(c => c.state === 'unsupported') ? 'unsupported' : rtcChecks.every(c => c.state === 'failed') ? 'failed' : 'empty';
+    await Promise.all([
+      publicAddresses(), dns(), webrtc(), echoes(),
+      sampleClaude({ check, request, progress, showCheck,
+        record: item => result.checks.push(item), v4, v6 })
+    ]);
     stage('submitting', text('browser.submitting'), text('browser.submitting_hint'));
     const response = await timed(base + 'result', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result) }, 25000);
     if (!response.ok) throw Error();
+    if (rows.dns.dataset.state === '') {
+      const dnsState = response.headers.get('X-Pax-DNS-Result');
+      showCheck('dns', { state: dnsState });
+    }
     const noIPv6 = response.headers.get('X-Pax-IPv6-Route') === 'absent';
-    const partial = result.checks.some(c => ['failed', 'timeout', 'unsupported'].includes(c.state) && !(noIPv6 && c.kind === 'ipv6'));
-    stage(partial ? 'partial' : 'complete', partial ? text('browser.partial') : text('browser.complete'), text('browser.submitted'));
+    const issues = completedIssues(noIPv6);
+    const summary = document.getElementById('issues');
+    summary.hidden = issues.length === 0;
+    if (issues.length) summary.textContent = text('browser.completed_issues', { items: issues.join(' / ') });
+    stage(issues.length ? 'partial' : 'complete', text('browser.complete'), text('browser.submitted'));
     submitted = true;
     countdown.hidden = false;
     actions.hidden = false;
     if (details.open) pauseCountdown();
     else startCountdown();
-  } catch {
+  } catch (error) {
+    if (rows.dns.dataset.state === '') {
+      showCheck('dns', { state: error.name === 'TimeoutError' ? 'timeout' : 'failed' });
+    }
     stage('failed', text('browser.failed'), text('browser.failed_hint'));
   }
 })();

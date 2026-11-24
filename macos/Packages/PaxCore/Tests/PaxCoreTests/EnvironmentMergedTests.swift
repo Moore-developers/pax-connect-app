@@ -38,7 +38,8 @@ import Testing
     #expect(rows[2].value.contains("Asia/Shanghai"))
     #expect(rows[3].value.contains("45 秒"))
     #expect(rows[3].value.contains("DNS 服务未返回有效解析器"))
-    #expect(rows[4].value.contains("未取得候选地址"))
+    #expect(rows[4].value == "Chrome：无公网候选 · 泄露待确认")
+    #expect(rows[4].detail.contains("未取得候选地址"))
   }
 
   @Test("浏览器和 Mac 相同或不同时，摘要保留双方来源")
@@ -83,7 +84,8 @@ import Testing
     #expect(rows[2].value.contains("Chrome：America/Los_Angeles"))
     #expect(rows[3].value.contains("1.1.1.1"))
     #expect(rows[3].value.contains("9.9.9.9"))
-    #expect(rows[4].value.contains("未取得候选地址"))
+    #expect(rows[4].value.hasPrefix("Chrome："))
+    #expect(rows[4].detail.contains("未取得候选地址"))
   }
   @Test("浏览器未返回时不伪称双方相同，也不借用不同出口的情报")
   func partialAndIdentity() {

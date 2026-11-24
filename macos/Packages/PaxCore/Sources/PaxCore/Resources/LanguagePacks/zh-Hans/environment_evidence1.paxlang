@@ -21,6 +21,11 @@
     "environment_evidence.c9a7fb33f3": "被阻断",
     "environment_evidence.10c2a89724": "未观察到连接",
     "environment_evidence.7da664f560": "无线路证据",
-    "environment_evidence.195f984a5c": "方向未知"
+    "environment_evidence.195f984a5c": "方向未知",
+    "environment.webrtc.timeout": "STUN 超时 · 泄露待确认",
+    "environment.webrtc.failed": "探测失败 · 泄露待确认",
+    "environment.webrtc.blocked": "STUN 被阻断 · 泄露待确认",
+    "environment.webrtc.no_public": "无公网候选 · 泄露待确认",
+    "environment.webrtc.unsupported": "浏览器不支持"
   }
 }

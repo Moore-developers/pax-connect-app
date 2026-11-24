@@ -50,6 +50,10 @@ sing-box 的 `StartedService` proto 描述状态、日志、连接、测速和 o
 
 ### 7.5 Go module 版本策略
 
+流量提醒跨端值TrafficAlertSettings/Rule/Notice在config、privacy/traffic.proto和PaxClient同名同步；TrafficAlertState为受控投影，稳定ID只表示当前轮次。RouteAlertProgress/RouteAlertWindow投影同版规则、实际线路上下行、窗口截止与覆盖。见[提醒合同](../changes/pax-connect-network-control-plane/traffic-alerts.md)。
+
+线路用量跨端值追加RouteUsageSummary/RouteUsageRank，随原RouteUsageResponse映射到PaxClient，后台owner与存储不变。语义见[线路用量](../changes/pax-connect-network-control-plane/route-usage-alerts.md)。
+
 DNSFact追加可选运行时上游字段，经core JSON观测到live view；不改变DNS方向或列式历史投影。诊断按测试域名关联，EnvironmentCheck的dns_path/dns_upstream合同见[DNS路径](../changes/pax-connect-network-control-plane/network-diagnostics-dns-path.md)。
 
 NetworkDiagnosticProgress是本轮临时计数/阶段标准值，measurement发布、controller拥有，proto与Swift同名映射；与历史报告分开，不落盘。合同见[实时进度](../changes/pax-connect-network-control-plane/network-diagnostics-progress.md)。

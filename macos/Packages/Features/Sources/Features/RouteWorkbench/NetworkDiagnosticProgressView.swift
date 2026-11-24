@@ -45,7 +45,7 @@ import PaxUI
     super.init(frame: .zero)
     orientation = .vertical
     alignment = .leading
-    spacing = PaxTheme.Spacing.tight
+    spacing = PaxTheme.Spacing.xs
     setAccessibilityIdentifier("network-diagnostic-progress")
     countdown.font = .monospacedDigitSystemFont(ofSize: Theme.progressBadgeFont, weight: .regular)
     note.font = PaxTheme.Typography.label(size: Theme.progressBadgeFont)
@@ -75,11 +75,15 @@ import PaxUI
       equalToConstant: Theme.progressIcon
     ).isActive = true
     let foot = horizontal([note, NSView(), countdown])
-    panel.setContent(vertical([heading, metadata, line(), rowStack, line(), foot]))
+    panel.setContent(
+      vertical([heading, metadata, line(), rowStack, line(), foot]),
+      verticalInset: Theme.expandedProgressVerticalInset)
     expand.font = PaxTheme.Typography.label(size: Theme.progressBadgeFont)
     expand.controlSize = .small
     expand.setAccessibilityIdentifier("diagnostic-progress-expand")
-    compact.setContent(horizontal([compactSymbol, compactText, NSView(), expand]))
+    compact.setContent(
+      horizontal([compactSymbol, compactText, NSView(), expand]), verticalInset: Theme.progressInset
+    )
     compactText.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     compactText.setAccessibilityIdentifier("diagnostic-progress-last-time")
     history.setAccessibilityIdentifier("diagnostic-progress-history-time")
@@ -166,29 +170,27 @@ import PaxUI
     compact.isHidden = !panel.isHidden || isHidden
     if let start = startedAt {
       let stopped = activities.contains { $0.state == .stopped }
-      let incomplete = activities.contains { $0.state == .failed || $0.state == .partial }
+      let hasIssues = activities.contains { $0.state == .failed || $0.state == .partial }
       let state: NetworkDiagnosticActivity.State =
-        isRunning ? .running : incomplete ? .partial : stopped ? .stopped : .finished
+        isRunning ? .running : stopped ? .stopped : hasIssues ? .partial : .finished
       symbol.apply(state)
       compactSymbol.apply(state)
       title.stringValue =
         isRunning
         ? context.text("native_diagnostic.2b5941013c")
-        : incomplete
-          ? context.text("native_diagnostic.81668dd93c")
-          : stopped
-            ? context.text("native_diagnostic.86ba986bcb")
-            : context.text("native_diagnostic.f7bdd9c96d")
+        : stopped
+          ? context.text("native_diagnostic.86ba986bcb")
+          : context.text("native_diagnostic.f7bdd9c96d")
       let settled = activities.filter(\.settled).count
       badge.stringValue =
         isRunning
         ? context.text(
           "native_diagnostic.21caad5454",
           ["arg0": String(describing: settled), "arg1": String(describing: activities.count)])
-        : incomplete
-          ? context.text("native_diagnostic.0de8544ea3")
-          : stopped
-            ? context.text("native_diagnostic.b390ab1f6d")
+        : stopped
+          ? context.text("native_diagnostic.b390ab1f6d")
+          : hasIssues
+            ? context.text("native_diagnostic.0de8544ea3")
             : context.text(
               "native_diagnostic.fc316655c4", ["arg0": String(describing: activities.count)])
       let elapsed = seconds(until: endedAt ?? Date())
@@ -212,10 +214,10 @@ import PaxUI
           ])
         + (isRunning
           ? context.text("native_diagnostic.20f99990c7")
-          : incomplete
-            ? context.text("native_diagnostic.3bfb98d16f")
-            : stopped
-              ? context.text("native_diagnostic.f006455e3b")
+          : stopped
+            ? context.text("native_diagnostic.f006455e3b")
+            : hasIssues
+              ? context.text("native_diagnostic.3bfb98d16f")
               : context.text("native_diagnostic.f28461bb49"))
       for (index, activity) in activities.enumerated() {
         rows[index].apply(
@@ -225,10 +227,10 @@ import PaxUI
       note.stringValue =
         isRunning
         ? context.text("native_diagnostic.d9cd6f4d5a")
-        : incomplete
-          ? context.text("diagnostic.progress.incomplete_details")
-          : stopped
-            ? context.text("native_diagnostic.0dda291efb")
+        : stopped
+          ? context.text("native_diagnostic.0dda291efb")
+          : hasIssues
+            ? context.text("diagnostic.progress.incomplete_details")
             : context.text("native_diagnostic.0ff91a01fc")
       countdown.stringValue =
         remaining.map {
@@ -315,13 +317,13 @@ import PaxUI
   override func updateLayer() {
     layer?.backgroundColor = PaxTheme.NetworkDiagnostics.progressBackground.cgColor
   }
-  func setContent(_ content: NSView) {
+  func setContent(_ content: NSView, verticalInset: CGFloat) {
     let inset = PaxTheme.NetworkDiagnostics.progressInset
     addSubview(content)
     content.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
-      content.topAnchor.constraint(equalTo: topAnchor, constant: inset),
-      content.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -inset),
+      content.topAnchor.constraint(equalTo: topAnchor, constant: verticalInset),
+      content.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -verticalInset),
       content.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
       content.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
     ])

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"pax-connect/daemon/internal/cadence"
@@ -55,6 +56,7 @@ type coverageSpan struct {
 	collecting bool
 	start      time.Time // first instant not yet written
 	last       time.Time // newest successful read
+	runFrom    time.Time // successful run, not shortened by journal flushes
 }
 
 // historyIngest is the single capture owner (history-storage §4.2): it pulls the core every
@@ -91,7 +93,8 @@ type historyIngest struct {
 	coreDown       bool
 	journalDown    bool
 	span           coverageSpan
-	closed         []journalPoll // ended spans waiting for a commit, oldest first
+	coverage       atomic.Pointer[coverageSpan] // immutable successful-poll proof for alert reads
+	closed         []journalPoll                // ended spans waiting for a commit, oldest first
 }
 
 func newHistoryIngest(journal ingestJournal, core observationPager) *historyIngest {
@@ -159,6 +162,7 @@ func (in *historyIngest) step(ctx context.Context) time.Duration {
 	batch, err := in.read(ctx)
 	if err != nil {
 		in.live.disconnect()
+		in.coverage.Store(nil)
 		in.resetToken, in.resetCursor = "", ""
 		if !in.coreDown {
 			slog.Debug("history ingest: core read failed", "reason", "history_core_read_failed")
@@ -274,6 +278,13 @@ func (in *historyIngest) plan(b config.ObservationBatch) ingestPlan {
 // collection) and starts a new one at this read.
 func (in *historyIngest) trackSpan(session string, collecting bool, now time.Time) {
 	s := &in.span
+	defer func() {
+		if in.pending != nil {
+			s.runFrom = now
+		}
+		value := *s
+		in.coverage.Store(&value)
+	}()
 	if s.valid && (s.session != session || s.collecting != collecting || now.Sub(s.last) > trafficPollSpacing) {
 		if s.collecting && s.last.After(s.start) {
 			in.closed = append(in.closed, journalPoll{Session: s.session, Collecting: true, AtMs: s.last.UnixMilli(), FromMs: s.start.UnixMilli()})
@@ -281,7 +292,7 @@ func (in *historyIngest) trackSpan(session string, collecting bool, now time.Tim
 		s.valid = false
 	}
 	if !s.valid {
-		*s = coverageSpan{valid: true, session: session, collecting: collecting, start: now, last: now}
+		*s = coverageSpan{valid: true, session: session, collecting: collecting, start: now, last: now, runFrom: now}
 		return
 	}
 	s.last = now

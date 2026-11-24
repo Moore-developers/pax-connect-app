@@ -30,6 +30,11 @@
     "environment_evidence.c9a7fb33f3": "Blocked",
     "environment_evidence.10c2a89724": "No connection observed",
     "environment_evidence.7da664f560": "No route evidence",
-    "environment_evidence.195f984a5c": "Direction unknown"
+    "environment_evidence.195f984a5c": "Direction unknown",
+    "environment.webrtc.timeout": "STUN timed out · leak risk unknown",
+    "environment.webrtc.failed": "Probe failed · leak risk unknown",
+    "environment.webrtc.blocked": "STUN blocked · leak risk unknown",
+    "environment.webrtc.no_public": "No public candidate · leak risk unknown",
+    "environment.webrtc.unsupported": "Unsupported by browser"
   }
 }

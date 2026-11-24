@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -103,10 +104,18 @@ var browserTargets = map[string]string{
 	"dns_session": "bash.ws", "dns_query": "bash.ws",
 	"rtc_cf": "stun.cloudflare.com:3478", "rtc_google": "stun.l.google.com:19302",
 	"echo_cf": "www.cloudflare.com", "echo_ipinfo": "ipinfo.io", "echo_ipip": "myip.ipip.net",
+	"echo_claude": "claude.ai", "claude_status": "status.claude.com",
+	"echo_claude_api":   "api.anthropic.com",
+	"claude_api_status": "status.claude.com", "claude_edge": "claude.ai", "claude_protocol": "claude.ai",
 }
 
+var claudeEdgePattern = regexp.MustCompile(`^[A-Z]{3}$`)
+var claudeProtocolPattern = regexp.MustCompile(`^HTTP/(1\.[01]|2|3) · TLS 1\.[0-3]$`)
+var echoLocationPattern = regexp.MustCompile(`^[\p{L}\p{M}\p{N} .,’'()\p{Pd}]+$`)
+var locationLetter = regexp.MustCompile(`\p{L}`)
+
 func validateChecks(checks []Check) error {
-	if len(checks) > 12 {
+	if len(checks) > len(browserTargets) {
 		return errors.New("sample_checks_limit")
 	}
 	seen := map[string]bool{}
@@ -143,11 +152,22 @@ func validateChecks(checks []Check) error {
 		}
 		if check.State == "observed" && (check.Kind == "ipv4" || check.Kind == "ipv6" || strings.HasPrefix(check.Kind, "echo_")) {
 			parts := strings.Split(check.Value, " · ")
-			if publicIP(parts[0]) == "" || len(parts) > 2 {
+			if publicIP(parts[0]) == "" || len(parts) > 2 || check.Kind == "echo_ipip" && strings.Contains(parts[0], ":") {
 				return errors.New("sample_check_address_invalid")
 			}
-			if len(parts) == 2 && (check.Kind != "echo_cf" || len(parts[1]) != 3 || strings.Trim(parts[1], "ABCDEFGHIJKLMNOPQRSTUVWXYZ") != "") {
-				return errors.New("sample_check_colo_invalid")
+			if len(parts) == 2 {
+				if !validEchoLocation(check.Kind, parts[1]) {
+					return errors.New("sample_check_location_invalid")
+				}
+			}
+		}
+		if strings.HasPrefix(check.Kind, "claude_") || strings.HasPrefix(check.Kind, "echo_claude") {
+			if check.State == "observed" {
+				if !validClaudeValue(check) {
+					return errors.New("sample_check_claude_value_invalid")
+				}
+			} else if check.Value != "" {
+				return errors.New("sample_check_value_invalid")
 			}
 		}
 		if !allowed {
@@ -155,4 +175,35 @@ func validateChecks(checks []Check) error {
 		}
 	}
 	return nil
+}
+
+func validEchoLocation(kind, value string) bool {
+	switch kind {
+	case "echo_ipip", "echo_ipinfo":
+		return len(value) <= 180 && echoLocationPattern.MatchString(value) && locationLetter.MatchString(value)
+	case "echo_cf":
+		return len(value) == 3 && strings.Trim(value, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") == ""
+	case "echo_claude", "echo_claude_api":
+		return len(value) == 2 && strings.Trim(value, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") == ""
+	default:
+		return false
+	}
+}
+
+// The page returns only bounded observations from the fixed Claude endpoints.
+func validClaudeValue(check Check) bool {
+	switch check.Kind {
+	case "echo_claude", "echo_claude_api":
+		return true // Address and optional country are checked above.
+	case "claude_status", "claude_api_status":
+		switch check.Value {
+		case "operational", "degraded_performance", "partial_outage", "major_outage", "under_maintenance":
+			return true
+		}
+	case "claude_edge":
+		return claudeEdgePattern.MatchString(check.Value)
+	case "claude_protocol":
+		return claudeProtocolPattern.MatchString(check.Value)
+	}
+	return false
 }

@@ -34,6 +34,8 @@ const (
 	PaxService_GetLogDetail_FullMethodName                   = "/pax.v1.PaxService/GetLogDetail"
 	PaxService_QueryTraffic_FullMethodName                   = "/pax.v1.PaxService/QueryTraffic"
 	PaxService_QueryTrafficDetail_FullMethodName             = "/pax.v1.PaxService/QueryTrafficDetail"
+	PaxService_GetTrafficAlerts_FullMethodName               = "/pax.v1.PaxService/GetTrafficAlerts"
+	PaxService_SaveTrafficAlertSettings_FullMethodName       = "/pax.v1.PaxService/SaveTrafficAlertSettings"
 	PaxService_ClearLogs_FullMethodName                      = "/pax.v1.PaxService/ClearLogs"
 	PaxService_ShutdownAppSession_FullMethodName             = "/pax.v1.PaxService/ShutdownAppSession"
 	PaxService_Hello_FullMethodName                          = "/pax.v1.PaxService/Hello"
@@ -112,6 +114,8 @@ type PaxServiceClient interface {
 	GetLogDetail(ctx context.Context, in *LogDetailRequest, opts ...grpc.CallOption) (*LogDetail, error)
 	QueryTraffic(ctx context.Context, in *TrafficQuery, opts ...grpc.CallOption) (*TrafficPage, error)
 	QueryTrafficDetail(ctx context.Context, in *TrafficDetailRequest, opts ...grpc.CallOption) (*TrafficDetail, error)
+	GetTrafficAlerts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*TrafficAlertState, error)
+	SaveTrafficAlertSettings(ctx context.Context, in *TrafficAlertSettings, opts ...grpc.CallOption) (*TrafficAlertState, error)
 	ClearLogs(ctx context.Context, in *ClearLogsRequest, opts ...grpc.CallOption) (*OperationAck, error)
 	// 协议版本握手；不兼容时 UI 提示升级，不做兼容降级。
 	// Only App-owned temporary sessions support graceful shutdown; legacy services reject it.
@@ -313,6 +317,26 @@ func (c *paxServiceClient) QueryTrafficDetail(ctx context.Context, in *TrafficDe
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TrafficDetail)
 	err := c.cc.Invoke(ctx, PaxService_QueryTrafficDetail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) GetTrafficAlerts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*TrafficAlertState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TrafficAlertState)
+	err := c.cc.Invoke(ctx, PaxService_GetTrafficAlerts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paxServiceClient) SaveTrafficAlertSettings(ctx context.Context, in *TrafficAlertSettings, opts ...grpc.CallOption) (*TrafficAlertState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TrafficAlertState)
+	err := c.cc.Invoke(ctx, PaxService_SaveTrafficAlertSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -863,6 +887,8 @@ type PaxServiceServer interface {
 	GetLogDetail(context.Context, *LogDetailRequest) (*LogDetail, error)
 	QueryTraffic(context.Context, *TrafficQuery) (*TrafficPage, error)
 	QueryTrafficDetail(context.Context, *TrafficDetailRequest) (*TrafficDetail, error)
+	GetTrafficAlerts(context.Context, *emptypb.Empty) (*TrafficAlertState, error)
+	SaveTrafficAlertSettings(context.Context, *TrafficAlertSettings) (*TrafficAlertState, error)
 	ClearLogs(context.Context, *ClearLogsRequest) (*OperationAck, error)
 	// 协议版本握手；不兼容时 UI 提示升级，不做兼容降级。
 	// Only App-owned temporary sessions support graceful shutdown; legacy services reject it.
@@ -971,6 +997,12 @@ func (UnimplementedPaxServiceServer) QueryTraffic(context.Context, *TrafficQuery
 }
 func (UnimplementedPaxServiceServer) QueryTrafficDetail(context.Context, *TrafficDetailRequest) (*TrafficDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryTrafficDetail not implemented")
+}
+func (UnimplementedPaxServiceServer) GetTrafficAlerts(context.Context, *emptypb.Empty) (*TrafficAlertState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTrafficAlerts not implemented")
+}
+func (UnimplementedPaxServiceServer) SaveTrafficAlertSettings(context.Context, *TrafficAlertSettings) (*TrafficAlertState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveTrafficAlertSettings not implemented")
 }
 func (UnimplementedPaxServiceServer) ClearLogs(context.Context, *ClearLogsRequest) (*OperationAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearLogs not implemented")
@@ -1394,6 +1426,42 @@ func _PaxService_QueryTrafficDetail_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PaxServiceServer).QueryTrafficDetail(ctx, req.(*TrafficDetailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_GetTrafficAlerts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).GetTrafficAlerts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_GetTrafficAlerts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).GetTrafficAlerts(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaxService_SaveTrafficAlertSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TrafficAlertSettings)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaxServiceServer).SaveTrafficAlertSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaxService_SaveTrafficAlertSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaxServiceServer).SaveTrafficAlertSettings(ctx, req.(*TrafficAlertSettings))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2371,6 +2439,14 @@ var PaxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryTrafficDetail",
 			Handler:    _PaxService_QueryTrafficDetail_Handler,
+		},
+		{
+			MethodName: "GetTrafficAlerts",
+			Handler:    _PaxService_GetTrafficAlerts_Handler,
+		},
+		{
+			MethodName: "SaveTrafficAlertSettings",
+			Handler:    _PaxService_SaveTrafficAlertSettings_Handler,
 		},
 		{
 			MethodName: "ClearLogs",

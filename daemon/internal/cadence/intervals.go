@@ -8,6 +8,7 @@ const (
 	HistoryLogsFallback = 60 * time.Second // log maintenance safety net; ingest wakes it on new rows
 	HistoryTraffic      = 60 * time.Second // traffic aggregation
 	HistoryPublish      = 1 * time.Second  // coalesced history change publish
+	TrafficAlerts       = 30 * time.Second // independent of App page visibility
 	RouteAutoLatency    = 30 * time.Second // automatic latency probe round
 	RoutingAutomatic    = 1 * time.Minute  // automatic routing re-evaluation
 	PhysicalEgress      = 60 * time.Second // physical egress fallback re-check

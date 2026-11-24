@@ -36,6 +36,25 @@
     },
     "routes.current": "当前线路",
     "routes.selected": "已选线路",
-    "routes.not_available": "未获取"
+    "routes.not_available": "未获取",
+    "routes.column.usage": "今日流量",
+    "routes.usage_view": "查看用量",
+    "routes.usage_today": "今日已用",
+    "routes.usage_hour_title": "最近一小时",
+    "routes.usage_top": "今日流量 TOP 3",
+    "routes.usage_applications": "应用与进程",
+    "routes.usage_domains": "域名",
+    "routes.usage_ips": "目标 IP",
+    "routes.usage_object": "流量来源",
+    "routes.usage_upload": "上传",
+    "routes.usage_download": "下载",
+    "routes.usage_total": "合计 / 占比",
+    "routes.usage_loading": "正在读取今日用量…",
+    "routes.usage_precision": "按实际线路归集，十进制单位。小时窗口取完整5分钟归档段和当前采集尾部。部分时段未记录时，仅显示已记录流量。",
+    "routes.usage_range": "今日 {from}–{until}",
+    "routes.usage_partial": "部分时段未记录",
+    "routes.usage_failed": "用量读取失败：{error}",
+    "routes.usage_empty": "此时间内暂无已记录流量",
+    "routes.usage_updated": "更新于 {time}"
   }
 }

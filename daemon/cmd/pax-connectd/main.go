@@ -219,6 +219,14 @@ func run(socketPath string, logger *slog.Logger, mixed string, ownerPID int) (re
 		}
 	}()
 	state.ConfigureOperations(ctx, func() (config.DebugProfile, error) { return config.DebugProfile{}, config.ErrProfileUnavailable })
+	state.ConfigureTrafficAlerts(ctx, directory, owner)
+	defer func() {
+		closeCtx, done := context.WithTimeout(context.Background(), 3*time.Second)
+		defer done()
+		if err := state.CloseTrafficAlerts(closeCtx); result == nil {
+			result = err
+		}
+	}()
 	state.ConfigureNetworkEpoch(network.Epoch)
 	state.ConfigurePathDiagnostics(network.NewPathInspector().Inspect)
 	exits := measurement.NewExitLookup()

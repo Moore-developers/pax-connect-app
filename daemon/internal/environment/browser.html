@@ -17,6 +17,12 @@
   main[data-stage="complete"] #icon::before, main[data-stage="partial"] #icon::before, main[data-stage="failed"] #icon::before { content: none; }
   h1 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.4; }
   p { margin: 0; line-height: 1.7; color: #73757a; }
+  #issues { margin-top: 6px; overflow-wrap: anywhere; color: #a15c00; }
+  #checks { list-style: none; margin: 16px 0 0; padding: 0; }
+  #checks li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eeeef0; }
+  .check-state { text-align: end; color: #62656b; font-size: 12px; }
+  li[data-state="observed"] .check-state { color: #247c44; }
+  li[data-state="failed"] .check-state { color: #a15c00; }
   #countdown { margin-top: 20px; color: #202124; font-weight: 500; font-variant-numeric: tabular-nums; }
   #actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
   button { padding: 9px 16px; border: 1px solid #dedee1; border-radius: 8px; font: inherit; background: #fff; color: #202124; cursor: pointer; }
@@ -38,7 +44,54 @@
       <h1 id="state" data-copy="browser.sampling">{{index .Messages "browser.sampling"}}</h1>
     </div>
     <p id="hint" data-copy="browser.hint">{{index .Messages "browser.hint"}}</p>
+    <p id="issues" hidden></p>
   </section>
+  <ul id="checks">
+    <li data-check="ip">
+      <span data-copy="browser.check_ip">{{index .Messages "browser.check_ip"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="dns">
+      <span data-copy="browser.check_dns">{{index .Messages "browser.check_dns"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="rtc">
+      <span data-copy="browser.check_rtc">{{index .Messages "browser.check_rtc"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="locale">
+      <span data-copy="browser.check_locale">{{index .Messages "browser.check_locale"}}</span>
+      <span class="check-state" data-copy="browser.check_reading">{{index .Messages "browser.check_reading"}}</span>
+    </li>
+    <li data-check="echoes">
+      <span data-copy="browser.check_echoes">{{index .Messages "browser.check_echoes"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_exit">
+      <span data-copy="browser.check_claude_exit">{{index .Messages "browser.check_claude_exit"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_status">
+      <span data-copy="browser.check_claude_status">{{index .Messages "browser.check_claude_status"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_api_exit">
+      <span data-copy="browser.check_claude_api_exit">{{index .Messages "browser.check_claude_api_exit"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_api_status">
+      <span data-copy="browser.check_claude_api_status">{{index .Messages "browser.check_claude_api_status"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_edge">
+      <span data-copy="browser.check_claude_edge">{{index .Messages "browser.check_claude_edge"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+    <li data-check="claude_protocol">
+      <span data-copy="browser.check_claude_protocol">{{index .Messages "browser.check_claude_protocol"}}</span>
+      <span class="check-state" data-copy="browser.check_checking">{{index .Messages "browser.check_checking"}}</span>
+    </li>
+  </ul>
   <p id="countdown" hidden></p>
   <div id="actions" hidden>
     <button id="close" type="button" data-copy="browser.close">{{index .Messages "browser.close"}}</button>

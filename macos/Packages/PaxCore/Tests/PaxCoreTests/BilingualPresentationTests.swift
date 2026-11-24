@@ -73,7 +73,7 @@ import Testing
     let fact = try #require(report.facts.first)
     #expect(fact.label == "Unknown 原文")
     #expect(NetworkDiagnosticPresentation.factValue(fact, context: context) == "Fact [value] <raw>")
-    #expect(NetworkDiagnosticPresentation.sourceRows(report, context: context).count == 12)
+    #expect(NetworkDiagnosticPresentation.sourceRows(report, context: context).isEmpty)
   }
   @Test func retainedFailuresAndDismissedFeedbackDoNotChangeIdentityWithLanguage() throws {
     let context = try english()

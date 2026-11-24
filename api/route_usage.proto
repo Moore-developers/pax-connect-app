@@ -1,7 +1,27 @@
 syntax = "proto3";
 package pax.v1;
 import "google/protobuf/timestamp.proto";
+import "privacy.proto";
 option go_package = "pax-connect/daemon/gen/proto/paxv1";
 
 // connections is the number of connections started inside this bucket.
 message RouteUsageBucket { google.protobuf.Timestamp at=1; uint64 upload=2; uint64 download=3; bool gap=4; uint32 seconds=5; bool partial=6; uint64 connections=7; }
+
+// Batch overview: actual outbound bytes, decimal units. Hour starts at the first
+// full five-minute bucket inside the rolling hour; includes the current tail.
+message RouteUsageSummary {
+ string route_id=1; uint64 today_upload=2; uint64 today_download=3;
+ uint64 hour_upload=4; uint64 hour_download=5;
+}
+message RouteUsageRank {
+ string id=1; string name=2; uint64 upload=3; uint64 download=4;
+}
+
+// Frozen sample from the latest evaluation. Totals include only the requested actual route.
+message RouteAlertProgress {
+ string monitor_state=1; TrafficAlertSettings settings=2; repeated RouteAlertWindow windows=3;
+}
+message RouteAlertWindow {
+ uint32 seconds=1; uint64 upload=2; uint64 download=3; bool partial=4;
+ google.protobuf.Timestamp until=5;
+}

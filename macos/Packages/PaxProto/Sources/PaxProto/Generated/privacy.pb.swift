@@ -115,6 +115,80 @@ public nonisolated struct Pax_V1_NetworkPrivacy: Sendable {
   fileprivate var _context: Pax_V1_OperationContext? = nil
 }
 
+/// Bytes use decimal units. Only one of hour/two_hours is selected by medium_seconds.
+public nonisolated struct Pax_V1_TrafficAlertRule: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var enabled: Bool = false
+
+  public var upload: UInt64 = 0
+
+  public var download: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pax_V1_TrafficAlertSettings: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var revision: UInt64 = 0
+
+  public var enabled: Bool = false
+
+  public var mediumSeconds: UInt32 = 0
+
+  public var short: Pax_V1_TrafficAlertRule {
+    get {_short ?? Pax_V1_TrafficAlertRule()}
+    set {_short = newValue}
+  }
+  /// Returns true if `short` has been explicitly set.
+  public var hasShort: Bool {self._short != nil}
+  /// Clears the value of `short`. Subsequent reads from it will return its default value.
+  public mutating func clearShort() {self._short = nil}
+
+  public var hour: Pax_V1_TrafficAlertRule {
+    get {_hour ?? Pax_V1_TrafficAlertRule()}
+    set {_hour = newValue}
+  }
+  /// Returns true if `hour` has been explicitly set.
+  public var hasHour: Bool {self._hour != nil}
+  /// Clears the value of `hour`. Subsequent reads from it will return its default value.
+  public mutating func clearHour() {self._hour = nil}
+
+  public var twoHours: Pax_V1_TrafficAlertRule {
+    get {_twoHours ?? Pax_V1_TrafficAlertRule()}
+    set {_twoHours = newValue}
+  }
+  /// Returns true if `twoHours` has been explicitly set.
+  public var hasTwoHours: Bool {self._twoHours != nil}
+  /// Clears the value of `twoHours`. Subsequent reads from it will return its default value.
+  public mutating func clearTwoHours() {self._twoHours = nil}
+
+  public var day: Pax_V1_TrafficAlertRule {
+    get {_day ?? Pax_V1_TrafficAlertRule()}
+    set {_day = newValue}
+  }
+  /// Returns true if `day` has been explicitly set.
+  public var hasDay: Bool {self._day != nil}
+  /// Clears the value of `day`. Subsequent reads from it will return its default value.
+  public mutating func clearDay() {self._day = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _short: Pax_V1_TrafficAlertRule? = nil
+  fileprivate var _hour: Pax_V1_TrafficAlertRule? = nil
+  fileprivate var _twoHours: Pax_V1_TrafficAlertRule? = nil
+  fileprivate var _day: Pax_V1_TrafficAlertRule? = nil
+}
+
 /// Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
 /// interface 如 utun6；target 为被承接的路由目标（如 128.0/1）；at 为观测时间。
 public nonisolated struct Pax_V1_ExternalTUN: Sendable {
@@ -428,6 +502,110 @@ nonisolated extension Pax_V1_NetworkPrivacy: SwiftProtobuf.Message, SwiftProtobu
     if lhs.dnsMode != rhs.dnsMode {return false}
     if lhs.webrtc != rhs.webrtc {return false}
     if lhs._context != rhs._context {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_TrafficAlertRule: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficAlertRule"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{1}upload\0\u{1}download\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.upload) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.download) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    if self.upload != 0 {
+      try visitor.visitSingularUInt64Field(value: self.upload, fieldNumber: 2)
+    }
+    if self.download != 0 {
+      try visitor.visitSingularUInt64Field(value: self.download, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficAlertRule, rhs: Pax_V1_TrafficAlertRule) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.upload != rhs.upload {return false}
+    if lhs.download != rhs.download {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pax_V1_TrafficAlertSettings: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TrafficAlertSettings"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}revision\0\u{1}enabled\0\u{3}medium_seconds\0\u{1}short\0\u{1}hour\0\u{3}two_hours\0\u{1}day\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.revision) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.mediumSeconds) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._short) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._hour) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._twoHours) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._day) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.revision != 0 {
+      try visitor.visitSingularUInt64Field(value: self.revision, fieldNumber: 1)
+    }
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 2)
+    }
+    if self.mediumSeconds != 0 {
+      try visitor.visitSingularUInt32Field(value: self.mediumSeconds, fieldNumber: 3)
+    }
+    try { if let v = self._short {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
+    try { if let v = self._hour {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._twoHours {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
+    try { if let v = self._day {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pax_V1_TrafficAlertSettings, rhs: Pax_V1_TrafficAlertSettings) -> Bool {
+    if lhs.revision != rhs.revision {return false}
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.mediumSeconds != rhs.mediumSeconds {return false}
+    if lhs._short != rhs._short {return false}
+    if lhs._hour != rhs._hour {return false}
+    if lhs._twoHours != rhs._twoHours {return false}
+    if lhs._day != rhs._day {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

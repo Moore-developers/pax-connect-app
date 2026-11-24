@@ -15,3 +15,5 @@
 **当前环境检测**：Mac实际网络探测与真实浏览器核心采样，独立记录语言、时区、IP、DNS及浏览器WebRTC，不绑定线路列表选中项；上次结果保存在本机，重开后标为历史，不能代表当前连接。不同应用、域名可能走不同路径；无DNS/ICE结果不等于安全。合同见[网络诊断](../changes/pax-connect-network-control-plane/network-diagnostics.md)。
 
 **本轮DNS请求路径**：只关联本轮测试域名与实际上游响应，区分经代理、按DNS规则直连及未确认；解析器地区或配置意图不能代替实际证据。不推广到所有DNS，浏览器DoH无法关联时仍未知。合同见[DNS路径](../changes/pax-connect-network-control-plane/network-diagnostics-dns-path.md)。
+
+**流量提醒**：已观测流量按来源跨线路、上传下载分别达到窗口阈值时的系统通知；持续越线同轮去重，无提醒历史页。合同见[流量提醒](../changes/pax-connect-network-control-plane/traffic-alerts.md)。

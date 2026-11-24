@@ -5,6 +5,7 @@ import PaxClient
 /// Saved catalog has one owner; ConnectionStore exposes a shared projection for TLS consumers.
 @MainActor @Observable
 public final class RoutesStore {
+  public let usageMonitor: RouteUsageMonitor
   public private(set) var groups: [RouteGroup] = []
   public private(set) var routes: [NodeProfile] = []
   public private(set) var subscriptions: [SubscriptionSummary] = []
@@ -105,6 +106,7 @@ public final class RoutesStore {
       throw DocumentSaveError.unavailable
     }
   ) {
+    usageMonitor = RouteUsageMonitor(query: periodUsage)
     self.historyQuery = history
     self.usageQuery = usage
     self.preview = preview
@@ -169,6 +171,7 @@ public final class RoutesStore {
   public func consume(_ update: ConnectionUpdate) {
     switch update {
     case .ready(let handshake, let snapshot):
+      usageMonitor.setConnected(false)
       failSaveWaiter()
       sessionGeneration &+= 1
       busy = false
@@ -184,6 +187,7 @@ public final class RoutesStore {
       refreshing = [:]
       pendingRefreshes = [:]
       apply(snapshot, replaySourceFailures: false)
+      usageMonitor.setConnected(capabilities.contains("routes.usage.overview.v1"))
     case .events(let events):
       for event in events {
         if case .snapshot(let s) = event { apply(s) }
@@ -243,6 +247,7 @@ public final class RoutesStore {
       failSaveWaiter()
       sessionGeneration &+= 1
       connected = false
+      usageMonitor.setConnected(false)
       busy = false
       pendingID = nil
       localPending = nil
@@ -266,18 +271,8 @@ public final class RoutesStore {
       failSaveWaiter()
       sessionGeneration &+= 1
       connected = false
+      usageMonitor.setConnected(false)
     }
-  }
-  private func refreshDoneMessage(_ sourceID: String) -> String {
-    guard let summary = subscriptions.first(where: { $0.id == sourceID }) else { return "订阅已刷新" }
-    let report = summary.lastRefresh
-    if report.partial {
-      return "部分刷新失败：保留 \(report.kept) 条未确认线路"
-    }
-    if report.removed > 0 {
-      return "刷新完成：新增 \(report.added)，来源移除 \(report.removed)"
-    }
-    return "订阅已刷新"
   }
   private func apply(_ snapshot: DaemonSnapshot, replaySourceFailures: Bool = true) {
     physicalEgress = snapshot.physicalEgress

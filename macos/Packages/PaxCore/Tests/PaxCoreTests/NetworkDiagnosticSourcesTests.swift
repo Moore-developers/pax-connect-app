@@ -8,98 +8,104 @@ import Testing
 @MainActor @Suite("多源对照完整列表") struct NetworkDiagnosticSourcesTests {
   typealias P = NetworkDiagnosticPresentation
 
-  private func report(failed: Bool, omit: String? = nil) -> NetworkDiagnosticReport {
-    NetworkDiagnosticReport(
+  @Test("旧报告的转交记录与重复来源从对照中剔除")
+  func historicTransfersStayOutOfComparison() {
+    let value = NetworkDiagnosticReport(
       .with {
-        $0.sources = ["ipquery", "ipwho.is"].map { name in
+        $0.sources = ["ipquery", "ipquery", "ipx.al", ""].map { id in
           .with {
-            $0.name = name
-            $0.providerID = name
+            $0.name = id == "ipquery" ? "ipquery" : "IPQuery"
+            $0.providerID = id
             $0.country = "US"
             $0.city = "Los Angeles"
             $0.asn = "AS36352"
           }
         }
-        if !failed {
-          let forwarded = [
-            "Cloudflare 边缘", "MaxMind GeoLite", "IPinfo", "IP.SB", "ipapi.is",
-            "proxycheck.io", "IPQuery", "IP-API", "IPLocate", "ip2region",
-          ]
-          $0.sources += forwarded.filter { $0 != omit }.map { name in
-            .with {
-              $0.name = name
-              $0.providerID = "ipx.al"
-              $0.country = "US"
-              $0.city = "Los Angeles"
-              $0.asn = "36352"
-            }
+        $0.providers = ["ipquery", "ipx.al"].map { id in
+          .with {
+            $0.id = id
+            $0.state = "observed"
+          }
+        }
+      })
+    #expect(P.sourceRows(nil).isEmpty)
+    #expect(P.sourceRows(value).map(\.title) == ["ipquery"])
+    #expect(P.sourceListOverview(P.sourceRows(value)).text == "1 个来源")
+    #expect(value.sources.count == 4)
+  }
+
+  @Test("新增来源保留独立失败，预期缺字段与 BGP 不算地理分歧")
+  func comparisonAndFailure() {
+    let value = NetworkDiagnosticReport(
+      .with {
+        $0.sources = [
+          .with {
+            $0.name = "db-ip"
+            $0.providerID = "db-ip"
+            $0.country = "US"
+            $0.city = "Los Angeles"
+          },
+          .with {
+            $0.name = "ipapi.is"
+            $0.providerID = "ipapi.is"
+            $0.country = "United States"
+            $0.city = "Los Angeles"
+            $0.asn = "AS36352"
+          },
+          .with {
+            $0.name = "RIPEstat"
+            $0.providerID = "ripestat"
+            $0.asn = "AS64500"
+          },
+        ]
+        $0.providers = ["db-ip", "ipapi.is", "ripestat", "proxycheck.io"].map { id in
+          .with {
+            $0.id = id
+            $0.state = id == "proxycheck.io" ? "failed" : "observed"
+            $0.errorCode = id == "proxycheck.io" ? "provider_http_403" : ""
+          }
+        }
+        $0.facts = [
+          .with {
+            $0.group = "source_network"
+            $0.providerID = "ripestat"
+            $0.value = "203.0.113.0/24"
+          }
+        ]
+      })
+    let all = P.sourceRows(value)
+    #expect(all.first { $0.title == "DB-IP" }?.tone == .information)
+    #expect(all.first { $0.title == "RIPEstat" }?.detail.contains("203.0.113.0/24") == true)
+    #expect(all.first { $0.title == "proxycheck.io" }?.value.contains("403") == true)
+    #expect(all.map(\.title) == ["proxycheck.io", "DB-IP", "ipapi.is", "RIPEstat"])
+    #expect(P.sourceListOverview(all).text == "1 个来源缺失 · 4 个来源")
+  }
+
+  @Test("来源分歧和缺失并存时，先显示分歧并保留完整来源")
+  func differencesComeFirst() {
+    let value = NetworkDiagnosticReport(
+      .with {
+        $0.sources = [("ipquery", "US"), ("ipwho.is", "CA")].map { id, country in
+          .with {
+            $0.name = id
+            $0.providerID = id
+            $0.country = country
+            $0.city = "Vancouver"
+            $0.asn = "AS64500"
           }
         }
         $0.providers = [
           .with {
-            $0.id = "ipx.al"
-            $0.state = failed ? "failed" : "observed"
-            $0.errorCode = failed ? "provider_timeout" : ""
+            $0.id = "db-ip"
+            $0.state = "failed"
           }
         ]
       })
-  }
-
-  @Test("补充失败保留12行及超时原因，不增加返回数；详情与报告同样可解释")
-  func supplementTimeout() {
-    let value = report(failed: true)
     let rows = P.sourceRows(value)
-    #expect(rows.count == 12)
-    #expect(rows.filter(\.unavailable).count == 10)
-    #expect(rows.first { $0.title == "IPLocate · 补充" }?.value.contains("资料请求超时") == true)
-    #expect(rows.suffix(10).allSatisfy { $0.tone == .pending && $0.detail.contains("不参与来源对照") })
-    #expect(P.sourceListOverview(value).text.contains("2 条来源资料"))
-    #expect(P.sourceListOverview(value).text.contains("10 项未返回资料"))
-    #expect(value.sources.count == 2)
-    #expect(P.sourceRows(value, onlyDifferences: true).count == 10)
+    #expect(rows.map(\.title) == ["ipquery", "ipwho.is", "DB-IP"])
+    let summary = P.sourceListOverview(rows)
+    #expect(summary.text == "2 个来源有分歧 · 1 个来源缺失 · 3 个来源")
+    #expect(summary.tone == .difference)
   }
 
-  @Test("成功保持真实12行且无重复，单家未返回不会伪称整个补充失败")
-  func successfulAndMissing() {
-    let complete = P.sourceRows(report(failed: false))
-    #expect(complete.count == 12)
-    #expect(!complete.contains { $0.unavailable })
-    #expect(Set(complete.map(\.title)).count == 12)
-    #expect(P.sourceRows(report(failed: false), onlyDifferences: true).isEmpty)
-    let partial = P.sourceRows(report(failed: false, omit: "IPLocate"))
-    #expect(partial.count == 12)
-    #expect(partial.filter(\.unavailable).count == 1)
-    #expect(partial.first { $0.title == "IPLocate · 补充" }?.value == "未返回本来源定位资料")
-  }
-
-  @Test("未检测与旧记录明确缺失，不补写历史；额外真实来源保留")
-  func oldAndAdditional() throws {
-    #expect(P.sourceRows(nil).count == 12)
-    #expect(P.sourceRows(nil).allSatisfy { $0.value == "尚未检测" })
-    let old = NetworkDiagnosticReport(
-      .with {
-        $0.sources = [
-          .with {
-            $0.name = "MaxMind GeoLite"
-            $0.country = "US"
-          },
-          .with {
-            $0.name = "额外库"
-            $0.country = "JP"
-            $0.providerID = "extra"
-          },
-        ]
-      })
-    var json = try #require(
-      JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as? [String: Any])
-    json.removeValue(forKey: "providers")
-    let legacy = try JSONDecoder().decode(
-      NetworkDiagnosticReport.self, from: JSONSerialization.data(withJSONObject: json))
-    let rows = P.sourceRows(legacy)
-    #expect(rows.count == 13)
-    #expect(rows.first { $0.title == "MaxMind GeoLite" }?.unavailable == false)
-    #expect(rows.last?.title == "额外库")
-    #expect(rows.first?.value == "旧记录未包含本来源资料")
-    #expect(legacy.sources.count == 2)
-  }
 }

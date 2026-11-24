@@ -19,6 +19,7 @@ extension DaemonConnection {
     } catch let error as RPCError {
       if error.message.hasPrefix("history_") || error.message.hasPrefix("icon_")
         || error.message.hasPrefix("routing_") || error.message.hasPrefix("fetch_")
+        || error.message.hasPrefix("traffic_alerts_")
         || ["invalid_filter", "settings_conflict", "operation_expired"].contains(error.message)
       {
         throw ProductError(code: error.message)

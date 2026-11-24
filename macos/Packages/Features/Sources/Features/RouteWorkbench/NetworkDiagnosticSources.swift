@@ -1,54 +1,34 @@
 import AppKit
 import PaxCore
-import PaxUI
 
 extension NetworkDiagnosticView {
   func sourcesContent() -> NSView {
-    let filter = action(
-      store.onlyDifferences
-        ? context.text("native_diagnostic.9f357adb61")
-        : context.text("native_diagnostic.5f36aced9d")
-    ) { [weak self] in
-      self?.store.onlyDifferences.toggle()
-    }
-    filter.setAccessibilityIdentifier("network-source-filter")
+    let report = intelligenceReport
+    let sources = P.sourceRows(report, context: context)
+    let assessment = P.sourceListOverview(sources, context: context)
+    let summary = topicSummary(
+      assessment.text, tone: assessment.tone,
+      metadata: routeSummaryMetadata(report, sourceData: true))
+    guard !sources.isEmpty else { return summary }
     var rows: [NSView] = []
-    for source in P.sourceRows(
-      intelligenceReport, onlyDifferences: store.onlyDifferences, context: context)
-    {
-      if !rows.isEmpty { rows.append(divider()) }
+    for source in sources {
+      let verdictKey: String
+      if source.unavailable {
+        verdictKey = "browser.check_unavailable"
+      } else {
+        switch source.tone {
+        case .difference: verdictKey = "diagnostic.overview.disagreement"
+        case .pending: verdictKey = "diagnostic.overview.partial"
+        default: verdictKey = "browser.check_observed"
+        }
+      }
       rows.append(
         diagnosticRow(
           title: source.title, subtitle: source.value, symbol: "globe", detail: source.detail,
-          tone: source.tone))
+          tone: source.tone, verdict: context.text(verdictKey), basis: source.value))
     }
-    let list = vertical(rows, spacing: 0)
+    let list = diagnosticTable(rows)
     list.setAccessibilityIdentifier("diagnostic-sources-table")
-    let views: [NSView] = [
-      horizontal([
-        heading(context.text("native_diagnostic.9608f6ef4a"), cardTitle: true), NSView(), filter,
-      ]),
-      text(
-        context.text("native_diagnostic.8870892b72")
-          + (report?.targetRouteName ?? context.text("native_diagnostic.4d2966c438"))
-          + context.text("native_diagnostic.803d722e2f")
-          + MeasurementTimestamp.text(report?.at)
-          + (store.stale ? context.text("native_diagnostic.68b60191d6") : ""), secondary: true),
-      assessmentText(P.sourceListOverview(intelligenceReport, context: context)), list,
-      text(P.acquisitionSummary(intelligenceReport, context: context), secondary: true),
-      text(
-        rows.isEmpty
-          ? context.text("native_diagnostic.19e7b8f8e3")
-          : context.text("native_diagnostic.a136915ce9"), secondary: true),
-      text(
-        context.text("native_diagnostic.4e31faa72a")
-          + MeasurementTimestamp.text(intelligenceReport?.at)
-          + (intelligenceReport?.at != report?.at
-            ? context.text("native_diagnostic.08b1ae01f0")
-              + P.problem(report?.providerError ?? "", context: context) : ""),
-        secondary: true),
-    ]
-    return vertical(views)
+    return vertical([summary, list])
   }
-
 }

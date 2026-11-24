@@ -2,14 +2,16 @@
 
 ## 4. IPC 与协议
 
-目标明细见[合同](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。
+`routes.usage.overview.v1` 单线路今日查询可附 `alert_progress`（截止、覆盖、双向字节及设置）。`traffic.alerts.v1`见[合同](../changes/pax-connect-network-control-plane/traffic-alerts.md)。
 
-MCP公共查询：`HelloResponse.daemon_instance`（字段8）为本次daemon进程随机身份，`timezone`（字段9）为其日历查询使用的时区。`operations.query.v1`提供`GetOperation`，按operation_id或client_id/request_id回读受控状态；实例变化、过期、未找到均是unknown，不能推断失败或重发。`OperationContext`绑定预期实例、稳定客户端和带时间戳UUID请求身份；SetProxyEnabled、SelectRoute、TestRoute、RecheckCurrentPath、CancelOperation、异步诊断/环境启动及M2导入确认、线路保存/删除/TLS/分组/组合、订阅刷新/删除/恢复已接入。旧App不传context仍走既有路径，Watch不重放旧结果。保留/权限合同见[MCP工具](../changes/pax-mcp/tool-contracts.md)§3。
+明细见[合同](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。
+
+MCP：Hello.daemon_instance标识进程，timezone为日历查询时区。`operations.query.v1`提供`GetOperation`，按operation_id或client_id/request_id回读受控状态；实例变化、过期、未找到均是unknown，不能推断失败或重发。`OperationContext`绑定预期实例、稳定客户端和带时间戳UUID请求身份；SetProxyEnabled、SelectRoute、TestRoute、RecheckCurrentPath、CancelOperation、异步诊断/环境启动及M2导入确认、线路保存/删除/TLS/分组/组合、订阅刷新/删除/恢复已接入。旧App不传context仍走既有路径，Watch不重放旧结果。保留/权限合同见[MCP工具](../changes/pax-mcp/tool-contracts.md)§3。
 
 context操作在受理前预留256项有界结果名额，活跃和10分钟内终态不淘汰，满则拒绝；相同请求同内容返回原operation_id，异内容request_conflict，旧时间戳不重新执行。结果variant包含RouteSaveResult、ProxyOperationResult、RouteMeasurementsResult、CurrentPathCheck及线路/网络/环境诊断报告；在原owner提交处冻结，保留选定/运行线路区别及批次逐项失败。OperationProgress的completed/total有presence，未知不造0。单结果≤1MiB、总预算32MiB在入队前预留，超预算拒绝新任务。为避免循环import，ProtectionStatus、RouteTestSummary、DownloadTestSummary、CurrentPathCheck移入operation.proto，EnvironmentDiagnosticRequest移入pax.proto；类型全名及原字段编号不变，不传任意业务JSON。
 
 
-`ai.profiles.operations.v1`将Profile mutation、Plan、Apply及StartAIProfileModels接入公共OperationContext/GetOperation。导入增加客户端生成的稳定UUID；旧App缺省ID仍由owner生成。目录刷新在AIProfilesServer拥有的有界任务中运行，stdio/RPC断开不撤销受理工作，关闭时取消目录读取并排空本地事务；只目录读取可取消。save/import先冻结保存回执，再独立发现模型，不能把目录失败说成未保存。公共结果追加AIProfileOperationResult（workspace/plan/保存或删除ID/应用outcome），引用的不含凭据的Profile状态消息位于ai_profile_state.proto；原消息全名及字段号不变。Go标准Workspace/Plan与Swift AIProfilesWorkspace/AIProfilePlan、DaemonAIProfileOperation同步；没有第二份配置写入或结果数据库。完整权限、DSH拒写与计划合同见[M6](../changes/pax-mcp/tools-ai-settings.md#m6profile与客户端配置)。
+`ai.profiles.operations.v1`将Profile mutation、Plan、Apply及StartAIProfileModels接入公共OperationContext/GetOperation。导入增加客户端生成的稳定UUID；旧App缺省ID仍由owner生成。目录刷新在AIProfilesServer拥有的有界任务中运行，stdio/RPC断开不撤销受理工作，关闭时取消目录读取并排空本地事务；只目录读取可取消。save/import先冻结保存回执，再独立发现模型，不能把目录失败说成未保存。AIProfileOperationResult含workspace/plan、保存或删除ID与应用outcome，引用ai_profile_state.proto无凭据投影，保留原消息与字段号。Go标准Workspace/Plan与Swift AIProfilesWorkspace/AIProfilePlan、DaemonAIProfileOperation同步；没有第二份配置写入或结果数据库。完整权限、DSH拒写与计划合同见[M6](../changes/pax-mcp/tools-ai-settings.md#m6profile与客户端配置)。
 
 `routes.edit_view.v1`：GetRouteEditView在daemon移除凭据，仅返回非秘密单outbound与JSON Pointer存在性；组合返回成员引用。SaveRouteEdit在单写队列内先CAS、同协议合并凭据/显式SecretUpdates，再typed校验并提交。非秘密JSON是整体替换；订阅覆盖沿既有DocumentOverride保存。UpdateRouteTLS.expected_route_revision供MCP绑定可见线路版本，原expected_revision仍是App使用的TLS策略版本；两者在owner内校验。预览context绑定实例、客户端和有界TTL内请求摘要，确认沿公共OperationContext。完整行为见[M2合同](../changes/pax-mcp/tools-routes.md)。
 
@@ -27,7 +29,7 @@ HistoryState.error_code=history_building：日志建立中，采集状态独立�
 
 引导：[合同](../changes/pax-connect-network-control-plane/first-run-onboarding.md)。Hello新增initial_install（onboarding.v1），启动建库前冻结；AI绑定附endpoint/target_path/requires_model，计划增加initialize/model_id与initializes/target_path，创建仍经Plan→Apply，无Key回传。
 
-用户模式通告`paxd.user`、`proxy.power`，不通告旧`app.session`。Hello字段7 `owner_app_pid`标识所属App。正式App的订阅与每条新命令连接（含退出）都先核对协议、App PID、能力与bundle指纹；指纹算法见下文“后台服务身份”。`PAX_SOCKET`保留开发入口。
+用户模式通告`paxd.user`、`proxy.power`，不通告旧`app.session`。Hello字段7 `owner_app_pid`标识所属App。正式App订阅与每条命令（含退出）先核对协议、App PID、能力与bundle指纹；指纹算法见下文“后台服务身份”。`PAX_SOCKET`保留开发入口。
 
 | 新增稳定产品码 | 触发 | 传递与呈现 |
 |---|---|---|
@@ -40,7 +42,7 @@ HistoryState.error_code=history_building：日志建立中，采集状态独立�
 
 `ShutdownAppSession` 同时用于用户子进程，排空后退出。用户 socket 为 `<os.UserHomeDir()>/Library/Application Support/Pax Connect/run/paxd.sock`；含 NUL 不得超过104字节，超长时使用已验证属于 euid 且0700的私有 os.TempDir() 下 `paxd/p.sock`，拒绝 `/tmp`、`/private/tmp`。唯一规则为 ipc.UserSocketPath；App 调 bundled daemon 的 `--print-user-socket`（只打印路径，不启动或读数据）后显式传 `--socket`。目录0700、socket0600；每次 accept 复用 LOCAL_PEERCRED、只准入 euid，绝不走 root 用户登记。旧Listen合同保留。
 
-`api/pax_core.proto` 定义独立 `pax.core.v1.PaxCore`（内部协议版本由 paxd 与 core 的 Hello 互验），只用于用户 paxd ↔ root pax-core，**不是 App-facing**，只生成 Go。RPC 为 Hello（运行可执行文件 SHA-256、版本、owner PID、上游状态）、ApplyProfile（JSON/revision）、ClearProfile、IdentifyTUNOwner（只识别）、Shutdown。错误 message 使用稳定 snake_case 产品 reason，拒绝配置前不调用内核；白名单与 reason 唯一实现见 `internal/singbox/core_profile.go`。同一 UDS 上暴露 `daemon.StartedService`，unary/stream interceptor 只准入票48列出的11个读取/选路/连接方法，其余 PermissionDenied。socket parent 为 root:wheel 0755，socket 为 owner-uid 0600；accept 核对 LOCAL_PEERCRED uid。owner PID/UID/内核启动时间绑定看门狗，1秒轮询；Clear 保留进程，Shutdown/owner退出/信号先清实例再关RPC和socket。root state 0700，cache 固定 `<state>/cache.db`。root验收见[tests/proxy-core](../../tests/proxy-core/RESULTS.md)。
+`api/pax_core.proto` 定义独立 `pax.core.v1.PaxCore`（内部协议版本由 paxd 与 core 的 Hello 互验），只用于用户 paxd ↔ root pax-core，**不是 App-facing**，只生成 Go。RPC 为 Hello（运行可执行文件 SHA-256、版本、owner PID、上游状态）、ApplyProfile（JSON/revision）、ClearProfile、IdentifyTUNOwner（只识别）、Shutdown。错误 message 使用稳定 snake_case 产品 reason，拒绝配置前不调用内核；白名单与 reason 唯一实现见 `internal/singbox/core_profile.go`。同一UDS暴露 `daemon.StartedService`，unary/stream interceptor 只准入票48列出的11个读取/选路/连接方法，其余 PermissionDenied。socket parent 为 root:wheel 0755，socket 为 owner-uid 0600；accept 核对 LOCAL_PEERCRED uid。owner PID/UID/内核启动时间绑定看门狗，1秒轮询；Clear 保留进程，Shutdown/owner退出/信号先清实例再关RPC和socket。root state 0700，cache 固定 `<state>/cache.db`。root验收见[tests/proxy-core](../../tests/proxy-core/RESULTS.md)。
 
 ApplyProfile 的 core 重写合同：`log.disabled` 强制为 false，`log.level` 收敛到 info/warn/error（fatal/panic → error，其余 → info）；`cache_file` 强制为 enabled 和 `<state>/cache.db`，调用方 `store_*` 不保留；`clash_api` 整体清除，包括 `store_selected`、`default_mode`。paxd 必须持有已选线路并在 Apply/reload 后重新应用，不依赖 sing-box selector 持久化。配置校验策略唯一实现为 `internal/singbox/core_profile.go`。系统代理仅允许一个 mixed inbound，固定 `127.0.0.1:<--mixed-port>`，使异常退出后的启动清理可覆盖它；不设置系统代理的 mixed 仍限 IPv4/IPv6 loopback。这些是配置处理合同，无 wire schema 变更。
 
@@ -52,7 +54,7 @@ Socket及身份见[runtime](runtime.md)§17；仅限本机UDS。
 
 **T3 快照同步**：Snapshot追加pending_operation_id（字段8）和degraded_reason（字段9），重连可恢复未完成开关与实际降级原因。ACK只代表命令入队，最终OperationResult与快照决定状态。
 
-**后台服务身份**：`HelloResponse.service_fingerprint`（字段4）提供运行中的已签名daemon字节与bundle plist字节拼接的SHA-256。App用bundle指纹核对实际服务；旧daemon无此字段且版本相同属于身份未知，不自动重注册，要求显式重新登记。具体更新事务与错误行为以T2 spec为准。
+**后台服务身份**：`HelloResponse.service_fingerprint`（字段4）提供运行中的已签名daemon字节与bundle plist字节拼接的SHA-256。App用bundle指纹核对实际服务；旧daemon无此字段且版本相同属于身份未知，不自动重注册，要求显式重新登记。更新与错误行为见T2 spec。
 
 跨端呈现语义及会话上限行见[呈现合同](presentation.md)。
 

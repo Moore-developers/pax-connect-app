@@ -2,6 +2,7 @@
 ///
 /// 上层只认这些 case，不认识 proto；新增载荷时在这里加 case 并在 `init(proto:)` 里映射。
 public enum DaemonEvent: Sendable {
+  case trafficAlerts(TrafficAlertState)
   case historyDelta(HistoryDelta)
   case currentPathCheck(CurrentPathCheck)
   case snapshot(DaemonSnapshot)
@@ -12,6 +13,7 @@ public enum DaemonEvent: Sendable {
 
 /// 完整快照：冷启动、重连、窗口重新可见时由 daemon 提供，是 UI 的唯一真相源。
 public struct DaemonSnapshot: Sendable, Equatable {
+  public var trafficAlerts: TrafficAlertState?
   public var history = HistoryState()
   public var currentPathCheck = CurrentPathCheck()
   /// 首帧 AI 用量状态；daemon 未采集时为 nil。

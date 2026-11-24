@@ -478,6 +478,7 @@ public final class ConnectionStore {
       if result.operationID == pendingOperationID {
         pendingOperationID = nil
       }
+    case .trafficAlerts: break
     case .aiUsage(let state):
       aiUsage = state
     }

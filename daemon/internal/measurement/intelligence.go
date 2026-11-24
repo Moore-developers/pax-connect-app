@@ -3,7 +3,6 @@ package measurement
 import (
 	"context"
 	"net/netip"
-	"slices"
 	"sync"
 	"time"
 )
@@ -18,9 +17,17 @@ var riskCapabilities = []struct{ label, capability string }{
 	{"伪家宽", "risk.residential"}, {"人类流量 <50%", "risk.human"}, {"广播 IP", "risk.broadcast"},
 }
 
-// DiagnoseIP collects independent exact-IP records first, then fills uncovered
-// checks from one bounded ipx.al report. Valid direct evidence always wins.
+// DiagnoseIP collects direct exact-IP evidence for the current environment.
 func (q *ExitLookup) DiagnoseIP(ctx context.Context, client Client, ip, scope string) NetworkDiagnosticReport {
+	return q.diagnoseIP(ctx, client, ip, scope, false)
+}
+
+// DiagnoseRouteIP adds comparison sources to the specified route's exact-IP lookup.
+func (q *ExitLookup) DiagnoseRouteIP(ctx context.Context, client Client, ip, scope string) NetworkDiagnosticReport {
+	return q.diagnoseIP(ctx, client, ip, scope, true)
+}
+
+func (q *ExitLookup) diagnoseIP(ctx context.Context, client Client, ip, scope string, comparison bool) NetworkDiagnosticReport {
 	addr, err := netip.ParseAddr(ip)
 	if err != nil || !addr.IsGlobalUnicast() || addr.IsPrivate() {
 		return NetworkDiagnosticReport{ProviderError: "exit_unavailable"}
@@ -57,12 +64,20 @@ func (q *ExitLookup) DiagnoseIP(ctx context.Context, client Client, ip, scope st
 		appendIntelligence(&report, q.fetchIntelligence(primary, client, id, ip, scope))
 	}
 	done()
-	missing := missingIntelligence(report)
-	if len(missing) > 0 && bounded.Err() == nil {
-		fallback := q.fetchIntelligence(bounded, client, "ipx.al", ip, scope)
-		fallback.attempt.FallbackFor = missing
-		fallback.attempt.FallbackReason = "independent_coverage_missing"
-		applyFallback(&report, fallback, missing)
+	var additional []intelligenceResult
+	if comparison {
+		additional = make([]intelligenceResult, len(routeComparisonIDs))
+		for i, id := range routeComparisonIDs {
+			workers.Go(func() {
+				additional[i] = q.fetchIntelligence(bounded, client, id, ip, scope)
+			})
+		}
+	}
+	workers.Wait()
+	for _, result := range additional {
+		report.Providers = append(report.Providers, result.attempt)
+		report.Sources = append(report.Sources, result.report.Sources...)
+		report.Facts = append(report.Facts, result.report.Facts...)
 	}
 	addUnmeasuredRisks(&report)
 	usable := len(report.Sources) > 0
@@ -138,73 +153,9 @@ func hasRisk(report NetworkDiagnosticReport, label string) bool {
 	}
 	return false
 }
-func missingIntelligence(report NetworkDiagnosticReport) []string {
-	caps := intelligenceCapabilities(report)
-	wanted := []string{"geo.country", "geo.asn"}
-	for _, item := range riskCapabilities {
-		wanted = append(wanted, item.capability)
-	}
-	var missing []string
-	for _, capability := range wanted {
-		if !slices.Contains(caps, capability) {
-			missing = append(missing, capability)
-		}
-	}
-	return missing
-}
-func applyFallback(report *NetworkDiagnosticReport, result intelligenceResult, missing []string) {
-	attempt := result.attempt
-	attempt.Capabilities = intelligenceCapabilities(result.report)
-	report.Providers = append(report.Providers, attempt)
-	if result.attempt.State != "observed" {
-		return
-	}
-	// Keep the original full multi-database comparison as attributed supplemental
-	// rows, even when the independent location is already available.
-	report.Sources = append(report.Sources, result.report.Sources...)
-	if report.Country == "" {
-		report.Country = result.report.Country
-	}
-	if report.Timezone == "" {
-		report.Timezone = result.report.Timezone
-	}
-	for _, fact := range result.report.Facts {
-		include := false
-		switch fact.Group {
-		case "risk", "exposure_detail":
-			for _, item := range riskCapabilities {
-				if fact.Label == item.label && slices.Contains(missing, item.capability) {
-					include = true
-				}
-			}
-		case "dnsbl":
-			include = slices.Contains(missing, "risk.dnsbl")
-		case "raw_risk", "registration", "network", "provider", "type":
-			include = fact.Value != ""
-		}
-		if !include {
-			continue
-		}
-		// Supplier numbers and metadata use their own attribution, but cannot replace
-		// an already-observed value for the same fact (including a valid zero).
-		existing := slices.ContainsFunc(report.Facts, func(f NetworkDiagnosticFact) bool {
-			return f.Group == fact.Group && f.Label == fact.Label
-		})
-		if !existing {
-			report.Facts = append(report.Facts, fact)
-		}
-	}
 
-	if report.IPType == "" {
-		report.IPType = result.report.IPType
-	}
-	// Supplier score stays ancillary; it never replaces the primary risk summary.
-	report.Score = result.report.Score
-	report.ScoreModel = result.report.ScoreModel
-	report.ScoreCeiling = result.report.ScoreCeiling
-}
 func addUnmeasuredRisks(report *NetworkDiagnosticReport) {
-	for _, label := range []string{"代理", "VPN", "Tor", "iCloud 中继", "匿名出口", "滥用标记", "代理风险 ≥67", "爬虫", "威胁情报名单", "恶意扫描", "邮件 DNSBL", "Shodan 标签", "开放端口", "已知漏洞", "自签证书", "机房 IP", "移动网络", "伪家宽", "人类流量 <50%", "广播 IP"} {
+	for _, label := range []string{"代理", "VPN", "Tor", "机房 IP", "移动网络", "开放端口", "已知漏洞", "Shodan 标签"} {
 		found := false
 		for _, fact := range report.Facts {
 			if fact.Group == "risk" && fact.Label == label {
@@ -215,7 +166,7 @@ func addUnmeasuredRisks(report *NetworkDiagnosticReport) {
 		if found {
 			continue
 		}
-		source := "独立与补充来源均未提供"
+		source := "直查来源未提供"
 		report.Facts = append(report.Facts, NetworkDiagnosticFact{Group: "risk", Label: label, Value: riskCategory(label), Source: source, State: "unknown"})
 	}
 }

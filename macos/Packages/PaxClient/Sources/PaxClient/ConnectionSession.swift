@@ -175,7 +175,7 @@ public actor ConnectionSession {
     version = envelope.snapshotVersion
     let urgent: Bool
     switch envelope.event {
-    case .operation, .currentPathCheck: urgent = true
+    case .operation, .currentPathCheck, .trafficAlerts: urgent = true
     case .historyDelta(let delta):
       urgent =
         delta.history.logDeletionGeneration != history.logDeletionGeneration

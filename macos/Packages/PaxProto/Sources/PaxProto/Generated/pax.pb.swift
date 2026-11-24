@@ -440,6 +440,15 @@ public nonisolated struct Pax_V1_Snapshot: @unchecked Sendable {
   /// Clears the value of `externalTun`. Subsequent reads from it will return its default value.
   public mutating func clearExternalTun() {_uniqueStorage()._externalTun = nil}
 
+  public var trafficAlerts: Pax_V1_TrafficAlertState {
+    get {_storage._trafficAlerts ?? Pax_V1_TrafficAlertState()}
+    set {_uniqueStorage()._trafficAlerts = newValue}
+  }
+  /// Returns true if `trafficAlerts` has been explicitly set.
+  public var hasTrafficAlerts: Bool {_storage._trafficAlerts != nil}
+  /// Clears the value of `trafficAlerts`. Subsequent reads from it will return its default value.
+  public mutating func clearTrafficAlerts() {_uniqueStorage()._trafficAlerts = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -534,6 +543,14 @@ public nonisolated struct Pax_V1_WatchEvent: @unchecked Sendable {
     set {_uniqueStorage()._payload = .aiUsage(newValue)}
   }
 
+  public var trafficAlerts: Pax_V1_TrafficAlertState {
+    get {
+      if case .trafficAlerts(let v)? = _storage._payload {return v}
+      return Pax_V1_TrafficAlertState()
+    }
+    set {_uniqueStorage()._payload = .trafficAlerts(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Payload: Equatable, Sendable {
@@ -543,6 +560,7 @@ public nonisolated struct Pax_V1_WatchEvent: @unchecked Sendable {
     case historyDelta(Pax_V1_HistoryDelta)
     case currentPathCheck(Pax_V1_CurrentPathCheck)
     case aiUsage(Pax_V1_AIUsageState)
+    case trafficAlerts(Pax_V1_TrafficAlertState)
 
   }
 
@@ -2095,6 +2113,46 @@ public nonisolated struct Pax_V1_RouteUsageResponse: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Today includes route summaries; a route_id also includes ranks for that
+  /// requested window (today/hour), from the same frozen traffic snapshot.
+  public var routes: [Pax_V1_RouteUsageSummary] {
+    get {_storage._routes}
+    set {_uniqueStorage()._routes = newValue}
+  }
+
+  public var hourFrom: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_storage._hourFrom ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_uniqueStorage()._hourFrom = newValue}
+  }
+  /// Returns true if `hourFrom` has been explicitly set.
+  public var hasHourFrom: Bool {_storage._hourFrom != nil}
+  /// Clears the value of `hourFrom`. Subsequent reads from it will return its default value.
+  public mutating func clearHourFrom() {_uniqueStorage()._hourFrom = nil}
+
+  public var applications: [Pax_V1_RouteUsageRank] {
+    get {_storage._applications}
+    set {_uniqueStorage()._applications = newValue}
+  }
+
+  public var domains: [Pax_V1_RouteUsageRank] {
+    get {_storage._domains}
+    set {_uniqueStorage()._domains = newValue}
+  }
+
+  public var ips: [Pax_V1_RouteUsageRank] {
+    get {_storage._ips}
+    set {_uniqueStorage()._ips = newValue}
+  }
+
+  public var alertProgress: Pax_V1_RouteAlertProgress {
+    get {_storage._alertProgress ?? Pax_V1_RouteAlertProgress()}
+    set {_uniqueStorage()._alertProgress = newValue}
+  }
+  /// Returns true if `alertProgress` has been explicitly set.
+  public var hasAlertProgress: Bool {_storage._alertProgress != nil}
+  /// Clears the value of `alertProgress`. Subsequent reads from it will return its default value.
+  public mutating func clearAlertProgress() {_uniqueStorage()._alertProgress = nil}
+
   public var items: [Pax_V1_RouteUsageBucket] {
     get {_storage._items}
     set {_uniqueStorage()._items = newValue}
@@ -3543,7 +3601,7 @@ nonisolated extension Pax_V1_GetSnapshotRequest: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Snapshot"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}snapshot_version\0\u{1}status\0\u{1}routes\0\u{3}current_route\0\u{3}today_traffic\0\u{1}settings\0\u{3}recent_logs\0\u{3}pending_operation_id\0\u{3}degraded_reason\0\u{3}active_tls\0\u{3}degraded_reasons\0\u{3}catalog_revision\0\u{3}selected_route_id\0\u{3}pending_target_route_id\0\u{1}subscriptions\0\u{3}testing_route_ids\0\u{3}route_groups\0\u{3}downloading_route_ids\0\u{3}download_operation_id\0\u{3}measurement_error\0\u{3}physical_egress\0\u{3}connection_session\0\u{3}connection_generation\0\u{3}route_measurement_progress\0\u{3}exit_pool_state\0\u{3}latency_operation_id\0\u{3}test_operation_ids\0\u{3}download_queue\0\u{1}history\0\u{3}current_path_check\0\u{3}exit_operation_ids\0\u{3}ai_usage\0\u{3}external_tun\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}snapshot_version\0\u{1}status\0\u{1}routes\0\u{3}current_route\0\u{3}today_traffic\0\u{1}settings\0\u{3}recent_logs\0\u{3}pending_operation_id\0\u{3}degraded_reason\0\u{3}active_tls\0\u{3}degraded_reasons\0\u{3}catalog_revision\0\u{3}selected_route_id\0\u{3}pending_target_route_id\0\u{1}subscriptions\0\u{3}testing_route_ids\0\u{3}route_groups\0\u{3}downloading_route_ids\0\u{3}download_operation_id\0\u{3}measurement_error\0\u{3}physical_egress\0\u{3}connection_session\0\u{3}connection_generation\0\u{3}route_measurement_progress\0\u{3}exit_pool_state\0\u{3}latency_operation_id\0\u{3}test_operation_ids\0\u{3}download_queue\0\u{1}history\0\u{3}current_path_check\0\u{3}exit_operation_ids\0\u{3}ai_usage\0\u{3}external_tun\0\u{3}traffic_alerts\0")
 
   fileprivate class _StorageClass {
     var _snapshotVersion: UInt64 = 0
@@ -3579,6 +3637,7 @@ nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._Mes
     var _exitOperationIds: Dictionary<String,String> = [:]
     var _aiUsage: Pax_V1_AIUsageState? = nil
     var _externalTun: Pax_V1_ExternalTUN? = nil
+    var _trafficAlerts: Pax_V1_TrafficAlertState? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -3622,6 +3681,7 @@ nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._Mes
       _exitOperationIds = source._exitOperationIds
       _aiUsage = source._aiUsage
       _externalTun = source._externalTun
+      _trafficAlerts = source._trafficAlerts
     }
   }
 
@@ -3673,6 +3733,7 @@ nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._Mes
         case 31: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &_storage._exitOperationIds) }()
         case 32: try { try decoder.decodeSingularMessageField(value: &_storage._aiUsage) }()
         case 33: try { try decoder.decodeSingularMessageField(value: &_storage._externalTun) }()
+        case 34: try { try decoder.decodeSingularMessageField(value: &_storage._trafficAlerts) }()
         default: break
         }
       }
@@ -3784,6 +3845,9 @@ nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._Mes
       try { if let v = _storage._externalTun {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
       } }()
+      try { if let v = _storage._trafficAlerts {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 34)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3826,6 +3890,7 @@ nonisolated extension Pax_V1_Snapshot: SwiftProtobuf.Message, SwiftProtobuf._Mes
         if _storage._exitOperationIds != rhs_storage._exitOperationIds {return false}
         if _storage._aiUsage != rhs_storage._aiUsage {return false}
         if _storage._externalTun != rhs_storage._externalTun {return false}
+        if _storage._trafficAlerts != rhs_storage._trafficAlerts {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -3897,7 +3962,7 @@ nonisolated extension Pax_V1_WatchRequest: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pax_V1_WatchEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WatchEvent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}seq\0\u{3}snapshot_version\0\u{2}\u{8}snapshot\0\u{2}\u{4}operation\0\u{4}\u{2}history_delta\0\u{3}current_path_check\0\u{3}ai_usage\0\u{b}status\0\u{b}traffic\0\u{b}log\0\u{b}connection\0\u{c}\u{b}\u{1}\u{c}\u{c}\u{1}\u{c}\u{d}\u{1}\u{c}\u{f}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}seq\0\u{3}snapshot_version\0\u{2}\u{8}snapshot\0\u{2}\u{4}operation\0\u{4}\u{2}history_delta\0\u{3}current_path_check\0\u{3}ai_usage\0\u{3}traffic_alerts\0\u{b}status\0\u{b}traffic\0\u{b}log\0\u{b}connection\0\u{c}\u{b}\u{1}\u{c}\u{c}\u{1}\u{c}\u{d}\u{1}\u{c}\u{f}\u{1}")
 
   fileprivate class _StorageClass {
     var _seq: UInt64 = 0
@@ -4001,6 +4066,19 @@ nonisolated extension Pax_V1_WatchEvent: SwiftProtobuf.Message, SwiftProtobuf._M
             _storage._payload = .aiUsage(v)
           }
         }()
+        case 19: try {
+          var v: Pax_V1_TrafficAlertState?
+          var hadOneofValue = false
+          if let current = _storage._payload {
+            hadOneofValue = true
+            if case .trafficAlerts(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payload = .trafficAlerts(v)
+          }
+        }()
         default: break
         }
       }
@@ -4039,6 +4117,10 @@ nonisolated extension Pax_V1_WatchEvent: SwiftProtobuf.Message, SwiftProtobuf._M
       case .aiUsage?: try {
         guard case .aiUsage(let v)? = _storage._payload else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+      }()
+      case .trafficAlerts?: try {
+        guard case .trafficAlerts(let v)? = _storage._payload else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       }()
       case nil: break
       }
@@ -6838,9 +6920,15 @@ nonisolated extension Pax_V1_RouteHistoryResponse: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RouteUsageResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}items\0\u{3}next_cursor\0\u{1}partial\0\u{3}today_upload\0\u{3}today_download\0\u{1}connections\0\u{3}sampled_at\0\u{1}error\0\u{1}basis\0\u{1}upload\0\u{1}download\0\u{1}from\0\u{1}until\0\u{3}coverage_start\0\u{3}window_connections\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}items\0\u{3}next_cursor\0\u{1}partial\0\u{3}today_upload\0\u{3}today_download\0\u{1}connections\0\u{3}sampled_at\0\u{1}error\0\u{1}basis\0\u{1}upload\0\u{1}download\0\u{1}from\0\u{1}until\0\u{3}coverage_start\0\u{3}window_connections\0\u{1}routes\0\u{3}hour_from\0\u{1}applications\0\u{1}domains\0\u{1}ips\0\u{3}alert_progress\0")
 
   fileprivate class _StorageClass {
+    var _routes: [Pax_V1_RouteUsageSummary] = []
+    var _hourFrom: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _applications: [Pax_V1_RouteUsageRank] = []
+    var _domains: [Pax_V1_RouteUsageRank] = []
+    var _ips: [Pax_V1_RouteUsageRank] = []
+    var _alertProgress: Pax_V1_RouteAlertProgress? = nil
     var _items: [Pax_V1_RouteUsageBucket] = []
     var _nextCursor: String = String()
     var _partial: Bool = false
@@ -6866,6 +6954,12 @@ nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftPro
     private init() {}
 
     init(copying source: _StorageClass) {
+      _routes = source._routes
+      _hourFrom = source._hourFrom
+      _applications = source._applications
+      _domains = source._domains
+      _ips = source._ips
+      _alertProgress = source._alertProgress
       _items = source._items
       _nextCursor = source._nextCursor
       _partial = source._partial
@@ -6914,6 +7008,12 @@ nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftPro
         case 13: try { try decoder.decodeSingularMessageField(value: &_storage._until) }()
         case 14: try { try decoder.decodeSingularMessageField(value: &_storage._coverageStart) }()
         case 15: try { try decoder.decodeSingularUInt64Field(value: &_storage._windowConnections) }()
+        case 16: try { try decoder.decodeRepeatedMessageField(value: &_storage._routes) }()
+        case 17: try { try decoder.decodeSingularMessageField(value: &_storage._hourFrom) }()
+        case 18: try { try decoder.decodeRepeatedMessageField(value: &_storage._applications) }()
+        case 19: try { try decoder.decodeRepeatedMessageField(value: &_storage._domains) }()
+        case 20: try { try decoder.decodeRepeatedMessageField(value: &_storage._ips) }()
+        case 21: try { try decoder.decodeSingularMessageField(value: &_storage._alertProgress) }()
         default: break
         }
       }
@@ -6971,6 +7071,24 @@ nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftPro
       if _storage._windowConnections != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._windowConnections, fieldNumber: 15)
       }
+      if !_storage._routes.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._routes, fieldNumber: 16)
+      }
+      try { if let v = _storage._hourFrom {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+      } }()
+      if !_storage._applications.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._applications, fieldNumber: 18)
+      }
+      if !_storage._domains.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._domains, fieldNumber: 19)
+      }
+      if !_storage._ips.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._ips, fieldNumber: 20)
+      }
+      try { if let v = _storage._alertProgress {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -6980,6 +7098,12 @@ nonisolated extension Pax_V1_RouteUsageResponse: SwiftProtobuf.Message, SwiftPro
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
+        if _storage._routes != rhs_storage._routes {return false}
+        if _storage._hourFrom != rhs_storage._hourFrom {return false}
+        if _storage._applications != rhs_storage._applications {return false}
+        if _storage._domains != rhs_storage._domains {return false}
+        if _storage._ips != rhs_storage._ips {return false}
+        if _storage._alertProgress != rhs_storage._alertProgress {return false}
         if _storage._items != rhs_storage._items {return false}
         if _storage._nextCursor != rhs_storage._nextCursor {return false}
         if _storage._partial != rhs_storage._partial {return false}

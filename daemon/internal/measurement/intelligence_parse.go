@@ -6,14 +6,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // parseIntelligence retains only bounded, standard evidence from fixed sources.
 func parseIntelligence(id string, body []byte, expected netip.Addr) NetworkDiagnosticReport {
-	invalid := NetworkDiagnosticReport{ProviderError: "provider_response_invalid"}
-	if id == "ipx.al" {
-		return parseNetworkReport(body, expected)
+	if isRouteComparison(id) {
+		return parseRouteComparison(id, body, expected)
 	}
+	invalid := NetworkDiagnosticReport{ProviderError: "provider_response_invalid"}
 	if id == "internetdb" {
 		return parseInternetDB(body, expected)
 	}
@@ -149,4 +150,17 @@ func riskCategory(label string) string {
 	default:
 		return "滥用"
 	}
+}
+
+func diagnosticText(s string) string {
+	s = strings.TrimSpace(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s))
+	if len([]rune(s)) > 180 {
+		s = string([]rune(s)[:180])
+	}
+	return s
 }

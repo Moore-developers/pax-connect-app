@@ -42,6 +42,7 @@ type Controller struct {
 	aiStore               *aiusage.Store // set by ConfigureAIUsage; its state is the Snapshot.ai_usage first frame
 	aiForeground          atomic.Bool    // last AI usage visibility seen by aiUsageViewsChanged
 	privacy               *privacyOwner
+	trafficAlerts         *trafficAlertOwner
 	routing               *routingLibraryOwner
 	icons                 *siteicon.Store
 	history               *historyOwner
@@ -143,6 +144,9 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 	if c.privacy != nil {
 		capabilities = append(capabilities, "network.privacy.v1")
 	}
+	if c.trafficAlerts != nil {
+		capabilities = append(capabilities, "traffic.alerts.v1")
+	}
 	if c.routing != nil {
 		capabilities = append(capabilities, "routing.library.v1")
 	}
@@ -163,6 +167,9 @@ func (c *Controller) Hello(ctx context.Context, req *paxv1.HelloRequest) (*paxv1
 	}
 	if c.data != nil {
 		capabilities = append(capabilities, "routes.history", "routes.usage")
+	}
+	if c.traffic != nil {
+		capabilities = append(capabilities, "routes.usage.overview.v1")
 	}
 	if c.pathDiagnostics != nil {
 		capabilities = append(capabilities, "network.path_diagnostics", "network.connection_diagnostics.v1")

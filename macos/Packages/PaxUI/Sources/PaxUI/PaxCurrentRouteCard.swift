@@ -41,7 +41,7 @@ public final class PaxCurrentRouteCard: PaxCard {
     public var noSelection = "未选择线路", comparison = "较上次", latencyTitle = "响应延迟"
     public var latencyCopy = PaxTimeSeriesCopy()
     public var protocolLabel = "协议", exitLabel = "上次测得出口", measuredPrefix = "测量时间 "
-    public var region = "出口地区", switchRoute = "切换线路 ›"
+    public var region = "出口地区", switchRoute = "切换线路"
     public init() {}
   }
   private var copy = Copy()
@@ -50,24 +50,29 @@ public final class PaxCurrentRouteCard: PaxCard {
   private let title = PaxText.label("")
   private let badge = PaxTag("", style: .currentRoute)
   private let link = PaxCompactButton("", style: .text, target: nil, action: nil)
-  private let number = PaxText.label(""), unit = PaxText.label("ms", secondary: true)
+  private let number = PaxText.label("", font: PaxTheme.Dashboard.readoutFont(size: 42, bold: true))
+  private let unit = PaxText.label("ms", font: PaxTheme.Dashboard.readoutFont(), secondary: true)
   private let delta = PaxTag("", style: .currentRoute)
-  private let comparison = PaxText.label("", secondary: true)
-  private let note = PaxText.label("", secondary: true)
+  private let comparison = PaxText.label(
+    "", font: PaxTheme.Dashboard.readoutFont(), secondary: true)
+  private let note = PaxText.label("", font: PaxTheme.Dashboard.readoutFont(), secondary: true)
   private let panel = NSView(), line = NSBox()
   private let splitLine = NSBox(), chartLine = NSBox()
   private let axis = PaxText.label("", secondary: true)
   private let emptySurface = NSView()
   private let emptyIcon = PaxIcon.view("waveform.path.ecg", size: 20)
   private let emptyMetric = PaxText.label(
-    "", font: PaxTheme.Typography.label(size: 16, weight: .medium))
+    "", font: PaxTheme.Dashboard.readoutFont(size: 16))
   private let chartEmpty = PaxText.label("", secondary: true)
   private let trend = PaxTimeSeriesChart(
     series: .init(
       domain: .init(start: .distantPast, end: .distantPast), points: [], axis: .samples),
     style: .latency(), density: .compact)
-  private let labels = (0..<3).map { _ in PaxText.label("", secondary: true) }
-  private let values = (0..<3).map { _ in PaxText.label("") }
+  private let labels = (0..<3).map { _ in
+    PaxText.label("", font: PaxTheme.Dashboard.readoutFont(), secondary: true)
+  }
+  private let values = (0..<3).map { _ in PaxText.label("", font: PaxTheme.Dashboard.readoutFont())
+  }
   public var onSwitch: (() -> Void)?
   public override var isFlipped: Bool { true }
   public init(tooltip: PaxChartTooltipCoordinator? = nil) {
@@ -94,7 +99,7 @@ public final class PaxCurrentRouteCard: PaxCard {
     trend.setAccessibilityIdentifier("route-quality-trend")
     link.target = self
     link.action = #selector(open)
-    number.font = PaxTheme.Typography.metric(size: 42, weight: .medium)
+    delta.font = PaxTheme.Dashboard.readoutFont(size: PaxTheme.Dashboard.captionFont)
     title.font = PaxTheme.Typography.label(size: 16, weight: .semibold)
     for value in values { value.alignment = .right }
     number.setAccessibilityIdentifier("route-quality-rtt")
@@ -162,7 +167,7 @@ public final class PaxCurrentRouteCard: PaxCard {
     let p = PaxTheme.Dashboard.inset
     let w = bounds.width - 2 * p
     icon.frame = NSRect(x: p, y: p, width: 28, height: 28)
-    link.sizeToFit()
+    link.frame.size = link.intrinsicContentSize
     link.frame.origin = NSPoint(
       x: bounds.width - p - link.frame.width, y: p + (28 - link.frame.height) / 2)
     let tx = icon.frame.maxX + 8
@@ -197,11 +202,11 @@ public final class PaxCurrentRouteCard: PaxCard {
         width: max(1, panel.frame.maxX - labels[i].frame.maxX - 11), height: 21)
     }
     number.frame = NSRect(
-      x: p, y: center - 39, width: min(number.intrinsicContentSize.width, w * 0.40 - 30), height: 54
+      x: p, y: center - 44, width: min(number.intrinsicContentSize.width, w * 0.40 - 30), height: 54
     )
-    unit.frame = NSRect(x: number.frame.maxX + 2, y: center - 12, width: 26, height: 20)
+    unit.frame = NSRect(x: number.frame.maxX + 2, y: center - 17, width: 26, height: 20)
     delta.frame.size = delta.intrinsicContentSize
-    delta.frame.origin = NSPoint(x: p, y: center + 19)
+    delta.frame.origin = NSPoint(x: p, y: center + 15)
     comparison.frame = NSRect(
       x: delta.frame.maxX + 4, y: center + 19, width: max(1, split - delta.frame.maxX - 8),
       height: 22)

@@ -15,7 +15,7 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
   private var groupButton: PaxRouteButton?
   let store: RouteWorkbenchStore
   let tooltip: PaxChartTooltipCoordinator
-  private let table = PaxRouteTable()
+  let table = PaxRouteTable()
   private var displayedGroup: String?
   private var displayedOrder: [String] = []
   private var orderingKey = ""
@@ -48,7 +48,7 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
     table.applyColumnTitles(
       [
         "", "routes.column.name", "routes.column.features", "routes.column.address",
-        "routes.column.latency", "routes.column.speed",
+        "routes.column.latency", "routes.column.speed", "routes.column.usage",
       ].map { $0.isEmpty ? "" : interfaceCopy.text($0) },
       emptyText: interfaceCopy.text("common.no_data"))
     tabs.applyMore(
@@ -130,6 +130,12 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
     search.action = #selector(searchChanged)
     search.sendsSearchStringImmediately = true
     search.setAccessibilityIdentifier("route-search")
+    table.usageContent = { [weak self] id in
+      guard let self, let monitor = self.store.routes?.usageMonitor else { return nil }
+      return RouteUsageReadoutView(
+        monitor: monitor, id: id,
+        name: self.store.node(id)?.name ?? id, context: self.interfaceCopy.context)
+    }
     table.onScrollPosition = { [weak self] atTop in self?.readingList = !atTop }
     table.onSort = { [weak self] column, ascending in
       self?.store.sortByColumn(column, ascending: ascending)
@@ -210,6 +216,10 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
     render()
     table.showFirstRowIfNeeded()
   }
+  override func viewDidDisappear() {
+    super.viewDidDisappear()
+    table.closeUsageReadout()
+  }
   func focusSearch() { view.window?.makeFirstResponder(search) }
   private func observe() {
     withObservationTracking {
@@ -285,7 +295,7 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
             store.info($0.front, context: self.interfaceCopy.context).cfIP
               ?? store.info($0.final, context: self.interfaceCopy.context).cfIP
           } ?? p.cfIP
-        return PaxRouteTableRow(
+        var row = PaxRouteTableRow(
           id: n.id, name: n.name,
           connection: ProxyRoutePresentation.connection(n),
           cf: cf == nil ? nil : "CF",
@@ -304,6 +314,14 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
           latencyCaption: stale.latency,
           speed: p.speed.display(.speed, context: interfaceCopy.context),
           latencyColor: p.latency.latencyColor)
+        if let summary = store.routes?.usageMonitor.summary(n.id) {
+          row.uploadText = TrafficFormatting.compactBytes(summary.todayUpload)
+          row.downloadText = TrafficFormatting.compactBytes(summary.todayDownload)
+          row.upload = Double(summary.todayUpload)
+          row.download = Double(summary.todayDownload)
+
+        }
+        return row
       }, resetScroll: displayedGroup != store.selectedGroup)
     displayedGroup = store.selectedGroup
     empty.isHidden = !store.visible.isEmpty
@@ -335,8 +353,10 @@ final class RouteWorkbenchViewController: NSViewController, InterfaceLanguageCon
       table.reveal(id)
       revealRouteID = nil
     }
-    notice.stringValue = store.statusMessage
-    notice.isHidden = store.statusMessage.isEmpty
+    notice.stringValue = [
+      store.statusMessage, store.routes?.usageMonitor.error,
+    ].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    notice.isHidden = notice.stringValue.isEmpty
   }
   @objc private func diagnoseTrafficPath() {
     guard let diagnostics = store.connectionStore?.trafficPathStore else { return }

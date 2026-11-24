@@ -90,7 +90,7 @@ extension EnvironmentDiagnosticPresentation {
             web, name: context.text("environment_evidence.e19c3b9e26"), context: context)
       case "webrtc":
         let verdict = webRTCVerdict(web, pending: web.complete != true && waiting, context: context)
-        value = verdict.text
+        value = verdict.summary
         tone = verdict.tone
         if includePhysical, let physical = verdict.physicalDetail { extra = physical }
       default: break
@@ -133,17 +133,38 @@ extension EnvironmentDiagnosticPresentation {
   )
     -> NetworkDiagnosticPresentation.Assessment
   {
-    let a = checks.first { $0.kind == "echo_ipip" && $0.state == "observed" }?.value
-    let b = checks.first { $0.kind == "echo_ipinfo" && $0.state == "observed" }?.value
+    let a = checks.first { $0.kind == "echo_ipip" && $0.state == "observed" }
+      .map { exitParts($0.value).ip }
+    let b = checks.first { $0.kind == "echo_ipinfo" && $0.state == "observed" }
+      .map { exitParts($0.value).ip }
     guard let a, let b, !a.isEmpty, !b.isEmpty else {
       return .init(text: context.text("environment_evidence.dc0767f559"), tone: .pending)
     }
     guard a.contains(":") == b.contains(":") else {
       return .init(text: context.text("environment_evidence.27c1178bb0"), tone: .information)
     }
-    return .init(
-      text: a == b
-        ? context.text("environment_evidence.ca00570dd3")
-        : context.text("environment_evidence.0270c8adb6"), tone: .information)
+    if a == b {
+      return .init(text: context.text("environment_evidence.ca00570dd3"), tone: .information)
+    }
+    return .init(text: context.text("browser.check_exit_mismatch"), tone: .difference)
+  }
+
+  public static func exitReading(
+    _ check: EnvironmentDiagnosticReport.Check, context: PresentationContext = .chinese
+  ) -> String {
+    guard check.kind == "echo_ipip" || check.kind == "echo_ipinfo" else { return check.value }
+    let (ip, location) = exitParts(check.value)
+    guard let location else { return ip + " · " + context.text("browser.check_exit_no_location") }
+    if check.kind == "echo_ipip" { return ip + " · " + location }
+    let fields = location.components(separatedBy: ", ")
+    let country = fields.first ?? ""
+    let name =
+      country.isEmpty ? "" : NetworkDiagnosticPresentation.countryName(country, context: context)
+    return ([ip, name] + fields.dropFirst()).filter { !$0.isEmpty }.joined(separator: " · ")
+  }
+
+  private static func exitParts(_ value: String) -> (ip: String, location: String?) {
+    let parts = value.components(separatedBy: " · ")
+    return (parts[0], parts.dropFirst().first)
   }
 }

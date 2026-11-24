@@ -7,18 +7,36 @@ extension NetworkDiagnosticView {
 
   func showEnvironmentBlock() {
     append(environmentSummary())
+    let environment = store.currentEnvironment
+    let title = text(context.text("diagnostic.overview.environment"))
+    title.font = PaxTheme.Typography.label(size: PaxTheme.Dashboard.bodyTitle, weight: .semibold)
+    let stamp =
+      context.text(
+        environment?.stale == true ? "native_diagnostic.46acb06da6" : "native_diagnostic.d3aababeca"
+      )
+      + MeasurementTimestamp.text(environment?.report?.at)
+    append(
+      horizontal([
+        title, text("Mac · " + browserName, secondary: true), NSView(),
+        text(stamp, secondary: true),
+      ]))
     append(mergedEnvironmentCard())
+  }
+
+  var browserName: String {
+    let name = store.currentEnvironment?.report?.browser.browser ?? ""
+    return name.isEmpty ? context.text("diagnostic.overview.default_browser") : name
   }
 
   private func environmentSummary() -> NSView {
     let environment = store.currentEnvironment
     let overview = E.overview(environment?.report, context: context)
-    let intel = overview.intelligence
+    let intel = overview.intelligence?.excludingProviderEvidence("ipx.al")
     let address =
       overview.address.isEmpty ? context.text("native_diagnostic.f97f6a88ec") : overview.address
     let ip = text(address)
     ip.font = PaxTheme.Typography.label(
-      size: PaxTheme.NetworkDiagnostics.ipFont, weight: .medium)
+      size: PaxTheme.NetworkDiagnostics.environmentIPFont, weight: .medium)
     ip.isSelectable = true
     ip.maximumNumberOfLines = 1
     ip.lineBreakMode = .byTruncatingTail
@@ -42,8 +60,6 @@ extension NetworkDiagnosticView {
       source?.org ?? "",
     ].filter { !$0.isEmpty }.joined(separator: " · ")
     let counts = P.riskCounts(intel)
-    let native = P.nativeAssessment(intel, context: context)
-    let risk = blacklistSummary(intel)
     let type =
       intel?.ipType.isEmpty == false
       ? P.typeName(intel?.ipType ?? "", context: context)
@@ -58,116 +74,61 @@ extension NetworkDiagnosticView {
     case nil, "": shortType = context.text("native_diagnostic.e7954a2f3a")
     default: shortType = type
     }
-    let cells: [NSView] = [
-      vertical(
-        [
-          text(
-            flag(intel?.country ?? "") + context.text("native_diagnostic.4ebb761ac3"),
-            secondary: true), ip,
-        ],
-        spacing: PaxTheme.Spacing.tight),
-      metricCard(
-        context.text("native_diagnostic.14ace9bd02"),
-        value: intel == nil
-          ? "—"
-          : context.text(
-            "native_diagnostic.e77ea3c4c6",
-            ["arg0": String(describing: counts.hits), "arg1": String(describing: counts.unknown)]),
-        color: summaryColor(counts.hits > 0 ? .difference : .pending),
-        splitValue: true,
-        detail: P.acquisitionSummary(intel, context: context)
-          + context.text("native_diagnostic.3dec23eae6")),
-      metricCard(
-        context.text("native_diagnostic.33ea5ef367"), value: native.text,
-        color: native.tone == .pending
-          ? PaxTheme.Color.textSecondary : PaxTheme.NetworkDiagnostics.summaryAccent,
-        detail: context.text("native_diagnostic.303b57d760")
-          + P.providerDetails(intel, id: "ipx.al", context: context)),
-      metricCard(
-        context.text("native_diagnostic.ba40014ff4"), value: shortType,
-        color: intel?.ipType.isEmpty == false
-          ? PaxTheme.NetworkDiagnostics.summaryText : PaxTheme.Color.textSecondary,
-        detail: context.text("native_diagnostic.2a6065d3d5")),
-      metricCard(
-        context.text("native_diagnostic.174ec5a4ab"), value: risk.text,
-        color: summaryColor(risk.tone), splitValue: true, detail: risk.detail),
-    ]
-    var columns: [NSView] = []
-    for (index, cell) in cells.enumerated() {
-      if index > 0 {
-        let line = NSBox()
-        line.boxType = .separator
-        line.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.cardBorder).isActive = true
-        line.heightAnchor.constraint(
-          equalToConstant: PaxTheme.NetworkDiagnostics.environmentMetricHeight
-        ).isActive = true
-        columns.append(line)
-      }
-      columns.append(cell)
+    let browser = environment?.report?.browser
+    let hasBrowserIP = [browser?.ipv4, browser?.ipv6].contains { $0?.isEmpty == false }
+    let tagText =
+      overview.address.isEmpty ? context.text("common.unknown") : hasBrowserIP ? browserName : "Mac"
+    let tag = PaxTag(tagText, style: .currentRoute)
+    tag.setAccessibilityLabel(tagText)
+    tag.setContentHuggingPriority(.required, for: .horizontal)
+    let title = cardHeading("diagnostic.overview.exit", symbol: "globe")
+    let risk =
+      intel?.facts.contains(where: { $0.group == "risk" }) == true
+      ? context.text(
+        "native_diagnostic.e77ea3c4c6",
+        ["arg0": String(counts.hits), "arg1": String(counts.unknown)])
+      : context.text("common.unknown")
+    let providers =
+      intel?.providers?.filter { ["observed", "partial", "not_indexed"].contains($0.state) }
+      .map(\.id) ?? []
+    let names = providers.isEmpty ? (intel?.sources.map(\.name) ?? []) : providers
+    let sources =
+      names.isEmpty ? context.text("native_diagnostic.e7954a2f3a") : names.joined(separator: " · ")
+    func metric(_ key: String, _ value: String) -> NSView {
+      let caption = text(context.text(key), secondary: true)
+      let field = text(value)
+      field.maximumNumberOfLines = 1
+      field.lineBreakMode = .byTruncatingTail
+      field.alignment = .right
+      field.toolTip = value
+      caption.setContentHuggingPriority(.required, for: .horizontal)
+      return horizontal([caption, field])
     }
-    let row = horizontal(columns, spacing: PaxTheme.Spacing.medium)
-    row.alignment = .top
-    let baseWidth = cells[2].widthAnchor
-    for cell in cells.dropFirst(3) {
-      cell.widthAnchor.constraint(equalTo: baseWidth).isActive = true
-    }
-    let riskWeight: CGFloat = context.language == .english ? 1.25 : 1
-    cells[1].widthAnchor.constraint(equalTo: baseWidth, multiplier: riskWeight).isActive = true
-    cells[0].widthAnchor.constraint(equalTo: baseWidth, multiplier: 3 - riskWeight).isActive = true
-    let result = card(row, summary: true)
-    result.toolTip = detail + "\n" + overview.source + " · " + overview.comparison
+    ip.textColor = PaxTheme.CurrentRoute.ink
+    let region = text(location)
+    region.textColor = PaxTheme.CurrentRoute.ink
+    let addressGroup = vertical([ip, region], spacing: PaxTheme.Spacing.tight)
+    let metrics = vertical([
+      metric("native_diagnostic.14ace9bd02", risk),
+      metric("diagnostic.overview.exit_type", shortType),
+      metric("diagnostic.overview.providers", sources),
+    ])
+    let rule = NSBox()
+    rule.boxType = .separator
+    rule.widthAnchor.constraint(equalToConstant: PaxTheme.Layout.cardBorder).isActive = true
+    let reading = horizontal([addressGroup, rule, metrics], spacing: PaxTheme.Spacing.page)
+    rule.heightAnchor.constraint(equalTo: metrics.heightAnchor).isActive = true
+    addressGroup.widthAnchor.constraint(
+      equalTo: metrics.widthAnchor, multiplier: PaxTheme.NetworkDiagnostics.heroExitRatio
+    ).isActive = true
+    let result = card(
+      vertical([horizontal([title, tag]), divider(), reading], spacing: PaxTheme.Spacing.medium),
+      style: .currentRoute)
+    result.setAccessibilityIdentifier("diagnostic-environment-overview")
+    result.toolTip = [
+      detail, overview.source, overview.comparison, P.acquisitionSummary(intel, context: context),
+    ].joined(separator: "\n")
     return result
-  }
-
-  private func metricCard(
-    _ title: String, value: String, color: NSColor, splitValue: Bool = false, detail: String
-  ) -> NSView {
-    let english = context.language == .english
-    let parts =
-      splitValue && !english
-      ? value.split(separator: " ", maxSplits: 1).map(String.init) : [value]
-    let caption = text(title, secondary: true)
-    let label = text(parts[0])
-    label.font = PaxTheme.Typography.label(
-      size: english ? PaxTheme.Routes.nameFont : PaxTheme.NetworkDiagnostics.metricFont,
-      weight: .medium)
-    label.textColor = color
-    if english {
-      for field in [caption, label] {
-        field.maximumNumberOfLines = 1
-        field.lineBreakMode = .byTruncatingTail
-      }
-    }
-    let valueRow = horizontal(
-      [label] + (parts.count > 1 ? [text(parts[1], secondary: true)] : []) + [NSView()],
-      spacing: PaxTheme.Spacing.xs)
-    let result = vertical([caption, valueRow], spacing: PaxTheme.Spacing.tight)
-    result.toolTip = english ? "\(title) · \(value)\n\(detail)" : detail
-    return result
-  }
-
-  private func blacklistSummary(_ intel: NetworkDiagnosticReport?) -> (
-    text: String, tone: E.Tone, detail: String
-  ) {
-    let facts = intel?.facts.filter { $0.group == "dnsbl" } ?? []
-    let hits = facts.filter { $0.state == "hit" }.count
-    let checked = facts.filter { ["hit", "clear"].contains($0.state) }.count
-    let unknown = facts.count - checked
-    let text =
-      hits > 0
-      ? context.text("native_diagnostic.a2966368ac", ["arg0": String(describing: hits)])
-      : checked > 0
-        ? context.text("native_diagnostic.cb5cde9cad", ["arg0": String(describing: checked)])
-          + (unknown > 0 ? context.text("native_diagnostic.abc328f9f4") : "")
-        : (intel?.providers == nil
-          ? context.text("native_diagnostic.e7954a2f3a")
-          : context.text("native_diagnostic.3acaa83343"))
-    return (
-      text, hits > 0 ? .difference : checked > 0 ? .matching : .pending,
-      intel?.providers != nil && checked == 0
-        ? context.text("native_diagnostic.536dcc7411")
-        : context.text("native_diagnostic.a69eb123c4", ["arg0": String(describing: checked)])
-    )
   }
 
   private func mergedEnvironmentCard() -> NSView {
@@ -175,31 +136,26 @@ extension NetworkDiagnosticView {
     let rows = E.assessedRows(
       environment?.report, local: environment?.local, waiting: environment?.busy == true,
       context: context)
-    let timestamp = text(
-      (environment?.stale == true
-        ? context.text("native_diagnostic.46acb06da6")
-        : context.text("native_diagnostic.d3aababeca"))
-        + MeasurementTimestamp.text(environment?.report?.at), secondary: true)
-    timestamp.maximumNumberOfLines = 1
-    let timestampRow = horizontal([timestamp])
-    timestampRow.heightAnchor.constraint(
-      equalToConstant:
-        PaxTheme.Control.compactHeight + PaxTheme.NetworkDiagnostics.environmentRowInset * 2
-    ).isActive = true
-    var content: [NSView] = [timestampRow]
-    for row in rows {
-      if !content.isEmpty { content.append(divider()) }
-      content.append(environmentRow(row))
+    let order = ["public_ip", "dns", "webrtc", "ipv6", "language", "timezone", "location"]
+    let ordered = rows.sorted {
+      (order.firstIndex(of: $0.kind) ?? order.count)
+        < (order.firstIndex(of: $1.kind) ?? order.count)
     }
-    let result = card(vertical(content, spacing: 0))
+    let table = diagnosticTable(
+      ordered.map { row in
+        diagnosticRow(
+          title: row.title, kind: row.kind, subtitle: row.value, symbol: row.symbol,
+          detail: environmentReadingDetails(row), tone: row.tone)
+      })
+    let result = card(
+      vertical(
+        [
+          cardHeading("diagnostic.overview.checks", symbol: "laptopcomputer", count: rows.count),
+          table,
+        ],
+        spacing: PaxTheme.Spacing.medium))
     result.setAccessibilityIdentifier("environment-merged-card")
     return result
-  }
-
-  private func environmentRow(_ row: E.Row) -> NSView {
-    diagnosticRow(
-      title: row.title, kind: row.kind, subtitle: row.value, symbol: row.symbol,
-      detail: environmentReadingDetails(row), tone: row.tone)
   }
 
   private func environmentReadingDetails(_ row: E.Row) -> String {
@@ -207,7 +163,7 @@ extension NetworkDiagnosticView {
     let local = store.currentEnvironment?.local
     var lines: [String] = []
     for browser in [false, true] {
-      if row.title == "WebRTC" && !browser { continue }
+      if row.kind == "webrtc" && !browser { continue }
       let sample = browser ? report.browser : report.mac
       let name =
         browser
@@ -263,6 +219,11 @@ extension NetworkDiagnosticView {
           $0.ip + " · " + P.countryName($0.country, context: context) + " · " + $0.organization
         }
       case "webrtc":
+        let verdict = E.webRTCVerdict(
+          sample, pending: !sample.complete && store.currentEnvironment?.busy == true,
+          context: context)
+        lines += [verdict.text] + verdict.routeDetails
+        if let physical = verdict.physicalDetail { lines.append(physical) }
         lines.append(
           context.text(
             "native_diagnostic.963e43ae47", ["arg0": String(describing: sample.rtcAddresses.count)])
@@ -294,20 +255,4 @@ extension NetworkDiagnosticView {
     return lines.joined(separator: "\n")
   }
 
-  private func summaryColor(_ tone: E.Tone) -> NSColor {
-    switch tone {
-    case .information: PaxTheme.NetworkDiagnostics.summaryText
-    case .matching: PaxTheme.NetworkDiagnostics.summaryClear
-    case .difference: PaxTheme.NetworkDiagnostics.summaryWarning
-    case .failure: PaxTheme.Color.error
-    case .pending: PaxTheme.Color.textSecondary
-    }
-  }
-
-  private func flag(_ country: String) -> String {
-    let codes = country.uppercased().unicodeScalars
-    guard codes.count == 2, codes.allSatisfy({ (65...90).contains($0.value) }) else { return "" }
-    return String(String.UnicodeScalarView(codes.compactMap { UnicodeScalar(127397 + $0.value) }))
-      + " "
-  }
 }

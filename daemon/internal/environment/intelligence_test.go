@@ -34,7 +34,7 @@ func TestEnvironmentSameIPIntelligenceSharedWithinRound(t *testing.T) {
 	go func() { defer workers.Done(); s.enrich(context.Background(), &a) }()
 	go func() { defer workers.Done(); s.enrich(context.Background(), &b) }()
 	workers.Wait()
-	if len(a.Intelligence.Providers) != 4 || len(b.Intelligence.Providers) != 4 || calls["api.ipquery.io"] != 1 || calls["ipwho.is"] != 1 || calls["internetdb.shodan.io"] != 1 || calls["ipx.al"] != 1 {
+	if len(a.Intelligence.Providers) != 3 || len(b.Intelligence.Providers) != 3 || calls["api.ipquery.io"] != 1 || calls["ipwho.is"] != 1 || calls["internetdb.shodan.io"] != 1 || len(calls) != 3 {
 		t.Fatal(calls, a.Intelligence, b.Intelligence)
 	}
 }

@@ -2,6 +2,24 @@ syntax = "proto3";
 package pax.v1;
 option go_package = "pax-connect/daemon/gen/proto/paxv1";
 import "google/protobuf/timestamp.proto";
+import "privacy.proto";
+
+// Latest still-active notice per source/direction; never an alert history.
+message TrafficAlertNotice {
+ string id=1; string key=2; string source=3; string source_kind=4; string direction=5;
+ uint32 window_seconds=6; uint64 bytes=7; uint64 threshold=8;
+ google.protobuf.Timestamp until=9;
+ string route_id=10; string route_name=11; uint32 route_count=12; bool partial=13;
+}
+message TrafficAlertState {
+ TrafficAlertSettings settings=1;
+ // disabled / checking / collecting / partial / proxy_off / collection_interrupted / failed
+ string monitor_state=2; string error_code=3; repeated TrafficAlertNotice notices=4;
+ // Current episode IDs include temporarily suppressed notices, for delivery-ledger pruning.
+ repeated string active_notice_ids=5;
+ // Changes only with visible state, for in-flight read vs Watch ordering.
+ uint64 revision=6;
+}
 
 // User-private connection facts and their frozen traffic projections.
 message HistoryState {

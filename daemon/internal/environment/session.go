@@ -24,6 +24,9 @@ var browserPage = template.Must(template.New("browser").Parse(browserHTML))
 //go:embed browser.js
 var browserScript string
 
+//go:embed browser_claude.js
+var browserClaudeScript string
+
 // Snapshot is an immutable copy of the two independent samples.
 type Snapshot struct {
 	ID, BrowserURL string
@@ -42,6 +45,7 @@ type Session struct {
 	client            measurement.Client
 	lookup            *measurement.ExitLookup
 	intelligenceTasks map[string]*intelligenceTask
+	macIPv6Route      string
 	browserDNS        string
 	browserDNSNames   []string
 	browserDNSStarted time.Time
@@ -102,7 +106,11 @@ func StartWithPresentation(parent context.Context, lookup *measurement.ExitLooku
 		close(s.done)
 	}()
 	go func() {
-		sample := macSample(ctx, client, provider)
+		sample := macSample(ctx, client, provider, func(route Check) {
+			s.mu.Lock()
+			s.macIPv6Route = route.State
+			s.mu.Unlock()
+		})
 		sample.Complete = false
 		s.mu.Lock()
 		if ctx.Err() == nil {
@@ -152,7 +160,7 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+s.state.ID+"'; style-src 'unsafe-inline'; connect-src 'self' https://ipv4.icanhazip.com https://ipv6.icanhazip.com https://*.bash.ws https://www.cloudflare.com https://ipinfo.io https://myip.ipip.net; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+s.state.ID+"'; style-src 'unsafe-inline'; connect-src 'self' https://ipv4.icanhazip.com https://ipv6.icanhazip.com https://*.bash.ws https://www.cloudflare.com https://ipinfo.io https://myip.ipip.net https://claude.ai https://api.anthropic.com https://status.claude.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 	endpoint := strings.TrimPrefix(r.URL.Path, s.path)
 	if endpoint == "presentation" && r.Method == http.MethodGet {
 		s.mu.Lock()
@@ -167,7 +175,7 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		_, _ = io.WriteString(w, "const paxBrowserCatalog = ")
 		_ = json.NewEncoder(w).Encode(browserCatalog())
-		_, _ = io.WriteString(w, ";\n"+browserScript)
+		_, _ = io.WriteString(w, ";\n"+browserClaudeScript+"\n"+browserScript)
 		return
 	}
 	if endpoint == "" && r.Method == http.MethodGet {
@@ -260,25 +268,30 @@ func (s *Session) serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			s.state.Browser = sample
 		}
 		s.mu.Unlock()
+		// Acknowledge browser and resolver evidence before enriching IP data or waiting for route attribution.
+		s.mu.Lock()
+		route := s.macIPv6Route
+		s.mu.Unlock()
+		if route == "" {
+			route = "unknown"
+		}
+		w.Header().Set("X-Pax-IPv6-Route", route)
+		dnsState := "failed"
+		switch sample.DNSError {
+		case "":
+			dnsState = "observed"
+		case "probe_timeout", "target_connection_timeout":
+			dnsState = "timeout"
+		}
+		w.Header().Set("X-Pax-DNS-Result", dnsState)
+		w.WriteHeader(http.StatusNoContent)
+		_ = http.NewResponseController(w).Flush()
 		s.enrich(ctx, &sample)
 		s.mu.Lock()
 		if ctx.Err() == nil {
 			s.state.Browser = sample
 		}
 		s.mu.Unlock()
-		// Answer the page first: route evidence waits for the ingest cadence, which the page need not.
-		// The page only needs the Mac's route state to skip an IPv6 request that cannot apply.
-		s.mu.Lock()
-		route := "unknown"
-		for _, check := range s.state.Mac.Checks {
-			if check.Kind == "ipv6_route" {
-				route = check.State
-			}
-		}
-		s.mu.Unlock()
-		w.Header().Set("X-Pax-IPv6-Route", route)
-		w.WriteHeader(http.StatusNoContent)
-		_ = http.NewResponseController(w).Flush()
 		var routeChecks, dnsChecks []Check
 		var evidence sync.WaitGroup
 		evidence.Add(1)

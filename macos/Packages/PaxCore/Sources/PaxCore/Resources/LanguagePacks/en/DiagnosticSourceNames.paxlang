@@ -2,6 +2,10 @@
   "formatVersion": 1,
   "locale": "en",
   "messages": {
-    "diagnostic.source.cloudflare_edge": "Cloudflare Edge"
+    "diagnostic.source.cloudflare_edge": "Cloudflare Edge",
+    "diagnostic.source.bgp_origin": "BGP origin ASN: ",
+    "diagnostic.source.bgp_prefix": "BGP announced prefix: ",
+    "diagnostic.source.flagged": "Flagged by provider",
+    "diagnostic.source.ip2location_attribution": "Pax Connect uses the IP2Location.io IP geolocation service"
   }
 }

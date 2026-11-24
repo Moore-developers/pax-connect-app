@@ -90,6 +90,39 @@ import Testing
     #expect(networkStore.stale)
   }
 
+  @Test("临时 IP2Location.io 结果不会落盘，同轮其他来源照常恢复")
+  func transientSourceDoesNotPersist() throws {
+    let folder = directory()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let url = folder.appendingPathComponent("latest.json")
+    let report = NetworkDiagnosticReport(
+      .with {
+        $0.sources = ["db-ip", "ip2location.io"].map { id in
+          .with {
+            $0.name = id
+            $0.providerID = id
+          }
+        }
+        $0.providers = ["db-ip", "ip2location.io"].map { id in
+          .with { $0.id = id }
+        }
+        $0.facts = [
+          .with {
+            $0.providerID = "ip2location.io"
+            $0.group = "source_risk"
+          }
+        ]
+      })
+    let history = NetworkDiagnosticHistory(url: url)
+    history.saveRoute(report: report, services: nil, environment: nil, previous: report)
+    let json = try String(contentsOf: url, encoding: .utf8)
+    #expect(!json.contains("ip2location.io"))
+    #expect(report.sources.count == 2)
+    let reopened = NetworkDiagnosticHistory(url: url)
+    #expect(reopened.route?.report?.sources.map(\.name) == ["db-ip"])
+    #expect(reopened.route?.previous?.providers?.map(\.id) == ["db-ip"])
+  }
+
   @Test("新测试取消后保留上次结果，迟到响应不会覆盖")
   func cancelledRunRetainsResult() async throws {
     let folder = directory()

@@ -2,27 +2,63 @@ import AppKit
 import PaxCore
 import PaxUI
 
-extension NetworkDiagnosticView {
+extension NetworkDiagnosticView: NSGestureRecognizerDelegate {
+  func diagnosticTable(_ rows: [NSView]) -> NSView {
+    let fields = [
+      "interface_detail.79f326be44", "event.field.conclusion", "diagnostic.overview.basis",
+    ].map {
+      text(context.text($0), secondary: true)
+    }
+    let header = columns(fields[0], fields[1], fields[2])
+    header.heightAnchor.constraint(equalToConstant: PaxTheme.Table.compactHeader).isActive = true
+    var content: [NSView] = [header]
+    for row in rows { content += [divider(), row] }
+    return card(vertical(content, spacing: 0), style: .routesList)
+  }
+
+  private func columns(_ item: NSView, _ verdict: NSView, _ reason: NSView) -> NSStackView {
+    let row = horizontal([item, verdict, reason])
+    let widths = PaxTheme.NetworkDiagnostics.serviceColumns
+    item.widthAnchor.constraint(equalTo: row.widthAnchor, multiplier: widths[0]).isActive = true
+    verdict.widthAnchor.constraint(equalTo: row.widthAnchor, multiplier: widths[1]).isActive = true
+    return row
+  }
+
   func diagnosticRow(
     title: String, kind: String? = nil, subtitle: String, symbol: String, detail: String = "",
-    tone: E.Tone = .information
+    tone: E.Tone = .information, verdict: String? = nil, basis: String? = nil,
+    detailAction: NSButton? = nil
   ) -> NSView {
-    let icon = PaxIcon.view(symbol, size: PaxTheme.NetworkDiagnostics.environmentIcon)
-    icon.contentTintColor = assessmentColor(tone)
-    icon.widthAnchor.constraint(equalToConstant: PaxTheme.Spacing.page).isActive = true
-    let name = text(title + "：")
-    name.font = PaxTheme.Typography.label(size: PaxTheme.Routes.bodyFont, weight: .medium)
-    name.maximumNumberOfLines = 1
-    name.lineBreakMode = .byTruncatingTail
-    name.widthAnchor.constraint(lessThanOrEqualToConstant: PaxTheme.NetworkDiagnostics.labelWidth)
+    let parts = subtitle.components(separatedBy: " · ")
+    let conclusion = verdict ?? parts[0]
+    let remainder = parts.dropFirst().joined(separator: " · ")
+    let reason =
+      basis
+      ?? (remainder.isEmpty
+        ? detail.components(separatedBy: .newlines).first(where: { !$0.isEmpty && $0 != subtitle })
+          ?? "—"
+        : remainder)
+    let icon = PaxIcon.view(symbol, size: PaxTheme.Table.font)
+    icon.contentTintColor = PaxTheme.Color.textSecondary
+    icon.widthAnchor.constraint(equalToConstant: PaxTheme.NetworkDiagnostics.environmentIcon)
       .isActive = true
-    name.setContentHuggingPriority(.required, for: .horizontal)
-    name.toolTip = title
-    let summary = text(subtitle)
-    summary.isSelectable = true
-    summary.maximumNumberOfLines = 1
+    let name = text(title)
+    name.maximumNumberOfLines = 2
+    let color: PaxToneBadge.Tone =
+      switch tone {
+      case .matching: .success
+      case .difference: .warning
+      case .failure: .error
+      case .information, .pending: .neutral
+      }
+    let badge = PaxToneBadge(conclusion, tone: color)
+    badge.toolTip = conclusion
+    badge.setContentHuggingPriority(.required, for: .horizontal)
+    badge.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    let summary = text(reason, secondary: true)
+    summary.maximumNumberOfLines = 2
     summary.lineBreakMode = .byTruncatingTail
-    summary.textColor = assessmentColor(tone)
+    summary.toolTip = reason
     let key = "diagnostic-row-" + (kind ?? title)
     let expanded = store.expanded.contains(key)
     let toggle = action(
@@ -37,6 +73,10 @@ extension NetworkDiagnosticView {
         store.expanded.insert(key)
       }
     }
+    toggle.image = PaxIcon.image(
+      expanded ? "chevron.down" : "chevron.right", size: PaxTheme.Dashboard.captionFont)
+    toggle.imagePosition = .imageOnly
+    toggle.contentTintColor = PaxTheme.Color.textSecondary
     toggle.controlSize = .small
     toggle.setAccessibilityIdentifier(key)
     toggle.setAccessibilityLabel(
@@ -44,18 +84,33 @@ extension NetworkDiagnosticView {
         + (expanded
           ? context.text("native_diagnostic.0ae7312510")
           : context.text("native_diagnostic.4bf0fb2140")))
-    let line = padded(
-      horizontal([icon, name, summary, toggle], spacing: PaxTheme.Spacing.tight),
-      vertical: PaxTheme.NetworkDiagnostics.environmentRowInset)
-    line.toolTip = [subtitle, detail].filter { !$0.isEmpty }.joined(separator: "\n")
+    let line = columns(
+      horizontal([icon, name], spacing: PaxTheme.Spacing.tight),
+      horizontal([badge, NSView()], spacing: 0),
+      horizontal([summary, toggle], spacing: PaxTheme.Spacing.tight))
+    line.heightAnchor.constraint(greaterThanOrEqualToConstant: PaxTheme.Table.compactRow).isActive =
+      true
+    let click = NSClickGestureRecognizer(
+      target: toggle, action: #selector(NSButton.performClick(_:)))
+    click.delegate = self
+    line.addGestureRecognizer(click)
     line.setAccessibilityElement(true)
     line.setAccessibilityRole(.group)
-    line.setAccessibilityLabel(title + "：" + subtitle)
-    line.setAccessibilityChildren([name, summary, toggle])
+    line.setAccessibilityLabel(title)
+    line.setAccessibilityChildren([name, badge, summary, toggle])
     guard expanded else { return line }
     let evidence = diagnosticDetailCard(detail.isEmpty ? subtitle : detail, omitting: subtitle)
     evidence.setAccessibilityIdentifier(key + "-evidence")
-    return vertical([line, padded(evidence, vertical: PaxTheme.Spacing.tight)], spacing: 0)
+    var views = [line, padded(evidence, vertical: PaxTheme.Spacing.tight)]
+    if let detailAction { views.append(horizontal([detailAction, NSView()])) }
+    return vertical(views, spacing: 0)
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: NSGestureRecognizer, shouldAttemptToRecognizeWith event: NSEvent
+  ) -> Bool {
+    guard let button = gestureRecognizer.target as? NSButton else { return true }
+    return !button.bounds.contains(button.convert(event.locationInWindow, from: nil))
   }
 
   /// Row evidence uses the existing inset surface.
@@ -135,10 +190,28 @@ extension NetworkDiagnosticView {
     }
   }
 
-  func assessmentText(_ value: P.Assessment) -> NSView {
-    let label = text(value.text)
-    label.textColor = assessmentColor(value.tone)
-    return padded(label, vertical: PaxTheme.Spacing.tight)
+  func topicSummary(
+    _ finding: String, tone: E.Tone, metadata: String, note: String? = nil
+  ) -> NSView {
+    let label = PaxRouteText.label("", font: PaxTheme.Typography.caption(), secondary: true)
+    label.maximumNumberOfLines = 1
+    label.lineBreakMode = .byTruncatingTail
+    let text = [finding, metadata].filter { !$0.isEmpty }.joined(separator: " · ")
+    let styled = NSMutableAttributedString(
+      string: text,
+      attributes: [
+        .font: PaxTheme.Typography.caption(),
+        .foregroundColor: label.textColor ?? PaxTheme.Color.textSecondary,
+      ])
+    if !finding.isEmpty {
+      styled.addAttribute(
+        .foregroundColor, value: assessmentColor(tone),
+        range: NSRange(location: 0, length: finding.utf16.count))
+    }
+    label.attributedStringValue = styled
+    label.toolTip = [text, note].compactMap { $0 }.joined(separator: "\n")
+    label.setAccessibilityIdentifier("diagnostic-topic-summary")
+    return label
   }
 
 }

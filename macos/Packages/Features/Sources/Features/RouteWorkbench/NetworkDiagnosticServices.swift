@@ -3,130 +3,127 @@ import PaxCore
 import PaxUI
 
 extension NetworkDiagnosticView {
-  func diagnosticServiceTargets() -> [(String, String)] {
-    [
-      ("ChatGPT", "chatgpt.com"), ("OpenAI API", "api.openai.com"),
-      ("Claude", "claude.ai"), ("Anthropic API", "api.anthropic.com"),
-      ("Grok", "grok.com"), ("Perplexity", "www.perplexity.ai"),
-      ("Gemini", "gemini.google.com"), ("TikTok", "www.tiktok.com"),
-      ("Facebook", "www.facebook.com"), ("X", "x.com"),
-      (context.text("native_diagnostic.ea1fd2165c"), "store.steampowered.com"),
-      ("GitHub", "github.com"),
+  func claudeContent() -> NSView {
+    let environment = store.currentEnvironment
+    let sample = environment?.report?.browser
+    let checking =
+      environment?.busy == true && (environment?.stale == true || sample?.complete != true)
+    let region = action(context.text("diagnostic.claude.regions")) {
+      if let url = URL(string: "https://www.anthropic.com/legal/supported-regions") {
+        NSWorkspace.shared.open(url)
+      }
+    }
+    region.setAccessibilityIdentifier("diagnostic-claude-regions")
+    var rows: [NSView] = [
+      heading(
+        context.text(
+          "diagnostic.overview.browser_group", ["count": String(E.ClaudeCheck.allCases.count)]))
     ]
-  }
-
-  func serviceSample(_ host: String) -> (NetworkDiagnosticReport.Probe, NetworkDiagnosticReport)? {
-    let reports = [report, store.services].compactMap { $0 }.filter { candidate in
-      report == nil
-        || report.map { $0 == candidate || NetworkDiagnosticStore.sameBoundary($0, candidate) }
-          == true
-    }
-    return reports.flatMap { candidate in
-      candidate.probes.filter { URL(string: $0.target)?.host == host }.map { ($0, candidate) }
-    }.max(by: { ($0.0.at ?? $0.1.at) < ($1.0.at ?? $1.1.at) })
-  }
-  func servicesContent() -> NSView {
-    let run = action(context.text("native_diagnostic.935d29270f")) { [weak self] in
-      self?.store.start(mode: "services")
-    }
-    run.isEnabled = !store.busy && store.currentEnvironment?.busy != true
-    run.setAccessibilityIdentifier("diagnostic-services-run")
-    let targets = diagnosticServiceTargets()
-    var rows: [NSView] = []
-    for (name, host) in targets {
-      if !rows.isEmpty { rows.append(divider()) }
-      let sample = serviceSample(host)
-      let judgment = P.serviceAssessment(sample?.0, api: host.hasPrefix("api."), context: context)
-      var detail =
-        context.text("native_diagnostic.4d2d25a288") + host
-        + context.text("native_diagnostic.eaaab2ef23")
-      if let (probe, owner) = sample {
-        detail +=
-          "\n" + P.probeResult(probe, context: context)
-          + context.text("native_diagnostic.a3d09d2e9e")
-          + MeasurementTimestamp.text(probe.at ?? owner.at)
-        if let previous = store.previousReport,
-          NetworkDiagnosticStore.sameBoundary(owner, previous),
-          let ip = owner.exit?.ip, !ip.isEmpty, ip == previous.exit?.ip, probe.httpStatus == 0,
-          let old = previous.probes.last(where: {
-            URL(string: $0.target)?.host == host && $0.httpStatus > 0
-          })
-        {
-          detail +=
-            context.text("native_diagnostic.322828a78a") + P.probeResult(old, context: context)
-            + " · " + MeasurementTimestamp.text(old.at)
-        }
+    for check in E.ClaudeCheck.allCases {
+      let reading = E.claudeReading(check, sample: checking ? nil : sample, context: context)
+      let observed =
+        checking
+        ? nil : sample?.checks?.first { $0.kind == check.rawValue && $0.state == "observed" }
+      let parts = reading.text.components(separatedBy: " · ")
+      let isExit = check == .exit || check == .apiExit
+      let exitVerdict = isExit && observed != nil ? parts.last : nil
+      let evidence: String?
+      if isExit, observed != nil {
+        evidence = parts.dropLast().joined(separator: " · ")
+      } else if check == .status || check == .apiStatus {
+        evidence = observed.map { $0.target + " · " + $0.value }
+      } else {
+        evidence = nil
       }
       rows.append(
         diagnosticRow(
-          title: name,
-          subtitle: judgment.text.replacingOccurrences(
-            of: context.text("native_diagnostic.577e0915d9"), with: ""
-          ).replacingOccurrences(
-            of: context.text("native_diagnostic.beeec8a46a"), with: ""),
-          symbol: "network", detail: detail, tone: judgment.tone))
+          title: context.text(check.titleKey), kind: check.rawValue,
+          subtitle: checking ? context.text("browser.check_checking") : reading.text,
+          symbol: symbol(for: check),
+          detail: reading.detail, tone: reading.tone,
+          verdict: exitVerdict, basis: evidence, detailAction: check == .exit ? region : nil))
     }
-    let list = vertical(rows, spacing: 0)
-    list.setAccessibilityIdentifier("diagnostic-services")
-    let samples = targets.compactMap { serviceSample($0.1)?.0 }
-    let overview = P.serviceOverview(samples, context: context)
+    let keychain = E.claudeKeychainReading(
+      environment?.claudeKeychain, checking: environment?.checkingClaudeKeychain == true,
+      context: context)
+    rows.append(heading(context.text("diagnostic.overview.local_group")))
+    rows.append(
+      diagnosticRow(
+        title: context.text("diagnostic.claude.keychain"), kind: "claude-keychain",
+        subtitle: keychain.text, symbol: "key", detail: keychain.detail, tone: keychain.tone,
+        basis: environment?.claudeKeychain.map { _ in
+          context.text("diagnostic.overview.keychain_source")
+        }))
+    let list = diagnosticTable(rows)
+    list.setAccessibilityIdentifier("diagnostic-claude")
     return vertical([
-      horizontal([
-        heading(context.text("native_diagnostic.8cc881f033"), cardTitle: true), NSView(), run,
-      ]),
-      text(serviceContext(), secondary: true),
-      text(context.text("native_diagnostic.513b5a115e"), secondary: true),
-      assessmentText(overview), list,
+      cardHeading(
+        "diagnostic.claude.title", symbol: "network", count: E.ClaudeCheck.allCases.count + 1),
+      list,
     ])
   }
-  private func serviceContext() -> String {
-    let results = diagnosticServiceTargets().compactMap { serviceSample($0.1) }
-    let times = results.compactMap { $0.0.at ?? $0.1.at }
-    guard let first = times.min(), let last = times.max() else {
-      return context.text("native_diagnostic.214836ed73")
+
+  private func symbol(for check: E.ClaudeCheck) -> String {
+    switch check {
+    case .exit, .apiExit: "globe"
+    case .status, .apiStatus: "waveform.path.ecg"
+    case .edge: "mappin.and.ellipse"
+    case .connection: "lock"
     }
-    let history =
-      store.stale || results.contains { $0.1.at != report?.at || $0.1.mode == "sources" }
-    return
-      (history
-      ? context.text("native_diagnostic.b2d9af2723") : context.text("native_diagnostic.ecc1fb185b"))
-      + MeasurementTimestamp.text(last)
-      + (last.timeIntervalSince(first) > 60 ? context.text("native_diagnostic.1e817d7cd8") : "")
   }
 
   func pathsContent() -> NSView {
     let environment = store.currentEnvironment
     let checks = environment?.report?.browser.checks ?? []
+    let assessment = E.exitAssessment(checks, context: context)
     var rows: [NSView] = []
+    var unavailable: [String] = []
     for (title, kind) in [
       ("IPIP", "echo_ipip"), ("IPinfo", "echo_ipinfo"), ("Cloudflare", "echo_cf"),
     ] {
-      if !rows.isEmpty { rows.append(divider()) }
       let check = checks.first { $0.kind == kind }
+      let mismatch = assessment.tone == .difference && kind != "echo_cf"
       let value: String
       if let check, check.state == "observed" {
-        value = context.text("native_diagnostic.769aebde14") + check.value
+        value =
+          context.text("native_diagnostic.769aebde14") + E.exitReading(check, context: context)
       } else {
+        if check != nil { unavailable.append(title) }
         value =
           check.map { E.checkProblem($0.errorCode, context: context) }
           ?? context.text("native_diagnostic.bec9167b59")
       }
       rows.append(
         diagnosticRow(
-          title: title, subtitle: value, symbol: "globe",
-          detail: check.map { E.checkText($0) } ?? context.text("native_diagnostic.883b0ebcba"),
-          tone: check?.state == "observed" ? .information : .pending))
+          title: title, kind: kind, subtitle: value, symbol: "globe",
+          detail: check.map { E.checkText($0, context: context) }
+            ?? context.text("native_diagnostic.883b0ebcba"),
+          tone: mismatch ? .difference : check?.state == "observed" ? .information : .pending,
+          verdict: context.text(
+            mismatch
+              ? "browser.check_exit_abnormal"
+              : check?.state == "observed"
+                ? "browser.check_observed" : "diagnostic_evidence.c098e854e6"), basis: value))
     }
-    let list = vertical(rows, spacing: 0)
+    let list = diagnosticTable(rows)
     list.setAccessibilityIdentifier("diagnostic-browser-exits")
-    return vertical([
-      heading(context.text("native_diagnostic.ee42d43fd2"), cardTitle: true),
-      text(
-        (environment?.stale == true ? context.text("native_diagnostic.55509b5207") : "")
-          + MeasurementTimestamp.text(environment?.report?.at)
-          + context.text("native_diagnostic.8adf0da57a"),
-        secondary: true),
-      assessmentText(E.exitAssessment(checks, context: context)), list,
-    ])
+    let metadata =
+      environment?.report.map {
+        [
+          browserName,
+          environment?.stale == true ? context.text("native_diagnostic.f48ea0733c") : "",
+          MeasurementTimestamp.text($0.at),
+        ].filter { !$0.isEmpty }.joined(separator: " · ")
+      } ?? ""
+    var finding = assessment.text
+    if !unavailable.isEmpty {
+      let failure = context.text(
+        "diagnostic.overview.browser_unavailable", ["targets": unavailable.joined(separator: ", ")])
+      finding = assessment.tone == .difference ? finding + " · " + failure : failure
+    }
+    let summary = topicSummary(
+      finding, tone: unavailable.isEmpty ? assessment.tone : .difference, metadata: metadata,
+      note: context.text("diagnostic.overview.browser_scope"))
+    return vertical([summary, list])
   }
 }

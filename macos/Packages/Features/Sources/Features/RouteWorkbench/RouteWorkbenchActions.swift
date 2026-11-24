@@ -17,6 +17,7 @@ extension RouteWorkbenchViewController {
         "arrow.left.arrow.right", "use"
       ),
       (self.interfaceCopy.text("interface_detail.a748cc074f"), "info.circle", "details"),
+      (self.interfaceCopy.text("routes.usage_view"), "arrow.up.arrow.down", "usage"),
       (
         store.isTestingLatency(id)
           ? self.interfaceCopy.text("interface_detail.e61a02b556")
@@ -51,6 +52,7 @@ extension RouteWorkbenchViewController {
         && !(command == "chain" && store.info(id, context: self.interfaceCopy.context).chain != nil)
         && !(command == "remove" && store.isCurrent(id))
       if command == "use" { item.isEnabled = item.isEnabled && store.canSelectRoute }
+      if command == "usage" { item.isEnabled = table.canShowUsage(id) }
       if command == "edit" || command == "remove" {
         item.isEnabled = item.isEnabled && store.canEdit
       }
@@ -60,6 +62,7 @@ extension RouteWorkbenchViewController {
       if !store.canManage && command != "test" && command != "use" && command != "details"
         && command != "edit"
         && command != "remove" && command != "speed" && command != "exit" && command != "share"
+        && command != "usage"
       {
         item.isEnabled = false
         item.toolTip = self.interfaceCopy.text("interface_detail.081d60fb80")
@@ -73,6 +76,7 @@ extension RouteWorkbenchViewController {
     guard let values = item.representedObject as? [String], values.count == 2 else { return }
     let id = values[0]
     switch values[1] {
+    case "usage": table.showUsageReadout(id)
     case "use": store.perform(.use(id))
     case "test":
       if store.isTestingLatency(id) {

@@ -245,6 +245,159 @@ func (x *NetworkPrivacy) GetContext() *OperationContext {
 	return nil
 }
 
+// Bytes use decimal units. Only one of hour/two_hours is selected by medium_seconds.
+type TrafficAlertRule struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Upload        uint64                 `protobuf:"varint,2,opt,name=upload,proto3" json:"upload,omitempty"`
+	Download      uint64                 `protobuf:"varint,3,opt,name=download,proto3" json:"download,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficAlertRule) Reset() {
+	*x = TrafficAlertRule{}
+	mi := &file_privacy_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficAlertRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficAlertRule) ProtoMessage() {}
+
+func (x *TrafficAlertRule) ProtoReflect() protoreflect.Message {
+	mi := &file_privacy_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficAlertRule.ProtoReflect.Descriptor instead.
+func (*TrafficAlertRule) Descriptor() ([]byte, []int) {
+	return file_privacy_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *TrafficAlertRule) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *TrafficAlertRule) GetUpload() uint64 {
+	if x != nil {
+		return x.Upload
+	}
+	return 0
+}
+
+func (x *TrafficAlertRule) GetDownload() uint64 {
+	if x != nil {
+		return x.Download
+	}
+	return 0
+}
+
+type TrafficAlertSettings struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Revision      uint64                 `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	MediumSeconds uint32                 `protobuf:"varint,3,opt,name=medium_seconds,json=mediumSeconds,proto3" json:"medium_seconds,omitempty"`
+	Short         *TrafficAlertRule      `protobuf:"bytes,4,opt,name=short,proto3" json:"short,omitempty"`
+	Hour          *TrafficAlertRule      `protobuf:"bytes,5,opt,name=hour,proto3" json:"hour,omitempty"`
+	TwoHours      *TrafficAlertRule      `protobuf:"bytes,6,opt,name=two_hours,json=twoHours,proto3" json:"two_hours,omitempty"`
+	Day           *TrafficAlertRule      `protobuf:"bytes,7,opt,name=day,proto3" json:"day,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrafficAlertSettings) Reset() {
+	*x = TrafficAlertSettings{}
+	mi := &file_privacy_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficAlertSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficAlertSettings) ProtoMessage() {}
+
+func (x *TrafficAlertSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_privacy_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficAlertSettings.ProtoReflect.Descriptor instead.
+func (*TrafficAlertSettings) Descriptor() ([]byte, []int) {
+	return file_privacy_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TrafficAlertSettings) GetRevision() uint64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *TrafficAlertSettings) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *TrafficAlertSettings) GetMediumSeconds() uint32 {
+	if x != nil {
+		return x.MediumSeconds
+	}
+	return 0
+}
+
+func (x *TrafficAlertSettings) GetShort() *TrafficAlertRule {
+	if x != nil {
+		return x.Short
+	}
+	return nil
+}
+
+func (x *TrafficAlertSettings) GetHour() *TrafficAlertRule {
+	if x != nil {
+		return x.Hour
+	}
+	return nil
+}
+
+func (x *TrafficAlertSettings) GetTwoHours() *TrafficAlertRule {
+	if x != nil {
+		return x.TwoHours
+	}
+	return nil
+}
+
+func (x *TrafficAlertSettings) GetDay() *TrafficAlertRule {
+	if x != nil {
+		return x.Day
+	}
+	return nil
+}
+
 // Snapshot.external_tun：仅当非 Pax 的 utun 承接公网默认路由时非空。
 // interface 如 utun6；target 为被承接的路由目标（如 128.0/1）；at 为观测时间。
 type ExternalTUN struct {
@@ -258,7 +411,7 @@ type ExternalTUN struct {
 
 func (x *ExternalTUN) Reset() {
 	*x = ExternalTUN{}
-	mi := &file_privacy_proto_msgTypes[3]
+	mi := &file_privacy_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +423,7 @@ func (x *ExternalTUN) String() string {
 func (*ExternalTUN) ProtoMessage() {}
 
 func (x *ExternalTUN) ProtoReflect() protoreflect.Message {
-	mi := &file_privacy_proto_msgTypes[3]
+	mi := &file_privacy_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +436,7 @@ func (x *ExternalTUN) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExternalTUN.ProtoReflect.Descriptor instead.
 func (*ExternalTUN) Descriptor() ([]byte, []int) {
-	return file_privacy_proto_rawDescGZIP(), []int{3}
+	return file_privacy_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ExternalTUN) GetInterface() string {
@@ -331,7 +484,7 @@ type MeasurementPreferences struct {
 
 func (x *MeasurementPreferences) Reset() {
 	*x = MeasurementPreferences{}
-	mi := &file_privacy_proto_msgTypes[4]
+	mi := &file_privacy_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -343,7 +496,7 @@ func (x *MeasurementPreferences) String() string {
 func (*MeasurementPreferences) ProtoMessage() {}
 
 func (x *MeasurementPreferences) ProtoReflect() protoreflect.Message {
-	mi := &file_privacy_proto_msgTypes[4]
+	mi := &file_privacy_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +509,7 @@ func (x *MeasurementPreferences) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MeasurementPreferences.ProtoReflect.Descriptor instead.
 func (*MeasurementPreferences) Descriptor() ([]byte, []int) {
-	return file_privacy_proto_rawDescGZIP(), []int{4}
+	return file_privacy_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MeasurementPreferences) GetRevision() uint64 {
@@ -480,7 +633,7 @@ type ExitPoolState struct {
 
 func (x *ExitPoolState) Reset() {
 	*x = ExitPoolState{}
-	mi := &file_privacy_proto_msgTypes[5]
+	mi := &file_privacy_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -492,7 +645,7 @@ func (x *ExitPoolState) String() string {
 func (*ExitPoolState) ProtoMessage() {}
 
 func (x *ExitPoolState) ProtoReflect() protoreflect.Message {
-	mi := &file_privacy_proto_msgTypes[5]
+	mi := &file_privacy_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,7 +658,7 @@ func (x *ExitPoolState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExitPoolState.ProtoReflect.Descriptor instead.
 func (*ExitPoolState) Descriptor() ([]byte, []int) {
-	return file_privacy_proto_rawDescGZIP(), []int{5}
+	return file_privacy_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ExitPoolState) GetConfiguredLimit() uint32 {
@@ -579,7 +732,19 @@ const file_privacy_proto_rawDesc = "" +
 	"\brevision\x18\x01 \x01(\x04R\brevision\x12\x19\n" +
 	"\bdns_mode\x18\x02 \x01(\tR\adnsMode\x12\x16\n" +
 	"\x06webrtc\x18\x03 \x01(\bR\x06webrtc\x122\n" +
-	"\acontext\x18\x04 \x01(\v2\x18.pax.v1.OperationContextR\acontext\"o\n" +
+	"\acontext\x18\x04 \x01(\v2\x18.pax.v1.OperationContextR\acontext\"`\n" +
+	"\x10TrafficAlertRule\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x16\n" +
+	"\x06upload\x18\x02 \x01(\x04R\x06upload\x12\x1a\n" +
+	"\bdownload\x18\x03 \x01(\x04R\bdownload\"\xb4\x02\n" +
+	"\x14TrafficAlertSettings\x12\x1a\n" +
+	"\brevision\x18\x01 \x01(\x04R\brevision\x12\x18\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\x12%\n" +
+	"\x0emedium_seconds\x18\x03 \x01(\rR\rmediumSeconds\x12.\n" +
+	"\x05short\x18\x04 \x01(\v2\x18.pax.v1.TrafficAlertRuleR\x05short\x12,\n" +
+	"\x04hour\x18\x05 \x01(\v2\x18.pax.v1.TrafficAlertRuleR\x04hour\x125\n" +
+	"\ttwo_hours\x18\x06 \x01(\v2\x18.pax.v1.TrafficAlertRuleR\btwoHours\x12*\n" +
+	"\x03day\x18\a \x01(\v2\x18.pax.v1.TrafficAlertRuleR\x03day\"o\n" +
 	"\vExternalTUN\x12\x1c\n" +
 	"\tinterface\x18\x01 \x01(\tR\tinterface\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12*\n" +
@@ -622,32 +787,38 @@ func file_privacy_proto_rawDescGZIP() []byte {
 	return file_privacy_proto_rawDescData
 }
 
-var file_privacy_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_privacy_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_privacy_proto_goTypes = []any{
 	(*Settings)(nil),               // 0: pax.v1.Settings
 	(*UpdateSettingsRequest)(nil),  // 1: pax.v1.UpdateSettingsRequest
 	(*NetworkPrivacy)(nil),         // 2: pax.v1.NetworkPrivacy
-	(*ExternalTUN)(nil),            // 3: pax.v1.ExternalTUN
-	(*MeasurementPreferences)(nil), // 4: pax.v1.MeasurementPreferences
-	(*ExitPoolState)(nil),          // 5: pax.v1.ExitPoolState
-	(*timestamppb.Timestamp)(nil),  // 6: google.protobuf.Timestamp
-	(*OperationContext)(nil),       // 7: pax.v1.OperationContext
+	(*TrafficAlertRule)(nil),       // 3: pax.v1.TrafficAlertRule
+	(*TrafficAlertSettings)(nil),   // 4: pax.v1.TrafficAlertSettings
+	(*ExternalTUN)(nil),            // 5: pax.v1.ExternalTUN
+	(*MeasurementPreferences)(nil), // 6: pax.v1.MeasurementPreferences
+	(*ExitPoolState)(nil),          // 7: pax.v1.ExitPoolState
+	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
+	(*OperationContext)(nil),       // 9: pax.v1.OperationContext
 }
 var file_privacy_proto_depIdxs = []int32{
-	0, // 0: pax.v1.UpdateSettingsRequest.settings:type_name -> pax.v1.Settings
-	6, // 1: pax.v1.UpdateSettingsRequest.requested_at:type_name -> google.protobuf.Timestamp
-	7, // 2: pax.v1.UpdateSettingsRequest.context:type_name -> pax.v1.OperationContext
-	7, // 3: pax.v1.NetworkPrivacy.context:type_name -> pax.v1.OperationContext
-	6, // 4: pax.v1.ExternalTUN.at:type_name -> google.protobuf.Timestamp
-	6, // 5: pax.v1.MeasurementPreferences.evaluated_at:type_name -> google.protobuf.Timestamp
-	5, // 6: pax.v1.MeasurementPreferences.exit_pool_state:type_name -> pax.v1.ExitPoolState
-	7, // 7: pax.v1.MeasurementPreferences.context:type_name -> pax.v1.OperationContext
-	6, // 8: pax.v1.ExitPoolState.at:type_name -> google.protobuf.Timestamp
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	0,  // 0: pax.v1.UpdateSettingsRequest.settings:type_name -> pax.v1.Settings
+	8,  // 1: pax.v1.UpdateSettingsRequest.requested_at:type_name -> google.protobuf.Timestamp
+	9,  // 2: pax.v1.UpdateSettingsRequest.context:type_name -> pax.v1.OperationContext
+	9,  // 3: pax.v1.NetworkPrivacy.context:type_name -> pax.v1.OperationContext
+	3,  // 4: pax.v1.TrafficAlertSettings.short:type_name -> pax.v1.TrafficAlertRule
+	3,  // 5: pax.v1.TrafficAlertSettings.hour:type_name -> pax.v1.TrafficAlertRule
+	3,  // 6: pax.v1.TrafficAlertSettings.two_hours:type_name -> pax.v1.TrafficAlertRule
+	3,  // 7: pax.v1.TrafficAlertSettings.day:type_name -> pax.v1.TrafficAlertRule
+	8,  // 8: pax.v1.ExternalTUN.at:type_name -> google.protobuf.Timestamp
+	8,  // 9: pax.v1.MeasurementPreferences.evaluated_at:type_name -> google.protobuf.Timestamp
+	7,  // 10: pax.v1.MeasurementPreferences.exit_pool_state:type_name -> pax.v1.ExitPoolState
+	9,  // 11: pax.v1.MeasurementPreferences.context:type_name -> pax.v1.OperationContext
+	8,  // 12: pax.v1.ExitPoolState.at:type_name -> google.protobuf.Timestamp
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_privacy_proto_init() }
@@ -662,7 +833,7 @@ func file_privacy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_privacy_proto_rawDesc), len(file_privacy_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

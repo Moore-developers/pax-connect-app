@@ -131,7 +131,7 @@
     "diagnostic_evidence.03134622e3": "Missing capabilities only: ",
     "diagnostic_evidence.9325ec09e6": "Legacy record has no per-source requests; run a new check if needed",
     "diagnostic_evidence.6c686d7b7c": "Independent sources: {arg0}/{arg1} returned; ipx.al supplement: ",
-    "diagnostic_evidence.dedda3b38d": "Independent sources: {arg0}/{arg1} returned; ipx.al not queried",
+    "diagnostic_evidence.dedda3b38d": "Direct sources responded: {arg0}/{arg1}",
     "diagnostic_evidence.d8750d60af": "Native IP",
     "diagnostic_evidence.c098e854e6": "Unconfirmed",
     "diagnostic_evidence.adae7def03": "No independent source data received at this stage; no judgment made",

@@ -53,6 +53,7 @@ extension PaxTheme {
       "PaxDiagnosticProgress", light: 0xf3f3f5, dark: 0x33353a
     ).withAlphaComponent(0.5)
     public static let progressInset: CGFloat = 14
+    public static let expandedProgressVerticalInset: CGFloat = 5
     public static let progressRadius: CGFloat = 12
     public static let progressLabelWidth: CGFloat = 114
     public static let progressTimeWidth: CGFloat = 44

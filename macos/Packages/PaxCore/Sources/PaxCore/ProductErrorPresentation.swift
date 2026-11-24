@@ -31,6 +31,11 @@ public enum ProductErrorPresentation {
     case "history_query_busy": context.text("error.history_query_busy")
     case "history_capacity_reached": context.text("error.history_capacity_reached")
     case "settings_conflict": context.text("error.settings_conflict")
+    case "traffic_alerts_conflict": context.text("error.settings_conflict")
+    case "traffic_alerts_invalid": context.text("alerts.invalid")
+    case "traffic_alerts_unavailable", "traffic_alerts_storage_failed",
+      "traffic_alerts_save_failed":
+      context.text("alerts.backend_error")
     case "operation_expired": context.text("error.operation_expired")
     case "invalid_filter": context.text("error.invalid_filter")
 

@@ -38,6 +38,8 @@ service PaxService {
   rpc GetLogDetail(LogDetailRequest) returns (LogDetail);
   rpc QueryTraffic(TrafficQuery) returns (TrafficPage);
   rpc QueryTrafficDetail(TrafficDetailRequest) returns (TrafficDetail);
+  rpc GetTrafficAlerts(google.protobuf.Empty) returns (TrafficAlertState);
+  rpc SaveTrafficAlertSettings(TrafficAlertSettings) returns (TrafficAlertState);
   rpc ClearLogs(ClearLogsRequest) returns (OperationAck);
   // 协议版本握手；不兼容时 UI 提示升级，不做兼容降级。
   // Only App-owned temporary sessions support graceful shutdown; legacy services reject it.
@@ -166,6 +168,7 @@ message Snapshot {
   map<string,string> exit_operation_ids = 31;
   AIUsageState ai_usage = 32;
   ExternalTUN external_tun = 33;
+  TrafficAlertState traffic_alerts = 34;
 }
 
 message ViewVisibility {
@@ -192,6 +195,7 @@ message WatchEvent {
     HistoryDelta history_delta = 16;
     CurrentPathCheck current_path_check = 17;
     AIUsageState ai_usage = 18;
+    TrafficAlertState traffic_alerts = 19;
   }
 }
 
@@ -586,6 +590,13 @@ message RouteHistorySample {
 }
 message RouteHistoryResponse { repeated RouteHistorySample items=1; string next_cursor=2; bool partial=3; }
 message RouteUsageResponse {
+ // Today includes route summaries; a route_id also includes ranks for that
+ // requested window (today/hour), from the same frozen traffic snapshot.
+ repeated RouteUsageSummary routes=16;
+ google.protobuf.Timestamp hour_from=17;
+ repeated RouteUsageRank applications=18; repeated RouteUsageRank domains=19;
+ repeated RouteUsageRank ips=20; RouteAlertProgress alert_progress=21;
+
  repeated RouteUsageBucket items=1; string next_cursor=2; bool partial=3;
  uint64 today_upload=4; uint64 today_download=5; uint64 connections=6; uint64 window_connections=15;
  uint64 upload=10;uint64 download=11;google.protobuf.Timestamp from=12;google.protobuf.Timestamp until=13; google.protobuf.Timestamp coverage_start=14;

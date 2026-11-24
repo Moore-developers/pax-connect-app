@@ -37,6 +37,25 @@
     },
     "routes.current": "Active Proxy",
     "routes.selected": "Selected Proxy",
-    "routes.not_available": "Unavailable"
+    "routes.not_available": "Unavailable",
+    "routes.column.usage": "Today’s traffic",
+    "routes.usage_view": "View usage",
+    "routes.usage_today": "Used today",
+    "routes.usage_hour_title": "Past hour",
+    "routes.usage_top": "Today’s TOP 3",
+    "routes.usage_applications": "Apps & processes",
+    "routes.usage_domains": "Domains",
+    "routes.usage_ips": "Target IPs",
+    "routes.usage_object": "Source",
+    "routes.usage_upload": "Upload",
+    "routes.usage_download": "Download",
+    "routes.usage_total": "Total / share",
+    "routes.usage_loading": "Loading today’s usage…",
+    "routes.usage_precision": "Actual outbound traffic, decimal units. The hour includes full 5-minute buckets and the current tail. Unrecorded periods are excluded.",
+    "routes.usage_range": "Today {from}–{until}",
+    "routes.usage_partial": "Some periods were not recorded",
+    "routes.usage_failed": "Usage could not be read: {error}",
+    "routes.usage_empty": "No recorded traffic in this window",
+    "routes.usage_updated": "Updated {time}"
   }
 }

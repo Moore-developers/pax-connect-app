@@ -64,13 +64,13 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
     ])
     presented.view.translatesAutoresizingMaskIntoConstraints = true
     presented.view.autoresizingMask = []
-    overlay.addSubview(presented.view)
+    let modalRoot = overlay.addPanel(presented.view)
     presented.view.setAccessibilityElement(true)
     presented.view.setAccessibilityRole(.group)
     presented.view.setAccessibilitySubrole(.dialog)
-    presented.view.setAccessibilityModal(true)
+    modalRoot.setAccessibilityModal(true)
     overlay.controller = presented
-    host.window?.setAccessibilityChildren([presented.view])
+    host.window?.setAccessibilityChildren([modalRoot])
     host.window?.setAccessibilityModal(true)
     let size = presented.preferredContentSize
     overlay.preferredSize = size
@@ -104,7 +104,10 @@ final class WorkbenchPresentation: NSObject, NSViewControllerPresentationAnimato
       let next =
         selected.map { ($0 + (backwards ? controls.count - 1 : 1)) % controls.count }
         ?? (backwards ? controls.count - 1 : 0)
-      overlay.window?.makeFirstResponder(controls[next])
+      let control = controls[next]
+      if overlay.window?.makeFirstResponder(control) == true {
+        overlay.revealControl(control)
+      }
       return nil
     }
     parent.layoutSubtreeIfNeeded()
@@ -194,7 +197,30 @@ private final class WorkbenchOverlay: NSView {
   }
   var keyMonitor: Any?
   var preferredSize = NSSize.zero
+  private var panelScroll: NSScrollView?
   private var sizing = false
+  func addPanel(_ panel: NSView) -> NSView {
+    guard (panel as? PaxDialogView)?.style == .overview else {
+      addSubview(panel)
+      return panel
+    }
+    let scroll = NSScrollView(frame: bounds)
+    scroll.autoresizingMask = [.width, .height]
+    scroll.drawsBackground = false
+    scroll.automaticallyAdjustsContentInsets = false
+    scroll.hasVerticalScroller = true
+    scroll.autohidesScrollers = true
+    scroll.scrollerStyle = .overlay
+    let document = WorkbenchDocument()
+    scroll.documentView = document
+    document.addSubview(panel)
+    addSubview(scroll)
+    panelScroll = scroll
+    return scroll
+  }
+  func revealControl(_ control: NSView) {
+    if panelScroll != nil { control.scrollToVisible(control.bounds) }
+  }
   override func setFrameSize(_ newSize: NSSize) {
     super.setFrameSize(newSize)
     resizePanel()
@@ -214,11 +240,24 @@ private final class WorkbenchOverlay: NSView {
     let width = min(
       available.width,
       min(maximum, max(preferredSize.width, bounds.width * c.dialogWindowFraction)))
+    let viewport = panelScroll?.contentView.bounds
     // 自定义呈现由容器管理 frame，避免 preferredContentSize 约束抬高宿主窗口最小尺寸。
     controller.view.setFrameSize(
       NSSize(width: width, height: min(available.height, preferredSize.height)))
     pane?.layoutSubtreeIfNeeded()
-    let height = min(available.height, pane?.naturalHeight ?? preferredSize.height)
+    let naturalHeight = pane?.naturalHeight ?? preferredSize.height
+    if let panelScroll, let document = panelScroll.documentView, let viewport {
+      let clip = panelScroll.contentView
+      document.setFrameSize(
+        NSSize(width: bounds.width, height: max(bounds.height, naturalHeight + c.overlayInset * 2)))
+      controller.view.frame = NSRect(
+        x: (bounds.width - width) / 2, y: (document.bounds.height - naturalHeight) / 2,
+        width: width, height: naturalHeight)
+      clip.scroll(to: clip.constrainBoundsRect(viewport).origin)
+      panelScroll.reflectScrolledClipView(clip)
+      return
+    }
+    let height = min(available.height, naturalHeight)
     let trailing = (controller as? WorkbenchModalController)?.alignsToTrailingEdge == true
     controller.view.frame = NSRect(
       x: trailing ? bounds.width - width - c.overlayInset : (bounds.width - width) / 2,

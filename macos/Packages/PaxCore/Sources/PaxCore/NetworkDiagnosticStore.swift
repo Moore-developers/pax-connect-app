@@ -75,7 +75,6 @@ public struct NetworkDiagnosticEnvironment: Sendable, Equatable, Codable {
   public private(set) var stale = false
   public private(set) var generation: UInt64 = 0
   public var topic = 0
-  public var onlyDifferences = false
   public var selectedSource: Int?
   public var expanded: Set<String> = []
   private let history: NetworkDiagnosticHistory?

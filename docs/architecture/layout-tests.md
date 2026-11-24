@@ -1,5 +1,7 @@
 # 架构：目录结构与测试（§16、§18）
 
+线路用量沿controller/route_usage_overview.go、PaxClient的RouteData/RouteUsageConnection、PaxCore/RouteUsageMonitor与RoutesStore、PaxUI/PaxUsageReadout和PaxRouteTable、Features/RouteWorkbench/RouteUsageReadoutView；route_alert_progress.go、RouteAlertProgressPresentation、PaxRouteAlertReadout负责线路提醒标尺与时段余量色带。证据见tests/route-alert-progress与tests/route-usage-alerts。
+
 ## 16. 目录结构
 
 发布入口：AGENTS.md指向docs/release/WORKFLOW.md；BUILD.md定义本地打包。scripts/public-allowlist.txt包含导出所需的release安装/版本材料，私有执行记录留在tests/release/。
@@ -29,7 +31,7 @@ pax-connect/
 │   ├── internal/core/                   # root RPC、受保护资源、watchdog、残留代理清理、只读归属
 │   ├── internal/processidentity/        # core/用户paxd复用PID、UID、内核启动时间
 │   ├── internal/coreclient/             # paxd 调 root core 的内部 RPC、内核身份与会话（只依赖 config 标准值）
-│   ├── internal/controller/             # 产品状态机、操作队列、保护检查、错误解释
+│   ├── internal/controller/             # 产品状态机、操作队列、保护检查、流量提醒（traffic_alerts*.go）、错误解释
 │   ├── internal/mcpserver/              # MCP schema/RPC映射、脱敏和有界查询续页
 │   ├── internal/config/                 # 生成、校验、版本和回滚；routing_claude.go 提供内置 Claude 名单
 │   ├── internal/importers/              # 链接/二维码/订阅/outbound → NodeProfile
@@ -59,13 +61,13 @@ pax-connect/
 │   └── Packages/
 │       ├── PaxProto/                    # 纯生成物包，不设测试target；由PaxClient依赖编译
 │       ├── PaxClient/                   # DaemonConnection、ConnectionSession、产品事件信封与 ClientError
-│       ├── PaxCore/                     # ConnectionStore、DaemonSetupStore、NetworkDiagnosticHistory与系统服务协议
+│       ├── PaxCore/                     # ConnectionStore、TrafficAlertsStore、DaemonSetupStore、NetworkDiagnosticHistory与系统服务协议
 │       ├── PaxUI/                       # Theme、Components（PaxTabs独立文件）、PaxCharts、PaxMenuBarIcon 云团状态图标
 │       └── Features/                    # 各页（Dashboard/Routes/RouteWorkbench（NetworkDiagnostic*环境摘要与主题卡片、Report实际证据报告）/RoutingWorkbench/LogsWorkbench/SettingsWorkbench/AIUsage/About）、Workbench共享壳、MenuBar（P06）
 ├── configs/                             # 默认配置和测试 fixture
 ├── rulesets/                            # 默认规则和测试 fixture
 ├── scripts/                             # package-release.sh / release-materials.py下载候选、create-release-dmg.py / dmg-background.swift安装界面、backup-release-data.py私有备份；构建；migrate-root-data.sh/.py、test-migrate-root-data.py
-├── tests/                               # 真实宿主验收脚本；paxd-user/{MIGRATION,RUN,RESULTS}.md
+├── tests/                               # 真实宿主验收脚本；settings-autosave/设置自动保存证据；paxd-user/{MIGRATION,RUN,RESULTS}.md
 └── third_party/licenses/
 ```
 
@@ -122,3 +124,5 @@ CF的异步验证/冻结保存沿controller/cf_validation_operations.go，MCP四
 目标明细查询/展示补充：controller/traffic_connection_groups.go与traffic_connection_evidence.go、PaxClient/Model/TrafficConnectionGroup.swift、Features/Workbench/WorkbenchConnectionGroups{View,Presentation}.swift、WorkbenchConnectionGroupEvidence.swift、WorkbenchConnectionTransferText.swift、WorkbenchConnectionReadoutLayout.swift与WorkbenchConnectionRule.swift。PaxUI/PaxDataRowView.swift从共享表格分出行背景和可选悬停，不增加状态owner；见[合同](../changes/pax-connect-network-control-plane/connection-target-details-1121.md)。
 
 目标明细移除WorkbenchConnectionListView.swift与WorkbenchConnectionListState.swift，原逐条排查信息并入目标hover；无新页面状态。
+
+流量提醒新增config/traffic_alerts.go私有设置及轮次文件、PaxClient/Model/TrafficAlerts.swift与映射、Features/SettingsWorkbench/TrafficAlertsSettingsController.swift、App/TrafficAlertNotification.swift；替换旧RouteUsageNotification.swift。验收tests/traffic-alerts，接口仍在既有proto族内。

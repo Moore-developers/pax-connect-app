@@ -79,6 +79,8 @@ UI 阶段默认 App 装配 `WorkbenchWindowController → WorkbenchShellViewCont
 
 ## 13. 状态与渲染规则
 
+RoutesStore装配RouteUsageMonitor，随连接代次取消旧任务。其30秒批量读取负责线路今日列，独立于页面可见性。hover打开时单独读取并每5秒刷新，显示实际线路的阈值标尺及三个时段的双向余量。独立TrafficAlertsStore消费daemon首帧/Watch，App注入系统权限与通知投递、保存当前轮次投递ID。见[流量提醒](../changes/pax-connect-network-control-plane/traffic-alerts.md)与[线路用量](../changes/pax-connect-network-control-plane/route-usage-alerts.md)。
+
 ```text
 PaxClient.DaemonConnection ──► ConnectionSession（actor，250ms 批次）
                                    │ 一次 MainActor 提交

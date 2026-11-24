@@ -14,10 +14,8 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
   private var group: PaxPreferenceGroup?
   private var saved: NetworkPrivacy?
   private var task: Task<Void, Never>?
-  private lazy var save = PaxRouteButton(
-    "保存网络保护", style: .primary, target: self, action: #selector(commit))
   private lazy var retry = PaxRouteButton(
-    "重试", style: .quiet, target: self, action: #selector(read))
+    "", style: .quiet, target: self, action: #selector(read))
 
   init(routes: RoutesStore) {
     self.routes = routes
@@ -31,16 +29,12 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
     mode.setAccessibilityIdentifier("privacy-dns-mode")
     interfaceCopy.bind(mode, key: "settings.privacy.dns") { $0.setAccessibilityLabel($1) }
     interfaceCopy.bind(webRTC, key: "settings.privacy.webrtc") { $0.apply(label: $1) }
-    interfaceCopy.button(save, key: "settings.privacy.save")
-    interfaceCopy.button(retry, key: "settings.retry")
+    interfaceCopy.button(retry, key: "settings.reload")
     interfaceCopy.onChange = { [weak self] in self?.renderStatus() }
     webRTC.setAccessibilityIdentifier("privacy-webrtc")
-    save.setAccessibilityIdentifier("privacy-save")
     retry.setAccessibilityIdentifier("privacy-retry")
     mode.target = self
     mode.action = #selector(changed)
-    let actions = NSStackView(views: [NSView(), retry, save])
-    actions.spacing = PaxTheme.Spacing.tight
     let group = PaxPreferenceGroup(
       title: "", symbol: "lock.shield",
       rows: [
@@ -49,7 +43,7 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
         interfaceCopy.preference(
           title: "settings.privacy.webrtc", detail: "settings.privacy.webrtc_detail",
           control: webRTC),
-      ], style: .compact, footer: actions)
+      ], style: .compact, headingAccessory: retry)
     self.group = group
     view = interfaceCopy.group(group, key: "settings.privacy.title")
     read()
@@ -68,7 +62,6 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
   @objc private func read() {
     guard task == nil else { return }
     saved = nil
-    save.isEnabled = false
     mode.isEnabled = false
     webRTC.isEnabled = false
     retry.isHidden = true
@@ -86,8 +79,7 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
           return
         }
         saved = value
-        mode.selectItem(at: value.dnsMode == "strict" ? 1 : 0)
-        webRTC.isChecked = value.webRTC
+        render(value)
         mode.isEnabled = true
         webRTC.isEnabled = true
         showStatus("")
@@ -102,19 +94,17 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
     }
   }
 
-  @objc private func changed() {
-    guard let saved else { return }
-    save.isEnabled =
-      (mode.indexOfSelectedItem == 1) != (saved.dnsMode == "strict")
-      || webRTC.isChecked != saved.webRTC
-    showStatus(save.isEnabled ? "settings.unsaved" : "")
+  private func render(_ value: NetworkPrivacy) {
+    mode.selectItem(at: value.dnsMode == "strict" ? 1 : 0)
+    webRTC.isChecked = value.webRTC
   }
 
-  @objc private func commit() {
+  @objc private func changed() {
     guard task == nil, var draft = saved else { return }
     draft.dnsMode = mode.indexOfSelectedItem == 1 ? "strict" : "balanced"
     draft.webRTC = webRTC.isChecked
-    save.isEnabled = false
+    guard draft != saved else { return }
+    retry.isHidden = true
     mode.isEnabled = false
     webRTC.isEnabled = false
     showStatus("settings.saving")
@@ -122,22 +112,37 @@ final class NetworkPrivacySettingsController: NSViewController, InterfaceLanguag
       guard let self else { return }
       defer {
         task = nil
-        mode.isEnabled = true
-        webRTC.isEnabled = true
+        mode.isEnabled = saved != nil
+        webRTC.isEnabled = saved != nil
       }
       do {
         guard
           case .networkPrivacy(let value) = try await routes.measurement(.saveNetworkPrivacy(draft))
         else { return }
         saved = value
+        render(value)
         showStatus("settings.privacy.saved")
       } catch {
-        showStatus(
-          "settings.save_failed",
-          parameters: [
-            "detail": ProductErrorPresentation.display(error, context: interfaceCopy.context)
-          ])
-        save.isEnabled = true
+        let detail = ProductErrorPresentation.display(error, context: interfaceCopy.context)
+        let conflict = (error as? ProductError)?.code == "network_privacy_conflict"
+        var refreshed = false
+        // A transport or durability failure can follow a committed save. Read the
+        // authoritative value before restoring controls; never claim an edit persisted.
+        do {
+          if case .networkPrivacy(let current) = try await routes.measurement(.networkPrivacy) {
+            saved = current
+            render(current)
+            refreshed = true
+          }
+        } catch {
+          saved = nil
+          retry.isHidden = false
+        }
+        if conflict && refreshed {
+          showStatus("settings.privacy.refreshed")
+        } else {
+          showStatus("settings.privacy.auto_save_failed", parameters: ["detail": detail])
+        }
       }
     }
   }

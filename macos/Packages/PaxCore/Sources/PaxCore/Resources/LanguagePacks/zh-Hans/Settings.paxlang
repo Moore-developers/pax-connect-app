@@ -29,7 +29,6 @@
     "settings.privacy.balanced": "加密分流",
     "settings.privacy.strict": "严格隐私",
     "settings.privacy.note": "仅开启代理时提供保护；修改后，下次开启代理生效。",
-    "settings.privacy.save": "保存网络保护",
     "settings.loading": "正在读取…",
     "settings.retry": "重试",
     "settings.backend_unavailable": "后台尚未就绪，连接后可重试。",
@@ -37,6 +36,9 @@
     "settings.unsaved": "尚未保存",
     "settings.saving": "正在保存…",
     "settings.privacy.saved": "已保存",
-    "settings.save_failed": "保存失败，草稿保留：{detail}"
+    "settings.save_failed": "保存失败，草稿保留：{detail}",
+    "settings.reload": "重新读取",
+    "settings.privacy.auto_save_failed": "自动保存失败：{detail}",
+    "settings.privacy.refreshed": "设置已被修改，已读取最新值，请重新操作。"
   }
 }

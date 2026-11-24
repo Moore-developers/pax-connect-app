@@ -14,6 +14,9 @@ extension NetworkDiagnosticPresentation {
   {
     [
       "geo.country": context.text("diagnostic_evidence.0cc659a9f5"), "geo.asn": "ASN",
+      "geo.city": context.text("diagnostic_evidence.ed84a1665f"),
+      "bgp.prefix": context.text("diagnostic.source.bgp_prefix").trimmingCharacters(
+        in: .punctuationCharacters),
       "risk.proxy": context.text("diagnostic_evidence.5e84ea61e8"), "risk.vpn": "VPN",
       "risk.tor": "Tor", "risk.datacenter": context.text("diagnostic_evidence.37727441a2"),
       "risk.mobile": context.text("diagnostic_evidence.a5c27195f9"),

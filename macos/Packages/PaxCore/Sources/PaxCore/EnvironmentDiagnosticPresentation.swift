@@ -121,11 +121,12 @@ public enum EnvironmentDiagnosticPresentation {
         addresses.isEmpty
         ? (pending || state == "unsupported"
           ? [] : [context.text("environment_evidence.650a19b9eb")]) : addresses
+      lines.insert(verdict.text, at: 0)
       lines += verdict.routeDetails + evidence
       rows.append(
         Row(
           title: "WebRTC", symbol: "point.3.connected.trianglepath.dotted",
-          value: verdict.text, detail: lines.joined(separator: "\n"), tone: verdict.tone,
+          value: verdict.summary, detail: lines.joined(separator: "\n"), tone: verdict.tone,
           context: context))
     }
     return rows

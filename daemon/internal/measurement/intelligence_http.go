@@ -9,9 +9,15 @@ import (
 	"time"
 )
 
+const networkReportLimit = 500 * 1024
+
 var diagnosticOnlyProviders = []exitProvider{
 	{id: "internetdb", endpoint: "https://internetdb.shodan.io/", slots: 2},
-	{id: "ipx.al", endpoint: "https://ipx.al/api/report/", slots: 2},
+	{id: "db-ip", endpoint: "https://api.db-ip.com/v2/free/", slots: 1, daily: 500},
+	{id: "ip2location.io", endpoint: "https://api.ip2location.io/", slots: 1, daily: 1000, utcDay: true},
+	{id: "proxycheck.io", endpoint: "https://proxycheck.io/v3/", slots: 1, daily: 100},
+	{id: "iplocate", endpoint: "https://www.iplocate.io/api/lookup/", slots: 1},
+	{id: "ripestat", endpoint: "https://stat.ripe.net/data/network-info/data.json", slots: 1},
 }
 
 func diagnosticProvider(id string) (exitProvider, bool) {
@@ -36,11 +42,7 @@ type intelligenceResult struct {
 // fetchIntelligence shares admission, quotas and cooldowns with exit observation.
 // Exact-IP lookups never teach the quota owner that the queried IP is the caller.
 func (q *ExitLookup) fetchIntelligence(ctx context.Context, client Client, id, ip, scope string) intelligenceResult {
-	timeout := 5 * time.Second
-	if id == "ipx.al" {
-		timeout = 6 * time.Second
-	}
-	bounded, cancel := context.WithTimeout(ctx, timeout)
+	bounded, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	addr := netip.MustParseAddr(ip) // validated by DiagnoseIP
 	family := "ipv4"
@@ -59,7 +61,10 @@ func (q *ExitLookup) fetchIntelligence(ctx context.Context, client Client, id, i
 	}
 	p := lease.provider
 	target := providerTarget(p, ip)
-	if id == "internetdb" || id == "ipx.al" {
+	if isRouteComparison(id) {
+		target = comparisonTarget(p, ip)
+	}
+	if id == "internetdb" {
 		target = p.endpoint + ip
 	}
 	req, _ := http.NewRequestWithContext(bounded, http.MethodGet, target, nil)
@@ -84,6 +89,9 @@ func (q *ExitLookup) fetchIntelligence(ctx context.Context, client Client, id, i
 		case status == http.StatusNotFound && id == "internetdb":
 			result.attempt.State = "not_indexed"
 			result.attempt.Capabilities = []string{"exposure"}
+		case id == "ip2location.io" && status == http.StatusUnauthorized && ip2LocationQuotaExceeded(body):
+			retry = nextUTCDay(q.now())
+			code = "exit_rate_limited"
 		case status != http.StatusOK:
 			code = "provider_http_" + strconv.Itoa(status)
 		default:
@@ -106,12 +114,18 @@ func (q *ExitLookup) fetchIntelligence(ctx context.Context, client Client, id, i
 		result.attempt.State = "failed"
 	}
 	// Provider authentication is global, while 403 remains path-specific.
-	finishCode := code
+	finishCode, finishStatus := code, status
+	if code == "exit_rate_limited" {
+		finishStatus = http.StatusTooManyRequests
+	}
 	if code == "provider_response_invalid" || code == "provider_ip_mismatch" {
 		finishCode = "exit_response_invalid"
 	}
-	q.finish(lease, scope, ExitResult{}, finishCode, status, retry, ctx.Err() != nil)
+	q.finish(lease, scope, ExitResult{}, finishCode, finishStatus, retry, ctx.Err() != nil)
 	result.attempt.ErrorCode = code
+	if result.attempt.State == "observed" && isRouteComparison(id) {
+		setComparisonCapabilities(&result)
+	}
 	result.report.ProviderError = code
 	result.attempt.HTTPStatus = status
 	result.attempt.Duration = time.Since(started)
