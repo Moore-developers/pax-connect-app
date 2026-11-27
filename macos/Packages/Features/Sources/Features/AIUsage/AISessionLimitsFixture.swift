@@ -134,14 +134,38 @@ enum AISessionLimitsFixture {
       parent: "codex-route", agent: "worker"),
   ]
 
-  static let sessions: [AILimitSessionInput] = plans.enumerated().map { offset, plan in
-    // A child session ends when its parent does.
-    let slot = plan.parent.flatMap { id in plans.firstIndex { $0.id == id } } ?? offset
-    return .init(
-      id: plan.id, cli: plan.cli, title: plan.title, parent: plan.parent, agentName: plan.agent,
-      requests: requests(plan, seed: offset, slot: slot))
+  private static let englishTitles: [String: String] = [
+    "codex-route": "Refactor daemon routing chain",
+    "codex-tests": "Backfill usage collector tests",
+    "codex-ledger": "Migrate historical ledger script",
+    "codex-channel": "Explore relay tariff pricing",
+    "claude-audit": "Audit session analysis metrics",
+    "claude-docs": "Organize integration docs",
+    "claude-notes": "Generate release notes",
+    "claude-trial": "Evaluate new model pricing",
+    "dsh-debug": "Debug DeepSeek usage collector",
+    "codex-astra": "Replay billing reconciliation",
+    "claude-fable": "Review new pricing tiers",
+    "claude-long": "Organize long-context notes",
+    "codex-docs": "Update user documentation",
+  ]
+
+  static func sessions(english: Bool = false) -> [AILimitSessionInput] {
+    plans.enumerated().map { offset, plan in
+      // A child session ends when its parent does.
+      let slot = plan.parent.flatMap { id in plans.firstIndex { $0.id == id } } ?? offset
+      let title = english ? (englishTitles[plan.id] ?? plan.title) : plan.title
+      return .init(
+        id: plan.id, cli: plan.cli, title: title, parent: plan.parent, agentName: plan.agent,
+        requests: requests(plan, seed: offset, slot: slot))
+    }
   }
+  static let sessions: [AILimitSessionInput] = sessions(english: false)
   static let model = AISessionLimitsMath.model(sessions)
+  static let englishModel = AISessionLimitsMath.model(sessions(english: true))
+  static func model(english: Bool) -> AISessionLimitsModel {
+    english ? englishModel : model
+  }
 
   private static func cost(_ price: Price, request: AILimitRequest) -> AILimitCosts {
     let doubled = request.doubled ? 2.0 : 1

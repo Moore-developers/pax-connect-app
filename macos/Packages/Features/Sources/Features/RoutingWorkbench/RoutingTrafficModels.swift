@@ -54,9 +54,13 @@ extension RoutingWorkbenchStore {
       if let aggregateBasis { return aggregateBasis }
       guard hits.count > 1 else { return hits.first?.basis ?? "暂无分流依据" }
       let counts = categoryCounts
-      return counts.count > 1
-        ? "\(counts.count) 种分流依据"
-        : (counts.keys.first ?? "规则") + " · \(hits.count) 个匹配条件"
+      if counts.count > 1 {
+        let english =
+          connections.first?.hit.title == "Priority Rule"
+          || connections.first?.hit.title == "Geo Baseline"
+        return english ? "\(counts.count) rule types" : "\(counts.count) 种分流依据"
+      }
+      return (counts.keys.first ?? "规则") + " · \(hits.count) 个匹配条件"
     }
     var basisSubtitle: String {
       guard hits.count > 1 else { return hits.first?.basisSource ?? "" }

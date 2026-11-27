@@ -11,6 +11,7 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
   let content = NSStackView()
   weak var profileTable: PaxDataTable?
   var sessionContent: AISessionLiveLimitsView?
+  private weak var demoSessionContent: AISessionLimitsView?
   var logContent: AIUsageLogView?
   var refreshMeasuresOnly = false
   var contentRefreshers: [() -> Void] = []
@@ -100,6 +101,12 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
       })
     logContent?.invalidateLanguage()
     sessionContent?.invalidateLanguage()
+    if let demoSessionContent {
+      demoSessionContent.apply(
+        model: AISessionLimitsFixture.model(english: interfaceCopy.context.language == .english),
+        selection: nil)
+      demoSessionContent.invalidateLanguage()
+    }
     render()
   }
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError("代码构建") }
@@ -274,6 +281,7 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
     contentRefreshers = []
     logContent = nil
     sessionContent = nil
+    demoSessionContent = nil
     refreshMeasuresOnly = false
     clientAnalysisContent = nil
     trendAnalysisContent = nil
@@ -295,7 +303,11 @@ final class AIUsageViewController: NSViewController, InterfaceLanguageConsumer {
     switch store.page {
     case .sessions where store.preview:
       // Demo entry only: the limits design runs on in-memory data (P07d-ai-session-limits).
-      add(AISessionLimitsView(options: store.sessionOptions))
+      let previewLimits = AISessionLimitsView(
+        model: AISessionLimitsFixture.model(english: interfaceCopy.context.language == .english),
+        options: store.sessionOptions, interfaceCopy: interfaceCopy)
+      demoSessionContent = previewLimits
+      add(previewLimits)
     case .sessions:
       let analysis = AISessionLiveLimitsView(store: store, interfaceCopy: interfaceCopy)
       sessionContent = analysis

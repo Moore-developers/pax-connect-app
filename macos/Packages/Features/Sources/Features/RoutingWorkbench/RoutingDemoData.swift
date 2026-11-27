@@ -10,11 +10,14 @@ extension RoutingWorkbenchStore {
     ]
   }
   static func demoConnections(session: WorkbenchDemoStore, now: Date) -> [Connection] {
+    let en = session.isEnglish
     let routes = session.routes
     let route = routes.first?.id ?? "vless-fast"
     let second = routes.dropFirst().first?.id ?? route
-    let title = routes.first?.name ?? "已保存线路"
+    let title = routes.first?.name ?? (en ? "Saved Route" : "已保存线路")
     let secondTitle = routes.dropFirst().first?.name ?? title
+    let localNet = en ? "Direct" : "本地网络"
+    let priorityTitle = en ? "Priority Rule" : "优先规则"
     let definitions:
       [(
         String?, String, String?, String, String?, String, Direction, Hit, UInt64, UInt64, Int,
@@ -22,33 +25,45 @@ extension RoutingWorkbenchStore {
       )] = [
         (
           "safari", "com.apple.WebKit.Networking", "github.com", "140.82.112.3", route, title,
-          .proxy, .init(sourceID: "priority", ruleID: "github", title: "优先规则", match: "github.com"),
+          .proxy,
+          .init(sourceID: "priority", ruleID: "github", title: priorityTitle, match: "github.com"),
           2_000_000, 109_400_000, 16, 236
         ),
         (
           "safari", "com.apple.WebKit.Networking", "api.bilibili.com", "110.43.34.12", route, title,
-          .proxy, .init(sourceID: nil, ruleID: nil, title: "无", match: "未命中已有规则"),
+          .proxy,
+          .init(
+            sourceID: nil, ruleID: nil, title: en ? "None" : "无",
+            match: en ? "No matching rule" : "未命中已有规则"),
           420_000, 18_600_000, 8, 410
         ),
         (
-          "safari", "Safari", "cn.bing.com", "13.107.21.200", nil, "本地网络", .direct,
-          .init(sourceID: "domestic", ruleID: "bing", title: "国内服务直连", match: "精确域名"),
+          "safari", "Safari", "cn.bing.com", "13.107.21.200", nil, localNet, .direct,
+          .init(
+            sourceID: "domestic", ruleID: "bing", title: en ? "Direct Rules" : "国内服务直连",
+            match: en ? "Exact domain" : "精确域名"),
           820_000, 64_000_000, 16, 66
         ),
         (
-          "store", "App Store", "apps.apple.com", "17.253.144.10", nil, "本地网络", .direct,
-          .init(sourceID: "geo", ruleID: "cn-domain", title: "Geo 基础包", match: "中国大陆域名"),
+          "store", "App Store", "apps.apple.com", "17.253.144.10", nil, localNet, .direct,
+          .init(
+            sourceID: "geo", ruleID: "cn-domain", title: en ? "Geo Baseline" : "Geo 基础包",
+            match: en ? "CN domains" : "中国大陆域名"),
           180_000, 24_000_000, 16, 96
         ),
         (
           "telegram", "Telegram Helper", "api.telegram.org", "149.154.167.220", second, secondTitle,
           .proxy,
-          .init(sourceID: "priority", ruleID: "telegram", title: "优先规则", match: "应用 Telegram"),
+          .init(
+            sourceID: "priority", ruleID: "telegram", title: priorityTitle,
+            match: en ? "App: Telegram" : "应用 Telegram"),
           640_000, 8_600_000, 28, 184
         ),
         (
           nil, "unknown-helper", nil, "1.1.1.1", route, title, .proxy,
-          .init(sourceID: nil, ruleID: nil, title: "无", match: "应用/域名未识别"),
+          .init(
+            sourceID: nil, ruleID: nil, title: en ? "None" : "无",
+            match: en ? "Unrecognized app/domain" : "应用/域名未识别"),
           16_000, 32_000, 2, nil
         ),
       ]

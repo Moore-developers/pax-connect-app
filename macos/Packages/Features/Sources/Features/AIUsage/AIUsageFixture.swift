@@ -33,17 +33,22 @@ enum AIUsageFixture {
       id: "deepseek-r1", name: "DeepSeek R1", clients: [.harness], inputPrice: 0.55,
       outputPrice: 2.19),
   ]
-  static let profiles: [AIProfile] = [
-    .init(
-      id: "example", name: "示例服务", endpoint: "https://test.example/v1", multiplier: 0.3,
-      modelIDs: Set(models.map(\.id))),
-    .init(
-      id: "anthropic", name: "Anthropic", endpoint: "https://api.anthropic.com", multiplier: 1,
-      modelIDs: ["opus", "sonnet", "haiku"]),
-    .init(
-      id: "openai", name: "OpenAI", endpoint: "https://api.openai.com/v1", multiplier: 1,
-      modelIDs: ["gpt", "gpt-mini"]),
-  ]
+  static let profiles: [AIProfile] = profiles(english: false)
+  static func profiles(english: Bool) -> [AIProfile] {
+    [
+      .init(
+        id: "example", name: english ? "Example Relay" : "示例服务",
+        endpoint: "https://test.example/v1",
+        multiplier: 0.3,
+        modelIDs: Set(models.map(\.id))),
+      .init(
+        id: "anthropic", name: "Anthropic", endpoint: "https://api.anthropic.com", multiplier: 1,
+        modelIDs: ["opus", "sonnet", "haiku"]),
+      .init(
+        id: "openai", name: "OpenAI", endpoint: "https://api.openai.com/v1", multiplier: 1,
+        modelIDs: ["gpt", "gpt-mini"]),
+    ]
+  }
   static let bindings: [AIClient: AIBinding] = [
     .claude: .init(profileID: "example", state: "applied"),
     .codex: .init(profileID: "openai", state: "applied"),

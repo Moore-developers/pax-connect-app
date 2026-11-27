@@ -11,19 +11,33 @@ extension WorkbenchDemoStore {
   }
   var statisticsMessage: String {
     switch scenario {
-    case .loading: "正在加载统计"
-    case .trafficFailed: "统计暂时不可用"
-    case .trafficMissing: "暂无统计"
-    case .empty: "暂无请求记录 · 产生网络请求后将在这里显示"
-    default: "暂无匹配记录 · 切换筛选条件查看其他请求"
+    case .loading: presentationContext.text("dashboard_value.stats_loading")
+    case .trafficFailed: presentationContext.text("dashboard_value.stats_unavailable")
+    case .trafficMissing: presentationContext.text("dashboard_value.stats_missing")
+    case .empty:
+      isEnglish
+        ? "No requests yet · Requests will appear here"
+        : "暂无请求记录 · 产生网络请求后将在这里显示"
+    default:
+      isEnglish
+        ? "No matching records · Adjust filters to view others"
+        : "暂无匹配记录 · 切换筛选条件查看其他请求"
     }
   }
 
   var dashboardRouteModel: PaxCurrentRouteModel {
-    let badge = scenario == .disconnected ? "最后线路" : isRunning ? "已连接" : "选定线路"
+    let badge: String =
+      if scenario == .disconnected {
+        isEnglish ? "Last Route" : "最后线路"
+      } else if isRunning {
+        isEnglish ? "Connected" : "已连接"
+      } else {
+        isEnglish ? "Selected" : "选定线路"
+      }
     guard scenario != .empty, let route else {
       return DashboardRouteProjection.card(
-        route: nil, badge: badge, exitIP: nil, running: false, history: [])
+        route: nil, badge: badge, exitIP: nil, running: false, history: [],
+        context: presentationContext)
     }
     let base = Date(timeIntervalSince1970: 1_791_006_000)
     let recorded =
@@ -39,7 +53,7 @@ extension WorkbenchDemoStore {
       } : []
     return DashboardRouteProjection.card(
       route: route, badge: badge, exitIP: isRunning ? "203.0.113.8" : nil,
-      running: isRunning, history: history)
+      running: isRunning, history: history, context: presentationContext)
   }
 
   var dashboardTrafficModel: PaxTodayTrafficModel {
@@ -48,7 +62,8 @@ extension WorkbenchDemoStore {
       var snapshot = TrafficSnapshot.zero
       snapshot.asOf = now
       var model = DashboardTrafficProjection.card(
-        snapshot: snapshot, page: scenario == .loading ? nil : TrafficPage(), now: now)
+        snapshot: snapshot, page: scenario == .loading ? nil : TrafficPage(), now: now,
+        context: presentationContext)
       model.upload = "—"
       model.download = "—"
       model.hourlyNote = statisticsMessage
@@ -70,7 +85,8 @@ extension WorkbenchDemoStore {
       point.upload = megabytes * 100_000
       return point
     }
-    return DashboardTrafficProjection.card(snapshot: snapshot, page: page, now: now)
+    return DashboardTrafficProjection.card(
+      snapshot: snapshot, page: page, now: now, context: presentationContext)
   }
 
   /// 前 9 日 + 今日各模型的确定桶：今日官方 $18.60，6 个模型，全部只在内存。
@@ -127,10 +143,16 @@ extension WorkbenchDemoStore {
     guard scenario != .empty, scenario != .off else { return [] }
     return [
       .init(
-        id: "subscription", symbol: "exclamationmark.triangle", title: "订阅 A 更新失败",
-        detail: "08:00 自动更新 · 无法连接订阅地址", badge: "错误", badgeTone: .error),
+        id: "subscription", symbol: "exclamationmark.triangle",
+        title: isEnglish ? "Subscription A refresh failed" : "订阅 A 更新失败",
+        detail: isEnglish
+          ? "08:00 auto refresh · Cannot reach subscription URL" : "08:00 自动更新 · 无法连接订阅地址",
+        badge: isEnglish ? "Error" : "错误", badgeTone: .error),
       .init(
-        id: "measure", symbol: "clock", title: "线路测量未完成", detail: "洛杉矶-备用 延迟测试超时", badge: "待处理",
+        id: "measure", symbol: "clock",
+        title: isEnglish ? "Route test incomplete" : "线路测量未完成",
+        detail: isEnglish ? "US West · Backup latency timed out" : "洛杉矶-备用 延迟测试超时",
+        badge: isEnglish ? "Pending" : "待处理",
         badgeTone: .warning),
     ]
   }
@@ -139,10 +161,16 @@ extension WorkbenchDemoStore {
     guard scenario != .empty else { return [] }
     return [
       .init(
-        id: "switch", time: "14:02", title: "切换到 洛杉矶-CF中转-防封-首选", detail: "成功", detailTone: .success
+        id: "switch", time: "14:02",
+        title: isEnglish
+          ? "Switched to US West · CF Relay Primary" : "切换到 洛杉矶-CF中转-防封-首选",
+        detail: isEnglish ? "OK" : "成功", detailTone: .success
       ),
-      .init(id: "proxy", time: "09:15", title: "开启代理"),
-      .init(id: "refresh", time: "08:00", title: "订阅 B 自动更新", detail: "新增 3 条线路"),
+      .init(id: "proxy", time: "09:15", title: isEnglish ? "Proxy enabled" : "开启代理"),
+      .init(
+        id: "refresh", time: "08:00",
+        title: isEnglish ? "Subscription B auto-refreshed" : "订阅 B 自动更新",
+        detail: isEnglish ? "Added 3 routes" : "新增 3 条线路"),
     ]
   }
 }
@@ -160,12 +188,14 @@ extension WorkbenchDashboardViewController {
       usageCard.apply(trend, rank)
     } else {
       let buckets = store.dashboardUsageBuckets
+      let context = self.interfaceCopy.context
       usageCard.apply(
         DashboardUsageProjection.trend(
           buckets: buckets, state: nil, updatedAt: now.addingTimeInterval(-1800), now: now,
-          filter: live.selectedUsageFilter),
+          filter: live.selectedUsageFilter, context: context),
         DashboardUsageProjection.rank(
-          buckets: buckets, state: nil, now: now, filter: live.selectedUsageFilter))
+          buckets: buckets, state: nil, now: now, filter: live.selectedUsageFilter, context: context
+        ))
     }
     changesCard.apply(
       PaxInsightModel(

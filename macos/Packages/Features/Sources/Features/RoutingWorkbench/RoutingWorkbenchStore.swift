@@ -25,19 +25,23 @@ final class RoutingWorkbenchStore {
     let match: String
     var signature: String? = nil
     var basis: String {
-      guard sourceID != nil else { return "无" }
+      let en =
+        title == "Priority Rule" || title == "Geo Baseline" || title == "Direct Rules"
+        || title == "None"
+      guard sourceID != nil else { return en ? "None" : "无" }
       let parts = signature?.split(separator: "|", maxSplits: 1).map(String.init) ?? []
       guard parts.count == 2, let method = Method(rawValue: parts[0]) else {
-        return sourceID == "geo" ? "Geo：" + match : match
+        return sourceID == "geo" ? "Geo: " + match : match
       }
       switch method {
       case .application:
-        return "应用：" + (match.hasPrefix("应用 ") ? String(match.dropFirst(3)) : parts[1])
-      case .process: return "进程：" + parts[1]
-      case .domain: return "域名：" + parts[1]
-      case .domainSuffix: return "域名及子域：" + parts[1]
-      case .ip: return "IP：" + parts[1]
-      case .cidr: return "IP 网段：" + parts[1]
+        let target = match.hasPrefix("应用 ") ? String(match.dropFirst(3)) : parts[1]
+        return (en ? "App: " : "应用：") + target
+      case .process: return (en ? "Process: " : "进程：") + parts[1]
+      case .domain: return (en ? "Domain: " : "域名：") + parts[1]
+      case .domainSuffix: return (en ? "Domain: " : "域名及子域：") + parts[1]
+      case .ip: return "IP: " + parts[1]
+      case .cidr: return (en ? "CIDR: " : "IP 网段：") + parts[1]
       case .builtin, .source: return match
       }
     }
@@ -372,7 +376,7 @@ final class RoutingWorkbenchStore {
       let symbol: String
       switch dimension {
       case .application:
-        name = application?.name ?? "未识别进程"
+        name = application?.name ?? (session.isEnglish ? "Unrecognized Process" : "未识别进程")
         symbol =
           ["safari": "safari", "telegram": "paperplane", "store": "bag"][application?.id ?? ""]
           ?? "app"
@@ -394,7 +398,8 @@ final class RoutingWorkbenchStore {
       }
       let routeNames = ordered.reduce(into: [String]()) { result, connection in
         let name = TrafficFormatting.actualConnection(
-          direction: connection.direction.title, route: connection.routeName)
+          direction: connection.direction.title, route: connection.routeName,
+          context: session.presentationContext)
         if !name.isEmpty && !result.contains(name) { result.append(name) }
       }
       let sameDirection = ordered.dropFirst().allSatisfy { $0.direction == first.direction }
@@ -425,24 +430,26 @@ final class RoutingWorkbenchStore {
 
 extension RoutingWorkbenchStore {
   static func demoPackages(session: WorkbenchDemoStore) -> [RulePackage] {
+    let en = session.isEnglish
     let first = session.routes.first?.id ?? "vless-fast"
     let second = session.routes.dropFirst().first?.id ?? first
     return [
       .init(
-        id: "priority", name: "优先规则", kind: .priority, destination: .global,
+        id: "priority", name: en ? "Priority rules" : "优先规则", kind: .priority, destination: .global,
         rules: [
           .init(
             id: "telegram", method: .application, target: "telegram", destination: .route(second)),
           .init(id: "github", method: .domain, target: "github.com", destination: .route(first)),
         ]),
       .init(
-        id: "domestic", name: "国内服务直连", kind: .local, destination: .direct,
+        id: "domestic", name: en ? "Direct Rules" : "国内服务直连", kind: .local, destination: .direct,
         rules: [
           .init(id: "bing", method: .domain, target: "cn.bing.com", destination: .direct),
           .init(id: "bili", method: .domainSuffix, target: "bilibili.com", destination: .direct),
         ]),
       .init(
-        id: "ai", name: "AI 服务", kind: .subscription, destination: .route(second),
+        id: "ai", name: en ? "AI Services" : "AI 服务", kind: .subscription,
+        destination: .route(second),
         rules: [
           .init(
             id: "openai", method: .domainSuffix, target: "openai.com", destination: .route(second)),
@@ -451,7 +458,7 @@ extension RoutingWorkbenchStore {
             destination: .route(second)),
         ], source: "https://example.com/rules/ai.srs"),
       .init(
-        id: "geo", name: "Geo 基础包", kind: .geo, destination: .direct,
+        id: "geo", name: en ? "Geo Baseline" : "Geo 基础包", kind: .geo, destination: .direct,
         rules: [
           .init(id: "lan", method: .cidr, target: "192.168.0.0/16", destination: .direct),
           .init(id: "cn-domain", method: .domainSuffix, target: "apple.com", destination: .direct),

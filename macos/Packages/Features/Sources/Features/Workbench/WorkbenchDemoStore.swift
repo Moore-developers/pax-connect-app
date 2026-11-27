@@ -35,6 +35,8 @@ public final class WorkbenchDemoStore {
   public private(set) var direction = "全部"
   public private(set) var selectedRouteID = "vless-fast"
   public private(set) var currentRouteID = "vless-fast"
+  public var presentationContext: PresentationContext = .chinese
+  public var isEnglish: Bool { presentationContext.language == .english }
   private var transition: Task<Void, Never>?
   private var generation: UInt64 = 0
 
@@ -106,25 +108,28 @@ public final class WorkbenchDemoStore {
   public var qualityItems: [PaxRouteQualityItem] {
     guard scenario != .empty else { return [] }
     // 2026-10-03 v2rayN 本地只读快照：有效 Delay 升序前五，不包含连接凭据。
+    let groupName = isEnglish ? "US West · RN" : "洛杉矶节点-RN"
     let definitions: [(String, String, String, String, [Double])] = [
       (
-        "vless-fast", "洛杉矶-直连-日常快线", "VLESS", "洛杉矶节点-RN",
+        "vless-fast", isEnglish ? "US West · Direct" : "洛杉矶-直连-日常快线", "VLESS", groupName,
         [214, 208, 202, 219, 232, 210, 205, 198, 203, 200, 197, 195]
       ),
       (
-        "hy2", "洛杉矶-直连-弱网加速", "Hysteria2", "洛杉矶节点-RN",
+        "hy2", isEnglish ? "US West · Direct (Weak Net)" : "洛杉矶-直连-弱网加速", "Hysteria2", groupName,
         [230, 218, 211, 207, 220, 202, 199, 208, 204, 201, 198, 196]
       ),
       (
-        "vmess", "洛杉矶-CF中转-防封-备用", "VMess", "洛杉矶节点-RN",
+        "vmess", isEnglish ? "US West · CF Relay Backup" : "洛杉矶-CF中转-防封-备用", "VMess", groupName,
         [244, 232, 219, 227, 212, 235, 218, 207, 215, 204, 201, 198]
       ),
       (
-        "vmess-primary", "洛杉矶-CF中转-防封-首选", "VMess", "洛杉矶节点-RN",
+        "vmess-primary", isEnglish ? "US West · CF Relay Primary" : "洛杉矶-CF中转-防封-首选", "VMess",
+        groupName,
         [218, 225, 207, 212, 230, 220, 206, 204, 211, 202, 200, 198]
       ),
       (
-        "vmess-backup2", "洛杉矶-CF中转-防封-备用2", "VMess", "洛杉矶节点-RN",
+        "vmess-backup2", isEnglish ? "US West · CF Relay Backup 2" : "洛杉矶-CF中转-防封-备用2", "VMess",
+        groupName,
         [264, 248, 232, 310, 278, 240, 224, 218, 230, 213, 208, 202]
       ),
     ]

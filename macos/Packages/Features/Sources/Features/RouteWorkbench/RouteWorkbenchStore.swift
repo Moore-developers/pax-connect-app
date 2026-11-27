@@ -395,6 +395,11 @@ final class RouteWorkbenchStore {
     self.connectionStore = nil
     let fixtureItems = session.qualityItems
     nodes = []
+    let en = session.isEnglish
+    let t1430 = en ? "Today 14:30" : "今日 14:30"
+    let t1418 = en ? "Today 14:18" : "今日 14:18"
+    let t1420 = en ? "Today 14:20" : "今日 14:20"
+    let t1431 = en ? "Today 14:31" : "今日 14:31"
     for (index, item) in fixtureItems.enumerated() {
       let cf = item.protocolName == "VMess"
       let node = NodeProfile(
@@ -408,24 +413,28 @@ final class RouteWorkbenchStore {
       presentations[node.id] = Presentation(
         exitIP: "198.51.100.24", cfIP: cf ? node.server : nil, cfPreferred: cf,
         latency: Measurement(
-          value: item.samples.last?.milliseconds, time: "今日 14:30",
+          value: item.samples.last?.milliseconds, time: t1430,
           samples: item.samples.compactMap(\.milliseconds)),
         speed: Measurement(
-          value: index == 1 ? 1.9 : 4.1, time: "今日 14:18", samples: [3.4, 3.8, 3.6, 4.2, 3.9, 4.1]),
+          value: index == 1 ? 1.9 : 4.1, time: t1418, samples: [3.4, 3.8, 3.6, 4.2, 3.9, 4.1]),
         cfLatency: cf
-          ? Measurement(value: 38, time: "今日 14:20", samples: [44, 42, 47, 43, 40, 38])
+          ? Measurement(value: 38, time: t1420, samples: [44, 42, 47, 43, 40, 38])
           : Measurement(), uploadMB: 220, downloadMB: 2180, activeConnections: 24,
         windowConnections: 312, transferSamples: transfers)
     }
+    let localGroup = en ? "Local Routes" : "本地线路"
     for (id, name, proto, transport) in [
-      ("hk", "香港 · 标准", "vless", "tcp"), ("jp", "东京 · 标准", "trojan", "tcp"),
-      ("new", "台北 · 新增", "vless", "ws"), ("failed", "大阪 · 下载失败", "vmess", "ws"),
-      ("tls-error", "首尔 · TLS 异常", "trojan", "tcp"), ("ss", "香港 · AEAD", "shadowsocks", "tcp"),
+      ("hk", en ? "Hong Kong · Standard" : "香港 · 标准", "vless", "tcp"),
+      ("jp", en ? "Tokyo · Standard" : "东京 · 标准", "trojan", "tcp"),
+      ("new", en ? "Taipei · New" : "台北 · 新增", "vless", "ws"),
+      ("failed", en ? "Osaka · Download Failed" : "大阪 · 下载失败", "vmess", "ws"),
+      ("tls-error", en ? "Seoul · TLS Error" : "首尔 · TLS 异常", "trojan", "tcp"),
+      ("ss", en ? "Hong Kong · AEAD" : "香港 · AEAD", "shadowsocks", "tcp"),
     ] {
       nodes.append(
         NodeProfile(
           id: id, name: name, protocolName: proto, server: "203.0.113.\(50 + nodes.count)",
-          port: 443, group: "本地线路", serverName: "edge.example.net", revision: 1,
+          port: 443, group: localGroup, serverName: "edge.example.net", revision: 1,
           transport: transport, security: proto == "shadowsocks" ? "none" : "tls", origin: "local"))
       presentations[id] =
         id == "new"
@@ -433,16 +442,18 @@ final class RouteWorkbenchStore {
         : Presentation(
           exitIP: "203.0.113.60",
           latency: Measurement(
-            value: id == "tls-error" ? nil : 68, failure: id == "tls-error" ? "证书验证失败" : nil,
-            time: "今日 14:30"),
+            value: id == "tls-error" ? nil : 68,
+            failure: id == "tls-error" ? (en ? "Certificate verification failed" : "证书验证失败") : nil,
+            time: t1430),
           speed: Measurement(
             value: id == "failed" || id == "tls-error" ? nil : 6.2,
-            failure: id == "failed" ? "下载请求超时" : nil, time: id == "failed" ? "今日 14:31" : nil))
+            failure: id == "failed" ? (en ? "Download timed out" : "下载请求超时") : nil,
+            time: id == "failed" ? t1431 : nil))
     }
     groups = [
-      Group(id: "work", name: "工作", members: ["vless-fast", "hk", "vmess-primary"]),
-      Group(id: "media", name: "影音", members: ["vmess", "jp"]),
-      Group(id: "backup", name: "备用", members: ["hy2", "new", "failed"]),
+      Group(id: "work", name: en ? "Work" : "工作", members: ["vless-fast", "hk", "vmess-primary"]),
+      Group(id: "media", name: en ? "Media" : "影音", members: ["vmess", "jp"]),
+      Group(id: "backup", name: en ? "Backup" : "备用", members: ["hy2", "new", "failed"]),
     ]
     syncSession()
   }

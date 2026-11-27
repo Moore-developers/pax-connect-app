@@ -115,7 +115,7 @@ public final class WorkbenchDashboardViewController: NSViewController, Interface
     analysisList = RoutingTrafficList(
       store: telemetry.map { RoutingWorkbenchStore(telemetry: $0) }
         ?? RoutingWorkbenchStore(
-          session: WorkbenchDemoStore(), backendAvailable: false, initialPeriod: .day),
+          session: store ?? WorkbenchDemoStore(), backendAvailable: false, initialPeriod: .day),
       icons: objectIcons, tooltip: tooltip, style: .dashboard)
     analysis = Self.makeAnalysisCard()
     super.init(nibName: nil, bundle: nil)

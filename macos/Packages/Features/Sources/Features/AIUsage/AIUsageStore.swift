@@ -71,7 +71,7 @@ final class AIUsageStore {
   var now: Date { preview ? initialNow : Date() }
   let calendar: Calendar
   init(
-    preview: Bool = false, now: Date = Date(), calendar: Calendar = .current,
+    preview: Bool = false, english: Bool = false, now: Date = Date(), calendar: Calendar = .current,
     configuration: AIProfilesStore? = nil, data: AIUsageDataStore? = nil
   ) {
     self.preview = preview
@@ -83,7 +83,7 @@ final class AIUsageStore {
     previewModels = preview ? AIUsageFixture.models : []
     var workspace = AIProfilesWorkspace()
     if preview {
-      workspace.profiles = AIUsageFixture.profiles
+      workspace.profiles = AIUsageFixture.profiles(english: english)
       workspace.bindings = AIUsageFixture.bindings
     }
     self.configuration = configuration ?? AIProfilesStore(preview: preview ? workspace : nil)

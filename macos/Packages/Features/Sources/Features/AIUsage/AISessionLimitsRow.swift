@@ -126,7 +126,13 @@ import PaxUI
     var parts: [String] = []
     if !row.model.isEmpty && row.title != row.model { parts.append(row.model) }
     if !row.effort.isEmpty { parts.append(row.effort) }
-    if !row.note.isEmpty { parts.append(row.note) }
+    if !row.note.isEmpty {
+      if row.modelLines.count > 1, row.note == "另 \(row.modelLines.count - 1) 个模型" {
+        parts.append(context.text("session_note.more_models", count: row.modelLines.count - 1))
+      } else {
+        parts.append(row.note)
+      }
+    }
     let detail = parts.joined(separator: " · ")
     subtitle.isHidden = detail.isEmpty
     if subtitle.stringValue != detail {

@@ -27,8 +27,11 @@ public final class WorkbenchShellViewController: NSSplitViewController {
   private let routing: RoutingWorkbenchViewController?
   private let logs: LogsWorkbenchViewController?
   private let settings: SettingsWorkbenchViewController?
+  private weak var demoStore: WorkbenchDemoStore?
   public init(store: WorkbenchDemoStore, language: InterfaceLanguageStore? = nil) {
     self.language = language
+    self.demoStore = store
+    store.presentationContext = language?.context ?? .chinese
     let icons = WorkbenchObjectIcons()
     dashboard = WorkbenchDashboardViewController(store: store, tooltip: tooltip, objectIcons: icons)
     navigation = WorkbenchNavigation()
@@ -52,7 +55,8 @@ public final class WorkbenchShellViewController: NSSplitViewController {
     pages.addTabViewItem(
       NSTabViewItem(
         viewController: AIUsageViewController(
-          store: AIUsageStore(preview: true), tooltip: tooltip, session: store))
+          store: AIUsageStore(preview: true, english: language?.context.language == .english),
+          tooltip: tooltip, session: store))
     )
     pages.addTabViewItem(
       NSTabViewItem(viewController: settings))
@@ -173,6 +177,7 @@ public final class WorkbenchShellViewController: NSSplitViewController {
       let context = language.context
       if presentationRevision != context.revision {
         presentationRevision = context.revision
+        demoStore?.presentationContext = context
         navigation.apply(context)
         updateOnboarding()
         for child in pages.children { child.applyInterfaceLanguage(context) }
